@@ -11,7 +11,7 @@ function EmployeeLogin() {
     e.preventDefault();
 
     
-        if (username === "EM01" && password === "1234") {
+        if (username === "EMP001" && password === "1234") {
         navigate("/hr-employee-dashboard");
         }else {
             alert("Invalid username or password. Please try again.");
