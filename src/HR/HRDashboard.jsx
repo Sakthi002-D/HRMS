@@ -8,26 +8,18 @@ function HRDashboard() {
       <aside className="sidebar">
         <h2>HRMS</h2>
 
-    <Link to="/hr-dashboard">Dashboard</Link>
-
-    <Link to="/employees">Employees</Link>
-
-    <Link to="/attendance">Attendance</Link>
-
-    <Link to="/leave-management">Leave Management</Link>
-
-    <Link to="/payroll">Payroll</Link>
-
-    <Link to="/tickets">Tickets</Link>
-
-    <Link to="/reports">Reports</Link>
-        
+        <Link to="/hr-dashboard">Dashboard</Link>
+        <Link to="/employees">Employees</Link>
+        <Link to="/attendance">Attendance</Link>
+        <Link to="/leave-management">Leave Management</Link>
+        <Link to="/payroll">Payroll</Link>
+        <Link to="/tickets">Tickets</Link>
+        <Link to="/reports">Reports</Link>
       </aside>
 
-      <main className="dashboard-content">
+      <main className="hr-main">
 
         <h1>Welcome, HR</h1>
-
         <p>HR Management Dashboard</p>
 
         <div className="dashboard-cards">
