@@ -1,59 +1,28 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Employees from "./HR/Employees";
+import Home from "./pages/Home";
+import EmployeeLogin from "./pages/EmployeeLogin";
+import HRLogin from "./pages/HRLogin";
+import HRDashboard from "./HR/HRDashboard";
 import "./App.css";
 
 function App() {
   return (
-    <div className="home">
+    <BrowserRouter>
+      <Routes>
 
-      <nav className="navbar">
-        <img className="logo" src="/shelter logo.png" alt="Shelter Group" />
-       <div className="hero-buttons">
-            <button className="hr-btn">HR Login</button>
-            <button className="employee-btn">Employee Login</button>
-       </div>
-        
-      </nav>
+        <Route path="/" element={<Home />} />
 
-      <section className="hero">
-        <div className="hero-content">
-          <h1> HRMS - Human Resource Management System</h1>
+        <Route path="/hr-login" element={<HRLogin />} />
 
-          <p>
-            A centralized platform to manage employees, attendance,
-            leave, payroll, and other HR activities efficiently.
-          </p>
+        <Route path="/employee-login" element={<EmployeeLogin />} />
 
-        </div>
-      </section>
+        <Route path="/hr-dashboard" element={<HRDashboard />} />
 
-      <section className="features">
-        <h2>HRMS Features</h2>
-
-        <div className="feature-container">
-
-          <div className="feature-card">
-            <h3>Attendance</h3>
-            <p>Monitor employee attendance and working hours.</p>
-          </div>
-
-          <div className="feature-card">
-            <h3>Leave Management</h3>
-            <p>Manage leave requests, balance and eligibility.</p>
-          </div>
-
-          <div className="feature-card">
-            <h3>Payroll</h3>
-            <p>Manage payroll-related employee information.</p>
-          </div>
-
-          <div className="feature-card">
-            <h3>Ticketing</h3>
-            <p>Manage employee requests and support tickets.</p>
-          </div>
-
-        </div>
-      </section>
-
-    </div>
+       <Route path="/employees" element={<Employees />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

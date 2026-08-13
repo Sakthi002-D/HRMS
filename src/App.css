@@ -33,7 +33,7 @@ body {
 }
 
 .logo {
-  width: 150px;
+  width: 250px;
   height: auto;
 }
 
@@ -86,10 +86,19 @@ body {
   gap: 15px;
 }
 
-.hero-buttons button {
-  padding: 14px 28px;
+.hero-buttons a {
+  padding: 8px 18px;
   font-size: 16px;
-  border-radius: 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.hero-buttons button {
+  padding: 8px 18px;
+  font-size: 16px;
+  border-radius: 5px;
   cursor: pointer;
 }
 
