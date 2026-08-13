@@ -15,7 +15,7 @@ function App() {
 
       <section className="hero">
         <div className="hero-content">
-          <h1>Human Resource Management System</h1>
+          <h1> HRMS - Human Resource Management System</h1>
 
           <p>
             A centralized platform to manage employees, attendance,
