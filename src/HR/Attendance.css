@@ -1,0 +1,126 @@
+*{
+    box-sizing: border-box;
+}
+
+.attendance-page{
+    min-height: 100vh;
+    padding: 35px 40px;
+    background: #f5f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.attendance-header{
+    margin-bottom: 30px;
+}
+
+.attendance-header h1{
+    margin: 0 0 5px;
+    color: #12304a;
+    font-size: 32px;
+}
+
+.attendance-header p{
+    margin: 0;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.attendance-summary{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.attendance-card{
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.attendance-card h3{
+    margin:  0 0 15px;
+    color: #64748b; 
+    font-size: 16px;
+}
+
+.attendance-card h2{
+    margin: 0 0 8px;
+    color: #12304a;
+    font-size: 28px;
+}
+
+.attendance-card p{
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.attendance-table-container {
+    margin-top: 30px;
+    background: white;
+    border-radius: 10px;
+    overflow-x: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.attendance-table th {
+    background: #12304a;
+    color: white;
+    padding: 15px;
+    text-align: left;
+    font-size: 15px;
+}
+
+
+.attendance-table td {
+    padding: 14px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 14px;
+}
+
+.attendance-table tr:hover {
+    background: #f8fafc;
+}
+
+/* Status */
+
+.status {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status.present {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status.absent {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+@media (max-width: 1000px) {
+    .attendance-summary{
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+@media (max-width: 700px) {
+    .attendance-page {
+        padding: 25px 20px;
+    }
+
+    .attendance-summary {
+        grid-template-columns: 1fr;
+    }
+}
