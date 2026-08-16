@@ -1,0 +1,41 @@
+.common-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+/*Primary */
+
+.common-btn.primary {
+    background: #2564eb;
+    color: white;
+}
+
+.common-btn.primary:hover{
+    background: #bae6fd;
+}
+/* Secondary*/
+
+.common-btn.secondary {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.common-btn.secondary:hover {
+    background: #bae6fd;
+}
+
+/*Danger*/
+
+.common-btn.danger{
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.common-btn.danger:hover {
+    background: #fecaca;
+}

@@ -1,5 +1,8 @@
 import { useState } from "react";
 import "./Employees.css";
+import DashboardLayout from "../../components/layout/DashboardLayout";
+import SearchBar from "../../components/layout/common/SearchBar";
+import Button from "../../components/layout/common/Button";
 
 function Employees() {
     const [employees, setEmployees] = useState ([
@@ -8,7 +11,7 @@ function Employees() {
             name: "Sakthivel",
             designation: "Web Developer",
             department: "IT",
-            email: "sakthive@company.com",
+            email: "sakthivel@company.com",
             phone: "123-456-7890",
             status: "Active",
         },
@@ -57,6 +60,8 @@ const deleteEmployee = (id) => {
 };
 
   return (
+<DashboardLayout>
+
     <div className="employees-page">
 
       {/* Page Header */}
@@ -67,9 +72,9 @@ const deleteEmployee = (id) => {
           <p>Manage all company employees</p>
         </div>
 
-        <button className="add-employee-btn">
+        <Button>
           + Add Employee
-        </button>
+        </Button>
 
       </div>
 
@@ -77,11 +82,11 @@ const deleteEmployee = (id) => {
       {/* Search */}
       <div className="employee-tools">
 
-        <input
-          type="text"
-          placeholder="Search employee..."
+        <SearchBar
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
+          placeholder="Search employee..."
+
         />
 
       </div>
@@ -158,7 +163,8 @@ const deleteEmployee = (id) => {
 
       </div>
 
-    </div>
+     </div>
+    </DashboardLayout>
   );
 }
 

@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 
-import Attendance from "./HR/Attendance";
-import Employees from "./HR/Employees";
+import Attendance from "./pages/hr/Attendance";
+import Employees from "./pages/hr/Employees";
 import Home from "./pages/Home";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import HRLogin from "./pages/HRLogin";
-import HRDashboard from "./HR/HRDashboard";
+import HRDashboard from "./pages/hr/HRDashboard";
 
 import "./App.css";
 

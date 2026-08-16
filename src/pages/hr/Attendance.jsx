@@ -1,3 +1,5 @@
+
+import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Attendance.css"
 
 function Attendance() {
@@ -8,7 +10,7 @@ function Attendance() {
             department: "IT",
             date: "14 Aug 2026",
             punchIn: "09:02",
-            puncOut: "18:15",
+            punchOut: "18:15",
             shiftStart: "09:00",
             shiftEnd: "18:00",
             break: 45,
@@ -45,6 +47,8 @@ function Attendance() {
         },
     ];
     return(
+        <DashboardLayout>
+
         <div className="attendance-page">
 
             {/*Page Header*/}
@@ -128,7 +132,7 @@ function Attendance() {
                                 </span>
                             </td>
 
-                            <td>{employee.puncOut}</td>
+                            <td>{employee.punchOut}</td>
 
                             <td>{employee.break}</td>
 
@@ -146,6 +150,7 @@ function Attendance() {
             </div>
 
         </div>
+    </DashboardLayout>
     );
 }
 
