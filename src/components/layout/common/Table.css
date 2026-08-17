@@ -10,8 +10,8 @@
     background: #12304a;
     color: #ffffff;
 
-    text-align: left;
-    font-size: 14px;
+    text-align: center;
+    font-size: 16px;
     font-weight: 600;
 }
 
@@ -19,11 +19,29 @@
     padding: 14px 15px;
 
     border-bottom: 1px solid #e2e8f0;
-
+    text-align: center;
     color: #334155;
     font-size: 14px;
 }
 
+.common-table th,
+.common-table td {
+    padding: 10px 18px;
+}
+
+    
+.common-table td button {
+}
+
 .common-table tbody tr:hover {
     background: #f8fafc;
+}
+
+.common-table th:last-child,
+.common-table td:last-child {
+  text-align: center;
+}
+
+.common-table td:last-child button {
+  margin: 0 5px;
 }

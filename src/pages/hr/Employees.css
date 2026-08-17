@@ -2,7 +2,6 @@
   width: 100%;
   min-height: 100vh;
   padding: 35px 40px;
-  min-height: 100vh;
   background: #f5f7fb;
 }
 
@@ -16,9 +15,9 @@
 }
 
 .employees-header h1 {
-  margin: 0;
-  color: #12304a;
   font-size: 30px;
+  font-weight: bold;
+  color: #12304a;
 }
 
 .employees-header p {
@@ -143,4 +142,96 @@
 
 .delete-btn:hover {
   background: #fecaca;
+}
+
+.employee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.employee-form h3 {
+  margin: 20px 0 5px;
+  padding-bottom: 8px;
+
+  font-size: 18px;
+  color: #12344d;
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+
+.phone-input {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.phone-input select {
+  width: 150px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+
+.phone-input input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+
+.phone-input select:focus,
+.phone-input input:focus {
+  border-color: #2563eb;
 }

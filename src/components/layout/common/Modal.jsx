@@ -1,3 +1,5 @@
+import "./Modal.css";
+
 function Modal ({ isOpen, onClose, title, children }) {
     if (!isOpen) {
         return null;
@@ -28,3 +30,5 @@ return(
     </div>
  );
 }
+
+export default Modal;
