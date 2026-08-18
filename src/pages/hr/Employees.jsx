@@ -5,6 +5,7 @@ import SearchBar from "../../components/layout/common/SearchBar";
 import Button from "../../components/layout/common/Button";
 import Table from "../../components/layout/common/Table";
 import Modal from "../../components/layout/common/Modal";
+import { Form } from "react-router-dom";
 
 function Employees() {
   // =========================
@@ -67,12 +68,19 @@ function Employees() {
   // =========================
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const employeesPerPage = 5;
   // =========================
   // MODAL
   // =========================
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [viewEmployeeData, setViewEmployeeData] = useState(null);
 
   // null = Add mode
   // employee ID = Edit mode
@@ -81,6 +89,7 @@ function Employees() {
   // =========================
   // FORM DATA
   // =========================
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     employeeId: "",
@@ -89,9 +98,9 @@ function Employees() {
     gender: "",
 
     country: "India",
-    countryCode: "+91",
 
     phone: "",
+    phoneCountryCode: "+91",
     email: "",
     address: "",
 
@@ -99,7 +108,6 @@ function Employees() {
     department: "",
     joiningDate: "",
     employmentType: "",
-    salary: "",
 
     status: "Active",
 
@@ -122,33 +130,32 @@ function Employees() {
   // =========================
   // RESET FORM
   // =========================
+const resetForm = () => {
+  setFormData({
+    employeeId: "",
+    fullName: "",
+    dateOfBirth: "",
+    gender: "",
 
-  const resetForm = () => {
-    setFormData({
-      employeeId: "",
-      fullName: "",
-      dateOfBirth: "",
-      gender: "",
+    phone: "",
+    phoneCountryCode: "+91",
 
-      country: "India",
-      countryCode: "+91",
+    email: "",
+    address: "",
 
-      phone: "",
-      email: "",
-      address: "",
+    designation: "",
+    department: "",
+    joiningDate: "",
+    employmentType: "",
 
-      designation: "",
-      department: "",
-      joiningDate: "",
-      employmentType: "",
-      salary: "",
+    status: "Active",
 
-      status: "Active",
+    emergencyContact: "",
+    profilePhoto: null,
 
-      emergencyContact: "",
-      profilePhoto: null,
-    });
-  };
+    country: "India",
+  });
+};
 
   // =========================
   // OPEN ADD MODAL
@@ -180,6 +187,60 @@ function Employees() {
     }
   };
 
+  const exportEmployeesToCSV = () => {
+  if (employees.length === 0) {
+    alert("No employees to export");
+    return;
+  }
+
+  const headers = [
+    "Employee ID",
+    "Name",
+    "Designation",
+    "Department",
+    "Email",
+    "Phone",
+    "Status",
+  ];
+
+  const rows = employees.map((employee) => [
+    employee.id,
+    employee.name,
+    employee.designation,
+    employee.department,
+    employee.email,
+    employee.phone,
+    employee.status,
+  ]);
+
+  const csvContent = [
+    headers,
+    ...rows,
+  ]
+    .map((row) =>
+      row
+        .map((value) => `"${value ?? ""}"`)
+        .join(",")
+    )
+    .join("\n");
+
+  const blob = new Blob(
+    [csvContent],
+    { type: "text/csv;charset=utf-8;" }
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "employees.csv";
+
+  link.click();
+
+  URL.revokeObjectURL(url);
+};
+
   // =========================
   // CHECK EMPLOYEE ID
   // =========================
@@ -193,6 +254,32 @@ function Employees() {
     );
   };
 
+    const isValidEmail = (email) => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+
+   const isValidPhone = (phone, countryCode) => {
+  const digits = phone.replace(/\D/g, "");
+
+  // India
+  if (countryCode === "+91") {
+    return digits.length === 10 && /^[6-9]\d{9}$/.test(digits);
+  }
+
+  // USA
+  if (countryCode === "+1") {
+    return digits.length === 10;
+  }
+
+  // UK
+  if (countryCode === "+44") {
+    return digits.length >= 10 && digits.length <= 11;
+  }
+
+  // Other countries
+  return digits.length >= 7 && digits.length <= 15;
+};
   // =========================
   // ADD EMPLOYEE
   // =========================
@@ -230,10 +317,35 @@ function Employees() {
       return;
     }
 
-    if (!formData.phone.trim()) {
-      alert("Please enter Phone Number");
+    if (!isValidEmail(formData.email)) {
+      alert("Please enter a valid email address");
       return;
     }
+
+   if (!formData.phone.trim()) {
+  alert("Please enter phone number");
+  return;
+}
+
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+
+    if (formData.phoneCountryCode === "+91") {
+      if (
+     phoneDigits.length !== 10 ||
+      !/^[6-9]\d{9}$/.test(phoneDigits)
+       ) {
+      alert("Please enter a valid 10-digit Indian phone number");
+    return;
+  }
+    } else if (
+      !isValidPhone(
+        formData.phone,
+        formData.phoneCountryCode
+   )
+  )   {
+    alert("Please enter a valid phone number");
+    return;
+  }
 
     const newEmployee = {
       id: employeeId,
@@ -241,18 +353,17 @@ function Employees() {
       designation: formData.designation,
       department: formData.department,
       email: formData.email,
-      phone: `${formData.countryCode} ${formData.phone}`,
+      phone: `${formData.phoneCountryCode} ${formData.phone}`,
       status: formData.status,
 
       // Extra details
       dateOfBirth: formData.dateOfBirth,
       gender: formData.gender,
       country: formData.country,
-      countryCode: formData.countryCode,
+      countryCode: formData.phoneCountryCode,
       address: formData.address,
       joiningDate: formData.joiningDate,
       employmentType: formData.employmentType,
-      salary: formData.salary,
       emergencyContact: formData.emergencyContact,
       profilePhoto: formData.profilePhoto,
     };
@@ -271,9 +382,15 @@ function Employees() {
     resetForm();
   };
 
+ 
   // =========================
   // EDIT EMPLOYEE
   // =========================
+
+   const viewEmployee = (employee) => {
+   setViewEmployeeData(employee);
+  };
+
 
   const editEmployee = (employee) => {
     setEditingEmployeeId(employee.id);
@@ -312,7 +429,7 @@ function Employees() {
       country:
         employee.country || country,
 
-      countryCode:
+      phoneCountryCode:
         employee.countryCode || countryCode,
 
       phone:
@@ -335,9 +452,6 @@ function Employees() {
 
       employmentType:
         employee.employmentType || "",
-
-      salary:
-        employee.salary || "",
 
       status:
         employee.status || "Active",
@@ -419,7 +533,7 @@ function Employees() {
                 formData.email,
 
               phone:
-                `${formData.countryCode} ${formData.phone}`,
+                `${formData.phoneCountryCode} ${formData.phone}`,
 
               status:
                 formData.status,
@@ -434,7 +548,7 @@ function Employees() {
                 formData.country,
 
               countryCode:
-                formData.countryCode,
+                formData.phoneCountryCode,
 
               address:
                 formData.address,
@@ -444,9 +558,6 @@ function Employees() {
 
               employmentType:
                 formData.employmentType,
-
-              salary:
-                formData.salary,
 
               emergencyContact:
                 formData.emergencyContact,
@@ -519,59 +630,103 @@ function Employees() {
       ),
     },
 
-    {
-      key: "action",
-      label: "Action",
+   {
+  key: "view",
+  label: "View",
 
-      render: (employee) => (
-        <>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              editEmployee(employee)
-            }
-          >
-            Edit
-          </Button>
+  render: (employee) => (
+    <Button
+      variant="secondary"
+      onClick={() => viewEmployee(employee)}
+    >
+      View
+    </Button>
+  ),
+},
 
-          <Button
-            variant="danger"
-            onClick={() =>
-              deleteEmployee(employee.id)
-            }
-          >
-            Delete
-          </Button>
-        </>
-      ),
-    },
-  ];
+{
+  key: "edit",
+  label: "Edit",
+
+  render: (employee) => (
+    <Button
+      variant="secondary"
+      onClick={() => editEmployee(employee)}
+    >
+      Edit
+    </Button>
+  ),
+},
+
+{
+  key: "delete",
+  label: "Delete",
+
+  render: (employee) => (
+    <Button
+      variant="danger"
+      onClick={() => deleteEmployee(employee.id)}
+    >
+      Delete
+    </Button>
+  ),
+},
+  ]
 
   // =========================
   // SEARCH FILTER
   // =========================
+const filteredEmployees =
+  employees.filter((employee) => {
 
-  const filteredEmployees =
-    employees.filter(
-      (employee) =>
-        employee.name
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
+    const matchesSearch =
+      employee.name
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
 
-        employee.id
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
+      employee.id
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
 
-        employee.department
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
+      employee.department
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+
+      employee.designation
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+
+      employee.email
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+
+      employee.phone
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "All" ||
+      employee.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // =========================
+  // PAGINATION
+  // =========================
+
+      const totalPages = Math.ceil(
+        filteredEmployees.length / employeesPerPage
     );
+
+      const startIndex =
+        (currentPage - 1) * employeesPerPage;
+
+      const currentEmployees =
+        filteredEmployees.slice(
+        startIndex,
+        startIndex + employeesPerPage
+     );
 
   // =========================
   // RETURN
@@ -594,13 +749,51 @@ function Employees() {
             </p>
           </div>
 
-          <Button
-            onClick={openAddEmployee}
+         <div className="header-actions">
+
+        <Button
+          variant="secondary"
+          onClick={exportEmployeesToCSV}
           >
-            + Add Employee
-          </Button>
+            Export CSV
+        </Button>
+
+        <Button
+        onClick={openAddEmployee}
+        >
+          + Add Employee
+        </Button>
 
         </div>
+
+        </div>
+
+        <div className="employee-stats">
+
+  <div className="stat-card">
+    <span>Total Employees</span>
+    <strong>{employees.length}</strong>
+  </div>
+
+  <div className="stat-card">
+    <span>Active Employees</span>
+    <strong>
+      {employees.filter(
+        (employee) => employee.status === "Active"
+      ).length}
+    </strong>
+  </div>
+
+  <div className="stat-card">
+    <span>Inactive Employees</span>
+    <strong>
+      {employees.filter(
+        (employee) => employee.status === "Inactive"
+      ).length}
+    </strong>
+  </div>
+
+</div>
 
         {/* ================= SEARCH ================= */}
 
@@ -612,7 +805,16 @@ function Employees() {
             placeholder="Search employee..."
           />
 
-        </div>
+      <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+         <option value="All">All Status</option>
+         <option value="Active">Active</option>
+         <option value="Inactive">Inactive</option>
+       </select>
+
+    </div>
 
         {/* ================= TABLE ================= */}
 
@@ -620,8 +822,48 @@ function Employees() {
 
           <Table
             columns={columns}
-            data={filteredEmployees}
+            data={currentEmployees}
           />
+            <div className="pagination">
+
+    <button
+      disabled={currentPage === 1}
+      onClick={() =>
+        setCurrentPage((prev) => prev - 1)
+      }
+    >
+      ← Previous
+    </button>
+
+    {Array.from(
+      { length: totalPages },
+      (_, index) => (
+        <button
+          key={index + 1}
+          className={
+            currentPage === index + 1
+              ? "active-page"
+              : ""
+          }
+          onClick={() =>
+            setCurrentPage(index + 1)
+          }
+        >
+          {index + 1}
+        </button>
+      )
+    )}
+
+    <button
+      disabled={currentPage === totalPages}
+      onClick={() =>
+        setCurrentPage((prev) => prev + 1)
+      }
+    >
+      Next →
+    </button>
+
+  </div>
 
         </div>
 
@@ -782,9 +1024,7 @@ function Employees() {
               <div className="phone-input">
 
                 <select
-                  value={
-                    formData.country
-                  }
+                  value={formData.country}
 
                   onChange={(e) => {
 
@@ -801,7 +1041,7 @@ function Employees() {
                       country:
                         selectedCountry.name,
 
-                      countryCode:
+                      phoneCountryCode:
                         selectedCountry.code,
                     });
 
@@ -1035,33 +1275,6 @@ function Employees() {
 
             </div>
 
-            {/* Salary */}
-
-            <div className="form-group">
-
-              <label>
-                Salary
-              </label>
-
-              <input
-                type="number"
-                placeholder="Enter salary"
-
-                value={
-                  formData.salary
-                }
-
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    salary:
-                      e.target.value,
-                  })
-                }
-              />
-
-            </div>
-
             {/* Status */}
 
             <div className="form-group">
@@ -1150,6 +1363,19 @@ function Employees() {
                 }
               />
 
+              {formData.profilePhoto && (
+                <div className="profile-preview">
+                  <img 
+                    src={
+                      typeof formData.profilePhoto === "string"
+                      ? formData.profilePhoto
+                      : URL.createObjectURL(formData.profilePhoto)
+                    }
+                    alt="Profile perview"
+                />
+                </div>
+             )}
+
             </div>
 
             {/* ================= BUTTONS ================= */}
@@ -1185,6 +1411,163 @@ function Employees() {
           </div>
 
         </Modal>
+
+        {viewEmployeeData && (
+  <Modal
+    isOpen={true}
+    onClose={() => setViewEmployeeData(null)}
+    title="Employee Details"
+  >
+
+   <div className="employee-profile">
+
+  {/* Profile Header */}
+  <div className="employee-profile-header">
+
+    <div className="employee-profile-photo">
+      {viewEmployeeData.profilePhoto ? (
+        <img
+          src={viewEmployeeData.profilePhoto}
+          alt={viewEmployeeData.name}
+        />
+      ) : (
+        <div className="profile-placeholder">
+          {viewEmployeeData.name?.charAt(0).toUpperCase()}
+        </div>
+      )}
+    </div>
+
+    <div className="employee-profile-title">
+      <h2>{viewEmployeeData.name}</h2>
+
+      <p>
+        {viewEmployeeData.designation}
+      </p>
+
+      <span
+        className={
+          viewEmployeeData.status === "Active"
+            ? "status active"
+            : "status inactive"
+        }
+      >
+        {viewEmployeeData.status}
+      </span>
+    </div>
+
+  </div>
+
+  {/* Personal Details */}
+  <div className="profile-section">
+
+    <h3>Personal Details</h3>
+
+    <div className="profile-grid">
+
+      <div>
+        <span>Employee ID</span>
+        <strong>{viewEmployeeData.id}</strong>
+      </div>
+
+      <div>
+        <span>Date of Birth</span>
+        <strong>
+          {viewEmployeeData.dateOfBirth || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Gender</span>
+        <strong>
+          {viewEmployeeData.gender || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Phone</span>
+        <strong>
+          {viewEmployeeData.phone || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Email</span>
+        <strong>
+          {viewEmployeeData.email || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Address</span>
+        <strong>
+          {viewEmployeeData.address || "-"}
+        </strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  {/* Job Details */}
+  <div className="profile-section">
+
+    <h3>Job Details</h3>
+
+    <div className="profile-grid">
+
+      <div>
+        <span>Designation</span>
+        <strong>
+          {viewEmployeeData.designation || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Department</span>
+        <strong>
+          {viewEmployeeData.department || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Joining Date</span>
+        <strong>
+          {viewEmployeeData.joiningDate || "-"}
+        </strong>
+      </div>
+
+      <div>
+        <span>Employment Type</span>
+        <strong>
+          {viewEmployeeData.employmentType || "-"}
+        </strong>
+      </div>
+
+    </div>
+
+  </div>
+
+  {/* Other Details */}
+  <div className="profile-section">
+
+    <h3>Other Details</h3>
+
+    <div className="profile-grid">
+
+      <div>
+        <span>Emergency Contact</span>
+        <strong>
+          {viewEmployeeData.emergencyContact || "-"}
+        </strong>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+  </Modal>
+)}
 
       </div>
 
