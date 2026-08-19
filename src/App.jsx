@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
+import LeaveManagement from "./pages/hr/LeaveManagement";
 import Home from "./pages/Home";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import HRLogin from "./pages/HRLogin";
@@ -26,6 +27,8 @@ function App() {
        <Route path="/employees" element={<Employees />} />
 
        <Route path="/attendance" element={<Attendance />} />
+       
+       <Route path="/leave-management" element={<LeaveManagement />} />
       </Routes>
     </BrowserRouter>
   );

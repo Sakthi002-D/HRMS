@@ -1,0 +1,192 @@
+* {
+    box-sizing: border-box;
+}
+
+.leave-page {
+    min-height: 100vh;;
+    background: #f5f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.leave-header {
+    margin-bottom: 30px;
+}
+
+.leave-header h1 {
+    margin: 0 0 5px;
+    color: #12304a;
+    font-size: 32px;
+}
+
+.leave-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.leave-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.leave-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.leave-card h3 {
+    margin: 0 0 15px;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.leave-card h2 {
+    margin: 0 0 8px;
+    color: #12304a;
+    font-size: 28px;
+}
+
+.leave-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+@media (max-width: 1000px) {
+    .leave-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .leave-page {
+        padding: 25px 20px;
+    }
+
+    .leave-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+.leave-table-container {
+    margin-top: 30px;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+}
+
+.leave-table-container h2 {
+    margin: 0 0 20px;
+    color: #12304a;
+    font-size: 22px;
+}
+
+.leave-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leave-table th {
+    background: #12304a;
+    color: white;
+    padding: 14px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.leave-table td {
+    padding: 14px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 14px;
+}
+
+.leave-table tr:hover {
+    background: #f8fafc;
+}
+
+.leave-status {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.leave-status.pending {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.leave-status.approved {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.leave-status.rejected {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.leave-tools {
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+
+.leave-tools input {
+    width: 280px;
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.leave-tools select {
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.leave-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.approve-btn,
+.reject-btn {
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.approve-btn {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.reject-btn {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.approve-btn:hover {
+    background: #bbf7d0;
+}
+
+.reject-btn:hover {
+    background: #fecaca;
+}

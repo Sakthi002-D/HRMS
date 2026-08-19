@@ -32,7 +32,52 @@ function HRDashboard() {
           </div>
 
          </div>
-         
+
+        <div className="recent-employees">
+
+          <div className="recent-employees-header">
+            <h2>Recent Employees</h2>
+            <Link to="/employees">View All</Link>
+          </div>
+
+          <div className="recent-employee-list">
+
+            <div className="recent-employee">
+              <div>
+                <strong>EMP008</strong>
+                <span>Santosh</span>
+              </div>
+              <span>Developer</span>
+            </div>
+
+            <div className="recent-employee">
+              <div>
+                <strong>EMP007</strong>
+                <span>Rahul</span>
+              </div>
+              <span>Developer</span>
+            </div>
+
+            <div className="recent-employee">
+              <div>
+                <strong>EMP006</strong>
+                <span>Prabhu</span>
+              </div>
+              <span>Software Dev</span>
+            </div>
+
+            <div className="recent-employee">
+              <div>
+                <strong>EMP005</strong>
+                <span>Siva</span>
+              </div>
+              <span>Web Dev</span>
+            </div>
+
+          </div>
+
+          </div>
+
     </DashboardLayout>
   );
 }

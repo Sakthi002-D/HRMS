@@ -10,7 +10,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
+  margin-bottom: 30px;
 }
 
 .employees-header h1 {
@@ -422,4 +422,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+
+.status.late {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status.on.leave {
+  background: #e0e7ff;
+  color: #4f46e5;
 }
