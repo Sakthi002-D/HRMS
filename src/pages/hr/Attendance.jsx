@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect} from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Attendance.css"
 
@@ -9,202 +9,43 @@ function Attendance() {
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
 
-    const attendanceData= [
-        {
-            employeeID: "EMP001",
-            employeeName: "Sakthivel",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:02",
-            punchOut: "18:15",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: 45,
-            status: "Present",
-            project: "HRMS Portal",
-        },
+    const [attendanceData, setAttendanceData] = useState([]);
 
-        {
-            employeeID: "EMP002",
-            employeeName: "Sundhar",
-            department: "IT",
-            date: "2026-08-13",
-            punchIn: "09:12",
-            punchOut: "18:00",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break :"32",
-            status: "Present",
-            project: "HRMS Portal",
-        },
+useEffect(() => {
+    fetchAttendance();
+}, []);
 
-        {
-            employeeID: "EMP003",
-            employeeName: "John Doe",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:22",
-            punchOut: "17:20",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break :"22",
-            status: "Present",
-            project: "HRMS Portal",
-        },
-        {
-            employeeID: "EMP004",
-            employeeName: "Rahul",
-            department: "IT",
-            date: "2026-08-11",
-            punchIn: "09:12",
-            punchOut: "16:10",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break :"12",
-            status: "Present",
-            project: "HRMS Portal",
-        },
-        {
-            employeeID: "EMP005",
-            employeeName: "Sandhiya",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:05",
-            punchOut: "18:10",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "40",
-            status: "Present",
-            project: "HRMS Portal",
-        },
+const fetchAttendance = async () => {
+    try {
+        const response = await fetch(
+            "http://localhost:5000/api/attendance"
+        );
 
-        {
-            employeeID: "EMP006",
-            employeeName: "Siva",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:18",
-            punchOut: "18:05",
-            hiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "35",
-            status: "Late",
-            project: "Payroll System",
-        },
+        const data = await response.json();
 
-        {
-            employeeID: "EMP007",
-            employeeName: "Prabhu",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "08:55",
-            punchOut: "18:00",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "45",
-            status: "Present",
-            project: "HRMS Portal",
-        },
+        const formattedData = data.map((item) => ({
+            employeeID: item.employee_id,
+            employeeName: item.employee_name,
+            department: item.department,
+            date: item.attendance_date,
+            punchIn: item.punch_in || "-",
+            punchOut: item.punch_out || "-",
+            shiftStart: item.shift_start || "09:00",
+            shiftEnd: item.shift_end || "18:00",
+            break: item.break_minutes || 0,
+            status: item.status,
+            project: item.project || "-",
+        }));
 
-        {
-            employeeID: "EMP008",
-            employeeName: "Rahul",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:30",
-            punchOut: "18:15",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "30",
-            status: "Late",
-            project: "Employee Portal",
-        },
+        setAttendanceData(formattedData);
 
-        {
-            employeeID: "EMP009",
-            employeeName: "Santosh",
-            department: "IT",
-            date: "2026-08-14",
-            punchIn: "09:00",
-            punchOut: "18:00",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "45",
-            status: "Present",
-            project: "HRMS Portal",
-        },
-
-        {
-            employeeID: "EMP0010",
-            employeeName: "Karthik",
-            department: "Finance",
-            date: "2026-08-14",
-            punchIn: "-",
-            punchOut: "-",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "-",
-            status: "Absent",
-            project: "Payroll System",
-        },
-
-        {
-            employeeID: "EMP011",
-            employeeName: "Divya",
-            department: "HR",
-            date: "2026-08-14",
-            punchIn: "09:10",
-            punchOut: "18:00",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "40",
-            status: "Late",
-            project: "HRMS Portal",
-        },
-
-        {
-            employeeID: "EMP012",
-            employeeName: "Arun",
-            department: "Development",
-            date: "2026-08-14",
-            punchIn: "08:58",
-            punchOut: "18:20",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "45",
-            status: "Present",
-            project: "Employee Portal",
-        },
-
-        {
-            employeeID: "EMP013",
-            employeeName: "Priya",
-            department: "Finance",
-            date: "2026-08-14",
-            punchIn: "-",
-            punchOut: "-",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "-",
-            status: "Absent",
-            project: "Payroll System",
-        },
-
-        {
-            employeeID: "EMP014",
-            employeeName: "Vignesh",
-            department: "Development",
-            date: "2026-08-14",
-            punchIn: "09:03",
-            punchOut: "18:10",
-            shiftStart: "09:00",
-            shiftEnd: "18:00",
-            break: "40",
-            status: "Present",
-            project: "HRMS Portal",
-        },
-
-    ];
+    } catch (error) {
+        console.error(
+            "Error fetching attendance:",
+            error
+        );
+    }
+};
 
     const filteredAttendance = attendanceData.filter((employee) => {
 
@@ -220,9 +61,15 @@ function Attendance() {
                 selectedStatus === "all" ||
             employee.status === selectedStatus;
 
-        const matchesData =
-                selectedDate === "" ||
-                employee.date === selectedDate;
+    const employeeDate = employee.date
+        ? new Date(employee.date).toLocaleDateString("en-CA", {
+            timeZone: "Asia/Kolkata",
+    })
+  : "";
+
+    const matchesData =
+        selectedDate === "" ||
+        employeeDate === selectedDate;
         
         return matchesSearch && matchesStatus && matchesData;
     });
@@ -256,7 +103,7 @@ function Attendance() {
 
         const selectedDay = selectedDate
             ? new Date(selectedDate)
-            : new Date("2026-08-14");
+            : new Date();
 
         const weekStart = new Date(selectedDay);
             weekStart.setDate(selectedDay.getDate() - selectedDay.getDay());

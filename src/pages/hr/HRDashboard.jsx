@@ -1,85 +1,128 @@
-import { Link } from "react-router-dom";
-import "./HRDashboard.css";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-
+import "./HRDashboard.css";
 
 function HRDashboard() {
-  return (
-    <DashboardLayout>
-        <h1>Welcome, HR</h1>
-        <p>HR Management Dashboard</p>
 
-        <div className="dashboard-cards">
+      const [totalEmployees, setTotalEmployees] = useState(0);
 
-          <div className="dashboard-card">
-            <h3>Total Employees</h3>
-            <h2>150</h2>
-          </div>
+      useEffect(() => {
+        fetch("http://localhost:5000/api/employees")
+          .then((response) => response.json())
+          .then((data) => {
+            setTotalEmployees(data.length);
+          })
+          .catch((error) => {
+            console.error("Error fetching employee:",error);
+          });
+      }, []);
+    return (
+        <DashboardLayout>
 
-          <div className="dashboard-card">
-            <h3>Present Today</h3>
-            <h2>133</h2>
-          </div>
+            <div className="hr-dashboard">
 
-          <div className="dashboard-card">
-            <h3>On Leave</h3>
-            <h2>17</h2>
-          </div>
+                <div className="dashboard-header">
+                    <h1>HR Dashboard</h1>
+                    <p>Overview of your organization's HR activities</p>
+                </div>
 
-          <div className="dashboard-card">
-            <h3>Pending Requests</h3>
-            <h2>0</h2>
-          </div>
+                {/* Summary Cards */}
+                <div className="dashboard-cards">
 
-         </div>
+                    <div className="dashboard-card">
+                        <h3>Total Employees</h3>
+                        <h2>{totalEmployees}</h2>
+                        <p>Active employees</p>
+                    </div>
 
-        <div className="recent-employees">
+                    <div className="dashboard-card">
+                        <h3>Present Today</h3>
+                        <h2>46</h2>
+                        <p>92% attendance</p>
+                    </div>
 
-          <div className="recent-employees-header">
-            <h2>Recent Employees</h2>
-            <Link to="/employees">View All</Link>
-          </div>
+                    <div className="dashboard-card">
+                        <h3>Pending Leaves</h3>
+                        <h2>2</h2>
+                        <p>Waiting for approval</p>
+                    </div>
 
-          <div className="recent-employee-list">
+                    <div className="dashboard-card">
+                        <h3>Open Tickets</h3>
+                        <h2>2</h2>
+                        <p>Need attention</p>
+                    </div>
 
-            <div className="recent-employee">
-              <div>
-                <strong>EMP008</strong>
-                <span>Santosh</span>
-              </div>
-              <span>Developer</span>
+                </div>
+
+                {/* Dashboard Sections */}
+                <div className="dashboard-sections">
+
+                    <div className="dashboard-section">
+                        <h2>Recent Leave Requests</h2>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>Sakthivel</strong>
+                                <p>Casual Leave • 20 Aug 2026</p>
+                            </div>
+                            <span className="pending">Pending</span>
+                        </div>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>John Doe</strong>
+                                <p>Casual Leave • 25 Aug 2026</p>
+                            </div>
+                            <span className="pending">Pending</span>
+                        </div>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>Sundhar</strong>
+                                <p>Sick Leave • 22 Aug 2026</p>
+                            </div>
+                            <span className="approved">Approved</span>
+                        </div>
+
+                    </div>
+
+
+                    <div className="dashboard-section">
+                        <h2>Recent Support Tickets</h2>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>System Login Issue</strong>
+                                <p>Sakthivel • High Priority</p>
+                            </div>
+                            <span className="open">Open</span>
+                        </div>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>Leave Balance Issue</strong>
+                                <p>Sundhar • Medium Priority</p>
+                            </div>
+                            <span className="progress">In Progress</span>
+                        </div>
+
+                        <div className="dashboard-row">
+                            <div>
+                                <strong>Laptop Request</strong>
+                                <p>Rahul • Low Priority</p>
+                            </div>
+                            <span className="open">Open</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
 
-            <div className="recent-employee">
-              <div>
-                <strong>EMP007</strong>
-                <span>Rahul</span>
-              </div>
-              <span>Developer</span>
-            </div>
-
-            <div className="recent-employee">
-              <div>
-                <strong>EMP006</strong>
-                <span>Prabhu</span>
-              </div>
-              <span>Software Dev</span>
-            </div>
-
-            <div className="recent-employee">
-              <div>
-                <strong>EMP005</strong>
-                <span>Siva</span>
-              </div>
-              <span>Web Dev</span>
-            </div>
-
-          </div>
-
-          </div>
-
-    </DashboardLayout>
-  );
+        </DashboardLayout>
+    );
 }
 
 export default HRDashboard;

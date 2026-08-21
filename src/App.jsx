@@ -4,10 +4,20 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
 import LeaveManagement from "./pages/hr/LeaveManagement";
+import Payroll from "./pages/hr/Payroll";
+import Tickets from "./pages/hr/Tickets";
+import Reports from "./pages/hr/Reports";
 import Home from "./pages/Home";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import HRLogin from "./pages/HRLogin";
 import HRDashboard from "./pages/hr/HRDashboard";
+
+import EmployeeReport from "./pages/hr/EmployeeReport";
+import AttendanceReport from "./pages/hr/AttendanceReport";
+import LeaveReport from "./pages/hr/LeaveReport";
+import PayrollReport from "./pages/hr/PayrollReport";
+
+
 
 import "./App.css";
 
@@ -29,6 +39,18 @@ function App() {
        <Route path="/attendance" element={<Attendance />} />
        
        <Route path="/leave-management" element={<LeaveManagement />} />
+
+       <Route path="/payroll" element={<Payroll />} />       
+
+       <Route path="/tickets" element={<Tickets />} />
+
+       <Route path="/reports" element={<Reports />} />
+
+       {/* Report Pages */}
+          <Route path="/employee-report" element={<EmployeeReport />} />
+          <Route path="/attendance-report" element={<AttendanceReport />} />
+          <Route path="/leave-report" element={<LeaveReport />} />
+          <Route path="/payroll-report" element={<PayrollReport />} />
       </Routes>
     </BrowserRouter>
   );

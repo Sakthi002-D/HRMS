@@ -1,0 +1,130 @@
+* {
+    box-sizing: border-box;
+}
+
+.reports-page {
+    min-height: 100vh;
+    background: #f5f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.reports-header {
+    margin-bottom: 25px;
+}
+
+.reports-header h1 {
+    margin: 0 0 5px;
+    color: #12304a;
+    font-size: 32px;
+}
+
+.reports-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 16px;
+}
+
+/* Summary */
+
+.reports-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.report-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.report-card h3 {
+    margin: 0 0 15px;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.report-card h2 {
+    margin: 0 0 8px;
+    color: #12304a;
+    font-size: 28px;
+}
+
+.report-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Reports */
+
+.reports-container {
+    margin-top: 30px;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.reports-container h2 {
+    margin: 0 0 20px;
+    color: #12304a;
+    font-size: 22px;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.report-item {
+    padding: 22px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.report-item h3 {
+    margin: 0 0 8px;
+    color: #12304a;
+}
+
+.report-item p {
+    margin: 0 0 18px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.report-item button {
+    border: none;
+    padding: 9px 15px;
+    border-radius: 5px;
+    background: #12304a;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.report-item button:hover {
+    background: #1e496b;
+}
+
+/* Responsive */
+
+@media (max-width: 1000px) {
+    .reports-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .reports-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .report-grid {
+        grid-template-columns: 1fr;
+    }
+}

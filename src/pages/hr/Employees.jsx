@@ -12,56 +12,30 @@ function Employees() {
   // EMPLOYEES
   // =========================
 
-  const [employees, setEmployees] = useState(() => {
-    const savedEmployees = localStorage.getItem("employees");
+  const [employees, setEmployees] = useState([]);
 
-    if (savedEmployees) {
-      return JSON.parse(savedEmployees);
-    }
+useEffect(() => {
+  fetch("http://localhost:5000/api/employees")
+    .then((response) => response.json())
+    .then((data) => {
+      const formattedEmployees = data.map((employee) => ({
+        id: employee.employee_id,
+        name: employee.name,
+        designation: employee.designation,
+        department: employee.department,
+        email: employee.email,
+        phone: employee.phone,
+        status: employee.status,
+        joiningDate: employee.joining_date,
+      }));
 
-    return [
-      {
-        id: "EMP001",
-        name: "Sakthivel",
-        designation: "Web Developer",
-        department: "IT",
-        email: "sakthivel@company.com",
-        phone: "+91 1234567890",
-        status: "Active",
-      },
-
-      {
-        id: "EMP002",
-        name: "Sundhar",
-        designation: "Web Developer",
-        department: "IT",
-        email: "sundhar@company.com",
-        phone: "+91 1234567890",
-        status: "Inactive",
-      },
-
-      {
-        id: "EMP003",
-        name: "John Doe",
-        designation: "Web Developer",
-        department: "IT",
-        email: "john.doe@company.com",
-        phone: "+91 1234567890",
-        status: "Active",
-      },
-    ];
-  });
-
-  // =========================
-  // SAVE TO LOCAL STORAGE
-  // =========================
-
-  useEffect(() => {
-    localStorage.setItem(
-      "employees",
-      JSON.stringify(employees)
-    );
-  }, [employees]);
+      setEmployees(formattedEmployees);
+    })
+    .catch((error) => {
+      console.error("Error fetching employees:", error);
+    });
+}, []);
+  
 
   // =========================
   // SEARCH
@@ -173,19 +147,43 @@ const resetForm = () => {
   // DELETE EMPLOYEE
   // =========================
 
-  const deleteEmployee = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this employee?"
+ const deleteEmployee = async (id) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this employee?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/employees/${id}`,
+      {
+        method: "DELETE",
+      }
     );
 
-    if (confirmDelete) {
-      setEmployees((prevEmployees) =>
-        prevEmployees.filter(
-          (employee) => employee.id !== id
-        )
-      );
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to delete employee");
+      return;
     }
-  };
+
+    setEmployees((prevEmployees) =>
+      prevEmployees.filter(
+        (employee) => employee.id !== id
+      )
+    );
+
+    alert("Employee deleted successfully!");
+
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    alert("Unable to connect to backend");
+  }
+};
 
   const exportEmployeesToCSV = () => {
   if (employees.length === 0) {
@@ -284,88 +282,112 @@ const resetForm = () => {
   // ADD EMPLOYEE
   // =========================
 
-  const addEmployee = () => {
-    const employeeId = formData.employeeId.trim();
+  
 
-    if (!employeeId) {
-      alert("Please enter Employee ID");
-      return;
-    }
+  const addEmployee = async () => {
+  const employeeId = formData.employeeId.trim();
 
-    if (isEmployeeIdExists(employeeId)) {
-      alert("Employee ID already exists!");
-      return;
-    }
-
-    if (!formData.fullName.trim()) {
-      alert("Please enter Full Name");
-      return;
-    }
-
-    if (!formData.designation.trim()) {
-      alert("Please enter Designation");
-      return;
-    }
-
-    if (!formData.department.trim()) {
-      alert("Please enter Department");
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      alert("Please enter Email");
-      return;
-    }
-
-    if (!isValidEmail(formData.email)) {
-      alert("Please enter a valid email address");
-      return;
-    }
-
-   if (!formData.phone.trim()) {
-  alert("Please enter phone number");
-  return;
-}
-
-    const phoneDigits = formData.phone.replace(/\D/g, "");
-
-    if (formData.phoneCountryCode === "+91") {
-      if (
-     phoneDigits.length !== 10 ||
-      !/^[6-9]\d{9}$/.test(phoneDigits)
-       ) {
-      alert("Please enter a valid 10-digit Indian phone number");
+  if (!employeeId) {
+    alert("Please enter Employee ID");
     return;
   }
-    } else if (
-      !isValidPhone(
-        formData.phone,
-        formData.phoneCountryCode
-   )
-  )   {
+
+  if (isEmployeeIdExists(employeeId)) {
+    alert("Employee ID already exists!");
+    return;
+  }
+
+  if (!formData.fullName.trim()) {
+    alert("Please enter Full Name");
+    return;
+  }
+
+  if (!formData.designation.trim()) {
+    alert("Please enter Designation");
+    return;
+  }
+
+  if (!formData.department.trim()) {
+    alert("Please enter Department");
+    return;
+  }
+
+  if (!formData.email.trim()) {
+    alert("Please enter Email");
+    return;
+  }
+
+  if (!isValidEmail(formData.email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  if (!formData.phone.trim()) {
+    alert("Please enter phone number");
+    return;
+  }
+
+  const phoneDigits = formData.phone.replace(/\D/g, "");
+
+  if (formData.phoneCountryCode === "+91") {
+    if (
+      phoneDigits.length !== 10 ||
+      !/^[6-9]\d{9}$/.test(phoneDigits)
+    ) {
+      alert("Please enter a valid 10-digit Indian phone number");
+      return;
+    }
+  } else if (
+    !isValidPhone(
+      formData.phone,
+      formData.phoneCountryCode
+    )
+  ) {
     alert("Please enter a valid phone number");
     return;
   }
 
-    const newEmployee = {
-      id: employeeId,
-      name: formData.fullName,
-      designation: formData.designation,
-      department: formData.department,
-      email: formData.email,
-      phone: `${formData.phoneCountryCode} ${formData.phone}`,
-      status: formData.status,
+  // Data sent to backend
+  const employeeData = {
+    employee_id: employeeId,
+    name: formData.fullName,
+    department: formData.department,
+    designation: formData.designation,
+    email: formData.email,
+    phone: `${formData.phoneCountryCode} ${formData.phone}`,
+    joining_date: formData.joiningDate,
+    status: formData.status || "Active",
+  };
 
-      // Extra details
-      dateOfBirth: formData.dateOfBirth,
-      gender: formData.gender,
-      country: formData.country,
-      countryCode: formData.phoneCountryCode,
-      address: formData.address,
-      joiningDate: formData.joiningDate,
-      employmentType: formData.employmentType,
-      emergencyContact: formData.emergencyContact,
-      profilePhoto: formData.profilePhoto,
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/employees",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(employeeData),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to add employee");
+      return;
+    }
+
+    // Add newly created employee to the current UI
+    const newEmployee = {
+      id: data.employee_id,
+      name: data.name,
+      designation: data.designation,
+      department: data.department,
+      email: data.email,
+      phone: data.phone,
+      status: data.status,
+      joiningDate: data.joining_date,
     };
 
     setEmployees((prevEmployees) => [
@@ -376,12 +398,14 @@ const resetForm = () => {
     alert("Employee added successfully!");
 
     setIsModalOpen(false);
-
     setEditingEmployeeId(null);
-
     resetForm();
-  };
 
+  } catch (error) {
+    console.error("Error adding employee:", error);
+    alert("Unable to connect to backend");
+  }
+};
  
   // =========================
   // EDIT EMPLOYEE
@@ -467,103 +491,101 @@ const resetForm = () => {
   };
 
   // =========================
-  // UPDATE EMPLOYEE
-  // =========================
+// UPDATE EMPLOYEE
+// =========================
 
-  const updateEmployee = () => {
-    const employeeId = formData.employeeId.trim();
+const updateEmployee = async () => {
+  const employeeId = formData.employeeId.trim();
 
-    if (!employeeId) {
-      alert("Please enter Employee ID");
+  if (!employeeId) {
+    alert("Please enter Employee ID");
+    return;
+  }
+
+  if (
+    isEmployeeIdExists(
+      employeeId,
+      editingEmployeeId
+    )
+  ) {
+    alert("Employee ID already exists!");
+    return;
+  }
+
+  if (!formData.fullName.trim()) {
+    alert("Please enter Full Name");
+    return;
+  }
+
+  if (!formData.designation.trim()) {
+    alert("Please enter Designation");
+    return;
+  }
+
+  if (!formData.department.trim()) {
+    alert("Please enter Department");
+    return;
+  }
+
+  if (!formData.email.trim()) {
+    alert("Please enter Email");
+    return;
+  }
+
+  if (!formData.phone.trim()) {
+    alert("Please enter Phone Number");
+    return;
+  }
+
+  // Data to send to backend
+  const employeeData = {
+    employee_id: employeeId,
+    name: formData.fullName,
+    department: formData.department,
+    designation: formData.designation,
+    email: formData.email,
+    phone: `${formData.phoneCountryCode} ${formData.phone}`,
+    joining_date: formData.joiningDate,
+    status: formData.status || "Active",
+  };
+
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/employees/${editingEmployeeId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(employeeData),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to update employee");
       return;
     }
 
-    if (
-      isEmployeeIdExists(
-        employeeId,
-        editingEmployeeId
-      )
-    ) {
-      alert("Employee ID already exists!");
-      return;
-    }
-
-    if (!formData.fullName.trim()) {
-      alert("Please enter Full Name");
-      return;
-    }
-
-    if (!formData.designation.trim()) {
-      alert("Please enter Designation");
-      return;
-    }
-
-    if (!formData.department.trim()) {
-      alert("Please enter Department");
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      alert("Please enter Email");
-      return;
-    }
-
-    if (!formData.phone.trim()) {
-      alert("Please enter Phone Number");
-      return;
-    }
+    // Update UI with backend response
+    const updatedEmployee = {
+      id: data.employee_id,
+      name: data.name,
+      designation: data.designation,
+      department: data.department,
+      email: data.email,
+      phone: data.phone,
+      status: data.status,
+      joiningDate: data.joining_date,
+    };
 
     setEmployees((prevEmployees) =>
       prevEmployees.map((employee) =>
         employee.id === editingEmployeeId
           ? {
               ...employee,
-
-              id: employeeId,
-
-              name: formData.fullName,
-
-              designation:
-                formData.designation,
-
-              department:
-                formData.department,
-
-              email:
-                formData.email,
-
-              phone:
-                `${formData.phoneCountryCode} ${formData.phone}`,
-
-              status:
-                formData.status,
-
-              dateOfBirth:
-                formData.dateOfBirth,
-
-              gender:
-                formData.gender,
-
-              country:
-                formData.country,
-
-              countryCode:
-                formData.phoneCountryCode,
-
-              address:
-                formData.address,
-
-              joiningDate:
-                formData.joiningDate,
-
-              employmentType:
-                formData.employmentType,
-
-              emergencyContact:
-                formData.emergencyContact,
-
-              profilePhoto:
-                formData.profilePhoto,
+              ...updatedEmployee,
             }
           : employee
       )
@@ -572,11 +594,14 @@ const resetForm = () => {
     alert("Employee updated successfully!");
 
     setEditingEmployeeId(null);
-
     setIsModalOpen(false);
-
     resetForm();
-  };
+
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    alert("Unable to connect to backend");
+  }
+};
 
   // =========================
   // TABLE COLUMNS
