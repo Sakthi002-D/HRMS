@@ -309,6 +309,38 @@ app.get("/api/leaves", async (req, res) => {
 });
 
 
+
+app.put("/api/leaves/:id/status", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const result = await pool.query(
+            `UPDATE leaves
+             SET status = $1
+             WHERE id = $2
+             RETURNING *`,
+            [status, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Leave not found"
+            });
+        }
+
+        res.json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Error updating leave status:", error);
+
+        res.status(500).json({
+            message: "Failed to update leave status"
+        });
+    }
+});
+
+
 // =========================
 // SERVER
 // =========================
