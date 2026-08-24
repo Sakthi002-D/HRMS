@@ -106,15 +106,43 @@ function LeaveManagement() {
     });
 
     // Temporary frontend status update
-    const updateLeaveStatus = (id, newStatus) => {
+     const updateLeaveStatus = async (id, newStatus) => {
+    try {
+        const response = await fetch(
+            `http://localhost:5000/api/leaves/${id}/status`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to update leave status");
+        }
+
+        const updatedLeave = await response.json();
+
         setLeaveData((previousLeaves) =>
             previousLeaves.map((leave) =>
                 leave.id === id
-                    ? { ...leave, status: newStatus }
+                    ? {
+                          ...leave,
+                          status: updatedLeave.status,
+                      }
                     : leave
             )
         );
-    };
+
+    } catch (error) {
+        console.error("Error updating leave:", error);
+        alert("Failed to update leave status");
+    }
+};
 
     const handleEmployeeClick = (leave) => {
         setSelectedEmployee(leave);
