@@ -5,7 +5,6 @@ import SearchBar from "../../components/layout/common/SearchBar";
 import Button from "../../components/layout/common/Button";
 import Table from "../../components/layout/common/Table";
 import Modal from "../../components/layout/common/Modal";
-import { Form } from "react-router-dom";
 
 function Employees() {
   // =========================
@@ -14,26 +13,37 @@ function Employees() {
 
   const [employees, setEmployees] = useState([]);
 
-useEffect(() => {
-  fetch("https://hrms-cuoq.onrender.com/api/employees")
-    .then((response) => response.json())
-    .then((data) => {
-      const formattedEmployees = data.map((employee) => ({
-        id: employee.employee_id,
-        name: employee.name,
-        designation: employee.designation,
-        department: employee.department,
-        email: employee.email,
-        phone: employee.phone,
-        status: employee.status,
-        joiningDate: employee.joining_date,
-      }));
+const fetchEmployees = async () => {
+  try {
+    const response = await fetch(
+      "https://hrms-cuoq.onrender.com/api/employees"
+    );
 
-      setEmployees(formattedEmployees);
-    })
-    .catch((error) => {
-      console.error("Error fetching employees:", error);
-    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch employees: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const formattedEmployees = data.map((employee) => ({
+      id: employee.employee_id,
+      name: employee.name,
+      designation: employee.designation,
+      department: employee.department,
+      email: employee.email,
+      phone: employee.phone,
+      status: employee.status,
+      joiningDate: employee.joining_date,
+    }));
+
+    setEmployees(formattedEmployees);
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+  }
+};
+
+useEffect(() => {
+  fetchEmployees();
 }, []);
   
 
@@ -171,11 +181,7 @@ const resetForm = () => {
       return;
     }
 
-    setEmployees((prevEmployees) =>
-      prevEmployees.filter(
-        (employee) => employee.id !== id
-      )
-    );
+    await fetchEmployees();
 
     alert("Employee deleted successfully!");
 
@@ -285,128 +291,115 @@ const resetForm = () => {
   
 
   const addEmployee = async () => {
-  const employeeId = formData.employeeId.trim();
+    const employeeId = formData.employeeId.trim();
 
-  if (!employeeId) {
-    alert("Please enter Employee ID");
-    return;
-  }
-
-  if (isEmployeeIdExists(employeeId)) {
-    alert("Employee ID already exists!");
-    return;
-  }
-
-  if (!formData.fullName.trim()) {
-    alert("Please enter Full Name");
-    return;
-  }
-
-  if (!formData.designation.trim()) {
-    alert("Please enter Designation");
-    return;
-  }
-
-  if (!formData.department.trim()) {
-    alert("Please enter Department");
-    return;
-  }
-
-  if (!formData.email.trim()) {
-    alert("Please enter Email");
-    return;
-  }
-
-  if (!isValidEmail(formData.email)) {
-    alert("Please enter a valid email address");
-    return;
-  }
-
-  if (!formData.phone.trim()) {
-    alert("Please enter phone number");
-    return;
-  }
-
-  const phoneDigits = formData.phone.replace(/\D/g, "");
-
-  if (formData.phoneCountryCode === "+91") {
-    if (
-      phoneDigits.length !== 10 ||
-      !/^[6-9]\d{9}$/.test(phoneDigits)
-    ) {
-      alert("Please enter a valid 10-digit Indian phone number");
+    if (!employeeId) {
+      alert("Please enter Employee ID");
       return;
     }
-  } else if (
-    !isValidPhone(
-      formData.phone,
-      formData.phoneCountryCode
-    )
-  ) {
-    alert("Please enter a valid phone number");
-    return;
-  }
 
-  // Data sent to backend
-  const employeeData = {
-    employee_id: employeeId,
-    name: formData.fullName,
-    department: formData.department,
-    designation: formData.designation,
-    email: formData.email,
-    phone: `${formData.phoneCountryCode} ${formData.phone}`,
-    joining_date: formData.joiningDate,
-    status: formData.status || "Active",
-  };
+    if (isEmployeeIdExists(employeeId)) {
+      alert("Employee ID already exists!");
+      return;
+    }
 
-  try {
-    const response = await fetch(
-      "https://hrms-cuoq.onrender.com/api/employees",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(employeeData),
+    if (!formData.fullName.trim()) {
+      alert("Please enter Full Name");
+      return;
+    }
+
+    if (!formData.designation.trim()) {
+      alert("Please enter Designation");
+      return;
+    }
+
+    if (!formData.department.trim()) {
+      alert("Please enter Department");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      alert("Please enter Email");
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      alert("Please enter phone number");
+      return;
+    }
+
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+
+    if (formData.phoneCountryCode === "+91") {
+      if (
+        phoneDigits.length !== 10 ||
+        !/^[6-9]\d{9}$/.test(phoneDigits)
+      ) {
+        alert("Please enter a valid 10-digit Indian phone number");
+        return;
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      alert(data.message || "Failed to add employee");
+    } else if (
+      !isValidPhone(
+        formData.phone,
+        formData.phoneCountryCode
+      )
+    ) {
+      alert("Please enter a valid phone number");
       return;
     }
 
-    // Add newly created employee to the current UI
-    const newEmployee = {
-      id: data.employee_id,
-      name: data.name,
-      designation: data.designation,
-      department: data.department,
-      email: data.email,
-      phone: data.phone,
-      status: data.status,
-      joiningDate: data.joining_date,
+    const employeeData = {
+      employee_id: employeeId,
+      name: formData.fullName.trim(),
+      department: formData.department.trim(),
+      designation: formData.designation.trim(),
+      email: formData.email.trim(),
+      phone: `${formData.phoneCountryCode} ${formData.phone.trim()}`,
+      joining_date: formData.joiningDate || null,
+      status: formData.status || "Active",
     };
 
-    setEmployees((prevEmployees) => [
-      ...prevEmployees,
-      newEmployee,
-    ]);
+    try {
+      const response = await fetch(
+        "https://hrms-cuoq.onrender.com/api/employees",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(employeeData),
+        }
+      );
 
-    alert("Employee added successfully!");
+      const data = await response.json();
 
-    setIsModalOpen(false);
-    setEditingEmployeeId(null);
-    resetForm();
+      if (!response.ok) {
+        console.error("Backend error:", data);
+        alert(data.message || "Failed to add employee");
+        return;
+      }
 
-  } catch (error) {
-    console.error("Error adding employee:", error);
-    alert("Unable to connect to backend");
-  }
-};
- 
+      console.log("Employee added successfully:", data);
+
+      // Get the latest data from the database
+      await fetchEmployees();
+
+      alert("Employee added successfully!");
+
+      setIsModalOpen(false);
+      setEditingEmployeeId(null);
+      resetForm();
+    } catch (error) {
+      console.error("Error adding employee:", error);
+      alert("Unable to connect to backend");
+    }
+  };
+
   // =========================
   // EDIT EMPLOYEE
   // =========================
@@ -568,28 +561,8 @@ const updateEmployee = async () => {
       return;
     }
 
-    // Update UI with backend response
-    const updatedEmployee = {
-      id: data.employee_id,
-      name: data.name,
-      designation: data.designation,
-      department: data.department,
-      email: data.email,
-      phone: data.phone,
-      status: data.status,
-      joiningDate: data.joining_date,
-    };
-
-    setEmployees((prevEmployees) =>
-      prevEmployees.map((employee) =>
-        employee.id === editingEmployeeId
-          ? {
-              ...employee,
-              ...updatedEmployee,
-            }
-          : employee
-      )
-    );
+    // Get the latest data from the database
+    await fetchEmployees();
 
     alert("Employee updated successfully!");
 
