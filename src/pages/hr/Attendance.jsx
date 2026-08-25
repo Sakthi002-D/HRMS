@@ -18,7 +18,7 @@ useEffect(() => {
 const fetchAttendance = async () => {
     try {
         const response = await fetch(
-            "http://localhost:5000/api/attendance"
+            "https://hrms-cuoq.onrender.com/api/attendance"
         );
 
         const data = await response.json();

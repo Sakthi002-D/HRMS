@@ -33,7 +33,7 @@ function LeaveManagement() {
                 setLoading(true);
 
                 const response = await fetch(
-                    "http://localhost:5000/api/leaves"
+                    "https://hrms-cuoq.onrender.com/api/leaves"
                 );
 
                 if (!response.ok) {
@@ -109,7 +109,7 @@ function LeaveManagement() {
      const updateLeaveStatus = async (id, newStatus) => {
     try {
         const response = await fetch(
-            `http://localhost:5000/api/leaves/${id}/status`,
+            `https://hrms-cuoq.onrender.com/api/leaves/${id}/status`,
             {
                 method: "PUT",
                 headers: {

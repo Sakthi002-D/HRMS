@@ -7,7 +7,7 @@ function HRDashboard() {
       const [totalEmployees, setTotalEmployees] = useState(0);
 
       useEffect(() => {
-        fetch("http://localhost:5000/api/employees")
+        fetch("https://hrms-cuoq.onrender.com/api/employees")
           .then((response) => response.json())
           .then((data) => {
             setTotalEmployees(data.length);

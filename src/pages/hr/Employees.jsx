@@ -15,7 +15,7 @@ function Employees() {
   const [employees, setEmployees] = useState([]);
 
 useEffect(() => {
-  fetch("http://localhost:5000/api/employees")
+  fetch("https://hrms-cuoq.onrender.com/api/employees")
     .then((response) => response.json())
     .then((data) => {
       const formattedEmployees = data.map((employee) => ({
@@ -158,7 +158,7 @@ const resetForm = () => {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/employees/${id}`,
+      `https://hrms-cuoq.onrender.com/api/employees/${id}`,
       {
         method: "DELETE",
       }
@@ -361,7 +361,7 @@ const resetForm = () => {
 
   try {
     const response = await fetch(
-      "http://localhost:5000/api/employees",
+      "https://hrms-cuoq.onrender.com/api/employees",
       {
         method: "POST",
         headers: {
@@ -551,7 +551,7 @@ const updateEmployee = async () => {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/employees/${editingEmployeeId}`,
+      `https://hrms-cuoq.onrender.com/api/employees/${editingEmployeeId}`,
       {
         method: "PUT",
         headers: {
