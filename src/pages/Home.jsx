@@ -25,6 +25,12 @@ function Home() {
         </button>
   </Link>
 
+    <Link to="/candidate-jobs">
+      <button className="career-btn">
+       Careers
+      </button>
+    </Link>
+
     </div>
 
       </nav>

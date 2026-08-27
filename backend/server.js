@@ -1,8 +1,22 @@
 import express from "express";
 import cors from "cors";
 import pool from "./db.js";
+import multer from "multer";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+    },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -15,31 +29,93 @@ app.get("/", (req, res) => {
 });
 
 
+
 // =========================
-// ATTENDANCE APIs
+// GET ATTENDANCE
 // =========================
 
-// Get all attendance records
 app.get("/api/attendance", async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT 
-                a.id, 
-                a.employee_id, 
-                e.name AS employee_name, 
-                e.department, 
-                a.attendance_date, 
-                a.punch_in, 
-                a.status, 
-                a.punch_out, 
-                a.break_minutes, 
-                a.shift, 
-                a.project 
-            FROM attendance a 
-            JOIN employees e 
-                ON a.employee_id = e.employee_id 
-            ORDER BY a.attendance_date DESC, a.id ASC`
-        );
+        const { date } = req.query;
+
+        let query;
+        let values = [];
+
+        if (date) {
+            query = `
+                SELECT
+                    a.id,
+                    a.employee_id,
+                    e.name AS employee_name,
+                    e.department,
+                    a.attendance_date,
+                    a.punch_in,
+                    a.status,
+                    a.punch_out,
+                    a.late_minutes,
+                    a.shift,
+                    a.project,
+
+                    CASE
+                        WHEN a.punch_out IS NOT NULL
+                        THEN ROUND(
+                            EXTRACT(
+                                EPOCH FROM (a.punch_out - a.punch_in)
+                            ) / 60
+                        )
+                        ELSE NULL
+                    END AS working_minutes
+
+                FROM attendance a
+
+                JOIN employees e
+                    ON a.employee_id = e.employee_id
+
+                WHERE a.attendance_date = $1
+
+                ORDER BY a.id DESC
+            `;
+
+            values = [date];
+
+        } else {
+            query = `
+                SELECT
+                    a.id,
+                    a.employee_id,
+                    e.name AS employee_name,
+                    e.department,
+                    a.attendance_date,
+                    a.punch_in,
+                    a.status,
+                    a.punch_out,
+                    a.late_minutes,
+                    a.shift,
+                    a.project,
+
+                    CASE
+                        WHEN a.punch_out IS NOT NULL
+                        THEN ROUND(
+                            EXTRACT(
+                                EPOCH FROM (a.punch_out - a.punch_in)
+                            ) / 60
+                        )
+                        ELSE NULL
+                    END AS working_minutes
+
+                FROM attendance a
+
+                JOIN employees e
+                    ON a.employee_id = e.employee_id
+
+                WHERE a.attendance_date =
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+
+                ORDER BY a.id DESC
+            `;
+        }
+
+        const result = await pool.query(query, values);
 
         res.json(result.rows);
 
@@ -51,7 +127,6 @@ app.get("/api/attendance", async (req, res) => {
         });
     }
 });
-
 
 // Add Attendance
 app.post("/api/attendance", async (req, res) => {
@@ -104,6 +179,223 @@ app.post("/api/attendance", async (req, res) => {
     }
 });
 
+// =========================
+// BIOMETRIC PUNCH IN API
+// =========================
+
+app.post("/api/attendance/punch-in", async (req, res) => {
+    try {
+        const { employee_id } = req.body;
+
+        if (!employee_id) {
+            return res.status(400).json({
+                message: "Employee ID is required"
+            });
+        }
+
+        // Check employee
+        const employeeResult = await pool.query(
+            `SELECT employee_id, name, department
+             FROM employees
+             WHERE employee_id = $1
+               AND status = 'Active'`,
+            [employee_id]
+        );
+
+        if (employeeResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "Active employee not found"
+            });
+        }
+
+        const employee = employeeResult.rows[0];
+
+        // Get current India date and time
+        const timeResult = await pool.query(`
+            SELECT
+                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date AS today,
+                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time AS current_time
+        `);
+
+        const today = timeResult.rows[0].today;
+        const punchTime = timeResult.rows[0].current_time;
+
+        // Check whether employee already punched in today
+        const existingResult = await pool.query(
+            `SELECT *
+             FROM attendance
+             WHERE employee_id = $1
+               AND attendance_date = $2`,
+            [employee_id, today]
+        );
+
+        if (existingResult.rows.length > 0) {
+            return res.status(400).json({
+                message: "Employee has already punched in today",
+                attendance: existingResult.rows[0]
+            });
+        }
+
+        // Calculate late minutes from 09:00 AM
+        const [hours, minutes] = punchTime
+            .toString()
+            .substring(0, 5)
+            .split(":")
+            .map(Number);
+
+        const punchTotalMinutes = hours * 60 + minutes;
+        const shiftStartMinutes = 9 * 60;
+
+        let lateMinutes = 0;
+
+        if (punchTotalMinutes > shiftStartMinutes) {
+            lateMinutes =
+                punchTotalMinutes - shiftStartMinutes;
+        }
+
+        // Status based on late minutes
+        const status =
+            lateMinutes > 0 ? "Late" : "Present";
+
+        // Insert attendance
+       const result = await pool.query(
+    `INSERT INTO attendance
+    (
+        employee_id,
+        attendance_date,
+        punch_in,
+        status,
+        late_minutes,
+        shift,
+        project
+    )
+    VALUES
+    (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        '09:00 - 18:00',
+        'HRMS Portal'
+    )
+    RETURNING *`,
+    [
+        employee_id,
+        today,
+        punchTime,
+        status,
+        lateMinutes
+    ]
+);
+
+        res.status(201).json({
+            message: "Punch In successful",
+            employee: {
+                employee_id: employee.employee_id,
+                name: employee.name,
+                department: employee.department
+            },
+            attendance: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Punch In error:", error);
+
+        res.status(500).json({
+            message: "Failed to process Punch In"
+        });
+    }
+});
+
+// =========================
+// BIOMETRIC PUNCH OUT API
+// =========================
+
+app.post("/api/attendance/punch-out", async (req, res) => {
+    try {
+        const { employee_id, punch_out } = req.body;
+
+        if (!employee_id) {
+            return res.status(400).json({
+                message: "Employee ID is required"
+            });
+        }
+
+        // Check employee
+        const employeeResult = await pool.query(
+            `SELECT employee_id, name, department
+             FROM employees
+             WHERE employee_id = $1
+               AND status = 'Active'`,
+            [employee_id]
+        );
+
+        if (employeeResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "Active employee not found"
+            });
+        }
+
+        const employee = employeeResult.rows[0];
+
+        // Find today's attendance - India timezone
+        const attendanceResult = await pool.query(
+            `SELECT *
+             FROM attendance
+             WHERE employee_id = $1
+               AND attendance_date =
+               (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date`,
+            [employee_id]
+        );
+
+        if (attendanceResult.rows.length === 0) {
+            return res.status(400).json({
+                message: "Employee has not punched in today"
+            });
+        }
+
+        const attendance = attendanceResult.rows[0];
+
+        if (attendance.punch_out) {
+            return res.status(400).json({
+                message: "Employee has already punched out today",
+                attendance
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE attendance
+             SET punch_out = COALESCE(
+                 $1::time,
+                 (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
+             )
+             WHERE id = $2
+             RETURNING *`,
+            [
+                punch_out || null,
+                attendance.id
+            ]
+        );
+
+        res.json({
+            message: "Punch Out successful",
+            employee: {
+                employee_id: employee.employee_id,
+                name: employee.name,
+                department: employee.department
+            },
+            attendance: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Punch Out error:", error);
+
+        res.status(500).json({
+            message: "Failed to process Punch Out"
+        });
+    }
+});
 
 // =========================
 // EMPLOYEE APIs
@@ -336,6 +628,450 @@ app.put("/api/leaves/:id/status", async (req, res) => {
 
         res.status(500).json({
             message: "Failed to update leave status"
+        });
+    }
+});
+
+
+// =========================
+// HR DASHBOARD API
+// =========================
+
+app.get("/api/dashboard", async (req, res) => {
+    try {
+        const employeesResult = await pool.query(`
+            SELECT COUNT(*)::int AS total_employees
+            FROM employees
+            WHERE status = 'Active'
+        `);
+
+        const attendanceResult = await pool.query(`
+            SELECT COUNT(DISTINCT employee_id)::int AS present_today
+            FROM attendance
+            WHERE attendance_date = CURRENT_DATE
+              AND LOWER(status) = 'present'
+        `);
+
+        const leavesResult = await pool.query(`
+            SELECT COUNT(*)::int AS pending_leaves
+            FROM leaves
+            WHERE LOWER(status) = 'pending'
+        `);
+
+        let openTickets = 0;
+
+        try {
+            const ticketsResult = await pool.query(`
+                SELECT COUNT(*)::int AS open_tickets
+                FROM tickets
+                WHERE LOWER(status) = 'open'
+            `);
+
+            openTickets = ticketsResult.rows[0].open_tickets;
+        } catch (ticketError) {
+            console.log("Tickets table not available yet:", ticketError.message);
+        }
+
+        res.json({
+            totalEmployees: employeesResult.rows[0].total_employees,
+            presentToday: attendanceResult.rows[0].present_today,
+            pendingLeaves: leavesResult.rows[0].pending_leaves,
+            openTickets: openTickets
+        });
+
+    } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+
+        res.status(500).json({
+            message: "Failed to fetch dashboard data"
+        });
+    }
+});
+
+
+        // =========================
+// JOB / RECRUITMENT APIs
+// =========================
+
+// GET all jobs
+app.get("/api/jobs", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                id,
+                job_id,
+                title,
+                department,
+                openings,
+                experience,
+                location,
+                employment_type,
+                status,
+                created_at
+            FROM public.jobs
+            ORDER BY id DESC
+        `);
+
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error("Error fetching jobs:", error);
+
+        res.status(500).json({
+            message: "Failed to fetch jobs"
+        });
+    }
+});
+
+
+// CREATE new job
+app.post("/api/jobs", async (req, res) => {
+    try {
+        const {
+            title,
+            department,
+            openings,
+            experience,
+            location,
+            employment_type
+        } = req.body;
+
+        if (!title || !department || !openings || !location) {
+            return res.status(400).json({
+                message: "Please provide all required job details"
+            });
+        }
+
+        const jobIdResult = await pool.query(`
+            SELECT
+                'JOB' ||
+                LPAD(
+                    (COALESCE(MAX(id), 0) + 1)::text,
+                    3,
+                    '0'
+                ) AS job_id
+            FROM public.jobs
+        `);
+
+        const jobId = jobIdResult.rows[0].job_id;
+
+        const result = await pool.query(
+            `
+            INSERT INTO public.jobs
+            (
+                job_id,
+                title,
+                department,
+                openings,
+                experience,
+                location,
+                employment_type,
+                status
+            )
+            VALUES
+            ($1, $2, $3, $4, $5, $6, $7, 'Open')
+            RETURNING *
+            `,
+            [
+                jobId,
+                title,
+                department,
+                openings,
+                experience,
+                location,
+                employment_type || "Full Time"
+            ]
+        );
+
+        res.status(201).json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Error creating job:", error);
+
+        res.status(500).json({
+            message: "Failed to create job"
+        });
+    }
+});
+
+
+
+// =========================
+// JOB APPLICATION APIs
+// =========================
+
+// Get all job applications
+app.get("/api/job-applications", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                id,
+                application_id,
+                job_id,
+                candidate_name,
+                email,
+                phone,
+                resume_url,
+                status,
+                applied_at
+            FROM public.job_applications
+            ORDER BY id DESC
+        `);
+
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error("Error fetching job applications:", error);
+
+        res.status(500).json({
+            message: "Failed to fetch job applications"
+        });
+    }
+});
+
+
+app.post("/api/job-applications", async (req, res) => {
+    try {
+        const {
+            job_id,
+            candidate_name,
+            email,
+            phone,
+            location,
+            address,
+            linkedin_url,
+            github_url,
+            portfolio_url,
+            highest_education,
+            college,
+            graduation_year,
+            cgpa_percentage,
+            candidate_type,
+            current_company,
+            current_designation,
+            total_experience,
+            current_ctc,
+            expected_ctc,
+            notice_period,
+            joining_date,
+            skills,
+            certifications,
+            project_name,
+            project_description,
+            technologies_used,
+            resume_url,
+            willing_to_relocate,
+            why_join,
+            why_suitable,
+            cover_letter,
+            source,
+            declaration
+        } = req.body;
+
+        if (!job_id || !candidate_name || !email) {
+            return res.status(400).json({
+                message: "Job ID, candidate name and email are required"
+            });
+        }
+
+        const applicationIdResult = await pool.query(`
+            SELECT
+                'APP' ||
+                LPAD(
+                    (COALESCE(MAX(id), 0) + 1)::text,
+                    3,
+                    '0'
+                ) AS application_id
+            FROM public.job_applications
+        `);
+
+        const applicationId =
+            applicationIdResult.rows[0].application_id;
+
+        const result = await pool.query(
+            `
+            INSERT INTO public.job_applications
+            (
+                application_id,
+                job_id,
+                candidate_name,
+                email,
+                phone,
+                location,
+                address,
+                linkedin_url,
+                github_url,
+                portfolio_url,
+                highest_education,
+                college,
+                graduation_year,
+                cgpa_percentage,
+                candidate_type,
+                current_company,
+                current_designation,
+                total_experience,
+                current_ctc,
+                expected_ctc,
+                notice_period,
+                joining_date,
+                skills,
+                certifications,
+                project_name,
+                project_description,
+                technologies_used,
+                resume_url,
+                willing_to_relocate,
+                why_join,
+                why_suitable,
+                cover_letter,
+                source,
+                declaration,
+                status
+            )
+            VALUES
+            (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+                $31, $32, $33, $34, 'Applied'
+            )
+            RETURNING *
+            `,
+            [
+                applicationId,
+                job_id,
+                candidate_name,
+                email,
+                phone || null,
+                location || null,
+                address || null,
+                linkedin_url || null,
+                github_url || null,
+                portfolio_url || null,
+                highest_education || null,
+                college || null,
+                graduation_year || null,
+                cgpa_percentage || null,
+                candidate_type || null,
+                current_company || null,
+                current_designation || null,
+                total_experience || null,
+                current_ctc || null,
+                expected_ctc || null,
+                notice_period || null,
+                joining_date || null,
+                skills || null,
+                certifications || null,
+                project_name || null,
+                project_description || null,
+                technologies_used || null,
+                resume_url || null,
+                willing_to_relocate ?? false,
+                why_join || null,
+                why_suitable || null,
+                cover_letter || null,
+                source || null,
+                declaration ?? false
+            ]
+        );
+
+        res.status(201).json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Error creating job application:", error);
+
+        res.status(500).json({
+            message: "Failed to create job application"
+        });
+    }
+});
+
+// Update application status
+app.put("/api/job-applications/:id/status", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!status) {
+            return res.status(400).json({
+                message: "Status is required"
+            });
+        }
+
+        const result = await pool.query(
+            `
+            UPDATE public.job_applications
+            SET status = $1
+            WHERE id = $2
+            RETURNING *
+            `,
+            [status, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Application not found"
+            });
+        }
+
+        res.json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Error updating application status:", error);
+
+        res.status(500).json({
+            message: "Failed to update application status"
+        });
+    }
+});
+
+
+
+// ================================
+// RESUME UPLOAD
+// ================================
+
+app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Resume file is required",
+            });
+        }
+
+        const fileExtension = req.file.originalname.split(".").pop();
+
+        const fileName = `resume-${Date.now()}.${fileExtension}`;
+        
+        const { error } = await supabase.storage
+            .from("resumes")
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype,
+                upsert: false,
+            });
+
+        if (error) {
+            console.error("Supabase upload error:", error);
+
+            return res.status(500).json({
+                message: "Failed to upload resume",
+            });
+        }
+
+        const { data } = supabase.storage
+            .from("resumes")
+            .getPublicUrl(fileName);
+
+        res.status(200).json({
+            message: "Resume uploaded successfully",
+            resume_url: data.publicUrl,
+        });
+
+    } catch (error) {
+        console.error("Resume upload error:", error);
+
+        res.status(500).json({
+            message: "Server error while uploading resume",
         });
     }
 });

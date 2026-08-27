@@ -23,6 +23,10 @@ function Sidebar() {
         Leave Management
       </Link>
 
+      <Link to="/recruitment" className="sidebar-link">
+        Recruitment
+      </Link>
+
       <Link to="/payroll" className="sidebar-link">
         Payroll
       </Link>

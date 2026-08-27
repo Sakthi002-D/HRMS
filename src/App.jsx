@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-
+import CandidateJobs from "./pages/CandidateJobs";
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
 import LeaveManagement from "./pages/hr/LeaveManagement";
@@ -10,6 +10,7 @@ import Reports from "./pages/hr/Reports";
 import Home from "./pages/Home";
 import EmployeeLogin from "./pages/EmployeeLogin";
 import HRLogin from "./pages/HRLogin";
+import Recruitment from "./pages/hr/Recruitment";
 import HRDashboard from "./pages/hr/HRDashboard";
 
 import EmployeeReport from "./pages/hr/EmployeeReport";
@@ -31,6 +32,10 @@ function App() {
         <Route path="/hr-login" element={<HRLogin />} />
 
         <Route path="/employee-login" element={<EmployeeLogin />} />
+
+        <Route path="/candidate-jobs" element={<CandidateJobs />} />
+
+        <Route path="/recruitment" element={<Recruitment />} />
 
         <Route path="/hr-dashboard" element={<HRDashboard />} />
 

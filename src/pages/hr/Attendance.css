@@ -24,18 +24,6 @@
     font-size: 16px;
 }
 
-.attendance-summary{
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-}
-
-.attendance-card{
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
 
 .attendance-card h3{
     margin:  0 0 15px;
@@ -175,4 +163,65 @@
 .attendance-status-filter:focus {
     outline: none;
     border-color: #12304a;
+}
+
+.working-hours {
+    font-weight: 600;
+}
+
+/* Punch In / Punch Out */
+
+.attendance-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+}
+
+.employee-id-input {
+    width: 170px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.employee-id-input:focus {
+    border-color: #1e5a7a;
+}
+
+.punch-btn {
+    height: 40px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.punch-in-btn {
+    background: #198754;
+}
+
+.punch-in-btn:hover {
+    background: #157347;
+}
+
+.punch-out-btn {
+    background: #dc3545;
+}
+
+.punch-out-btn:hover {
+    background: #bb2d3b;
+}
+
+.punch-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

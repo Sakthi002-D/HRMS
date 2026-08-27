@@ -1,0 +1,297 @@
+.candidate-jobs-page {
+    min-height: 100vh;
+    padding: 50px;
+    background: #f5f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.candidate-jobs-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.candidate-jobs-header h1 {
+    color: #12304a;
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.candidate-jobs-header p {
+    color: #64748b;
+}
+
+.candidate-jobs-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+}
+
+.candidate-job-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.candidate-job-card h2 {
+    color: #12304a;
+    margin-bottom: 20px;
+}
+
+.candidate-job-card p {
+    color: #475569;
+    margin: 10px 0;
+}
+
+.candidate-job-card button,
+.application-form button {
+    border: none;
+    background: #12304a;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.candidate-job-card button {
+    margin-top: 15px;
+}
+
+.application-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.application-form {
+    width: 450px;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    position: relative;
+}
+
+.application-form h2 {
+    color: #12304a;
+    margin-bottom: 25px;
+}
+
+.application-form input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.application-form form button {
+    width: 100%;
+}
+
+.close-btn {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    border: none;
+    background: none;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .candidate-jobs-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================================
+   Application Form
+================================ */
+
+.application-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 30px;
+    z-index: 1000;
+
+    overflow-y: auto;
+}
+
+.application-form {
+    position: relative;
+
+    width: 700px;
+    max-width: 100%;
+
+    max-height: 90vh;
+    overflow-y: auto;
+
+    background: white;
+    padding: 30px 35px;
+
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.application-form h2 {
+    margin: 0 0 25px;
+    color: #12304a;
+    font-size: 24px;
+}
+
+.application-form h3 {
+    margin: 25px 0 12px;
+    color: #12304a;
+    font-size: 18px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 8px;
+}
+
+/* Inputs */
+
+.application-form input,
+.application-form select,
+.application-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+
+    margin-bottom: 14px;
+
+    padding: 12px 14px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+
+    font-size: 14px;
+    font-family: Arial, Helvetica, sans-serif;
+
+    background: white;
+}
+
+.application-form input,
+.application-form select {
+    height: 44px;
+}
+
+.application-form textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.application-form input:focus,
+.application-form select:focus,
+.application-form textarea:focus {
+    outline: none;
+    border-color: #12304a;
+}
+
+/* Resume */
+
+.application-form input[type="file"] {
+    height: auto;
+    padding: 10px;
+    cursor: pointer;
+}
+
+/* Date label */
+
+.application-form label {
+    display: block;
+    margin-bottom: 8px;
+
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Declaration */
+
+.application-form .declaration {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    margin: 15px 0;
+
+    font-size: 14px;
+    font-weight: normal;
+    color: #334155;
+}
+
+.application-form .declaration input {
+    width: auto;
+    height: auto;
+    margin: 2px 0 0;
+}
+
+/* Submit button */
+
+.application-form button[type="submit"] {
+    width: 100%;
+
+    height: 46px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: #12304a;
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.application-form button[type="submit"]:hover {
+    background: #1e5a7a;
+}
+
+/* Close button */
+
+.application-form .close-btn {
+    position: absolute;
+    top: 15px;
+    right: 18px;
+
+    width: 32px;
+    height: 32px;
+
+    border: none;
+    background: transparent;
+
+    color: #64748b;
+    font-size: 28px;
+
+    cursor: pointer;
+}
+
+.application-form .close-btn:hover {
+    color: #dc2626;
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+    .application-overlay {
+        padding: 15px;
+        align-items: flex-start;
+    }
+
+    .application-form {
+        width: 100%;
+        padding: 25px 20px;
+    }
+}
