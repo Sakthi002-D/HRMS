@@ -361,17 +361,21 @@ const resetForm = () => {
       alert("Please enter a valid phone number");
       return;
     }
-
-    const employeeData = {
-      employee_id: employeeId,
-      name: formData.fullName.trim(),
-      department: formData.department.trim(),
-      designation: formData.designation.trim(),
-      email: formData.email.trim(),
-      phone: `${formData.phoneCountryCode} ${formData.phone.trim()}`,
-      joining_date: formData.joiningDate || null,
-      status: formData.status || "Active",
-    };
+const employeeData = {
+  employee_id: employeeId,
+  name: formData.fullName.trim(),
+  date_of_birth: formData.dateOfBirth || null,
+  gender: formData.gender || null,
+  phone: `${formData.phoneCountryCode} ${formData.phone.trim()}`,
+  email: formData.email.trim(),
+  address: formData.address || null,
+  designation: formData.designation.trim(),
+  department: formData.department.trim(),
+  joining_date: formData.joiningDate || null,
+  employment_type: formData.employmentType || null,
+  status: formData.status || "Active",
+  emergency_contact: formData.emergencyContact || null,
+};
 
     try {
       const response = await fetch(
@@ -541,16 +545,20 @@ const updateEmployee = async () => {
 
   // Data to send to backend
   const employeeData = {
-    employee_id: employeeId,
-    name: formData.fullName,
-    department: formData.department,
-    designation: formData.designation,
-    email: formData.email,
-    phone: `${formData.phoneCountryCode} ${formData.phone}`,
-    joining_date: formData.joiningDate,
-    status: formData.status || "Active",
-  };
-
+  employee_id: employeeId,
+  name: formData.fullName,
+  date_of_birth: formData.dateOfBirth || null,
+  gender: formData.gender || null,
+  phone: `${formData.phoneCountryCode} ${formData.phone}`,
+  email: formData.email,
+  address: formData.address || null,
+  designation: formData.designation,
+  department: formData.department,
+  joining_date: formData.joiningDate || null,
+  employment_type: formData.employmentType || null,
+  status: formData.status || "Active",
+  emergency_contact: formData.emergencyContact || null,
+};
   try {
     const response = await fetch(
       `https://hrms-cuoq.onrender.com/api/employees/${editingEmployeeId}`,

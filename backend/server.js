@@ -477,42 +477,57 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     try {
         const { employeeId } = req.params;
 
-        const {
-            employee_id,
-            name,
-            department,
-            designation,
-            email,
-            phone,
-            joining_date,
-            status
+       const {
+        employee_id,
+        name,
+        date_of_birth,
+        gender,
+        department,
+        designation,
+        email,
+        phone,
+        address,
+        joining_date,
+        employment_type,
+        status,
+        emergency_contact
         } = req.body;
 
         const result = await pool.query(
-            `UPDATE employees 
-             SET
-                employee_id = $1,
-                name = $2,
-                department = $3,
-                designation = $4,
-                email = $5,
-                phone = $6,
-                joining_date = $7,
-                status = $8
-             WHERE employee_id = $9
-             RETURNING *`,
-            [
-                employee_id,
-                name,
-                department,
-                designation,
-                email,
-                phone,
-                joining_date,
-                status,
-                employeeId
-            ]
-        );
+  `UPDATE employees
+   SET
+      employee_id = $1,
+      name = $2,
+      date_of_birth = $3,
+      gender = $4,
+      department = $5,
+      designation = $6,
+      email = $7,
+      phone = $8,
+      address = $9,
+      joining_date = $10,
+      employment_type = $11,
+      status = $12,
+      emergency_contact = $13
+   WHERE employee_id = $14
+   RETURNING *`,
+  [
+    employee_id,
+    name,
+    date_of_birth,
+    gender,
+    department,
+    designation,
+    email,
+    phone,
+    address,
+    joining_date,
+    employment_type,
+    status,
+    emergency_contact,
+    employeeId
+  ]
+);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
