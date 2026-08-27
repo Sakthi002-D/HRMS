@@ -47,7 +47,7 @@ function CandidateJobs() {
 
     const fetchJobs = async () => {
         try {
-            const response = await fetch("http://localhost:5000/api/jobs");
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/jobs`);
 
             if (!response.ok) {
                 throw new Error("Failed to fetch jobs");
@@ -113,8 +113,7 @@ function CandidateJobs() {
         // STEP 2: Submit Application
         // ================================
 
-        const response = await fetch(
-            "http://localhost:5000/api/job-applications",
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/job-applications`,
             {
                 method: "POST",
                 headers: {
