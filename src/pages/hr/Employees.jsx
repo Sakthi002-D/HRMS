@@ -25,16 +25,25 @@ const fetchEmployees = async () => {
 
     const data = await response.json();
 
-    const formattedEmployees = data.map((employee) => ({
-      id: employee.employee_id,
-      name: employee.name,
-      designation: employee.designation,
-      department: employee.department,
-      email: employee.email,
-      phone: employee.phone,
-      status: employee.status,
-      joiningDate: employee.joining_date,
-    }));
+  const formattedEmployees = data.map((employee) => ({
+  id: employee.employee_id,
+  name: employee.name,
+  designation: employee.designation,
+  department: employee.department,
+  email: employee.email,
+  phone: employee.phone,
+  status: employee.status,
+  joiningDate: employee.joining_date,
+
+  // Additional employee details
+  dateOfBirth: employee.date_of_birth,
+  gender: employee.gender,
+  country: employee.country,
+  address: employee.address,
+  employmentType: employee.employment_type,
+  emergencyContact: employee.emergency_contact,
+  profilePhoto: employee.profile_photo,
+}));
 
     setEmployees(formattedEmployees);
   } catch (error) {
