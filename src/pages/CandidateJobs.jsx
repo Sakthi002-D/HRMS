@@ -91,7 +91,7 @@ function CandidateJobs() {
             resumeData.append("resume", formData.resume);
 
             const uploadResponse = await fetch(
-                "http://localhost:5000/api/upload-resume",
+               `${import.meta.env.VITE_API_URL}/api/upload-resume`,
                 {
                     method: "POST",
                     body: resumeData,

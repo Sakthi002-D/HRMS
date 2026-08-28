@@ -24,9 +24,8 @@ const fetchAttendance = async () => {
     try {
         const response = await fetch(
             selectedDate
-            ? `http://localhost:5000/api/attendance?date=${selectedDate}`
-            : "http://localhost:5000/api/attendance"
-        );
+                ? `${import.meta.env.VITE_API_URL}/api/attendance?date=${selectedDate}`
+                : `${import.meta.env.VITE_API_URL}/api/attendance`
 
         if (!response.ok) {
             throw new Error("Failed to fetch attendance");
@@ -87,7 +86,7 @@ const fetchAttendance = async () => {
             setMessage("");
 
             const response = await fetch(
-                "http://localhost:5000/api/attendance/punch-in",
+                `${import.meta.env.VITE_API_URL}/api/attendance/punch-in`,
                 {
                     method: "POST",
                     headers: {
@@ -133,7 +132,7 @@ const fetchAttendance = async () => {
             setMessage("");
 
             const response = await fetch(
-                "http://localhost:5000/api/attendance/punch-out",
+                `${import.meta.env.VITE_API_URL}/api/attendance/punch-out`,
                 {
                     method: "POST",
                     headers: {
