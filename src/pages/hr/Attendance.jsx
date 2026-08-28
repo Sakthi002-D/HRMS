@@ -16,6 +16,7 @@ function Attendance() {
     // FETCH ATTENDANCE
     // =========================
 
+   
    useEffect(() => {
     fetchAttendance();
 }, [selectedDate]);
@@ -26,6 +27,7 @@ const fetchAttendance = async () => {
             selectedDate
                 ? `${import.meta.env.VITE_API_URL}/api/attendance?date=${selectedDate}`
                 : `${import.meta.env.VITE_API_URL}/api/attendance`
+        );
 
         if (!response.ok) {
             throw new Error("Failed to fetch attendance");
@@ -41,25 +43,20 @@ const fetchAttendance = async () => {
             return;
         }
 
-    const formattedData = data.map((item) => ({
-        employeeID: item.employee_id,
-        employeeName: item.employee_name || "",
-        department: item.department || "",
-        date: item.attendance_date,
+        const formattedData = data.map((item) => ({
+            employeeID: item.employee_id,
+            employeeName: item.employee_name || "",
+            department: item.department || "",
+            date: item.attendance_date,
+            punchIn: item.punch_in || "-",
+            punchOut: item.punch_out || "-",
+            status: item.status || "Present",
+            workingMinutes: Number(item.working_minutes) || 0,
+            lateMinutes: Number(item.late_minutes) || 0,
+            shift: item.shift || "09:00 - 18:00",
+            project: item.project || "-"
+        }));
 
-        punchIn: item.punch_in || "-",
-        punchOut: item.punch_out || "-",
-
-        status: item.status || "Present",
-
-        workingMinutes: Number(item.working_minutes) || 0,
-
-        lateMinutes: Number(item.late_minutes) || 0,
-
-        shift: item.shift || "09:00 - 18:00",
-
-        project: item.project || "-",
-    }));
         console.log("Formatted attendance:", formattedData);
 
         setAttendanceData(formattedData);
@@ -67,10 +64,11 @@ const fetchAttendance = async () => {
     } catch (error) {
         console.error("Error fetching attendance:", error);
         setAttendanceData([]);
+        setMessage("Unable to connect to backend");
     }
 };
 
-   
+
 // =========================
 // HANDLE PUNCH IN
 // =========================
