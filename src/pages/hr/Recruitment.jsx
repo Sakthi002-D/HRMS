@@ -509,218 +509,227 @@ const handleViewApplication = (application) => {
                                 {/* APPLICATION DETAILS MODAL */}
 
                 {showApplication && selectedApplication && (
-                    <div
-                        style={{
-                            position: "fixed",
-                            inset: 0,
-                            background: "rgba(0,0,0,0.5)",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            zIndex: 9999
-                        }}
-                    >
+    <div className="candidate-modal-overlay">
 
-                        <div
-                            style={{
-                                background: "#fff",
-                                width: "700px",
-                                maxHeight: "90vh",
-                                overflowY: "auto",
-                                borderRadius: "10px",
-                                padding: "25px"
-                            }}
-                        >
+        <div className="candidate-modal">
 
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center"
-                                }}
-                            >
-                                <h2>Candidate Details</h2>
+            {/* Header */}
+            <div className="candidate-modal-header">
+                <div>
+                    <h2>Candidate Details</h2>
+                    <span>
+                        Application ID: {selectedApplication.application_id}
+                    </span>
+                </div>
 
-                                <button
-                                    onClick={() => setShowApplication(false)}
-                                    style={{
-                                        border: "none",
-                                        background: "transparent",
-                                        fontSize: "24px",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    ×
-                                </button>
-                            </div>
+                <button
+                    className="candidate-modal-close"
+                    onClick={() => setShowApplication(false)}
+                >
+                    ×
+                </button>
+            </div>
 
-                            <hr />
+            {/* Personal Details */}
+            <section className="candidate-section">
+                <h3>Personal Details</h3>
 
-                            <h3>Personal Details</h3>
+                <div className="candidate-grid">
+                    <div>
+                        <label>Candidate Name</label>
+                        <p>{selectedApplication.candidate_name}</p>
+                    </div>
 
+                    <div>
+                        <label>Email</label>
+                        <p>{selectedApplication.email}</p>
+                    </div>
+
+                    <div>
+                        <label>Phone</label>
+                        <p>{selectedApplication.phone || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>Location</label>
+                        <p>{selectedApplication.location || "-"}</p>
+                    </div>
+
+                    <div className="full-width">
+                        <label>Address</label>
+                        <p>{selectedApplication.address || "-"}</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Education */}
+            <section className="candidate-section">
+                <h3>Education Details</h3>
+
+                <div className="candidate-grid">
+                    <div>
+                        <label>Highest Education</label>
+                        <p>{selectedApplication.highest_education || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>College</label>
+                        <p>{selectedApplication.college || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>Graduation Year</label>
+                        <p>{selectedApplication.graduation_year || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>CGPA / Percentage</label>
+                        <p>{selectedApplication.cgpa_percentage || "-"}</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Candidate Type */}
+            <section className="candidate-section">
+                <h3>Candidate Type</h3>
+
+                <div className="candidate-type-badge">
+                    {selectedApplication.candidate_type || "-"}
+                </div>
+            </section>
+
+            {/* Experienced Details */}
+            {selectedApplication.candidate_type === "Experienced" && (
+                <section className="candidate-section">
+                    <h3>Experience Details</h3>
+
+                    <div className="candidate-grid">
+                        <div>
+                            <label>Current Company</label>
                             <p>
-                                <strong>Application ID:</strong>{" "}
-                                {selectedApplication.application_id}
+                                {selectedApplication.current_company || "-"}
                             </p>
-
-                            <p>
-                                <strong>Candidate Name:</strong>{" "}
-                                {selectedApplication.candidate_name}
-                            </p>
-
-                            <p>
-                                <strong>Email:</strong>{" "}
-                                {selectedApplication.email}
-                            </p>
-
-                            <p>
-                                <strong>Phone:</strong>{" "}
-                                {selectedApplication.phone}
-                            </p>
-
-                            <p>
-                                <strong>Location:</strong>{" "}
-                                {selectedApplication.location || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Address:</strong>{" "}
-                                {selectedApplication.address || "-"}
-                            </p>
-
-                            <h3>Education Details</h3>
-
-                            <p>
-                                <strong>Highest Education:</strong>{" "}
-                                {selectedApplication.highest_education || "-"}
-                            </p>
-
-                            <p>
-                                <strong>College:</strong>{" "}
-                                {selectedApplication.college || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Graduation Year:</strong>{" "}
-                                {selectedApplication.graduation_year || "-"}
-                            </p>
-
-                            <p>
-                                <strong>CGPA / Percentage:</strong>{" "}
-                                {selectedApplication.cgpa_percentage || "-"}
-                            </p>
-
-                            <h3>Candidate Type</h3>
-
-                            <p>
-                                <strong>Type:</strong>{" "}
-                                {selectedApplication.candidate_type}
-                            </p>
-
-                            {/* EXPERIENCED DETAILS */}
-
-                            {selectedApplication.candidate_type === "Experienced" && (
-                                <>
-                                    <h3>Experience Details</h3>
-
-                                    <p>
-                                        <strong>Current Company:</strong>{" "}
-                                        {selectedApplication.current_company || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Current Designation:</strong>{" "}
-                                        {selectedApplication.current_designation || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Total Experience:</strong>{" "}
-                                        {selectedApplication.total_experience || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Current CTC:</strong>{" "}
-                                        {selectedApplication.current_ctc || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Expected CTC:</strong>{" "}
-                                        {selectedApplication.expected_ctc || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Notice Period:</strong>{" "}
-                                        {selectedApplication.notice_period || "-"}
-                                    </p>
-
-                                    <p>
-                                        <strong>Joining Date:</strong>{" "}
-                                        {selectedApplication.joining_date || "-"}
-                                    </p>
-                                </>
-                            )}
-
-                            <h3>Skills & Projects</h3>
-
-                            <p>
-                                <strong>Skills:</strong>{" "}
-                                {selectedApplication.skills || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Certifications:</strong>{" "}
-                                {selectedApplication.certifications || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Project Name:</strong>{" "}
-                                {selectedApplication.project_name || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Project Description:</strong>{" "}
-                                {selectedApplication.project_description || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Technologies Used:</strong>{" "}
-                                {selectedApplication.technologies_used || "-"}
-                            </p>
-
-                            <h3>Additional Information</h3>
-
-                            <p>
-                                <strong>Why Join:</strong>{" "}
-                                {selectedApplication.why_join || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Why Suitable:</strong>{" "}
-                                {selectedApplication.why_suitable || "-"}
-                            </p>
-
-                            <p>
-                                <strong>Cover Letter:</strong>{" "}
-                                {selectedApplication.cover_letter || "-"}
-                            </p>
-
-                            {selectedApplication.resume_url && (
-                                <p>
-                                    <strong>Resume:</strong>{" "}
-                                    <a
-                                        href={selectedApplication.resume_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        View Resume
-                                    </a>
-                                </p>
-                            )}
-
                         </div>
 
+                        <div>
+                            <label>Current Designation</label>
+                            <p>
+                                {selectedApplication.current_designation || "-"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label>Total Experience</label>
+                            <p>
+                                {selectedApplication.total_experience || "-"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label>Current CTC</label>
+                            <p>
+                                {selectedApplication.current_ctc || "-"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label>Expected CTC</label>
+                            <p>
+                                {selectedApplication.expected_ctc || "-"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label>Notice Period</label>
+                            <p>
+                                {selectedApplication.notice_period || "-"}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label>Joining Date</label>
+                            <p>
+                                {selectedApplication.joining_date || "-"}
+                            </p>
+                        </div>
                     </div>
-                )}
+                </section>
+            )}
+
+            {/* Skills & Projects */}
+            <section className="candidate-section">
+                <h3>Skills & Projects</h3>
+
+                <div className="candidate-grid">
+                    <div className="full-width">
+                        <label>Skills</label>
+                        <p>{selectedApplication.skills || "-"}</p>
+                    </div>
+
+                    <div className="full-width">
+                        <label>Certifications</label>
+                        <p>{selectedApplication.certifications || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>Project Name</label>
+                        <p>{selectedApplication.project_name || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>Technologies Used</label>
+                        <p>{selectedApplication.technologies_used || "-"}</p>
+                    </div>
+
+                    <div className="full-width">
+                        <label>Project Description</label>
+                        <p>
+                            {selectedApplication.project_description || "-"}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Additional Information */}
+            <section className="candidate-section">
+                <h3>Additional Information</h3>
+
+                <div className="candidate-grid">
+                    <div>
+                        <label>Why Join</label>
+                        <p>{selectedApplication.why_join || "-"}</p>
+                    </div>
+
+                    <div>
+                        <label>Why Suitable</label>
+                        <p>{selectedApplication.why_suitable || "-"}</p>
+                    </div>
+
+                    <div className="full-width">
+                        <label>Cover Letter</label>
+                        <p>{selectedApplication.cover_letter || "-"}</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Resume */}
+            {selectedApplication.resume_url && (
+                <div className="candidate-resume">
+                    <span>Resume</span>
+
+                    <a
+                        href={selectedApplication.resume_url}
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        View Resume →
+                    </a>
+                </div>
+            )}
+
+        </div>
+    </div>
+)}
         </DashboardLayout>
     );
 }

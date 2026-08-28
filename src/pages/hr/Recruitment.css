@@ -226,27 +226,29 @@
 }
 
 
-/* Candidate Details Modal */
+/* ================================
+   Candidate Details Modal
+================================ */
 
 .candidate-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(15, 23, 42, 0.65);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    padding: 24px;
+    z-index: 9999;
 }
 
 .candidate-modal {
-    width: 700px;
-    max-width: 90%;
-    max-height: 85vh;
+    width: min(900px, 100%);
+    max-height: 90vh;
     overflow-y: auto;
     background: #ffffff;
-    border-radius: 12px;
-    padding: 28px 32px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    padding: 0;
 }
 
 /* Header */
@@ -255,65 +257,142 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 15px;
-    margin-bottom: 18px;
+    padding: 24px 28px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .candidate-modal-header h2 {
-    margin: 0;
-    color: #12304a;
+    margin: 0 0 5px;
     font-size: 24px;
+    color: #102f4a;
+}
+
+.candidate-modal-header span {
+    font-size: 13px;
+    color: #64748b;
 }
 
 .candidate-modal-close {
+    width: 36px;
+    height: 36px;
     border: none;
-    background: transparent;
-    color: #64748b;
-    font-size: 25px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 24px;
+    line-height: 1;
     cursor: pointer;
+    transition: 0.2s ease;
 }
 
 .candidate-modal-close:hover {
-    color: #12304a;
+    background: #e2e8f0;
+    transform: rotate(90deg);
 }
 
-/* Section headings */
+/* Sections */
 
-.candidate-modal h3 {
-    margin: 20px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #e2e8f0;
-    color: #12304a;
+.candidate-section {
+    margin: 20px 28px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.candidate-section h3 {
+    margin: 0 0 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dbe3ec;
+    color: #102f4a;
     font-size: 17px;
 }
 
-/* Details */
+/* Grid */
 
-.candidate-modal p {
-    margin: 7px 0;
-    color: #475569;
-    font-size: 14px;
-    line-height: 1.5;
+.candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 24px;
 }
 
-.candidate-modal p strong {
-    display: inline-block;
-    min-width: 170px;
+.candidate-grid > div {
+    min-width: 0;
+}
+
+.candidate-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+/* Labels */
+
+.candidate-grid label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Values */
+
+.candidate-grid p {
+    margin: 0;
     color: #1e293b;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* Candidate Type */
+
+.candidate-type-badge {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 13px;
     font-weight: 600;
 }
 
 /* Resume */
 
-.candidate-modal a {
-    color: #2563eb;
-    font-weight: 600;
-    text-decoration: none;
+.candidate-resume {
+    margin: 20px 28px 28px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    background: #102f4a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.candidate-modal a:hover {
-    text-decoration: underline;
+.candidate-resume span {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.candidate-resume a {
+    padding: 9px 16px;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #102f4a;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+
+.candidate-resume a:hover {
+    background: #e2e8f0;
 }
 
 /* Scrollbar */
@@ -333,17 +412,33 @@
 
 /* Mobile */
 
-@media (max-width: 600px) {
-    .candidate-modal {
-        width: 90%;
-        padding: 20px;
+@media (max-width: 650px) {
+    .candidate-modal-overlay {
+        padding: 10px;
     }
 
-    .candidate-modal p strong {
-        min-width: 130px;
+    .candidate-modal-header {
+        padding: 18px;
     }
 
-    .candidate-modal-header h2 {
-        font-size: 20px;
+    .candidate-section {
+        margin: 14px;
+        padding: 16px;
+    }
+
+    .candidate-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .candidate-resume {
+        margin: 14px;
+        gap: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .candidate-resume a {
+        text-align: center;
     }
 }
