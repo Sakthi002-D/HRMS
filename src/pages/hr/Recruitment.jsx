@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Recruitment.css";
+const API_URL = import.meta.env.VITE_API_URL;
 
 function Recruitment() {
     const [showForm, setShowForm] = useState(false);
@@ -12,7 +13,7 @@ function Recruitment() {
 
     const fetchJobs = async () => {
         try {
-            const response = await fetch("http://localhost:5000/api/jobs");
+            const response = await fetch(`${API_URL}/api/jobs`);
 
             if (!response.ok) {
             throw new Error("Failed to fetch jobs");
@@ -46,7 +47,7 @@ function Recruitment() {
     e.preventDefault();
 
     try {
-        const response = await fetch("http://localhost:5000/api/jobs", {
+        const response = await fetch(`${API_URL}/api/jobs`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
