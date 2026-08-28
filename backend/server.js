@@ -748,7 +748,10 @@ app.post("/api/jobs", async (req, res) => {
             openings,
             experience,
             location,
-            employment_type
+            employment_type,
+            job_description,
+            skills,
+            compensation
         } = req.body;
 
         if (!title || !department || !openings || !location) {
@@ -781,10 +784,13 @@ app.post("/api/jobs", async (req, res) => {
                 experience,
                 location,
                 employment_type,
+                job_description,
+                skills,
+                compensation,
                 status
             )
             VALUES
-            ($1, $2, $3, $4, $5, $6, $7, 'Open')
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Open')
             RETURNING *
             `,
             [
@@ -794,7 +800,10 @@ app.post("/api/jobs", async (req, res) => {
                 openings,
                 experience,
                 location,
-                employment_type || "Full Time"
+                employment_type || "Full Time",
+                job_description,
+                skills,
+                compensation
             ]
         );
 

@@ -78,6 +78,9 @@ const handleViewApplication = (application) => {
         experience: "",
         location: "",
         type: "Full Time",
+        job_description: "",
+        skills: "",
+        compensation: "",
     });
 
     const handleChange = (e) => {
@@ -103,6 +106,9 @@ const handleViewApplication = (application) => {
                 experience: formData.experience,
                 location: formData.location,
                 employment_type: formData.type,
+                job_description: formData.job_description,
+                skills: formData.skills,
+                compensation: formData.compensation,
             }),
         });
 
@@ -121,6 +127,9 @@ const handleViewApplication = (application) => {
             experience: "",
             location: "",
             type: "Full Time",
+            job_description: "",
+            skills: "",
+            compensation: "",
         });
 
         setShowForm(false);
@@ -291,6 +300,42 @@ const handleViewApplication = (application) => {
                                         </option>
                                     </select>
                                 </div>
+
+                            <div className="form-group">
+                               <label>Job Description</label>
+                                <textarea
+                                 name="job_description"
+                                 value={formData.job_description}
+                                 onChange={handleChange}
+                                 placeholder="Enter job description"
+                                 rows="4"
+                                 required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Required Skills</label>
+                                <input
+                                    type="text"
+                                    name="skills"
+                                    value={formData.skills}
+                                    onChange={handleChange}
+                                    placeholder="e.g. React, Node.js, MongoDB"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Compensation</label>
+                                <input
+                                 type="text"
+                                 name="compensation"
+                                 value={formData.compensation}
+                                 onChange={handleChange}
+                                 placeholder="e.g. ₹4 - ₹6 LPA"
+                                 required
+                            />
+                            </div>
 
                             </div>
 
