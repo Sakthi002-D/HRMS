@@ -819,16 +819,7 @@ app.post("/api/jobs", async (req, res) => {
 app.get("/api/job-applications", async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                id,
-                application_id,
-                job_id,
-                candidate_name,
-                email,
-                phone,
-                resume_url,
-                status,
-                applied_at
+            SELECT *
             FROM public.job_applications
             ORDER BY id DESC
         `);
