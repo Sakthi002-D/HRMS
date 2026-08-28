@@ -1,4 +1,4 @@
-    
+
 .recruitment-header {
     display: flex;
     justify-content: space-between;
@@ -222,5 +222,128 @@
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+
+/* Candidate Details Modal */
+
+.candidate-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.candidate-modal {
+    width: 700px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Header */
+
+.candidate-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 15px;
+    margin-bottom: 18px;
+}
+
+.candidate-modal-header h2 {
+    margin: 0;
+    color: #12304a;
+    font-size: 24px;
+}
+
+.candidate-modal-close {
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.candidate-modal-close:hover {
+    color: #12304a;
+}
+
+/* Section headings */
+
+.candidate-modal h3 {
+    margin: 20px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #12304a;
+    font-size: 17px;
+}
+
+/* Details */
+
+.candidate-modal p {
+    margin: 7px 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.candidate-modal p strong {
+    display: inline-block;
+    min-width: 170px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* Resume */
+
+.candidate-modal a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.candidate-modal a:hover {
+    text-decoration: underline;
+}
+
+/* Scrollbar */
+
+.candidate-modal::-webkit-scrollbar {
+    width: 7px;
+}
+
+.candidate-modal::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.candidate-modal::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 10px;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+    .candidate-modal {
+        width: 90%;
+        padding: 20px;
+    }
+
+    .candidate-modal p strong {
+        min-width: 130px;
+    }
+
+    .candidate-modal-header h2 {
+        font-size: 20px;
     }
 }
