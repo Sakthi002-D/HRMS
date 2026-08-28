@@ -363,6 +363,9 @@ function CandidateJobs() {
         <option value="Fresher">Fresher</option>
         <option value="Experienced">Experienced</option>
     </select>
+        
+        {formData.candidate_type === "Experienced" && (
+    <>
 
     <input
         type="text"
@@ -420,6 +423,8 @@ function CandidateJobs() {
         value={formData.joining_date}
         onChange={handleChange}
     />
+    </>
+)}
 
     <h3>Education</h3>
 
