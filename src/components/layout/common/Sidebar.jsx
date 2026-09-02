@@ -7,6 +7,10 @@ function Sidebar() {
 
       <h2>Main Menu</h2>
 
+      <Link to="/home" className="sidebar-link">
+        Home
+      </Link>
+
       <Link to="/hr-dashboard" className="sidebar-link">
         Dashboard
       </Link>

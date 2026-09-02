@@ -427,7 +427,7 @@ const employeeData = {
 
     let phoneNumber = employee.phone || "";
 
-    let countryCode = "+91";
+    let countryCode = " 91";
     let country = "India";
 
     // Try to separate country code from phone

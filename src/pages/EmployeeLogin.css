@@ -2,7 +2,7 @@
   box-sizing: border-box;
 }
 
-.hr-login-page {
+.employee-login-page {
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -15,7 +15,7 @@
    LEFT SIDE
 ========================= */
 
-.hr-login-left {
+.employee-login-left {
   width: 50%;
   min-height: 100vh;
   background: #000000;
@@ -30,7 +30,7 @@
    BRAND
 ========================= */
 
-.brand {
+.employee-brand {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -38,14 +38,14 @@
   z-index: 5;
 }
 
-.brand img {
+.employee-brand img {
   width: 48px;
   height: 48px;
   object-fit: contain;
   background: #000000;
 }
 
-.brand span {
+.employee-brand span {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -57,14 +57,14 @@
    LEFT CONTENT
 ========================= */
 
-.left-content {
+.employee-left-content {
   position: relative;
   z-index: 5;
   margin-top: 165px;
   max-width: 580px;
 }
 
-.welcome-text {
+.employee-welcome {
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 4px;
@@ -72,7 +72,7 @@
   color: #ffffff;
 }
 
-.left-content h1 {
+.employee-left-content h1 {
   font-size: 48px;
   line-height: 1.15;
   margin: 0 0 32px;
@@ -80,7 +80,7 @@
   color: #ffffff;
 }
 
-.description {
+.employee-description {
   font-size: 17px;
   line-height: 1.7;
   max-width: 520px;
@@ -93,21 +93,21 @@
    DECORATIVE CIRCLES
 ========================= */
 
-.circle {
+.employee-circle {
   position: absolute;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   pointer-events: none;
 }
 
-.circle-one {
+.employee-circle-one {
   width: 450px;
   height: 450px;
   top: -180px;
   right: -180px;
 }
 
-.circle-two {
+.employee-circle-two {
   width: 360px;
   height: 360px;
   bottom: -220px;
@@ -119,7 +119,7 @@
    RIGHT SIDE
 ========================= */
 
-.hr-login-right {
+.employee-login-right {
   width: 50%;
   min-height: 100vh;
   background: #ffffff;
@@ -134,7 +134,7 @@
    LOGIN BOX
 ========================= */
 
-.login-box {
+.employee-login-box {
   width: 100%;
   max-width: 480px;
   text-align: left;
@@ -142,10 +142,10 @@
 
 
 /* =========================
-   LOGIN LOGO
+   LOGO
 ========================= */
 
-.login-logo {
+.employee-login-logo {
   display: block;
   width: 76px;
   height: 76px;
@@ -159,7 +159,7 @@
    HEADING
 ========================= */
 
-.login-box h2 {
+.employee-login-box h2 {
   text-align: center;
   font-size: 34px;
   color: #111111;
@@ -167,7 +167,7 @@
   font-weight: 700;
 }
 
-.login-subtitle {
+.employee-login-subtitle {
   text-align: center;
   color: #777777;
   font-size: 15px;
@@ -179,11 +179,11 @@
    FORM
 ========================= */
 
-.login-box form {
+.employee-login-box form {
   width: 100%;
 }
 
-.login-box form > label {
+.employee-login-box form > label {
   display: block;
   font-size: 14px;
   font-weight: 600;
@@ -196,7 +196,7 @@
    INPUT
 ========================= */
 
-.input-box {
+.employee-input-box {
   width: 100%;
   height: 52px;
   border: 1px solid #d5d5d5;
@@ -208,12 +208,12 @@
   transition: 0.2s ease;
 }
 
-.input-box:focus-within {
+.employee-input-box:focus-within {
   border-color: #000000;
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
-.input-box input {
+.employee-input-box input {
   width: 100%;
   height: 100%;
   border: none;
@@ -224,7 +224,7 @@
   background: transparent;
 }
 
-.input-box input::placeholder {
+.employee-input-box input::placeholder {
   color: #999999;
 }
 
@@ -233,15 +233,15 @@
    PASSWORD
 ========================= */
 
-.password-box {
+.employee-password-box {
   position: relative;
 }
 
-.password-box input {
+.employee-password-box input {
   padding-right: 65px;
 }
 
-.password-toggle {
+.employee-password-toggle {
   position: absolute;
   right: 12px;
   border: none;
@@ -252,7 +252,7 @@
   font-weight: 600;
 }
 
-.password-toggle:hover {
+.employee-password-toggle:hover {
   color: #555555;
 }
 
@@ -261,29 +261,31 @@
    REMEMBER / FORGOT
 ========================= */
 
-.login-options {
+.employee-login-options {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin: 3px 0 27px;
 }
 
-.remember {
-  display: flex;
+.employee-remember {
+  display: flex !important;
   align-items: center;
   gap: 8px;
-  color: #666666;
-  font-size: 14px;
+  color: #666666 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  margin: 0 !important;
   cursor: pointer;
 }
 
-.remember input {
+.employee-remember input {
   width: 17px;
   height: 17px;
   accent-color: #000000;
 }
 
-.forgot-password {
+.employee-forgot {
   border: none;
   background: transparent;
   color: #000000;
@@ -291,7 +293,7 @@
   cursor: pointer;
 }
 
-.forgot-password:hover {
+.employee-forgot:hover {
   text-decoration: underline;
 }
 
@@ -300,7 +302,7 @@
    SIGN IN BUTTON
 ========================= */
 
-.sign-in-btn {
+.employee-sign-in-btn {
   width: 100%;
   height: 52px;
   border: none;
@@ -313,13 +315,9 @@
   transition: 0.2s ease;
 }
 
-.sign-in-btn:hover {
+.employee-sign-in-btn:hover {
   background: #222222;
   transform: translateY(-1px);
-}
-
-.sign-in-btn:active {
-  transform: translateY(0);
 }
 
 
@@ -327,7 +325,7 @@
    FOOTER
 ========================= */
 
-.hrms-text {
+.employee-hrms-text {
   text-align: center;
   margin-top: 36px;
   margin-bottom: 10px;
@@ -335,7 +333,7 @@
   font-size: 14px;
 }
 
-.copyright {
+.employee-copyright {
   text-align: center;
   color: #999999;
   font-size: 12px;
@@ -348,17 +346,17 @@
 
 @media (max-width: 900px) {
 
-  .hr-login-left {
+  .employee-login-left {
     display: none;
   }
 
-  .hr-login-right {
+  .employee-login-right {
     width: 100%;
     min-height: 100vh;
     padding: 30px 20px;
   }
 
-  .login-box {
+  .employee-login-box {
     max-width: 450px;
   }
 }
@@ -366,15 +364,15 @@
 
 @media (max-width: 500px) {
 
-  .hr-login-right {
+  .employee-login-right {
     padding: 25px 18px;
   }
 
-  .login-box h2 {
+  .employee-login-box h2 {
     font-size: 28px;
   }
 
-  .login-logo {
+  .employee-login-logo {
     width: 65px;
     height: 65px;
   }
