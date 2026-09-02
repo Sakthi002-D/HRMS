@@ -1,379 +1,102 @@
-* {
-  box-sizing: border-box;
-}
-
 .employee-login-page {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f4f7fb;
+    padding: 30px;
 }
 
-
-/* =========================
-   LEFT SIDE
-========================= */
-
-.employee-login-left {
-  width: 50%;
-  min-height: 100vh;
-  background: #000000;
-  color: #ffffff;
-  position: relative;
-  overflow: hidden;
-  padding: 45px 60px;
+.employee-login-card {
+    width: 420px;
+    background: #ffffff;
+    padding: 42px;
+    border-radius: 18px;
+    box-shadow: 0 15px 45px rgba(18, 48, 74, 0.12);
 }
 
-
-/* =========================
-   BRAND
-========================= */
-
-.employee-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: relative;
-  z-index: 5;
+.employee-login-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: #e8f1ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
 }
 
-.employee-brand img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  background: #000000;
-}
-
-.employee-brand span {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #ffffff;
-}
-
-
-/* =========================
-   LEFT CONTENT
-========================= */
-
-.employee-left-content {
-  position: relative;
-  z-index: 5;
-  margin-top: 165px;
-  max-width: 580px;
-}
-
-.employee-welcome {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  margin-bottom: 28px;
-  color: #ffffff;
-}
-
-.employee-left-content h1 {
-  font-size: 48px;
-  line-height: 1.15;
-  margin: 0 0 32px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.employee-description {
-  font-size: 17px;
-  line-height: 1.7;
-  max-width: 520px;
-  margin: 0;
-  color: #e5e5e5;
-}
-
-
-/* =========================
-   DECORATIVE CIRCLES
-========================= */
-
-.employee-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  pointer-events: none;
-}
-
-.employee-circle-one {
-  width: 450px;
-  height: 450px;
-  top: -180px;
-  right: -180px;
-}
-
-.employee-circle-two {
-  width: 360px;
-  height: 360px;
-  bottom: -220px;
-  left: -160px;
-}
-
-
-/* =========================
-   RIGHT SIDE
-========================= */
-
-.employee-login-right {
-  width: 50%;
-  min-height: 100vh;
-  background: #ffffff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
-}
-
-
-/* =========================
-   LOGIN BOX
-========================= */
-
-.employee-login-box {
-  width: 100%;
-  max-width: 480px;
-  text-align: left;
-}
-
-
-/* =========================
-   LOGO
-========================= */
-
-.employee-login-logo {
-  display: block;
-  width: 76px;
-  height: 76px;
-  object-fit: contain;
-  background: #000000;
-  margin: 0 auto 28px;
-}
-
-
-/* =========================
-   HEADING
-========================= */
-
-.employee-login-box h2 {
-  text-align: center;
-  font-size: 34px;
-  color: #111111;
-  margin: 0 0 10px;
-  font-weight: 700;
+.employee-login-card h1 {
+    text-align: center;
+    margin: 0;
+    color: #12304a;
+    font-size: 28px;
 }
 
 .employee-login-subtitle {
-  text-align: center;
-  color: #777777;
-  font-size: 15px;
-  margin-bottom: 38px;
+    text-align: center;
+    color: #718096;
+    margin: 8px 0 30px;
+    font-size: 14px;
 }
 
-
-/* =========================
-   FORM
-========================= */
-
-.employee-login-box form {
-  width: 100%;
+.employee-input-group {
+    margin-bottom: 20px;
 }
 
-.employee-login-box form > label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: #222222;
-  margin-bottom: 9px;
+.employee-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #26384a;
+    font-size: 14px;
 }
 
-
-/* =========================
-   INPUT
-========================= */
-
-.employee-input-box {
-  width: 100%;
-  height: 52px;
-  border: 1px solid #d5d5d5;
-  border-radius: 7px;
-  margin-bottom: 23px;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  transition: 0.2s ease;
-}
-
-.employee-input-box:focus-within {
-  border-color: #000000;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
-}
-
-.employee-input-box input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  padding: 0 16px;
-  font-size: 15px;
-  color: #222222;
-  background: transparent;
-}
-
-.employee-input-box input::placeholder {
-  color: #999999;
-}
-
-
-/* =========================
-   PASSWORD
-========================= */
-
-.employee-password-box {
-  position: relative;
-}
-
-.employee-password-box input {
-  padding-right: 65px;
-}
-
-.employee-password-toggle {
-  position: absolute;
-  right: 12px;
-  border: none;
-  background: transparent;
-  color: #000000;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.employee-password-toggle:hover {
-  color: #555555;
-}
-
-
-/* =========================
-   REMEMBER / FORGOT
-========================= */
-
-.employee-login-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 3px 0 27px;
-}
-
-.employee-remember {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
-  color: #666666 !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  margin: 0 !important;
-  cursor: pointer;
-}
-
-.employee-remember input {
-  width: 17px;
-  height: 17px;
-  accent-color: #000000;
-}
-
-.employee-forgot {
-  border: none;
-  background: transparent;
-  color: #000000;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.employee-forgot:hover {
-  text-decoration: underline;
-}
-
-
-/* =========================
-   SIGN IN BUTTON
-========================= */
-
-.employee-sign-in-btn {
-  width: 100%;
-  height: 52px;
-  border: none;
-  border-radius: 7px;
-  background: #000000;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.employee-sign-in-btn:hover {
-  background: #222222;
-  transform: translateY(-1px);
-}
-
-
-/* =========================
-   FOOTER
-========================= */
-
-.employee-hrms-text {
-  text-align: center;
-  margin-top: 36px;
-  margin-bottom: 10px;
-  color: #666666;
-  font-size: 14px;
-}
-
-.employee-copyright {
-  text-align: center;
-  color: #999999;
-  font-size: 12px;
-}
-
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media (max-width: 900px) {
-
-  .employee-login-left {
-    display: none;
-  }
-
-  .employee-login-right {
+.employee-input-group input {
     width: 100%;
-    min-height: 100vh;
-    padding: 30px 20px;
-  }
-
-  .employee-login-box {
-    max-width: 450px;
-  }
+    box-sizing: border-box;
+    padding: 13px 14px;
+    border: 1px solid #d7dee7;
+    border-radius: 9px;
+    outline: none;
+    font-size: 14px;
+    transition: 0.2s;
 }
 
+.employee-input-group input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
 
-@media (max-width: 500px) {
+.employee-login-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 9px;
+    background: #12304a;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
 
-  .employee-login-right {
-    padding: 25px 18px;
-  }
+.employee-login-btn:hover {
+    background: #1b4668;
+}
 
-  .employee-login-box h2 {
-    font-size: 28px;
-  }
+.employee-login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
-  .employee-login-logo {
-    width: 65px;
-    height: 65px;
-  }
+.back-home-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 14px;
 }

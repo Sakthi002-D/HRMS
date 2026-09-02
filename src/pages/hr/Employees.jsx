@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Employees.css";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import SearchBar from "../../components/layout/common/SearchBar";
@@ -7,6 +8,8 @@ import Table from "../../components/layout/common/Table";
 import Modal from "../../components/layout/common/Modal";
 
 function Employees() {
+
+  const navigate = useNavigate();
   // =========================
   // EMPLOYEES
   // =========================
@@ -73,7 +76,6 @@ useEffect(() => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [viewEmployeeData, setViewEmployeeData] = useState(null);
 
   // null = Add mode
   // employee ID = Edit mode
@@ -418,8 +420,16 @@ const employeeData = {
   // =========================
 
    const viewEmployee = (employee) => {
-   setViewEmployeeData(employee);
-  };
+    const employeeSlug = employee.name
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+
+    navigate(
+        `/employees/employeedetails/${employeeSlug}`
+    );
+};
 
 
   const editEmployee = (employee) => {
@@ -1427,163 +1437,7 @@ const filteredEmployees =
 
         </Modal>
 
-        {viewEmployeeData && (
-  <Modal
-    isOpen={true}
-    onClose={() => setViewEmployeeData(null)}
-    title="Employee Details"
-  >
-
-   <div className="employee-profile">
-
-  {/* Profile Header */}
-  <div className="employee-profile-header">
-
-    <div className="employee-profile-photo">
-      {viewEmployeeData.profilePhoto ? (
-        <img
-          src={viewEmployeeData.profilePhoto}
-          alt={viewEmployeeData.name}
-        />
-      ) : (
-        <div className="profile-placeholder">
-          {viewEmployeeData.name?.charAt(0).toUpperCase()}
-        </div>
-      )}
-    </div>
-
-    <div className="employee-profile-title">
-      <h2>{viewEmployeeData.name}</h2>
-
-      <p>
-        {viewEmployeeData.designation}
-      </p>
-
-      <span
-        className={
-          viewEmployeeData.status === "Active"
-            ? "status active"
-            : "status inactive"
-        }
-      >
-        {viewEmployeeData.status}
-      </span>
-    </div>
-
-  </div>
-
-  {/* Personal Details */}
-  <div className="profile-section">
-
-    <h3>Personal Details</h3>
-
-    <div className="profile-grid">
-
-      <div>
-        <span>Employee ID</span>
-        <strong>{viewEmployeeData.id}</strong>
-      </div>
-
-      <div>
-        <span>Date of Birth</span>
-        <strong>
-          {viewEmployeeData.dateOfBirth || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Gender</span>
-        <strong>
-          {viewEmployeeData.gender || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Phone</span>
-        <strong>
-          {viewEmployeeData.phone || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Email</span>
-        <strong>
-          {viewEmployeeData.email || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Address</span>
-        <strong>
-          {viewEmployeeData.address || "-"}
-        </strong>
-      </div>
-
-    </div>
-
-  </div>
-
-  {/* Job Details */}
-  <div className="profile-section">
-
-    <h3>Job Details</h3>
-
-    <div className="profile-grid">
-
-      <div>
-        <span>Designation</span>
-        <strong>
-          {viewEmployeeData.designation || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Department</span>
-        <strong>
-          {viewEmployeeData.department || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Joining Date</span>
-        <strong>
-          {viewEmployeeData.joiningDate || "-"}
-        </strong>
-      </div>
-
-      <div>
-        <span>Employment Type</span>
-        <strong>
-          {viewEmployeeData.employmentType || "-"}
-        </strong>
-      </div>
-
-    </div>
-
-  </div>
-
-  {/* Other Details */}
-  <div className="profile-section">
-
-    <h3>Other Details</h3>
-
-    <div className="profile-grid">
-
-      <div>
-        <span>Emergency Contact</span>
-        <strong>
-          {viewEmployeeData.emergencyContact || "-"}
-        </strong>
-      </div>
-
-    </div>
-
-  </div>
-
-</div>
-  </Modal>
-)}
-
+        
       </div>
 
     </DashboardLayout>

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Attendance.css";
 
+const API_URL = "http://localhost:5000";
+
 function Attendance() {
     const [search, setSearch] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
@@ -25,8 +27,8 @@ const fetchAttendance = async () => {
     try {
         const response = await fetch(
             selectedDate
-                ? `${import.meta.env.VITE_API_URL}/api/attendance?date=${selectedDate}`
-                : `${import.meta.env.VITE_API_URL}/api/attendance`
+                ? `${API_URL}/api/attendance?date=${selectedDate}`
+                : `${API_URL}/api/attendance`
         );
 
         if (!response.ok) {
@@ -84,7 +86,7 @@ const fetchAttendance = async () => {
             setMessage("");
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/attendance/punch-in`,
+                `${API_URL}/api/attendance/punch-in`,
                 {
                     method: "POST",
                     headers: {
@@ -130,7 +132,7 @@ const fetchAttendance = async () => {
             setMessage("");
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/attendance/punch-out`,
+               `${API_URL}/api/attendance/punch-out`,
                 {
                     method: "POST",
                     headers: {

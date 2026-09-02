@@ -579,12 +579,11 @@ app.delete("/api/employees/:employeeId", async (req, res) => {
     }
 });
 
-
 // =========================
 // LEAVE MANAGEMENT API
 // =========================
 
-// Get all leave requests
+// Get all leave requests - HR
 app.get("/api/leaves", async (req, res) => {
     try {
         const result = await pool.query(`
@@ -616,17 +615,40 @@ app.get("/api/leaves", async (req, res) => {
 });
 
 
+// =========================
+// HR - APPROVE / REJECT LEAVE
+// =========================
 
 app.put("/api/leaves/:id/status", async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
 
+        if (!status) {
+            return res.status(400).json({
+                message: "Status is required"
+            });
+        }
+
+        const allowedStatuses = [
+            "Pending",
+            "Approved",
+            "Rejected"
+        ];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                message: "Invalid leave status"
+            });
+        }
+
         const result = await pool.query(
-            `UPDATE leaves
-             SET status = $1
-             WHERE id = $2
-             RETURNING *`,
+            `
+            UPDATE leaves
+            SET status = $1
+            WHERE id = $2
+            RETURNING *
+            `,
             [status, id]
         );
 
@@ -636,17 +658,225 @@ app.put("/api/leaves/:id/status", async (req, res) => {
             });
         }
 
-        res.json(result.rows[0]);
+        res.json({
+            message: `Leave ${status.toLowerCase()} successfully`,
+            leave: result.rows[0]
+        });
 
     } catch (error) {
         console.error("Error updating leave status:", error);
 
         res.status(500).json({
-            message: "Failed to update leave status"
+            message: "Failed to update leave status",
+            error: error.message
         });
     }
 });
 
+
+// =====================================================
+// EMPLOYEE - GET OWN LEAVE REQUESTS
+// =====================================================
+
+app.get("/api/leaves/employee/:employeeId", async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const result = await pool.query(
+            `
+            SELECT
+                id,
+                employee_id,
+                leave_type,
+                from_date,
+                to_date,
+                days,
+                reason,
+                status,
+                created_at
+            FROM leaves
+            WHERE employee_id = $1
+            ORDER BY id DESC
+            `,
+            [employeeId]
+        );
+
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error("Error fetching employee leaves:", error);
+
+        res.status(500).json({
+            message: "Failed to fetch employee leaves",
+            error: error.message
+        });
+    }
+});
+
+
+// =====================================================
+// EMPLOYEE - APPLY LEAVE
+// =====================================================
+
+app.post("/api/leaves", async (req, res) => {
+    try {
+        const {
+            employee_id,
+            leave_type,
+            from_date,
+            to_date,
+            reason
+        } = req.body;
+
+        console.log("Apply Leave Request:", req.body);
+
+
+        // Check required fields
+        if (
+            !employee_id ||
+            !leave_type ||
+            !from_date ||
+            !to_date
+        ) {
+            return res.status(400).json({
+                message: "Please fill all required fields"
+            });
+        }
+
+
+        // Check employee
+        const employeeResult = await pool.query(
+            `
+            SELECT
+                employee_id,
+                name,
+                status
+            FROM employees
+            WHERE employee_id = $1
+            `,
+            [employee_id]
+        );
+
+        if (employeeResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "Employee not found"
+            });
+        }
+
+        const employee = employeeResult.rows[0];
+
+
+        // Only active employees can apply
+        if (
+            String(employee.status).toLowerCase() !==
+            "active"
+        ) {
+            return res.status(400).json({
+                message: "Inactive employees cannot apply for leave"
+            });
+        }
+
+
+        // Validate dates
+        const from = new Date(`${from_date}T00:00:00`);
+        const to = new Date(`${to_date}T00:00:00`);
+
+        if (
+            Number.isNaN(from.getTime()) ||
+            Number.isNaN(to.getTime())
+        ) {
+            return res.status(400).json({
+                message: "Invalid date format"
+            });
+        }
+
+
+        // To date cannot be before from date
+        if (to < from) {
+            return res.status(400).json({
+                message: "To Date must be after or equal to From Date"
+            });
+        }
+
+
+        // Calculate leave days
+        const difference =
+            Math.floor(
+                (to.getTime() - from.getTime()) /
+                (1000 * 60 * 60 * 24)
+            ) + 1;
+
+
+        // Insert leave
+        const result = await pool.query(
+            `
+            INSERT INTO leaves
+            (
+                employee_id,
+                leave_type,
+                from_date,
+                to_date,
+                days,
+                reason,
+                status
+            )
+            VALUES
+            (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                'Pending'
+            )
+            RETURNING *
+            `,
+            [
+                employee_id,
+                leave_type,
+                from_date,
+                to_date,
+                difference,
+                reason || null
+            ]
+        );
+
+
+        console.log(
+            "Leave created successfully:",
+            result.rows[0]
+        );
+
+
+        res.status(201).json({
+            message: "Leave applied successfully",
+            leave: result.rows[0]
+        });
+
+    } catch (error) {
+
+        console.error(
+            "===================================="
+        );
+
+        console.error(
+            "ERROR APPLYING LEAVE:"
+        );
+
+        console.error(error);
+
+        console.error(
+            "===================================="
+        );
+
+
+        res.status(500).json({
+            message: "Failed to apply leave",
+            error: error.message
+        });
+    }
+});
 
 // =========================
 // HR DASHBOARD API
@@ -1096,7 +1326,7 @@ app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
 // SERVER
 // =========================
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`HRMS Backend running on port ${PORT}`);
