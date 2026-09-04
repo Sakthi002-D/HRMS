@@ -3,6 +3,9 @@ import cors from "cors";
 import pool from "./db.js";
 import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
+
 
 const app = express();
 
@@ -419,6 +422,467 @@ app.get("/api/employees", async (req, res) => {
     }
 });
 
+// Get employee detail sections
+app.get("/api/employees/:employeeId/details", async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const result = await pool.query(
+            `SELECT
+                e.id,
+                e.employee_id,
+                COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
+                COALESCE((SELECT row_to_json(f) FROM employee_family_details f WHERE f.employee_id = e.employee_id ORDER BY f.id DESC LIMIT 1), '{}'::json) AS family,
+                COALESCE((SELECT row_to_json(ed) FROM employee_education ed WHERE ed.employee_id = e.employee_id ORDER BY ed.id DESC LIMIT 1), '{}'::json) AS education,
+                COALESCE((SELECT row_to_json(ex) FROM employee_experience ex WHERE ex.employee_id = e.id ORDER BY ex.id DESC LIMIT 1), '{}'::json) AS experience,
+                COALESCE((SELECT row_to_json(p) FROM employee_projects p WHERE p.employee_id = e.employee_id ORDER BY p.id DESC LIMIT 1), '{}'::json) AS project
+             FROM employees e
+             WHERE e.employee_id = $1`,
+            [employeeId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error fetching employee details:", error);
+        res.status(500).json({ message: "Failed to fetch employee details" });
+    }
+});
+
+const detailTableConfig = {
+    bank: { table: "employee_bank_details", key: "employee_id", columns: ["account_holder_name", "account_number", "bank_name", "branch_name", "ifsc_code", "account_type"] },
+    family: { table: "employee_family_details", key: "employee_id", columns: ["father_name", "mother_name", "spouse_name", "spouse_employment", "marital_status", "children_count"] },
+    education: { table: "employee_education", key: "employee_id", columns: ["qualification", "institution", "field_of_study", "start_year", "end_year", "grade"] },
+    project: { table: "employee_projects", key: "employee_id", columns: ["project_name", "description", "project_lead", "start_date", "deadline", "status"] },
+};
+
+for (const [section, config] of Object.entries(detailTableConfig)) {
+    app.put(`/api/employees/:employeeId/${section}`, async (req, res) => {
+        try {
+            const { employeeId } = req.params;
+            const employeeResult = await pool.query(
+                "SELECT employee_id FROM employees WHERE employee_id = $1",
+                [employeeId]
+            );
+            if (employeeResult.rows.length === 0) {
+                return res.status(404).json({ message: "Employee not found" });
+            }
+
+            const values = config.columns.map((column) => req.body[column] ?? null);
+            const existing = await pool.query(
+                `SELECT id FROM ${config.table} WHERE ${config.key} = $1 ORDER BY id DESC LIMIT 1`,
+                [employeeId]
+            );
+
+            let result;
+            if (existing.rows.length > 0) {
+                const assignments = config.columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+                result = await pool.query(
+                    `UPDATE ${config.table} SET ${assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length + 1} RETURNING *`,
+                    [...values, existing.rows[0].id]
+                );
+            } else {
+                const columns = [config.key, ...config.columns];
+                const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
+                result = await pool.query(
+                    `INSERT INTO ${config.table} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING *`,
+                    [employeeId, ...values]
+                );
+            }
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error(`Error updating employee ${section}:`, error);
+            res.status(500).json({ message: `Failed to update ${section} details` });
+        }
+    });
+}
+
+app.put("/api/employees/:employeeId/experience", async (req, res) => {
+    try {
+        const employeeResult = await pool.query(
+            "SELECT id FROM employees WHERE employee_id = $1",
+            [req.params.employeeId]
+        );
+        if (employeeResult.rows.length === 0) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+        const employeeDbId = employeeResult.rows[0].id;
+        const columns = ["company_name", "designation", "start_date", "end_date", "description"];
+        const values = columns.map((column) => req.body[column] ?? null);
+        const existing = await pool.query(
+            "SELECT id FROM employee_experience WHERE employee_id = $1 ORDER BY id DESC LIMIT 1",
+            [employeeDbId]
+        );
+        let result;
+        if (existing.rows.length > 0) {
+            const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+            result = await pool.query(
+                `UPDATE employee_experience SET ${assignments} WHERE id = $${values.length + 1} RETURNING *`,
+                [...values, existing.rows[0].id]
+            );
+        } else {
+            result = await pool.query(
+                `INSERT INTO employee_experience (employee_id, ${columns.join(", ")}) VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(", ")}) RETURNING *`,
+                [employeeDbId, ...values]
+            );
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating employee experience:", error);
+        res.status(500).json({ message: "Failed to update experience details" });
+    }
+});
+
+
+const handleLogin = async (e) => {
+  e.preventDefault();
+
+  if (!username.trim() || !password.trim()) {
+    alert("Please enter username and password");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const response = await fetch(`${API_URL}/api/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        employee_id: username.trim(),
+        password: password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Invalid username or password");
+      return;
+    }
+
+    const user = data.employee;
+
+    // Clear old login sessions
+    sessionStorage.removeItem("loggedInEmployee");
+    sessionStorage.removeItem("loggedInHR");
+
+    // HR LOGIN
+    if (user.role === "hr") {
+      sessionStorage.setItem(
+        "loggedInHR",
+        JSON.stringify(user)
+      );
+
+      navigate("/hr-dashboard", { replace: true });
+      return;
+    }
+
+    // EMPLOYEE LOGIN
+    sessionStorage.setItem(
+      "loggedInEmployee",
+      JSON.stringify(user)
+    );
+
+    navigate("/employee-dashboard", { replace: true });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Unable to connect to backend");
+  } finally {
+    setLoading(false);
+  }
+};
+
+// ===============================
+// FORGOT PASSWORD - SEND OTP
+// ===============================
+
+app.post("/api/forgot-password", async (req, res) => {
+    try {
+        const { employee_id } = req.body;
+
+        if (!employee_id) {
+            return res.status(400).json({
+                message: "Employee ID is required",
+            });
+        }
+
+        // Find employee
+        const result = await pool.query(
+            `SELECT employee_id, email, name
+             FROM employees
+             WHERE employee_id = $1
+               AND status = 'Active'`,
+            [employee_id.trim()]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Employee not found",
+            });
+        }
+
+        const employee = result.rows[0];
+
+        if (!employee.email) {
+            return res.status(400).json({
+                message: "No registered email found for this employee",
+            });
+        }
+
+        // Generate 6 digit OTP
+        const otp = Math.floor(
+            100000 + Math.random() * 900000
+        ).toString();
+
+        // Hash OTP
+        const otpHash = await bcrypt.hash(otp, 10);
+
+        // OTP expires in 5 minutes
+        const expiresAt = new Date(
+            Date.now() + 5 * 60 * 1000
+        );
+
+        // Save OTP
+        await pool.query(
+            `INSERT INTO password_resets
+             (employee_id, otp_hash, expires_at)
+             VALUES ($1, $2, $3)`,
+            [
+                employee.employee_id,
+                otpHash,
+                expiresAt,
+            ]
+        );
+
+        // Gmail transporter
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        // Send OTP
+        await transporter.sendMail({
+            from: `"HRMS" <${process.env.EMAIL_USER}>`,
+            to: employee.email,
+            subject: "HRMS Password Reset OTP",
+            text: `Hello ${employee.name},
+
+Your HRMS password reset OTP is: ${otp}
+
+This OTP is valid for 5 minutes.
+
+If you did not request a password reset, please ignore this email.
+
+Regards,
+HRMS Team`,
+        });
+
+        res.json({
+            message: "OTP generated successfully",
+            email: employee.email,
+        });
+
+    } catch (error) {
+        console.error(
+            "Forgot password error:",
+            error
+        );
+
+        res.status(500).json({
+            message: "Failed to generate OTP",
+        });
+    }
+});
+
+
+// ===============================
+// VERIFY OTP
+// ===============================
+
+app.post("/api/verify-otp", async (req, res) => {
+    try {
+        const { employee_id, otp } = req.body;
+
+        if (!employee_id || !otp) {
+            return res.status(400).json({
+                message: "Employee ID and OTP are required",
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT *
+             FROM password_resets
+             WHERE employee_id = $1
+               AND verified = FALSE
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [employee_id.trim()]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(400).json({
+                message: "OTP not found or already used",
+            });
+        }
+
+        const reset = result.rows[0];
+
+        // Check expiry
+        if (new Date() > new Date(reset.expires_at)) {
+            return res.status(400).json({
+                message: "OTP has expired",
+            });
+        }
+
+        // Check attempts
+        if (reset.attempts >= 5) {
+            return res.status(400).json({
+                message: "Too many incorrect attempts",
+            });
+        }
+
+        // Compare OTP
+        const isValid = await bcrypt.compare(
+            otp.trim(),
+            reset.otp_hash
+        );
+
+        if (!isValid) {
+            await pool.query(
+                `UPDATE password_resets
+                 SET attempts = attempts + 1
+                 WHERE id = $1`,
+                [reset.id]
+            );
+
+            return res.status(400).json({
+                message: "Invalid OTP",
+            });
+        }
+
+        // Mark OTP as verified
+        await pool.query(
+            `UPDATE password_resets
+             SET verified = TRUE
+             WHERE id = $1`,
+            [reset.id]
+        );
+
+        res.json({
+            message: "OTP verified successfully",
+        });
+
+    } catch (error) {
+        console.error(
+            "Verify OTP error:",
+            error
+        );
+
+        res.status(500).json({
+            message: "Failed to verify OTP",
+        });
+    }
+});
+
+
+// ===============================
+// RESET PASSWORD
+// ===============================
+
+app.post("/api/reset-password", async (req, res) => {
+    try {
+        const {
+            employee_id,
+            new_password
+        } = req.body;
+
+        if (!employee_id || !new_password) {
+            return res.status(400).json({
+                message:
+                    "Employee ID and new password are required",
+            });
+        }
+
+        if (new_password.length < 6) {
+            return res.status(400).json({
+                message:
+                    "Password must be at least 6 characters",
+            });
+        }
+
+        // Check OTP verification
+        const resetResult = await pool.query(
+            `SELECT *
+             FROM password_resets
+             WHERE employee_id = $1
+               AND verified = TRUE
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [employee_id.trim()]
+        );
+
+        if (resetResult.rows.length === 0) {
+            return res.status(400).json({
+                message: "OTP verification required",
+            });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(
+            new_password,
+            10
+        );
+
+        // Update employee password
+        const updateResult = await pool.query(
+            `UPDATE employees
+             SET password = $1
+             WHERE employee_id = $2
+               AND status = 'Active'
+             RETURNING employee_id`,
+            [
+                hashedPassword,
+                employee_id.trim()
+            ]
+        );
+
+        if (updateResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "Employee not found",
+            });
+        }
+
+        // Delete used OTP
+        await pool.query(
+            `DELETE FROM password_resets
+             WHERE employee_id = $1`,
+            [employee_id.trim()]
+        );
+
+        res.json({
+            message: "Password reset successfully",
+        });
+
+    } catch (error) {
+        console.error(
+            "Reset password error:",
+            error
+        );
+
+        res.status(500).json({
+            message: "Failed to reset password",
+        });
+    }
+});
 
 // Add New Employees
 app.post("/api/employees", async (req, res) => {
@@ -1322,6 +1786,62 @@ app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
 });
 
 
+app.post("/api/login", async (req, res) => {
+  try {
+    const { employee_id, password } = req.body;
+
+    if (!employee_id || !password) {
+      return res.status(400).json({
+        message: "Employee ID and password are required",
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM employees
+       WHERE employee_id = $1`,
+      [employee_id.trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        message: "Invalid employee ID or password",
+      });
+    }
+
+    const employee = result.rows[0];
+
+    if (employee.access_disabled === true) {
+      return res.status(403).json({
+        message: "Your account has been disabled. Please contact HR.",
+      });
+    }
+
+    // Compare plain password with bcrypt hash
+    const passwordMatch = await bcrypt.compare(
+      password,
+      employee.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        message: "Invalid employee ID or password",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Login successful",
+      employee: employee,
+    });
+
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+
+    return res.status(500).json({
+      message: "Server error during login",
+    });
+  }
+});
 // =========================
 // SERVER
 // =========================
