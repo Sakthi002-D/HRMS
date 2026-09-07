@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DatePicker from "../components/layout/common/DatePicker";
 import "./CandidateJobs.css";
 
 function CandidateJobs() {
@@ -417,11 +418,9 @@ function CandidateJobs() {
 
     <label>Available Joining Date</label>
 
-    <input
-        type="date"
-        name="joining_date"
+    <DatePicker
         value={formData.joining_date}
-        onChange={handleChange}
+        onChange={(value) => setFormData((previous) => ({ ...previous, joining_date: value }))}
     />
     </>
 )}

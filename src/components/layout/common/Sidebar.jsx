@@ -1,47 +1,63 @@
-import { Link } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  Clock3,
+  CalendarDays,
+  IndianRupee,
+  Ticket,
+  FileText,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import "./Sidebar.css";
 
 function Sidebar() {
+  const navigate = useNavigate();
+
+  const menuItems = [
+    ["/hr-dashboard", "Dashboard", LayoutDashboard],
+    ["/employees", "Employees", Users],
+    ["/attendance", "Attendance", Clock3],
+    ["/leave-management", "Leave Management", CalendarDays],
+    ["/payroll", "Payroll", IndianRupee],
+    ["/tickets", "Ticketing", Ticket],
+    ["/reports", "Reports", FileText],
+  ];
+
   return (
     <aside className="sidebar">
+      <div className="sidebar-logo">
+        <img src="/shelter logo.png" alt="Shelter Group" />
+      </div>
+      <div className="sidebar-section-title">MAIN MENU</div>
+      <nav className="sidebar-menu">
+        {menuItems.map(([path, label, Icon]) => (
+          <NavLink key={path} to={path} className="sidebar-link">
+            <Icon size={19} strokeWidth={2} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-      <h2>Main Menu</h2>
-
-      <Link to="/home" className="sidebar-link">
-        Home
-      </Link>
-
-      <Link to="/hr-dashboard" className="sidebar-link">
-        Dashboard
-      </Link>
-
-      <Link to="/employees" className="sidebar-link">
-        Employees
-      </Link>
-
-      <Link to="/attendance" className="sidebar-link">
-        Attendance
-      </Link>
-
-      <Link to="/leave-management" className="sidebar-link">
-        Leave Management
-      </Link>
-
-      <Link to="/recruitment" className="sidebar-link">
-        Recruitment
-      </Link>
-
-      <Link to="/payroll" className="sidebar-link">
-        Payroll
-      </Link>
-
-      <Link to="/tickets" className="sidebar-link">
-        Tickets
-      </Link>
-
-      <Link to="/reports" className="sidebar-link">
-        Reports
-      </Link>
+      <div className="sidebar-account">
+        <div className="sidebar-section-title">ACCOUNT</div>
+        <button type="button" className="sidebar-link sidebar-button" onClick={() => navigate("/settings")}>
+          <Settings size={19} strokeWidth={2} />
+          <span>Settings</span>
+        </button>
+        <button
+          type="button"
+          className="sidebar-link sidebar-button"
+          onClick={() => {
+            sessionStorage.removeItem("loggedInHR");
+            navigate("/login", { replace: true });
+          }}
+        >
+          <LogOut size={19} strokeWidth={2} />
+          <span>Logout</span>
+        </button>
+      </div>
 
     </aside>
   );

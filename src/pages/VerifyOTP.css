@@ -1,0 +1,88 @@
+.verify-otp-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+.verify-otp-card {
+  width: 100%;
+  max-width: 430px;
+  background: #fff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.verify-otp-icon {
+  font-size: 45px;
+  margin-bottom: 15px;
+}
+
+.verify-otp-card h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  color: #111;
+}
+
+.verify-otp-card p {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.verify-otp-card form {
+  text-align: left;
+}
+
+.verify-otp-card label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #222;
+}
+
+.verify-otp-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 18px;
+  letter-spacing: 5px;
+  text-align: center;
+  outline: none;
+}
+
+.verify-otp-card input:focus {
+  border-color: #111;
+}
+
+.verify-otp-card form button {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #111;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.verify-otp-card form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.back-login-btn {
+  margin-top: 18px;
+  border: none;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+}

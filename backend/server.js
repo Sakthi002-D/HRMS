@@ -430,6 +430,24 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
             `SELECT
                 e.id,
                 e.employee_id,
+                e.name,
+                e.date_of_birth,
+                e.gender,
+                e.department,
+                e.designation,
+                e.email,
+                e.phone,
+                e.address,
+                e.joining_date,
+                e.employment_type,
+                e.status,
+                e.emergency_contact,
+                e.passport_no,
+                e.passport_exp_date,
+                e.nationality,
+                e.religion,
+                e.marital_status,
+                e.children_count,
                 COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
                 COALESCE((SELECT row_to_json(f) FROM employee_family_details f WHERE f.employee_id = e.employee_id ORDER BY f.id DESC LIMIT 1), '{}'::json) AS family,
                 COALESCE((SELECT row_to_json(ed) FROM employee_education ed WHERE ed.employee_id = e.employee_id ORDER BY ed.id DESC LIMIT 1), '{}'::json) AS education,
@@ -894,7 +912,18 @@ app.post("/api/employees", async (req, res) => {
             designation,
             email,
             phone,
+            date_of_birth,
+            gender,
+            address,
             joining_date,
+            employment_type,
+            emergency_contact,
+            passport_no,
+            passport_exp_date,
+            nationality,
+            religion,
+            marital_status,
+            children_count,
             status
         } = req.body;
 
@@ -907,10 +936,21 @@ app.post("/api/employees", async (req, res) => {
                 designation, 
                 email, 
                 phone, 
-                joining_date, 
+                date_of_birth,
+                gender,
+                address,
+                joining_date,
+                employment_type,
+                emergency_contact,
+                passport_no,
+                passport_exp_date,
+                nationality,
+                religion,
+                marital_status,
+                children_count,
                 status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             RETURNING *`,
             [
                 employee_id,
@@ -919,7 +959,18 @@ app.post("/api/employees", async (req, res) => {
                 designation,
                 email,
                 phone,
-                joining_date,
+                normalizeDateValue(date_of_birth),
+                gender,
+                address,
+                normalizeDateValue(joining_date),
+                employment_type,
+                emergency_contact,
+                passport_no,
+                normalizeDateValue(passport_exp_date),
+                nationality,
+                religion,
+                marital_status,
+                children_count === "" || children_count == null ? null : Number(children_count),
                 status || "Active"
             ]
         );
@@ -954,7 +1005,13 @@ app.put("/api/employees/:employeeId", async (req, res) => {
         joining_date,
         employment_type,
         status,
-        emergency_contact
+        emergency_contact,
+        passport_no,
+        passport_exp_date,
+        nationality,
+        religion,
+        marital_status,
+        children_count
         } = req.body;
 
         const result = await pool.query(
@@ -972,23 +1029,35 @@ app.put("/api/employees/:employeeId", async (req, res) => {
       joining_date = $10,
       employment_type = $11,
       status = $12,
-      emergency_contact = $13
-   WHERE employee_id = $14
+        emergency_contact = $13,
+        passport_no = $14,
+        passport_exp_date = $15,
+        nationality = $16,
+        religion = $17,
+        marital_status = $18,
+        children_count = $19
+    WHERE employee_id = $20
    RETURNING *`,
   [
     employee_id,
     name,
-    date_of_birth,
+    normalizeDateValue(date_of_birth),
     gender,
     department,
     designation,
     email,
     phone,
     address,
-    joining_date,
+    normalizeDateValue(joining_date),
     employment_type,
     status,
     emergency_contact,
+    passport_no,
+    normalizeDateValue(passport_exp_date),
+    nationality,
+    religion,
+    marital_status,
+    children_count === "" || children_count == null ? null : Number(children_count),
     employeeId
   ]
 );
@@ -1848,6 +1917,67 @@ app.post("/api/login", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`HRMS Backend running on port ${PORT}`);
-});
+const normalizeDateValue = (value) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return null;
+    const dateValue = Array.isArray(value) ? value[0] : value;
+    const parsedDate = new Date(dateValue);
+    return Number.isNaN(parsedDate.getTime())
+        ? null
+        : parsedDate.toISOString().slice(0, 10);
+};
+
+const ensureEmployeePersonalInfoColumns = async () => {
+    await pool.query(`
+        ALTER TABLE employees
+        ADD COLUMN IF NOT EXISTS passport_no TEXT,
+        ADD COLUMN IF NOT EXISTS passport_exp_date DATE,
+        ADD COLUMN IF NOT EXISTS nationality TEXT,
+        ADD COLUMN IF NOT EXISTS religion TEXT,
+        ADD COLUMN IF NOT EXISTS marital_status TEXT,
+        ADD COLUMN IF NOT EXISTS children_count INTEGER
+    `);
+    await pool.query(`
+        ALTER TABLE employees
+        ALTER COLUMN name TYPE TEXT,
+        ALTER COLUMN department TYPE TEXT,
+        ALTER COLUMN designation TYPE TEXT,
+        ALTER COLUMN email TYPE TEXT,
+        ALTER COLUMN phone TYPE TEXT,
+        ALTER COLUMN address TYPE TEXT,
+        ALTER COLUMN employment_type TYPE TEXT,
+        ALTER COLUMN emergency_contact TYPE TEXT,
+        ALTER COLUMN passport_no TYPE TEXT,
+        ALTER COLUMN nationality TYPE TEXT,
+        ALTER COLUMN religion TYPE TEXT,
+        ALTER COLUMN marital_status TYPE TEXT
+    `);
+    await pool.query(`
+        DO $$
+        DECLARE column_record RECORD;
+        BEGIN
+            FOR column_record IN
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'employees'
+                  AND table_schema = 'public'
+                  AND data_type = 'character varying'
+            LOOP
+                EXECUTE format(
+                    'ALTER TABLE employees ALTER COLUMN %I TYPE TEXT',
+                    column_record.column_name
+                );
+            END LOOP;
+        END $$;
+    `);
+};
+
+ensureEmployeePersonalInfoColumns()
+    .then(() => {
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`HRMS Backend running on port ${PORT}`);
+        });
+    })
+    .catch((error) => {
+        console.error("Failed to prepare employee personal information columns:", error);
+        process.exit(1);
+    });

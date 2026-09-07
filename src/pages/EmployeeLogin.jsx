@@ -8,14 +8,14 @@ function EmployeeLogin() {
     const navigate = useNavigate();
 
     const [employeeId, setEmployeeId] = useState("");
-    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        if (!employeeId.trim() || !email.trim()) {
-            alert("Please enter Employee ID and Email");
+        if (!employeeId.trim() || !password.trim()) {
+            alert("Please enter Employee ID and Password");
             return;
         }
 
@@ -36,12 +36,11 @@ function EmployeeLogin() {
                 (item) =>
                     String(item.employee_id).toLowerCase() ===
                         employeeId.trim().toLowerCase() &&
-                    String(item.email).toLowerCase() ===
-                        email.trim().toLowerCase()
+                    String(item.password) === password
             );
 
             if (!employee) {
-                alert("Invalid Employee ID or Email");
+                alert("Invalid Employee ID or Password");
                 return;
             }
 
@@ -67,7 +66,6 @@ function EmployeeLogin() {
 
     return (
         <div className="employee-login-page">
-
             <div className="employee-login-card">
 
                 <div className="employee-login-icon">
@@ -82,6 +80,7 @@ function EmployeeLogin() {
 
                 <form onSubmit={handleLogin}>
 
+                    {/* Employee ID */}
                     <div className="employee-input-group">
                         <label>Employee ID</label>
 
@@ -95,15 +94,16 @@ function EmployeeLogin() {
                         />
                     </div>
 
+                    {/* Password */}
                     <div className="employee-input-group">
-                        <label>Email</label>
+                        <label>Password</label>
 
                         <input
-                            type="email"
-                            placeholder="Enter registered email"
-                            value={email}
+                            type="password"
+                            placeholder="Enter your password"
+                            value={password}
                             onChange={(e) =>
-                                setEmail(e.target.value)
+                                setPassword(e.target.value)
                             }
                         />
                     </div>
@@ -113,7 +113,9 @@ function EmployeeLogin() {
                         className="employee-login-btn"
                         disabled={loading}
                     >
-                        {loading ? "Logging in..." : "Login"}
+                        {loading
+                            ? "Logging in..."
+                            : "Login"}
                     </button>
 
                 </form>
@@ -126,7 +128,6 @@ function EmployeeLogin() {
                 </button>
 
             </div>
-
         </div>
     );
 }

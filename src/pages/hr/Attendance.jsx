@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import DatePicker from "../../components/layout/common/DatePicker";
 import "./Attendance.css";
 
 const API_URL = "http://localhost:5000";
@@ -13,6 +14,7 @@ function Attendance() {
     const [employeeId, setEmployeeId] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isExportOpen, setIsExportOpen] = useState(false);
 
     // =========================
     // FETCH ATTENDANCE
@@ -174,6 +176,23 @@ const fetchAttendance = async () => {
     return `${hours}h ${remainingMinutes}m`;
 };
 
+    const formatAttendanceTime = (time) => {
+        if (!time || time === "-") {
+            return "-";
+        }
+
+        const match = String(time).match(/^(\d{1,2}):(\d{2})/);
+        if (!match) {
+            return time;
+        }
+
+        const hours = Number(match[1]);
+        const period = hours >= 12 ? "PM" : "AM";
+        const displayHours = hours % 12 || 12;
+
+        return `${String(displayHours).padStart(2, "0")}:${match[2]} ${period}`;
+    };
+
     // =========================
     // FILTER ATTENDANCE
     // =========================
@@ -209,6 +228,46 @@ const fetchAttendance = async () => {
             matchesDate
         );
     });
+
+    const exportAttendance = (format) => {
+        if (!filteredAttendance.length) {
+            return;
+        }
+
+        const headers = [
+            "Employee ID", "Employee Name", "Department", "Date", "Punch In",
+            "Status", "Punch Out", "Working Hours", "Late", "Shift", "Project",
+        ];
+        const rows = filteredAttendance.map((employee) => [
+            employee.employeeID,
+            employee.employeeName,
+            employee.department,
+            employee.date,
+            formatAttendanceTime(employee.punchIn),
+            employee.status,
+            formatAttendanceTime(employee.punchOut),
+            employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes),
+            employee.lateMinutes > 0 ? `${employee.lateMinutes} min` : "0 min",
+            employee.shift,
+            employee.project,
+        ]);
+        const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+        const csv = [headers, ...rows]
+            .map((row) => row.map(escapeValue).join(","))
+            .join("\n");
+        const content = format === "excel"
+            ? `<table><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>${rows.map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join("")}</tr>`).join("")}</table>`
+            : csv;
+        const url = URL.createObjectURL(new Blob([content], {
+            type: format === "excel" ? "application/vnd.ms-excel" : "text/csv;charset=utf-8;",
+        }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `attendance.${format === "excel" ? "xls" : "csv"}`;
+        link.click();
+        URL.revokeObjectURL(url);
+        setIsExportOpen(false);
+    };
 
     // =========================
     // RETURN
@@ -277,14 +336,9 @@ const fetchAttendance = async () => {
                         }
                     />
 
-                    <input
-                        type="date"
-                        className="attendance-date"
-                        value={selectedDate}
-                        onChange={(e) =>
-                            setSelectedDate(e.target.value)
-                        }
-                    />
+                    <div className="attendance-date">
+                        <DatePicker value={selectedDate} onChange={setSelectedDate} />
+                    </div>
 
                     <select
                         className="attendance-status-filter"
@@ -313,6 +367,25 @@ const fetchAttendance = async () => {
                             On Leave
                         </option>
                     </select>
+
+                    <div className="attendance-export-menu">
+                        <button
+                            type="button"
+                            className="attendance-export-btn"
+                            onClick={() => setIsExportOpen((open) => !open)}
+                            disabled={!filteredAttendance.length}
+                            aria-expanded={isExportOpen}
+                        >
+                            Export <span aria-hidden="true">⌄</span>
+                        </button>
+
+                        {isExportOpen && (
+                            <div className="attendance-export-options">
+                                <button type="button" onClick={() => exportAttendance("excel")}>Excel</button>
+                                <button type="button" onClick={() => exportAttendance("csv")}>CSV</button>
+                            </div>
+                        )}
+                    </div>
 
                 </div>
 
@@ -372,7 +445,9 @@ const fetchAttendance = async () => {
                                     </td>
 
                                     <td>
-                                        {employee.punchIn}
+                                        <span className="punch-in-time">
+                                            {formatAttendanceTime(employee.punchIn)}
+                                        </span>
                                     </td>
 
                                     <td>
@@ -386,7 +461,7 @@ const fetchAttendance = async () => {
                                     </td>
 
                                     <td>
-                                        {employee.punchOut}
+                                        {formatAttendanceTime(employee.punchOut)}
                                     </td>
 
                                     <td className="working-hours">

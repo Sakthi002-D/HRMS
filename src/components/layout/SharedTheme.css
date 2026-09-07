@@ -1,0 +1,115 @@
+.dashboard-content > *:not(.employee-details-page) {
+  color: #102a43;
+}
+
+.dashboard-content
+  :is(.employees-page, .attendance-page, .leave-page, .recruitment-page,
+    .payroll-page, .tickets-page, .reports-page, .report-page,
+    .employee-report, .payroll-report-page) {
+  min-height: calc(100vh - 80px);
+  color: #102a43;
+}
+
+.dashboard-content
+  :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
+    .payroll-header, .tickets-header, .reports-header, .report-header,
+    .payroll-report-header) {
+  margin-bottom: 24px;
+}
+
+.dashboard-content
+  :is(.employees-header h1, .attendance-header h1, .leave-header h1,
+    .recruitment-header h1, .payroll-header h1, .tickets-header h1,
+    .reports-header h1, .report-header h1, .payroll-report-header h1) {
+  color: #0b2946;
+  font-size: 28px;
+  font-weight: 750;
+}
+
+.dashboard-content
+  :is(.employees-header p, .attendance-header p, .leave-header p,
+    .recruitment-header p, .payroll-header p, .tickets-header p,
+    .reports-header p, .report-header p, .payroll-report-header p) {
+  color: #718096;
+}
+
+.dashboard-content
+  :is(.employee-tools, .attendance-tools, .leave-tools, .payroll-tools,
+    .tickets-tools, .reports-container, .recruitment-card,
+    .employee-table-container, .attendance-table-container,
+    .table-wrapper, .jobs-table-container, .tickets-table-container,
+    .leave-table-container, .payroll-table-container,
+    .payroll-report-table-container, .report-table-container,
+    .leave-report-table-container, .employee-report-table) {
+  border: 1px solid #d3e2ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+.dashboard-content
+  :is(.employee-stats, .attendance-summary, .leave-summary,
+    .payroll-summary, .reports-summary, .report-summary,
+    .payroll-report-summary, .leave-report-summary) {
+  gap: 14px;
+}
+
+.dashboard-content
+  :is(.stat-card, .ticket-card, .report-card, .payroll-card,
+    .payroll-report-card) {
+  border: 1px solid #d3e2ee;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(35, 91, 130, .07);
+}
+
+.dashboard-content
+  :is(.employee-tools input, .employee-tools select, .attendance-tools input,
+    .attendance-tools select, .leave-tools input, .leave-tools select,
+    .payroll-tools input, .payroll-tools select, .tickets-tools input,
+    .tickets-tools select, .job-search input, .form-group input,
+    .form-group select) {
+  border-color: #cbddea;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.dashboard-content
+  :is(.employee-tools input:focus, .employee-tools select:focus,
+    .attendance-tools input:focus, .attendance-tools select:focus,
+    .leave-tools input:focus, .leave-tools select:focus,
+    .payroll-tools input:focus, .payroll-tools select:focus,
+    .tickets-tools input:focus, .tickets-tools select:focus,
+    .form-group input:focus, .form-group select:focus) {
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, .13);
+}
+
+.dashboard-content
+  :is(.add-employee-btn, .punch-in-btn, .resolve-btn, .progress-btn,
+    .report-item button, .modal-actions button:last-child) {
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff6b35, #ff5428);
+  box-shadow: 0 5px 13px rgba(255, 107, 53, .2);
+}
+
+.dashboard-content
+  :is(.employee-table th, .attendance-table th, .leave-table th,
+    .payroll-table th, .tickets-table th, .report-table th,
+    .payroll-report-table th) {
+  background: #16466d;
+}
+
+.dashboard-content
+  :is(.employee-table tbody tr:hover, .attendance-table tbody tr:hover,
+    .leave-table tbody tr:hover, .payroll-table tbody tr:hover,
+    .tickets-table tbody tr:hover, .report-table tbody tr:hover) {
+  background: #f2f8fc;
+}
+
+@media (max-width: 700px) {
+  .dashboard-content {
+    padding: 22px 16px 40px;
+  }
+}

@@ -2,13 +2,25 @@
   display: flex;
   min-height: 100vh;
   width: 100%;
-  background: #f5f7fb;
+  background: linear-gradient(135deg, #fbfdff 0%, #f1f7fc 100%);
 }
 
 .dashboard-content {
-  margin-left: 240px;
-  width: calc(100% - 240px);
+  margin-left: 250px;
+  width: calc(100% - 250px);
   min-height: 100vh;
-  padding: 35px 40px;
-  background: #f5f7fb;
+  padding: 30px 38px 50px;
+  background: rgba(255,255,255,.28);
+}
+
+@media (max-width: 650px) {
+  .dashboard-layout .sidebar {
+    display: none;
+  }
+
+  .dashboard-content {
+    width: 100%;
+    margin-left: 0;
+    padding: 22px 16px 40px;
+  }
 }

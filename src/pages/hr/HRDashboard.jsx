@@ -1,118 +1,118 @@
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard,
   Users,
   Clock3,
-  CalendarDays,
   IndianRupee,
   Ticket,
-  FileText,
-  Settings,
-  LogOut,
+  LayoutDashboard,
   Bell,
   UserPlus,
   ClipboardCheck,
   CalendarCheck,
   FileBarChart,
   ArrowRight,
-  CheckCircle2,
+  AlertCircle,
   X,
-  ChevronDown,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./HRDashboard.css";
 
 function HRDashboard() {
+  const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showDate, setShowDate] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
 
-  const today = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const loadNotifications = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/leaves");
+
+      if (!response.ok) {
+        throw new Error("Unable to load notifications");
+      }
+
+      const leaves = await response.json();
+      const pendingLeaves = leaves.filter(
+        (leave) => leave.status?.toLowerCase() === "pending"
+      );
+
+      const leaveNotifications = pendingLeaves.map((leave) => ({
+        id: `leave-${leave.id}`,
+        type: "leave",
+        title: `${leave.employee_name || leave.employee_id} requested leave`,
+        message: `${leave.leave_type} request for ${leave.days || 1} day${Number(leave.days) === 1 ? "" : "s"}.`,
+        time: leave.from_date
+          ? `From ${new Date(leave.from_date).toLocaleDateString()}`
+          : "Pending review",
+        path: "/leave-management",
+      }));
+
+      setNotifications([
+        {
+          id: "payroll-status",
+          type: "payroll",
+          title: "Payroll and salary updates",
+          message: "Review employee salary details and payroll status.",
+          time: "Open payroll",
+          path: "/payroll",
+        },
+        ...leaveNotifications,
+      ]);
+    } catch {
+      setNotifications([
+        {
+          id: "payroll-status",
+          type: "payroll",
+          title: "Payroll and salary updates",
+          message: "Review employee salary details and payroll status.",
+          time: "Open payroll",
+          path: "/payroll",
+        },
+      ]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const hrSession = sessionStorage.getItem("loggedInHR");
+
+    if (!hrSession) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    window.history.pushState(null, "", window.location.href);
+
+    const handleBackButton = () => {
+      sessionStorage.removeItem("loggedInHR");
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener("popstate", handleBackButton);
+
+    return () => {
+      window.removeEventListener("popstate", handleBackButton);
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const openNotification = (notification) => {
+    setShowNotifications(false);
+    navigate(notification.path);
+  };
+
+  const unreadCount = notifications.length;
 
   return (
-    <div className="dashboard">
-
-      {/* ================= SIDEBAR ================= */}
-      <aside className="sidebar">
-
-        <div className="sidebar-logo">
-          <img src="/shelter logo.png" alt="Shelter Group" />
-        </div>
-
-        <div className="menu-title">MAIN MENU</div>
-
-        <nav className="sidebar-menu">
-
-          <Link
-            to="/hr-dashboard"
-            className="menu-item active"
-          >
-            <LayoutDashboard size={19} strokeWidth={2} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/employees" className="menu-item">
-            <Users size={19} strokeWidth={2} />
-            <span>Employees</span>
-          </Link>
-
-          <Link to="/attendance" className="menu-item">
-            <Clock3 size={19} strokeWidth={2} />
-            <span>Attendance</span>
-          </Link>
-
-          <Link to="/leave-management" className="menu-item">
-            <CalendarDays size={19} strokeWidth={2} />
-            <span>Leave Management</span>
-          </Link>
-
-          <Link to="/payroll" className="menu-item">
-            <IndianRupee size={19} strokeWidth={2} />
-            <span>Payroll</span>
-          </Link>
-
-          <Link to="/tickets" className="menu-item">
-            <Ticket size={19} strokeWidth={2} />
-            <span>Ticketing</span>
-          </Link>
-
-          <Link to="/reports" className="menu-item">
-            <FileText size={19} strokeWidth={2} />
-            <span>Reports</span>
-          </Link>
-
-        </nav>
-
-        <div className="sidebar-bottom">
-
-          <div className="menu-title">ACCOUNT</div>
-
-          <button
-            className="menu-item settings-btn"
-            onClick={() =>
-              alert("Settings page will be available soon.")
-            }
-          >
-            <Settings size={19} strokeWidth={2} />
-            <span>Settings</span>
-          </button>
-
-          <Link to="/" className="menu-item logout">
-            <LogOut size={19} strokeWidth={2} />
-            <span>Logout</span>
-          </Link>
-
-        </div>
-
-      </aside>
-
-
-      {/* ================= MAIN ================= */}
-      <main className="dashboard-main">
+    <DashboardLayout>
+      <div className="dashboard-main">
 
         {/* ================= HEADER ================= */}
         <header className="dashboard-header">
@@ -131,49 +131,63 @@ function HRDashboard() {
 
               <button
                 className="notification-btn"
+                aria-label="Open notifications"
+                aria-expanded={showNotifications}
                 onClick={() =>
                   setShowNotifications(!showNotifications)
                 }
               >
                 <Bell size={19} />
 
-                <span className="notification-dot"></span>
+                {unreadCount > 0 && (
+                  <span className="notification-dot" aria-label={`${unreadCount} unread notifications`}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {showNotifications && (
                 <div className="notification-dropdown">
 
                   <div className="notification-header">
-                    <strong>Notifications</strong>
+                    <div>
+                      <strong>Notifications</strong>
+                      <span>{notificationsLoading ? "Checking for updates..." : `${unreadCount} updates need your attention`}</span>
+                    </div>
 
                     <button
                       onClick={() => setShowNotifications(false)}
+                      aria-label="Close notifications"
                     >
                       <X size={16} />
                     </button>
                   </div>
 
-                  <div className="notification-item">
-                    <div className="notification-icon">
-                      <CheckCircle2 size={17} />
-                    </div>
+                  {notificationsLoading ? (
+                    <div className="notification-empty">Loading updates...</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="notification-empty">You are all caught up.</div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        className="notification-item"
+                        key={notification.id}
+                        type="button"
+                        onClick={() => openNotification(notification)}
+                      >
+                        <span className={`notification-icon ${notification.type}`}>
+                          {notification.type === "leave" ? <CalendarCheck size={17} /> : <AlertCircle size={17} />}
+                        </span>
 
-                    <div>
-                      <strong>Payroll completed</strong>
-                      <p>August payroll has been processed.</p>
-                    </div>
-                  </div>
-
-                  <div className="notification-item">
-                    <div className="notification-icon">
-                      <CalendarCheck size={17} />
-                    </div>
-
-                    <div>
-                      <strong>Leave requests</strong>
-                      <p>3 leave requests need approval.</p>
-                    </div>
-                  </div>
+                        <span className="notification-copy">
+                          <strong>{notification.title}</strong>
+                          <small>{notification.time}</small>
+                          <span>{notification.message}</span>
+                        </span>
+                        <ArrowRight className="notification-arrow" size={15} />
+                      </button>
+                    ))
+                  )}
 
                 </div>
               )}
@@ -189,8 +203,8 @@ function HRDashboard() {
               </div>
 
               <div className="profile-info">
-                <strong>HR Admin</strong>
-                <small>Administrator</small>
+                <strong>HR Administrator</strong>
+                <small>People Operations</small>
               </div>
 
             </div>
@@ -199,39 +213,21 @@ function HRDashboard() {
 
         </header>
 
+        <section className="welcome-card">
+          <div className="welcome-avatar">HR</div>
+          <div className="welcome-copy">
+            <h2>Welcome back, HR Admin</h2>
+            <p>You have <strong>3 pending approvals</strong> and <strong>5 employee updates</strong> to review.</p>
+          </div>
+          <div className="welcome-actions">
+            <Link to="/employees">Manage Employees</Link>
+            <Link to="/leave-management" className="primary-action">Review Requests</Link>
+          </div>
+        </section>
+
 
         {/* ================= OVERVIEW ================= */}
         <section className="dashboard-section">
-
-          <div className="section-heading">
-
-            <div>
-              <h2>Overview</h2>
-              <p>Employee and HR activities at a glance.</p>
-            </div>
-
-            <div className="today-wrapper">
-
-              <button
-                className="today"
-                onClick={() => setShowDate(!showDate)}
-              >
-                <CalendarDays size={16} />
-                Today
-                <ChevronDown size={14} />
-              </button>
-
-              {showDate && (
-                <div className="date-popup">
-                  {today}
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
           {/* ================= STAT CARDS ================= */}
           <div className="stats-grid">
 
@@ -253,6 +249,7 @@ function HRDashboard() {
                 <h3>128</h3>
                 <small>+8 this month</small>
               </div>
+              <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -275,6 +272,7 @@ function HRDashboard() {
                 <h3>112</h3>
                 <small>87.5% attendance</small>
               </div>
+              <Link className="stat-link" to="/attendance">View Details <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -297,6 +295,7 @@ function HRDashboard() {
                 <h3>09</h3>
                 <small>3 pending approval</small>
               </div>
+              <Link className="stat-link" to="/leave-management">View Details <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -319,27 +318,67 @@ function HRDashboard() {
                 <h3>Paid</h3>
                 <small>August 2026</small>
               </div>
-
+              <Link className="stat-link" to="/payroll">View Details <ArrowRight size={13} /></Link>
             </div>
 
-          </div>
+            <div className="stat-card recruitment-card">
+                <div className="stat-top">
+                  <div className="stat-icon recruitment-icon"><UserPlus size={21} /></div>
+                  <span className="stat-growth">↗ 6%</span>
+                </div>
+                <div className="stat-content">
+                  <span>Open Positions</span>
+                  <h3>18</h3>
+                  <small>6 interviews this week</small>
+                </div>
+                <Link className="stat-link" to="/recruitment">View Details <ArrowRight size={13} /></Link>
+              </div>
 
+            <div className="stat-card joiners-card">
+                <div className="stat-top">
+                  <div className="stat-icon joiners-icon"><Users size={21} /></div>
+                  <span className="stat-growth">↗ 4%</span>
+                </div>
+                <div className="stat-content">
+                  <span>New Joiners</span>
+                  <h3>07</h3>
+                  <small>This month</small>
+                </div>
+                <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
+              </div>
+
+            <div className="stat-card tickets-card">
+                <div className="stat-top">
+                  <div className="stat-icon tickets-icon"><Ticket size={21} /></div>
+                  <span className="stat-growth">↗ 9%</span>
+                </div>
+                <div className="stat-content">
+                  <span>Open Tickets</span>
+                  <h3>12</h3>
+                  <small>4 require attention</small>
+                </div>
+                <Link className="stat-link" to="/tickets">View Details <ArrowRight size={13} /></Link>
+              </div>
+
+            <div className="stat-card department-card">
+                <div className="stat-top">
+                  <div className="stat-icon department-icon"><LayoutDashboard size={21} /></div>
+                  <span className="stat-growth">Active</span>
+                </div>
+                <div className="stat-content">
+                  <span>Departments</span>
+                  <h3>09</h3>
+                  <small>Across the organization</small>
+                </div>
+                <Link className="stat-link" to="/reports">View Details <ArrowRight size={13} /></Link>
+              </div>
+
+          </div>
         </section>
 
 
         {/* ================= QUICK ACTIONS ================= */}
         <section className="dashboard-section">
-
-          <div className="section-heading">
-
-            <div>
-              <h2>Quick Actions</h2>
-              <p>Frequently used HR operations.</p>
-            </div>
-
-          </div>
-
-
           <div className="quick-actions">
 
             {/* Employees */}
@@ -418,152 +457,9 @@ function HRDashboard() {
         </section>
 
 
-        {/* ================= BOTTOM ================= */}
-        <section className="bottom-grid">
 
-
-          {/* ================= ATTENDANCE ================= */}
-          <div className="dashboard-panel">
-
-            <div className="panel-header">
-
-              <div>
-                <h2>Today's Attendance</h2>
-                <p>Employee attendance summary</p>
-              </div>
-
-              <Link to="/attendance">
-                View All <ArrowRight size={14} />
-              </Link>
-
-            </div>
-
-
-            <div className="attendance-summary">
-
-              <div>
-                <strong>112</strong>
-                <span>Present</span>
-              </div>
-
-              <div>
-                <strong>07</strong>
-                <span>Absent</span>
-              </div>
-
-              <div>
-                <strong>09</strong>
-                <span>Leave</span>
-              </div>
-
-            </div>
-
-
-            <div className="progress-area">
-
-              <div className="progress-label">
-                <span>Attendance Rate</span>
-                <strong>87.5%</strong>
-              </div>
-
-              <div className="progress-bar">
-                <div style={{ width: "87.5%" }}></div>
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* ================= LEAVE REQUESTS ================= */}
-          <div className="dashboard-panel">
-
-            <div className="panel-header">
-
-              <div>
-                <h2>Pending Leave Requests</h2>
-                <p>Requires your attention</p>
-              </div>
-
-              <Link to="/leave-management">
-                View All <ArrowRight size={14} />
-              </Link>
-
-            </div>
-
-
-            {/* Arun */}
-            <div className="leave-request">
-
-              <div className="employee-avatar">
-                AK
-              </div>
-
-              <div className="leave-info">
-                <strong>Arun Kumar</strong>
-                <span>Casual Leave • 2 Days</span>
-              </div>
-
-              <Link
-                to="/leave-management?review=EMP001"
-                className="review-btn"
-              >
-                Review
-              </Link>
-
-            </div>
-
-
-            {/* Ravi */}
-            <div className="leave-request">
-
-              <div className="employee-avatar">
-                RS
-              </div>
-
-              <div className="leave-info">
-                <strong>Ravi Shankar</strong>
-                <span>Sick Leave • 1 Day</span>
-              </div>
-
-              <Link
-                to="/leave-management?review=EMP002"
-                className="review-btn"
-              >
-                Review
-              </Link>
-
-            </div>
-
-
-            {/* Priya */}
-            <div className="leave-request">
-
-              <div className="employee-avatar">
-                PM
-              </div>
-
-              <div className="leave-info">
-                <strong>Priya Menon</strong>
-                <span>Earned Leave • 3 Days</span>
-              </div>
-
-              <Link
-                to="/leave-management?review=EMP003"
-                className="review-btn"
-              >
-                Review
-              </Link>
-
-            </div>
-
-          </div>
-
-        </section>
-
-      </main>
-
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
 

@@ -1,9 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import DatePicker from "../../components/layout/common/DatePicker";
 import "./EmployeeDetails.css";
 
-const API_URL = "https://hrms-cuoq.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+async function readApiResponse(response) {
+    const responseText = await response.text();
+    try {
+        return responseText ? JSON.parse(responseText) : {};
+    } catch {
+        throw new Error(
+            `Employee details API is unavailable (${response.status}). Restart or redeploy the backend.`
+        );
+    }
+}
 
 function EmployeeDetails() {
     const { employeeSlug } = useParams();
@@ -12,6 +24,19 @@ function EmployeeDetails() {
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editForm, setEditForm] = useState({});
+    const [sectionEditor, setSectionEditor] = useState(null);
+    const [sectionForm, setSectionForm] = useState({});
+    const [activeWorkTab, setActiveWorkTab] = useState("projects");
+    const [openPanels, setOpenPanels] = useState({
+        about: true,
+        bank: false,
+        family: false,
+        education: false,
+        experience: false,
+    });
 
     useEffect(() => {
         fetchEmployee();
@@ -50,6 +75,16 @@ function EmployeeDetails() {
             }
 
             setEmployee(foundEmployee);
+            const detailsResponse = await fetch(
+                `${API_URL}/api/employees/${foundEmployee.employee_id}/details`
+            );
+            if (!detailsResponse.ok) {
+                throw new Error(
+                    `Employee details API is unavailable (${detailsResponse.status}). Restart or redeploy the backend.`
+                );
+            }
+            const details = await readApiResponse(detailsResponse);
+            setEmployee((current) => ({ ...current, ...details }));
         } catch (error) {
             console.error("Employee details error:", error);
             setError("Unable to connect to backend");
@@ -72,6 +107,90 @@ function EmployeeDetails() {
             month: "short",
             year: "numeric",
         });
+    };
+
+    const openEditor = () => {
+        setEditForm({
+            employee_id: employee.employee_id || "",
+            name: employee.name || "",
+            date_of_birth: employee.date_of_birth ? String(employee.date_of_birth).slice(0, 10) : "",
+            gender: employee.gender || "",
+            phone: employee.phone || "",
+            email: employee.email || "",
+            address: employee.address || "",
+            designation: employee.designation || "",
+            department: employee.department || "",
+            joining_date: employee.joining_date ? String(employee.joining_date).slice(0, 10) : "",
+            employment_type: employee.employment_type || "",
+            status: employee.status || "Active",
+            emergency_contact: employee.emergency_contact || "",
+            passport_no: employee.passport_no || "",
+            passport_exp_date: employee.passport_exp_date ? String(employee.passport_exp_date).slice(0, 10) : "",
+            nationality: employee.nationality || employee.country || "Indian",
+            religion: employee.religion || "",
+            marital_status: employee.marital_status || "",
+            children_count: employee.children_count ?? "",
+        });
+        setIsEditing(true);
+    };
+
+    const updateFormField = ({ target }) => {
+        setEditForm((current) => ({ ...current, [target.name]: target.value }));
+    };
+
+    const saveEmployee = async (event) => {
+        event.preventDefault();
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editForm),
+            });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Failed to update employee");
+            setEmployee((current) => ({ ...current, ...data }));
+            setIsEditing(false);
+        } catch (saveError) {
+            console.error("Employee update error:", saveError);
+            alert(saveError.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const sectionFields = {
+        bank: [["account_holder_name", "Account Holder Name"], ["account_number", "Account Number"], ["bank_name", "Bank Name"], ["branch_name", "Branch Name"], ["ifsc_code", "IFSC Code"], ["account_type", "Account Type"]],
+        family: [["father_name", "Father Name"], ["mother_name", "Mother Name"], ["spouse_name", "Spouse Name"], ["spouse_employment", "Spouse Employment"], ["marital_status", "Marital Status"], ["children_count", "Children Count"]],
+        education: [["qualification", "Qualification"], ["institution", "Institution"], ["field_of_study", "Field of Study"], ["start_year", "Start Year"], ["end_year", "End Year"], ["grade", "Grade"]],
+        experience: [["company_name", "Company Name"], ["designation", "Designation"], ["start_date", "Start Date"], ["end_date", "End Date"], ["description", "Description"]],
+        project: [["project_name", "Project Name"], ["description", "Description"], ["project_lead", "Project Lead"], ["start_date", "Start Date"], ["deadline", "Deadline"], ["status", "Status"]],
+    };
+
+    const openSectionEditor = (section) => {
+        const current = employee[section] || {};
+        setSectionForm(Object.fromEntries((sectionFields[section] || []).map(([name]) => [name, current[name] ?? ""])));
+        setSectionEditor(section);
+    };
+
+    const saveSection = async (event) => {
+        event.preventDefault();
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/${sectionEditor}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(sectionForm),
+            });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Failed to save details");
+            setEmployee((current) => ({ ...current, [sectionEditor]: data }));
+            setSectionEditor(null);
+        } catch (saveError) {
+            alert(saveError.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (loading) {
@@ -115,371 +234,253 @@ function EmployeeDetails() {
         .substring(0, 2)
         .toUpperCase();
 
+    const detailRows = [
+        ["Phone", employee.phone],
+        ["Email", employee.email],
+        ["Gender", employee.gender],
+        ["Birthday", formatDate(employee.date_of_birth)],
+        ["Joining Date", formatDate(employee.joining_date)],
+        ["Employment Type", employee.employment_type],
+        ["Address", employee.address],
+    ];
+
     return (
         <DashboardLayout>
             <div className="employee-details-page">
-
-                {/* TOP BAR */}
                 <div className="employee-details-topbar">
-
-                    <div>
-                        <button
-                            className="back-btn"
-                            onClick={() => navigate("/employees")}
-                        >
-                            ← Back to Employees
-                        </button>
-
-                        <div className="breadcrumb">
-                            Employees
-                            <span>/</span>
-                            {employee.name}
-                        </div>
-                    </div>
-
-                    <button
-                        className="edit-employee-btn"
-                        onClick={() =>
-                            navigate("/employees")
-                        }
-                    >
-                        ✎ Edit Employee
+                    <button className="back-btn" onClick={() => navigate("/employees")}>
+                        ← Employee Details
                     </button>
+                    <div className="topbar-actions">
+                        <span className="details-heading">Employee Overview</span>
+                        <button
+                            className="collapse-btn"
+                            type="button"
+                            onClick={() => setOpenPanels((current) => {
+                                const shouldOpen = Object.values(current).some(Boolean) === false;
+                                return Object.fromEntries(Object.keys(current).map((key) => [key, shouldOpen]));
+                            })}
+                            aria-label="Expand or collapse all employee details"
+                        >
+                            {Object.values(openPanels).some(Boolean) ? "⌃" : "⌄"}
+                        </button>
+                    </div>
                 </div>
 
-                {/* PROFILE HERO */}
-                <section className="employee-profile-hero">
-
-                    <div className="profile-avatar-large">
-                        {employee.profile_photo ? (
-                            <img
-                                src={employee.profile_photo}
-                                alt={employee.name}
-                            />
-                        ) : (
-                            initials
-                        )}
-                    </div>
-
-                    <div className="profile-main-info">
-
-                        <div className="profile-name-row">
-                            <h1>{employee.name}</h1>
-
-                            <span
-                                className={`employee-status-badge ${
-                                    employee.status === "Active"
-                                        ? "active"
-                                        : "inactive"
-                                }`}
-                            >
-                                <span className="status-dot"></span>
-                                {employee.status}
-                            </span>
+                <div className="employee-details-layout">
+                    <aside className="employee-summary">
+                        <div className="profile-cover"></div>
+                        <div className="profile-avatar-large">
+                            {employee.profile_photo ? (
+                                <img src={employee.profile_photo} alt={employee.name} />
+                            ) : initials}
                         </div>
-
-                        <p className="profile-designation">
-                            {employee.designation || "Employee"}
-                        </p>
-
-                        <div className="profile-meta">
-
-                            <span>
-                                <b>Employee ID</b>
-                                {employee.employee_id}
-                            </span>
-
-                            <span>
-                                <b>Department</b>
-                                {employee.department || "-"}
-                            </span>
-
-                            <span>
-                                <b>Joined</b>
-                                {formatDate(employee.joining_date)}
-                            </span>
-
+                        <h1>{employee.name}</h1>
+                        <span className="verified-name">●</span>
+                        <div className="profile-tags">
+                            <span>● {employee.designation || "Employee"}</span>
+                            <span>{employee.employment_type || "Full time"}</span>
                         </div>
-                    </div>
-
-                </section>
-
-                {/* QUICK STATS */}
-                <section className="employee-quick-stats">
-
-                    <div className="quick-stat-card">
-                        <div className="quick-stat-icon blue">
-                            👤
+                        <div className="summary-actions">
+                            <button type="button" onClick={openEditor}>✎ Edit Info</button>
+                            <a href={`mailto:${employee.email}`}>▣ Message</a>
                         </div>
-
-                        <div>
-                            <span>Employment Type</span>
-                            <strong>
-                                {employee.employment_type || "-"}
-                            </strong>
+                        <InfoSection title="Basic information" rows={detailRows} />
+                        <InfoSection
+                            title="Personal Information"
+                            rows={[
+                                ["Passport No", employee.passport_no],
+                                ["Passport Exp Date", formatDate(employee.passport_exp_date)],
+                                ["Nationality", employee.nationality || employee.country || "Indian"],
+                                ["Religion", employee.religion],
+                                ["Marital status", employee.marital_status],
+                                ["No. of children", employee.children_count],
+                            ]}
+                        />
+                        <div className="info-section emergency-section">
+                            <h3>Emergency Contact Number</h3>
+                            <p><b>Primary</b><strong>{employee.emergency_contact || "-"}</strong></p>
                         </div>
-                    </div>
+                    </aside>
 
-                    <div className="quick-stat-card">
-                        <div className="quick-stat-icon purple">
-                            💼
+                    <main className="employee-detail-content">
+                        <DetailPanel panelKey="about" isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title="About Employee" content={`Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`} onEdit={openEditor} />
+                        <DetailPanel panelKey="bank" isOpen={openPanels.bank} onToggle={() => setOpenPanels((current) => ({ ...current, bank: !current.bank }))} title="Bank Information" onEdit={() => openSectionEditor("bank")} content={formatSection(employee.bank)} />
+                        <DetailPanel panelKey="family" isOpen={openPanels.family} onToggle={() => setOpenPanels((current) => ({ ...current, family: !current.family }))} title="Family Information" onEdit={() => openSectionEditor("family")} content={formatSection(employee.family)} />
+                        <div className="detail-panel-row">
+                            <DetailPanel panelKey="education" isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title="Education Details" onEdit={() => openSectionEditor("education")} content={formatSection(employee.education)} />
+                            <DetailPanel panelKey="experience" isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title="Experience" onEdit={() => openSectionEditor("experience")} content={formatSection(employee.experience)} />
                         </div>
-
-                        <div>
-                            <span>Department</span>
-                            <strong>
-                                {employee.department || "-"}
-                            </strong>
-                        </div>
-                    </div>
-
-                    <div className="quick-stat-card">
-                        <div className="quick-stat-icon green">
-                            📅
-                        </div>
-
-                        <div>
-                            <span>Joining Date</span>
-                            <strong>
-                                {formatDate(employee.joining_date)}
-                            </strong>
-                        </div>
-                    </div>
-
-                    <div className="quick-stat-card">
-                        <div className="quick-stat-icon orange">
-                            📞
-                        </div>
-
-                        <div>
-                            <span>Contact</span>
-                            <strong>
-                                {employee.phone || "-"}
-                            </strong>
-                        </div>
-                    </div>
-
-                </section>
-
-                {/* DETAILS GRID */}
-                <div className="employee-details-grid">
-
-                    {/* PERSONAL DETAILS */}
-                    <section className="details-card">
-
-                        <div className="details-card-header">
-                            <div className="section-icon">
-                                👤
+                        <section className="projects-panel">
+                            <div className="project-tabs" role="tablist" aria-label="Employee work details">
+                                <button type="button" role="tab" aria-selected={activeWorkTab === "projects"} className={activeWorkTab === "projects" ? "active" : ""} onClick={() => setActiveWorkTab("projects")}>Projects</button>
+                                <button type="button" role="tab" aria-selected={activeWorkTab === "assets"} className={activeWorkTab === "assets" ? "active" : ""} onClick={() => setActiveWorkTab("assets")}>Assets</button>
                             </div>
-
-                            <div>
-                                <h2>Personal Details</h2>
-                                <p>
-                                    Personal information of the employee
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="details-content">
-
-                            <div className="detail-item">
-                                <span>Employee ID</span>
-                                <strong>
-                                    {employee.employee_id}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Full Name</span>
-                                <strong>
-                                    {employee.name || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Date of Birth</span>
-                                <strong>
-                                    {formatDate(employee.date_of_birth)}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Gender</span>
-                                <strong>
-                                    {employee.gender || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Email</span>
-                                <strong className="email-value">
-                                    {employee.email || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Phone</span>
-                                <strong>
-                                    {employee.phone || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item full-width">
-                                <span>Address</span>
-                                <strong>
-                                    {employee.address || "-"}
-                                </strong>
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                    {/* JOB DETAILS */}
-                    <section className="details-card">
-
-                        <div className="details-card-header">
-                            <div className="section-icon purple-icon">
-                                💼
-                            </div>
-
-                            <div>
-                                <h2>Job Details</h2>
-                                <p>
-                                    Employment and organizational details
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="details-content">
-
-                            <div className="detail-item">
-                                <span>Designation</span>
-                                <strong>
-                                    {employee.designation || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Department</span>
-                                <strong>
-                                    {employee.department || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Joining Date</span>
-                                <strong>
-                                    {formatDate(employee.joining_date)}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Employment Type</span>
-                                <strong>
-                                    {employee.employment_type || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item">
-                                <span>Employee Status</span>
-                                <strong>
-                                    <span
-                                        className={`mini-status ${
-                                            employee.status ===
-                                            "Active"
-                                                ? "active"
-                                                : "inactive"
-                                        }`}
-                                    >
-                                        {employee.status}
-                                    </span>
-                                </strong>
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                    {/* OTHER DETAILS */}
-                    <section className="details-card">
-
-                        <div className="details-card-header">
-                            <div className="section-icon orange-icon">
-                                🛡
-                            </div>
-
-                            <div>
-                                <h2>Other Details</h2>
-                                <p>
-                                    Additional employee information
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="details-content">
-
-                            <div className="detail-item full-width">
-                                <span>Emergency Contact</span>
-                                <strong>
-                                    {employee.emergency_contact || "-"}
-                                </strong>
-                            </div>
-
-                            <div className="detail-item full-width">
-                                <span>Country</span>
-                                <strong>
-                                    {employee.country || "India"}
-                                </strong>
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                    {/* CONTACT CARD */}
-                    <section className="contact-card">
-
-                        <div className="contact-card-icon">
-                            ✉
-                        </div>
-
-                        <div>
-                            <h2>Need to contact {employee.name}?</h2>
-
-                            <p>
-                                Use the employee's registered contact
-                                information.
-                            </p>
-
-                            <div className="contact-actions">
-
-                                <a
-                                    href={`mailto:${employee.email}`}
-                                    className="contact-btn primary"
-                                >
-                                    ✉ Send Email
-                                </a>
-
-                                {employee.phone && (
-                                    <a
-                                        href={`tel:${employee.phone}`}
-                                        className="contact-btn secondary"
-                                    >
-                                        ☎ Call Employee
-                                    </a>
-                                )}
-
-                            </div>
-                        </div>
-
-                    </section>
-
+                            {activeWorkTab === "projects" ? (
+                                <div className="project-list" role="tabpanel">
+                                    <article><span className="project-icon blue">C</span><div><b>{employee.department || "Workforce"} Management</b><p>Employee responsibilities and assigned work</p></div></article>
+                                    <article><span className="project-icon purple">●</span><div><b>{employee.designation || "Employee"} Operations</b><p>Current role and organizational activities</p></div></article>
+                                </div>
+                            ) : (
+                                <div className="assets-empty-state" role="tabpanel">
+                                    <span className="assets-empty-icon">▣</span>
+                                    <div><b>No assets assigned</b><p>Company assets assigned to this employee will appear here.</p></div>
+                                </div>
+                            )}
+                            {activeWorkTab === "projects" && (
+                                <button className="section-edit-button" type="button" onClick={() => openSectionEditor("project")} aria-label="Edit projects">✎</button>
+                            )}
+                        </section>
+                    </main>
                 </div>
 
+                {isEditing && (
+                    <div className="employee-edit-overlay">
+                        <form className="employee-edit-form" onSubmit={saveEmployee}>
+                            <div className="edit-form-header">
+                                <h2>Edit Employee Details</h2>
+                                <button type="button" onClick={() => setIsEditing(false)}>×</button>
+                            </div>
+                            <div className="edit-form-grid">
+                                {[
+                                    ["employee_id", "Employee ID", "text"],
+                                    ["name", "Full Name", "text"],
+                                    ["date_of_birth", "Date of Birth", "date"],
+                                    ["phone", "Phone", "tel"],
+                                    ["email", "Email", "email"],
+                                    ["address", "Address", "text"],
+                                    ["designation", "Designation", "text"],
+                                    ["department", "Department", "text"],
+                                    ["joining_date", "Joining Date", "date"],
+                                    ["emergency_contact", "Emergency Contact", "tel"],
+                                ].map(([name, label, type]) => (
+                                    <label key={name}>{label}
+                                        {type === "date" ? (
+                                            <DatePicker value={editForm[name] || ""} onChange={(value) => setEditForm((current) => ({ ...current, [name]: value }))} />
+                                        ) : (
+                                            <input name={name} type={type} value={editForm[name] || ""} onChange={updateFormField} />
+                                        )}
+                                    </label>
+                                ))}
+                                <label>Gender
+                                    <select name="gender" value={editForm.gender || ""} onChange={updateFormField}>
+                                        <option value="">Select gender</option><option>Male</option><option>Female</option><option>Other</option>
+                                    </select>
+                                </label>
+                                <label>Employment Type
+                                    <select name="employment_type" value={editForm.employment_type || ""} onChange={updateFormField}>
+                                        <option value="">Select employment type</option><option>Full Time</option><option>Part Time</option><option>Contract</option><option>Intern</option>
+                                    </select>
+                                </label>
+                                <label>Status
+                                    <select name="status" value={editForm.status || "Active"} onChange={updateFormField}>
+                                        <option>Active</option><option>Inactive</option>
+                                    </select>
+                                </label>
+                                <label>Passport No
+                                    <input name="passport_no" type="text" value={editForm.passport_no || ""} onChange={updateFormField} />
+                                </label>
+                                <label>Passport Exp Date
+                                    <DatePicker value={editForm.passport_exp_date || ""} onChange={(value) => setEditForm((current) => ({ ...current, passport_exp_date: value }))} />
+                                </label>
+                                <label>Nationality
+                                    <input name="nationality" type="text" value={editForm.nationality || ""} onChange={updateFormField} />
+                                </label>
+                                <label>Religion
+                                    <input name="religion" type="text" value={editForm.religion || ""} onChange={updateFormField} />
+                                </label>
+                                <label>Marital Status
+                                    <select name="marital_status" value={editForm.marital_status || ""} onChange={updateFormField}>
+                                        <option value="">Select marital status</option>
+                                        <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+                                    </select>
+                                </label>
+                                <label>No. of Children
+                                    <input name="children_count" type="number" min="0" value={editForm.children_count ?? ""} onChange={updateFormField} />
+                                </label>
+                            </div>
+                            <div className="edit-form-actions">
+                                <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
+                                <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+                {sectionEditor && (
+                    <div className="employee-edit-overlay">
+                        <form className="employee-edit-form" onSubmit={saveSection}>
+                            <div className="edit-form-header">
+                                <h2>Edit {sectionEditor} Details</h2>
+                                <button type="button" onClick={() => setSectionEditor(null)}>×</button>
+                            </div>
+                            <div className="edit-form-grid">
+                                {sectionFields[sectionEditor].map(([name, label]) => (
+                                    <label key={name}>{label}
+                                        {name.includes("date") || name === "deadline" ? (
+                                            <DatePicker value={sectionForm[name] || ""} onChange={(value) => setSectionForm((current) => ({ ...current, [name]: value }))} />
+                                        ) : (
+                                            <input name={name} type="text" value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))} />
+                                        )}
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="edit-form-actions">
+                                <button type="button" onClick={() => setSectionEditor(null)}>Cancel</button>
+                                <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     );
+}
+
+function InfoSection({ title, rows }) {
+    return (
+        <section className="info-section">
+            <h3>{title}</h3>
+            {rows.map(([label, value]) => (
+                <p key={label}><span>{label}</span><strong>{value || "-"}</strong></p>
+            ))}
+        </section>
+    );
+}
+
+function DetailPanel({ title, content, isOpen, onToggle, onEdit }) {
+    return (
+        <section className={`detail-panel ${isOpen ? "open" : "collapsed"}`}>
+            <header>
+                <h2>{title}</h2>
+                <button type="button" className="panel-edit-button" onClick={onEdit} aria-label={`Edit ${title}`}>✎</button>
+                <button type="button" className="panel-toggle-button" onClick={onToggle} aria-label={`${isOpen ? "Collapse" : "Expand"} ${title}`}>
+                    {isOpen ? "⌃" : "⌄"}
+                </button>
+            </header>
+            {isOpen && content && (
+                <div className={`detail-panel-content ${typeof content === "string" ? "plain" : ""}`}>
+                    {content}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function formatSection(section) {
+    if (!section || Object.keys(section).length === 0) {
+        return "No details added yet.";
+    }
+
+    const entries = Object.entries(section)
+        .filter(([key, value]) => !["id", "employee_id", "created_at", "updated_at"].includes(key) && value !== null && value !== "")
+        .map(([key, value]) => (
+            <div className="detail-field" key={key}>
+                <span>{key.replaceAll("_", " ")}</span>
+                <strong>{value}</strong>
+            </div>
+        ));
+
+    return entries.length > 0 ? entries : "No details added yet.";
 }
 
 export default EmployeeDetails;

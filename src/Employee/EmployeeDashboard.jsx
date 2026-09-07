@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DatePicker from "../components/layout/common/DatePicker";
 import "./EmployeeDashboard.css";
 
 const API_URL = "http://localhost:5000";
@@ -22,20 +23,36 @@ function EmployeeDashboard() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const savedEmployee =
-            localStorage.getItem("loggedInEmployee");
+    const savedEmployee =
+        sessionStorage.getItem("loggedInEmployee");
 
-        if (!savedEmployee) {
-            navigate("/employee-login");
-            return;
-        }
+    if (!savedEmployee) {
+        navigate("/login", { replace: true });
+        return;
+    }
 
-        const employeeData = JSON.parse(savedEmployee);
+    const employeeData = JSON.parse(savedEmployee);
 
-        setEmployee(employeeData);
+    setEmployee(employeeData);
 
-        fetchLeaves(employeeData.employee_id);
-    }, [navigate]);
+    fetchLeaves(employeeData.employee_id);
+
+    // Prevent browser Back from reopening dashboard
+    window.history.pushState(null, "", window.location.href);
+
+    const handleBackButton = () => {
+        sessionStorage.removeItem("loggedInEmployee");
+
+        navigate("/login", { replace: true });
+    };
+
+    window.addEventListener("popstate", handleBackButton);
+
+    return () => {
+        window.removeEventListener("popstate", handleBackButton);
+    };
+
+}, [navigate]);
 
     const fetchLeaves = async (employeeId) => {
         try {
@@ -125,8 +142,8 @@ function EmployeeDashboard() {
     };
 
     const logout = () => {
-        localStorage.removeItem("loggedInEmployee");
-        navigate("/employee-login");
+     sessionStorage.removeItem("loggedInEmployee");
+     navigate("/login", { replace: true });
     };
 
     if (!employee) {
@@ -464,11 +481,9 @@ function EmployeeDashboard() {
 
                                     <label>From Date</label>
 
-                                    <input
-                                        type="date"
-                                        name="from_date"
+                                    <DatePicker
                                         value={formData.from_date}
-                                        onChange={handleChange}
+                                        onChange={(value) => setFormData((previous) => ({ ...previous, from_date: value }))}
                                     />
 
                                 </div>
@@ -477,11 +492,9 @@ function EmployeeDashboard() {
 
                                     <label>To Date</label>
 
-                                    <input
-                                        type="date"
-                                        name="to_date"
+                                    <DatePicker
                                         value={formData.to_date}
-                                        onChange={handleChange}
+                                        onChange={(value) => setFormData((previous) => ({ ...previous, to_date: value }))}
                                     />
 
                                 </div>

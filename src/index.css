@@ -14,6 +14,16 @@ body,
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background: #f5f7fb;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  color: #102a43;
+  background: #fbfdff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }

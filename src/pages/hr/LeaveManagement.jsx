@@ -66,6 +66,7 @@ function LeaveManagement() {
     const [error, setError] = useState("");
 
     const [updating, setUpdating] = useState(false);
+    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
     // =========================================================
     // DATE FORMAT
@@ -509,6 +510,63 @@ function LeaveManagement() {
         }
     };
 
+    const exportLeaves = (format) => {
+        if (!filteredLeaves.length) {
+            return;
+        }
+
+        const headers = [
+            "Employee ID",
+            "Employee Name",
+            "Leave Type",
+            "From Date",
+            "To Date",
+            "Days",
+            "Reason",
+            "Status",
+        ];
+
+        const rows = filteredLeaves.map((leave) => [
+            leave.employeeID,
+            leave.employeeName,
+            leave.leaveType,
+            leave.fromDate,
+            leave.toDate,
+            leave.days,
+            leave.reason,
+            leave.status,
+        ]);
+
+        const escapeCSV = (value) =>
+            `"${String(value ?? "").replaceAll('"', '""')}"`;
+
+        const fileContent = format === "excel"
+            ? `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${rows
+                  .map((row) => `<tr>${row.map((value) => `<td>${String(value ?? "")}</td>`).join("")}</tr>`)
+                  .join("")}</tbody></table>`
+            : [headers, ...rows]
+                  .map((row) => row.map(escapeCSV).join(","))
+                  .join("\n");
+
+        const blob = new Blob(
+            [fileContent],
+            {
+                type: format === "excel"
+                    ? "application/vnd.ms-excel"
+                    : "text/csv;charset=utf-8;",
+            }
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = format === "excel"
+            ? "leave-requests.xls"
+            : "leave-requests.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+        setIsExportMenuOpen(false);
+    };
+
     // =========================================================
     // SELECTED EMPLOYEE LEAVE HISTORY
     // =========================================================
@@ -668,107 +726,31 @@ function LeaveManagement() {
                         </p>
                     </div>
 
-                </div>
+                    <div className="leave-header-actions">
+                        <div className="leave-export-menu">
+                            <button
+                                type="button"
+                                className="leave-export-btn"
+                                onClick={() => setIsExportMenuOpen((open) => !open)}
+                                disabled={!filteredLeaves.length}
+                                aria-expanded={isExportMenuOpen}
+                                aria-haspopup="menu"
+                            >
+                                Export <span aria-hidden="true">⌄</span>
+                            </button>
 
-                {/* =================================================
-                    SEARCH + FILTERS
-                ================================================= */}
-
-                <div className="leave-tools">
-
-                    {/* SEARCH */}
-
-                    <input
-                        type="text"
-                        placeholder="Search employee..."
-                        value={search}
-                        onChange={(e) =>
-                            setSearch(
-                                e.target.value
-                            )
-                        }
-                    />
-
-                    {/* STATUS */}
-
-                    <select
-                        value={selectedStatus}
-                        onChange={(e) =>
-                            setSelectedStatus(
-                                e.target.value
-                            )
-                        }
-                    >
-                        <option value="all">
-                            All Status
-                        </option>
-
-                        <option value="Pending">
-                            Pending
-                        </option>
-
-                        <option value="Approved">
-                            Approved
-                        </option>
-
-                        <option value="Rejected">
-                            Rejected
-                        </option>
-                    </select>
-
-                    {/* LEAVE TYPE */}
-
-                    <select
-                        value={
-                            selectedLeaveType
-                        }
-                        onChange={(e) =>
-                            setSelectedLeaveType(
-                                e.target.value
-                            )
-                        }
-                    >
-                        <option value="all">
-                            All Leave Types
-                        </option>
-
-                        {leaveTypes.map(
-                            (type) => (
-                                <option
-                                    key={type}
-                                    value={type}
-                                >
-                                    {type}
-                                </option>
-                            )
-                        )}
-                    </select>
-
-                    {/* MONTH */}
-
-                    <select
-                        value={selectedMonth}
-                        onChange={(e) =>
-                            setSelectedMonth(
-                                e.target.value
-                            )
-                        }
-                    >
-                        {MONTHS.map(
-                            (month) => (
-                                <option
-                                    key={
-                                        month.value
-                                    }
-                                    value={
-                                        month.value
-                                    }
-                                >
-                                    {month.label}
-                                </option>
-                            )
-                        )}
-                    </select>
+                            {isExportMenuOpen && (
+                                <div className="leave-export-options" role="menu">
+                                    <button type="button" onClick={() => exportLeaves("excel")} role="menuitem">
+                                        Excel
+                                    </button>
+                                    <button type="button" onClick={() => exportLeaves("csv")} role="menuitem">
+                                        CSV
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                 </div>
 
@@ -894,6 +876,47 @@ function LeaveManagement() {
                         </div>
 
 
+                    </div>
+
+                    {/* SEARCH + FILTERS */}
+                    <div className="leave-tools leave-request-filters">
+                        <input
+                            type="text"
+                            placeholder="Search employee..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+
+                        <div className="leave-tools-spacer" />
+
+                        <select
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
+                            <option value="all">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+
+                        <select
+                            value={selectedLeaveType}
+                            onChange={(e) => setSelectedLeaveType(e.target.value)}
+                        >
+                            <option value="all">All Leave Types</option>
+                            {leaveTypes.map((type) => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                        >
+                            {MONTHS.map((month) => (
+                                <option key={month.value} value={month.value}>{month.label}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* LOADING */}

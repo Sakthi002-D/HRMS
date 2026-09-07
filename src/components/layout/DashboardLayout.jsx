@@ -1,5 +1,6 @@
 import Sidebar from "./common/Sidebar";
 import "./DashboardLayout.css";
+import "./SharedTheme.css";
 
 function DashboardLayout({ children }) {
   return (

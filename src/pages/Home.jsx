@@ -17,13 +17,9 @@ function Home() {
         </div>
 
         <div className="nav-buttons">
-          <Link to="/hr-login">
-            <button className="hr-btn">HR Login</button>
-          </Link>
-
-          <Link to="/employee-login">
-            <button className="employee-btn">Employee Login</button>
-          </Link>
+        <Link to="/login" className="login-btn">
+            Login
+        </Link>
 
           <Link to="/candidate-jobs">
             <button className="career-btn">Careers</button>
@@ -53,21 +49,6 @@ function Home() {
             leave, payroll, recruitment and other HR activities efficiently.
           </p>
 
-          <div className="hero-actions">
-
-            <Link to="/hr-login">
-              <button className="primary-btn">
-                HR Login →
-              </button>
-            </Link>
-
-            <Link to="/employee-login">
-              <button className="secondary-btn">
-                Employee Login
-              </button>
-            </Link>
-
-          </div>
 
         </div>
 
