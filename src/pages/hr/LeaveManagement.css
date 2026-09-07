@@ -80,42 +80,6 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
-.leave-request-filters {
-    margin: 0 -24px 20px;
-    padding: 14px 16px;
-    border-top: 1px solid #e5eaf0;
-    border-bottom: 1px solid #e5eaf0;
-    background: #ffffff;
-}
-
-.leave-request-filters .leave-tools-spacer {
-    flex: 1;
-}
-
-.leave-request-filters input,
-.leave-request-filters select {
-    height: 38px;
-    border-color: #cbddea;
-    border-radius: 8px;
-    background: #fbfdff;
-    font-size: 13px;
-}
-
-.leave-request-filters input {
-    width: 240px;
-}
-
-@media (max-width: 700px) {
-    .leave-request-filters {
-        margin-right: -18px;
-        margin-left: -18px;
-    }
-
-    .leave-request-filters .leave-tools-spacer {
-        display: none;
-    }
-}
-
 /* =========================================================
    SUMMARY
 ========================================================= */
@@ -1089,99 +1053,6 @@
     font-size: 13px;
 }
 
-.leave-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-}
-
-.leave-export-menu {
-    position: relative;
-}
-
-.leave-export-btn {
-    min-width: 98px;
-    min-height: 40px;
-    padding: 0 15px;
-    border: 1px solid #d5e8f4;
-    border-radius: 8px;
-    background: #e5f3fc;
-    color: #00689d;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(35, 91, 130, 0.05);
-    transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.leave-export-btn:hover {
-    border-color: #b7d9eb;
-    background: #e5f3fc;
-    color: #005b89;
-    box-shadow: 0 4px 10px rgba(35, 91, 130, 0.1);
-}
-
-.leave-export-btn[aria-expanded="true"] {
-    border-color: #a9d2e8;
-    background: #dceffa;
-    box-shadow: 0 3px 8px rgba(35, 91, 130, 0.12);
-}
-
-.leave-export-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-}
-
-.leave-export-options {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 20;
-    min-width: 130px;
-    padding: 7px;
-    border: 1px solid #cfe1ec;
-    border-radius: 9px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(18, 48, 74, 0.16);
-    animation: leaveExportMenuIn 0.14s ease-out;
-}
-
-@keyframes leaveExportMenuIn {
-    from {
-        opacity: 0;
-        transform: translateY(-4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.leave-export-options button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 38px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: #18354d;
-    text-align: center;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.leave-export-options button:hover {
-    background: #e5f3fc;
-    color: #1e638f;
-}
-
 .leave-header-actions button,
 .leave-list-actions button {
     display: inline-flex;
@@ -1335,18 +1206,7 @@
     align-items: center;
     min-height: 70px;
     margin-bottom: 18px;
-    padding-left: 14px;
-}
-
-.leave-header::before {
-    position: absolute;
-    top: 2px;
-    bottom: 2px;
-    left: 0;
-    width: 4px;
-    border-radius: 4px;
-    background: #ff6b35;
-    content: "";
+    padding-left: 0;
 }
 
 .leave-header h1 {
@@ -1438,42 +1298,6 @@
 .leave-card.pending-card h3,
 .leave-card.pending-card h2 {
     color: #000000;
-}
-
-/* Match the Employees summary card typography. */
-.leave-card h3 {
-    position: absolute;
-    top: 50%;
-    left: 60px;
-    margin: 0;
-    color: #18354d !important;
-    font-size: 15px;
-    font-weight: 650;
-    line-height: 1.2;
-    transform: translateY(-50%);
-}
-
-.leave-card h2 {
-    position: absolute;
-    top: 50%;
-    right: 18px;
-    margin: 0;
-    color: #102a43 !important;
-    font-size: 34px;
-    font-weight: 750;
-    line-height: 1;
-    transform: translateY(-50%);
-}
-
-.leave-card.total-request-card h3,
-.leave-card.total-request-card h2,
-.leave-card.approved-card h3,
-.leave-card.approved-card h2,
-.leave-card.rejected-card h3,
-.leave-card.rejected-card h2,
-.leave-card.pending-card h3,
-.leave-card.pending-card h2 {
-    color: #102a43 !important;
 }
 
 .leave-table-container {

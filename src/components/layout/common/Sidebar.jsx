@@ -9,10 +9,12 @@ import {
   FileText,
   Settings,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import "./Sidebar.css";
 
-function Sidebar() {
+function Sidebar({ collapsed, onToggle }) {
   const navigate = useNavigate();
 
   const menuItems = [
@@ -26,9 +28,18 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       <div className="sidebar-logo">
         <img src="/shelter logo.png" alt="Shelter Group" />
+        <button
+          type="button"
+          className="sidebar-collapse-button"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+        </button>
       </div>
       <div className="sidebar-section-title">MAIN MENU</div>
       <nav className="sidebar-menu">

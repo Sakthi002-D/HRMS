@@ -16,16 +16,7 @@
     align-items: center;
     min-height: 70px;
     margin-bottom: 18px;
-    padding-left: 14px;
-}
-
-.attendance-header::before {
-    position: absolute;
-    inset: 2px auto 2px 0;
-    width: 4px;
-    border-radius: 4px;
-    background: #ff6b35;
-    content: "";
+    padding-left: 0;
 }
 
 .attendance-header h1{

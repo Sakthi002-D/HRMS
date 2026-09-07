@@ -19,31 +19,20 @@
     padding-left: 14px;
 }
 
-.payroll-header::before {
-    position: absolute;
-    inset: 2px auto 2px 0;
-    width: 4px;
-    border-radius: 4px;
-    background: #ff6b35;
-    content: "";
-}
-
 .payroll-header h1 {
     margin: 0;
     color: #12304a;
-    font-size: 28px;
+    font-size: 24px;
+    font-weight: 800;
     line-height: 1.2;
+    letter-spacing: -0.02em;
 }
 
-.payroll-breadcrumbs {
-    margin-top: 7px;
+.payroll-header p {
+    margin: 6px 0 0;
     color: #64748b;
-    font-size: 13px;
-}
-
-.payroll-breadcrumbs strong {
-    color: #12304a;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .payroll-header-actions,

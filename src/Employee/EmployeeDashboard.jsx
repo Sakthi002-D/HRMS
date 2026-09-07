@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, LayoutDashboard, LogOut } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import "./EmployeeDashboard.css";
 
@@ -13,6 +13,7 @@ function EmployeeDashboard() {
     const [leaves, setLeaves] = useState([]);
 
     const [showApplyLeave, setShowApplyLeave] = useState(false);
+    const [activeSection, setActiveSection] = useState("dashboard");
 
     const [formData, setFormData] = useState({
         leave_type: "Casual Leave",
@@ -37,6 +38,17 @@ function EmployeeDashboard() {
     setEmployee(employeeData);
 
     fetchLeaves(employeeData.employee_id);
+
+    fetch(`${API_URL}/api/employees/${employeeData.employee_id}/details`)
+        .then((response) => response.ok ? response.json() : null)
+        .then((details) => {
+            if (details) {
+                setEmployee((current) => ({ ...current, ...details }));
+            }
+        })
+        .catch(() => {
+            // Basic session details remain available if the optional profile request fails.
+        });
 
     // Prevent browser Back from reopening dashboard
     window.history.pushState(null, "", window.location.href);
@@ -147,6 +159,19 @@ function EmployeeDashboard() {
      navigate("/login", { replace: true });
     };
 
+    const openLeaveDetails = () => {
+        setActiveSection("leave");
+        document.getElementById("employee-leave-section")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+        });
+    };
+
+    const openProfile = () => {
+        setActiveSection("profile");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     if (!employee) {
         return <div className="employee-loading">Loading...</div>;
     }
@@ -163,8 +188,17 @@ function EmployeeDashboard() {
         (leave) => leave.status === "Rejected"
     ).length;
 
+    const profileValue = (value) => value || "-";
+    const formatProfileDate = (value) => {
+        if (!value) return "-";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? value
+            : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    };
+
     return (
-        <div className="employee-dashboard">
+        <div className={`employee-dashboard ${activeSection}-view`}>
 
             {/* SIDEBAR */}
             <aside className="employee-sidebar">
@@ -179,14 +213,22 @@ function EmployeeDashboard() {
 
                 <div className="employee-menu">
 
-                    <button className="employee-menu-item active">
+                    <button className={`employee-menu-item ${activeSection === "dashboard" ? "active" : ""}`} onClick={() => setActiveSection("dashboard")}>
                         <LayoutDashboard size={19} strokeWidth={2} />
                         <span>Dashboard</span>
                     </button>
 
                     <button
-                        className="employee-menu-item"
-                        onClick={() => setShowApplyLeave(true)}
+                        className={`employee-menu-item ${activeSection === "profile" ? "active" : ""}`}
+                        onClick={openProfile}
+                    >
+                        <UserRound size={19} strokeWidth={2} />
+                        <span>Profile</span>
+                    </button>
+
+                    <button
+                        className={`employee-menu-item ${activeSection === "leave" ? "active" : ""}`}
+                        onClick={openLeaveDetails}
                     >
                         <CalendarDays size={19} strokeWidth={2} />
                         <span>Apply Leave</span>
@@ -238,58 +280,55 @@ function EmployeeDashboard() {
                 </header>
 
 
-                {/* PROFILE */}
-                <section className="employee-profile-card">
-
-                    <div className="profile-title">
-                        <h2>My Profile</h2>
-
-                        <span className="active-badge">
-                            {employee.status}
-                        </span>
+                {/* PROFILE VIEW */}
+                <section className="employee-profile-view">
+                    <div className="employee-section-heading">
+                        <div>
+                            <h2>My Profile</h2>
+                            <p>Complete employee information from HR records</p>
+                        </div>
+                        <span className="active-badge">{profileValue(employee.status)}</span>
                     </div>
-
-                    <div className="profile-grid">
-
-                        <div>
-                            <label>Employee ID</label>
-                            <strong>
-                                {employee.employee_id}
-                            </strong>
+                    <div className="employee-detail-group">
+                        <h3>Basic Information</h3>
+                        <div className="employee-detail-grid">
+                            <div><label>Employee ID</label><strong>{profileValue(employee.employee_id)}</strong></div>
+                            <div><label>Full Name</label><strong>{profileValue(employee.name)}</strong></div>
+                            <div><label>Phone</label><strong>{profileValue(employee.phone)}</strong></div>
+                            <div><label>Email</label><strong>{profileValue(employee.email)}</strong></div>
+                            <div><label>Department</label><strong>{profileValue(employee.department)}</strong></div>
+                            <div><label>Designation</label><strong>{profileValue(employee.designation)}</strong></div>
+                            <div><label>Gender</label><strong>{profileValue(employee.gender)}</strong></div>
+                            <div><label>Date of Birth</label><strong>{formatProfileDate(employee.date_of_birth)}</strong></div>
+                            <div><label>Joining Date</label><strong>{formatProfileDate(employee.joining_date)}</strong></div>
+                            <div><label>Employment Type</label><strong>{profileValue(employee.employment_type)}</strong></div>
+                            <div className="detail-wide"><label>Address</label><strong>{profileValue(employee.address)}</strong></div>
                         </div>
-
-                        <div>
-                            <label>Employee Name</label>
-                            <strong>
-                                {employee.name}
-                            </strong>
-                        </div>
-
-                        <div>
-                            <label>Department</label>
-                            <strong>
-                                {employee.department}
-                            </strong>
-                        </div>
-
-                        <div>
-                            <label>Designation</label>
-                            <strong>
-                                {employee.designation}
-                            </strong>
-                        </div>
-
-                        <div>
-                            <label>Email</label>
-                            <strong>
-                                {employee.email}
-                            </strong>
-                        </div>
-
                     </div>
-
+                    <div className="employee-detail-group">
+                        <h3>Personal Information</h3>
+                        <div className="employee-detail-grid">
+                            <div><label>Passport No</label><strong>{profileValue(employee.passport_no)}</strong></div>
+                            <div><label>Passport Expiry</label><strong>{formatProfileDate(employee.passport_exp_date)}</strong></div>
+                            <div><label>Nationality</label><strong>{profileValue(employee.nationality || employee.country)}</strong></div>
+                            <div><label>Religion</label><strong>{profileValue(employee.religion)}</strong></div>
+                            <div><label>Marital Status</label><strong>{profileValue(employee.marital_status)}</strong></div>
+                            <div><label>No. of Children</label><strong>{profileValue(employee.children_count)}</strong></div>
+                            <div><label>Emergency Contact</label><strong>{profileValue(employee.emergency_contact)}</strong></div>
+                        </div>
+                    </div>
+                    <div className="employee-detail-group">
+                        <h3>Additional HR Information</h3>
+                        <div className="employee-detail-grid">
+                            <div><label>Bank Name</label><strong>{profileValue(employee.bank?.bank_name)}</strong></div>
+                            <div><label>Account Number</label><strong>{profileValue(employee.bank?.account_number)}</strong></div>
+                            <div><label>Qualification</label><strong>{profileValue(employee.education?.qualification)}</strong></div>
+                            <div><label>Institution</label><strong>{profileValue(employee.education?.institution)}</strong></div>
+                            <div><label>Previous Company</label><strong>{profileValue(employee.experience?.company_name)}</strong></div>
+                            <div><label>Previous Role</label><strong>{profileValue(employee.experience?.designation)}</strong></div>
+                        </div>
+                    </div>
                 </section>
-
 
                 {/* SUMMARY */}
                 <section className="employee-summary">
@@ -330,7 +369,7 @@ function EmployeeDashboard() {
 
 
                 {/* LEAVE REQUESTS */}
-                <section className="employee-leave-section">
+                <section id="employee-leave-section" className="employee-leave-section">
 
                     <div className="employee-section-header">
 

@@ -30,29 +30,37 @@
     .payroll-header, .tickets-header, .reports-header, .report-header,
     .payroll-report-header, .leave-report-header) > div:first-child::before {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 4px;
   border-radius: 4px;
-  background: #ff6b35;
+  background: #03a9f4;
   content: "";
 }
 
 .dashboard-content
   :is(.employees-header h1, .attendance-header h1, .leave-header h1,
     .recruitment-header h1, .payroll-header h1, .tickets-header h1,
-    .reports-header h1, .report-header h1, .payroll-report-header h1) {
+    .reports-header h1, .report-header h1, .payroll-report-header h1,
+    .leave-report-header h1) {
   color: #0b2946;
-  font-size: 28px;
-  font-weight: 750;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 .dashboard-content
   :is(.employees-header p, .attendance-header p, .leave-header p,
     .recruitment-header p, .payroll-header p, .tickets-header p,
-    .reports-header p, .report-header p, .payroll-report-header p) {
+    .reports-header p, .report-header p, .payroll-report-header p,
+    .leave-report-header p) {
   color: #718096;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .dashboard-content
@@ -67,6 +75,12 @@
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+.dashboard-content
+  :is(.attendance-export-btn, .leave-export-btn, .payroll-export-btn,
+    .ticket-export-button, .common-btn.secondary) {
+  box-shadow: none !important;
 }
 
 .dashboard-content
@@ -103,8 +117,8 @@
     .payroll-tools input:focus, .payroll-tools select:focus,
     .tickets-tools input:focus, .tickets-tools select:focus,
     .form-group input:focus, .form-group select:focus) {
-  border-color: #ff6b35;
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, .13);
+  border-color: #03a9f4;
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, .13);
 }
 
 .dashboard-content
@@ -112,8 +126,8 @@
     .report-item button, .modal-actions button:last-child) {
   border: 0;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff6b35, #ff5428);
-  box-shadow: 0 5px 13px rgba(255, 107, 53, .2);
+  background: linear-gradient(135deg, #03a9f4, #0288d1);
+  box-shadow: 0 5px 13px rgba(3, 169, 244, .2);
 }
 
 .dashboard-content
@@ -176,7 +190,7 @@
 }
 
 .report-back-button:hover {
-  border-color: #ff6b35;
+  border-color: #03a9f4;
   background: #fff4ef;
   color: #e85d31;
 }

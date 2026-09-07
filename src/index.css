@@ -1,3 +1,19 @@
+:root {
+  --navy-900: #0b1f2d;
+  --navy-800: #12304a;
+  --navy-700: #16466d;
+  --blue-600: #2563eb;
+  --blue-500: #2b7ab0;
+  --orange-500: #03a9f4;
+  --orange-600: #0288d1;
+  --bg-soft: #f5f7fb;
+  --card-bg: #ffffff;
+  --line: #dbe5ed;
+  --text: #12304a;
+  --muted: #64748b;
+  --shadow: rgba(18, 48, 74, 0.12);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -15,8 +31,8 @@ body,
 
 body {
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
-  color: #102a43;
-  background: #fbfdff;
+  color: var(--text);
+  background: var(--bg-soft);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -26,4 +42,19 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button,
+.common-btn,
+.primary-btn,
+.login-btn,
+.hr-btn,
+.add-employee-btn,
+.add-salary-btn,
+.add-ticket-button {
+  background: linear-gradient(135deg, var(--orange-500), var(--orange-600));
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(3, 169, 244, 0.18);
 }

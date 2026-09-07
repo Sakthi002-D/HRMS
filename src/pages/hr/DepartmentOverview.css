@@ -18,7 +18,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 20px;
-  color: #ff6339;
+  color: #03a9f4;
   font-size: 12px;
   font-weight: 700;
 }
@@ -83,7 +83,7 @@
   flex-shrink: 0;
   place-items: center;
   border-radius: 12px;
-  background: #ff6339;
+  background: #03a9f4;
   color: #ffffff;
 }
 
@@ -209,9 +209,9 @@
 .node-2 { border-top-color: #9b4dcc; }
 .node-2 .department-node-icon { background: #f2e8fc; color: #9b4dcc; }
 .node-2 .department-progress span { background: #9b4dcc; }
-.node-3 { border-top-color: #ef6b2e; }
-.node-3 .department-node-icon { background: #fff0e9; color: #ef6b2e; }
-.node-3 .department-progress span { background: #ef6b2e; }
+.node-3 { border-top-color: #03a9f4; }
+.node-3 .department-node-icon { background: #e1f5fe; color: #03a9f4; }
+.node-3 .department-progress span { background: #03a9f4; }
 .node-4 { border-top-color: #ec4899; }
 .node-4 .department-node-icon { background: #fff0f7; color: #ec4899; }
 .node-4 .department-progress span { background: #ec4899; }

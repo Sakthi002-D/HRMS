@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   CalendarCheck,
   FileBarChart,
+  BriefcaseBusiness,
   ArrowRight,
   AlertCircle,
   X,
@@ -379,7 +380,8 @@ function HRDashboard() {
 
 
         {/* ================= QUICK ACTIONS ================= */}
-        <section className="dashboard-section">
+        <section className="dashboard-section quick-actions-panel">
+          <h2>Quick Actions</h2>
           <div className="quick-actions">
 
             {/* Employees */}
@@ -390,67 +392,43 @@ function HRDashboard() {
               <div className="action-icon">
                 <UserPlus size={21} />
               </div>
-
-              <div>
-                <h3>Employees</h3>
-                <p>Manage employee information</p>
-              </div>
-
-              <ArrowRight size={19} className="action-arrow" />
+              <h3>Add Employee</h3>
             </Link>
 
 
-            {/* Attendance */}
+            {/* Leave request */}
             <Link
-              to="/attendance"
+              to="/leave-management"
               className="action-card attendance-action"
             >
               <div className="action-icon">
                 <ClipboardCheck size={21} />
               </div>
-
-              <div>
-                <h3>Attendance</h3>
-                <p>View today's attendance</p>
-              </div>
-
-              <ArrowRight size={19} className="action-arrow" />
+              <h3>Leave Request</h3>
             </Link>
 
 
-            {/* Leave */}
+            {/* Payroll */}
             <Link
-              to="/leave-management"
+              to="/payroll"
               className="action-card leave-action"
             >
               <div className="action-icon">
-                <CalendarCheck size={21} />
+                <IndianRupee size={21} />
               </div>
-
-              <div>
-                <h3>Leave Requests</h3>
-                <p>Review pending requests</p>
-              </div>
-
-              <ArrowRight size={19} className="action-arrow" />
+              <h3>Run Payroll</h3>
             </Link>
 
 
-            {/* Reports */}
+            {/* Recruitment */}
             <Link
-              to="/reports"
+              to="/recruitment"
               className="action-card reports-action"
             >
               <div className="action-icon">
-                <FileBarChart size={21} />
+                <BriefcaseBusiness size={21} />
               </div>
-
-              <div>
-                <h3>Reports</h3>
-                <p>Generate HR reports</p>
-              </div>
-
-              <ArrowRight size={19} className="action-arrow" />
+              <h3>Post Job</h3>
             </Link>
 
           </div>

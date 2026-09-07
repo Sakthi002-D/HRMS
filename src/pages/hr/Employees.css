@@ -35,17 +35,6 @@
     padding-left: 14px;
 }
 
-.employees-header > div:first-child::before {
-    position: absolute;
-    top: 2px;
-    bottom: 2px;
-    left: 0;
-    width: 4px;
-    border-radius: 4px;
-    background: #ff6b35;
-    content: "";
-}
-
 .employees-header h1 {
     margin: 0;
     color: #12304a;
@@ -144,8 +133,8 @@
 
 .view-toggle.active,
 .view-toggle:hover {
-    border-color: #ff6b35;
-    background: #ff6b35;
+    border-color: #03a9f4;
+    background: #03a9f4;
     color: #fff;
 }
 
@@ -155,7 +144,7 @@
 
 .add-employee-btn {
     border: none;
-    background: linear-gradient(135deg, #ff6b35, #ff5428);
+    background: linear-gradient(135deg, #03a9f4, #0288d1);
     color: #ffffff;
     padding: 10px 16px;
     border-radius: 8px;

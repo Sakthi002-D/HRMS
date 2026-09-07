@@ -107,7 +107,7 @@ function Payroll() {
                 <div className="payroll-header">
                     <div>
                         <h1>Employee Salary</h1>
-                        <div className="payroll-breadcrumbs">⌂　›　Payroll　›　<strong>Salary Records</strong></div>
+                        <p>Manage employee salary records</p>
                     </div>
                     <div className="payroll-header-actions">
                         <div className="payroll-export-menu">
