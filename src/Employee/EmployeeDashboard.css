@@ -37,7 +37,7 @@
 .employee-menu {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 3px;
 }
 
 .employee-menu-item {
@@ -406,6 +406,211 @@
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Match the HR dashboard visual system while keeping the employee portal actions. */
+.employee-dashboard {
+    background: linear-gradient(135deg, #fbfdff 0%, #f1f7fc 100%);
+    color: #102a43;
+}
+
+.employee-sidebar {
+    width: 250px;
+    padding: 24px 16px;
+    background: linear-gradient(180deg, #16466d 0%, #0b3153 100%);
+}
+
+.employee-brand {
+    justify-content: center;
+    height: 90px;
+    margin: -8px 0 6px;
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    overflow: hidden;
+}
+
+.employee-brand img {
+    display: block;
+    width: 205px;
+    height: 72px;
+    object-fit: cover;
+    object-position: center;
+}
+
+.employee-logout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 46px;
+    padding: 0 15px;
+    font-weight: 600;
+}
+
+.employee-menu-title {
+    margin: 28px 12px 13px;
+    color: #9bb6cc;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+}
+
+.employee-menu-item {
+    width: 100%;
+    height: 46px;
+    margin: 3px 0;
+    padding: 0 15px;
+    border-radius: 9px;
+    color: #d7e5f0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.employee-menu-item:hover,
+.employee-menu-item.active {
+    background: linear-gradient(135deg, #ff6b35, #ff5428);
+    box-shadow: 0 8px 20px rgba(255,107,53,.22);
+}
+
+.employee-main {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    padding: 30px 38px 50px;
+}
+
+.employee-header {
+    position: relative;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-left: 14px;
+}
+
+.employee-header > div:first-child::before {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 4px;
+    border-radius: 4px;
+    background: #ff6b35;
+    content: "";
+}
+
+.employee-header h1 {
+    color: #0b2946;
+    font-size: 28px;
+    font-weight: 750;
+}
+
+.employee-profile-card,
+.employee-table-card {
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
+    box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+.employee-profile-card {
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+.profile-title {
+    margin-bottom: 22px;
+}
+
+.profile-title h2,
+.employee-section-header h2 {
+    color: #102a43;
+}
+
+.profile-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.profile-grid label,
+.employee-section-header p {
+    color: #718096;
+}
+
+.employee-dashboard .employee-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.employee-dashboard .employee-stat-card {
+    min-height: 92px;
+    padding: 16px;
+    border: 1px solid #d3e2ee;
+    border-radius: 10px;
+    box-shadow: 0 7px 20px rgba(35, 91, 130, .07);
+}
+
+.employee-stat-card > span {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #e8f2ff;
+    color: #3182f6;
+}
+
+.employee-stat-card small {
+    color: #718096;
+    font-size: 12px;
+}
+
+.employee-stat-card strong {
+    color: #102a43;
+    font-size: 26px;
+}
+
+.employee-section-header {
+    margin-bottom: 14px;
+}
+
+.apply-leave-btn,
+.submit-leave-btn {
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ff6b35, #ff5428);
+    box-shadow: 0 5px 13px rgba(255, 107, 53, .2);
+}
+
+.employee-table-card th {
+    background: #16466d;
+}
+
+@media (max-width: 1000px) {
+    .employee-dashboard .employee-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .profile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .employee-sidebar {
+        display: none;
+    }
+
+    .employee-main {
+        width: 100%;
+        margin-left: 0;
+        padding: 22px 16px 40px;
+    }
+
+    .employee-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .employee-dashboard .employee-summary,
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* RESPONSIVE */

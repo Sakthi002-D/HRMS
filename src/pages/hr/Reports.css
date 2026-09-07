@@ -9,7 +9,35 @@
 }
 
 .reports-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
     margin-bottom: 25px;
+}
+
+.reports-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.report-view-toggle {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #dce5ee;
+    border-radius: 8px;
+    background: #fff;
+    color: #173b5f;
+    cursor: pointer;
+}
+
+.report-view-toggle.active {
+    border-color: #ff6b35;
+    background: #ff6b35;
+    color: #fff;
 }
 
 .reports-header h1 {
@@ -75,24 +103,30 @@
 
 .report-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    grid-template-columns: 1fr;
+    gap: 14px;
 }
 
 .report-item {
-    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-height: 78px;
+    padding: 16px 20px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
 }
 
 .report-item h3 {
-    margin: 0 0 8px;
+    min-width: 190px;
+    margin: 0;
     color: #12304a;
 }
 
 .report-item p {
-    margin: 0 0 18px;
+    flex: 1;
+    margin: 0;
     color: #64748b;
     font-size: 14px;
 }
@@ -111,6 +145,48 @@
     background: #1e496b;
 }
 
+.report-grid-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-grid-view .report-item {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 150px;
+}
+
+.report-grid-view .report-item h3 {
+    min-width: 0;
+}
+
+.report-grid-view .report-item button {
+    margin-top: auto;
+}
+
+@media (max-width: 700px) {
+    .reports-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .report-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .report-item h3 {
+        min-width: 0;
+    }
+
+    .report-item button {
+        width: 100%;
+    }
+
+    .report-grid-view {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Responsive */
 
 @media (max-width: 1000px) {
@@ -124,7 +200,4 @@
         grid-template-columns: 1fr;
     }
 
-    .report-grid {
-        grid-template-columns: 1fr;
-    }
 }

@@ -4,7 +4,6 @@ import {
   Clock3,
   IndianRupee,
   Ticket,
-  LayoutDashboard,
   Bell,
   UserPlus,
   ClipboardCheck,
@@ -25,6 +24,17 @@ function HRDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+
+  const loadDashboardData = () => {
+    fetch("http://localhost:5000/api/dashboard")
+      .then((response) => {
+        if (!response.ok) throw new Error("Unable to load dashboard data");
+        return response.json();
+      })
+      .then(setDashboardData)
+      .catch(() => setDashboardData(null));
+  };
 
   const loadNotifications = async () => {
     try {
@@ -50,28 +60,9 @@ function HRDashboard() {
         path: "/leave-management",
       }));
 
-      setNotifications([
-        {
-          id: "payroll-status",
-          type: "payroll",
-          title: "Payroll and salary updates",
-          message: "Review employee salary details and payroll status.",
-          time: "Open payroll",
-          path: "/payroll",
-        },
-        ...leaveNotifications,
-      ]);
+      setNotifications(leaveNotifications);
     } catch {
-      setNotifications([
-        {
-          id: "payroll-status",
-          type: "payroll",
-          title: "Payroll and salary updates",
-          message: "Review employee salary details and payroll status.",
-          time: "Open payroll",
-          path: "/payroll",
-        },
-      ]);
+      setNotifications([]);
     } finally {
       setNotificationsLoading(false);
     }
@@ -101,6 +92,12 @@ function HRDashboard() {
 
   useEffect(() => {
     loadNotifications();
+    loadDashboardData();
+
+    const refreshDashboard = () => loadDashboardData();
+    window.addEventListener("focus", refreshDashboard);
+
+    return () => window.removeEventListener("focus", refreshDashboard);
   }, []);
 
   const openNotification = (notification) => {
@@ -217,7 +214,9 @@ function HRDashboard() {
           <div className="welcome-avatar">HR</div>
           <div className="welcome-copy">
             <h2>Welcome back, HR Admin</h2>
-            <p>You have <strong>3 pending approvals</strong> and <strong>5 employee updates</strong> to review.</p>
+            <p>
+              You have <strong>{dashboardData?.pendingLeaves ?? "-"} pending approvals</strong> to review.
+            </p>
           </div>
           <div className="welcome-actions">
             <Link to="/employees">Manage Employees</Link>
@@ -240,14 +239,14 @@ function HRDashboard() {
                 </div>
 
                 <span className="stat-growth">
-                  ↗ 5%
+                  —
                 </span>
               </div>
 
               <div className="stat-content">
                 <span>Total Employees</span>
-                <h3>128</h3>
-                <small>+8 this month</small>
+                <h3>{dashboardData?.totalEmployees ?? "—"}</h3>
+                <small>Active employees</small>
               </div>
               <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
 
@@ -263,14 +262,14 @@ function HRDashboard() {
                 </div>
 
                 <span className="stat-growth">
-                  ↗ 12%
+                  —
                 </span>
               </div>
 
               <div className="stat-content">
                 <span>Present Today</span>
-                <h3>112</h3>
-                <small>87.5% attendance</small>
+                <h3>{dashboardData?.presentToday ?? "—"}</h3>
+                <small>Present today</small>
               </div>
               <Link className="stat-link" to="/attendance">View Details <ArrowRight size={13} /></Link>
 
@@ -286,14 +285,14 @@ function HRDashboard() {
                 </div>
 
                 <span className="stat-growth">
-                  ↗ 8%
+                  —
                 </span>
               </div>
 
               <div className="stat-content">
                 <span>On Leave</span>
-                <h3>09</h3>
-                <small>3 pending approval</small>
+                <h3>{dashboardData?.onLeave ?? "—"}</h3>
+                <small>{dashboardData?.pendingLeaves ?? "—"} pending approval</small>
               </div>
               <Link className="stat-link" to="/leave-management">View Details <ArrowRight size={13} /></Link>
 
@@ -309,14 +308,14 @@ function HRDashboard() {
                 </div>
 
                 <span className="stat-growth">
-                  ↗ 3%
+                  —
                 </span>
               </div>
 
               <div className="stat-content">
                 <span>Payroll Status</span>
-                <h3>Paid</h3>
-                <small>August 2026</small>
+                <h3>{dashboardData?.payrollStatus ?? "—"}</h3>
+                <small>{dashboardData?.payrollStatus ? "Current payroll status" : "No payroll data"}</small>
               </div>
               <Link className="stat-link" to="/payroll">View Details <ArrowRight size={13} /></Link>
             </div>
@@ -324,12 +323,12 @@ function HRDashboard() {
             <div className="stat-card recruitment-card">
                 <div className="stat-top">
                   <div className="stat-icon recruitment-icon"><UserPlus size={21} /></div>
-                  <span className="stat-growth">↗ 6%</span>
+                  <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
                   <span>Open Positions</span>
-                  <h3>18</h3>
-                  <small>6 interviews this week</small>
+                  <h3>{dashboardData?.openPositions ?? "—"}</h3>
+                  <small>Open positions</small>
                 </div>
                 <Link className="stat-link" to="/recruitment">View Details <ArrowRight size={13} /></Link>
               </div>
@@ -337,12 +336,12 @@ function HRDashboard() {
             <div className="stat-card joiners-card">
                 <div className="stat-top">
                   <div className="stat-icon joiners-icon"><Users size={21} /></div>
-                  <span className="stat-growth">↗ 4%</span>
+                  <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
                   <span>New Joiners</span>
-                  <h3>07</h3>
-                  <small>This month</small>
+                  <h3>{dashboardData?.newJoiners ?? "—"}</h3>
+                  <small>Joined this month</small>
                 </div>
                 <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
               </div>
@@ -350,27 +349,29 @@ function HRDashboard() {
             <div className="stat-card tickets-card">
                 <div className="stat-top">
                   <div className="stat-icon tickets-icon"><Ticket size={21} /></div>
-                  <span className="stat-growth">↗ 9%</span>
+                  <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
                   <span>Open Tickets</span>
-                  <h3>12</h3>
-                  <small>4 require attention</small>
+                  <h3>{dashboardData?.openTickets ?? "—"}</h3>
+                  <small>Open tickets</small>
                 </div>
                 <Link className="stat-link" to="/tickets">View Details <ArrowRight size={13} /></Link>
               </div>
 
             <div className="stat-card department-card">
                 <div className="stat-top">
-                  <div className="stat-icon department-icon"><LayoutDashboard size={21} /></div>
-                  <span className="stat-growth">Active</span>
+                  <div className="stat-icon department-icon"><FileBarChart size={21} /></div>
+                  <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
-                  <span>Departments</span>
-                  <h3>09</h3>
-                  <small>Across the organization</small>
+                  <span>Reports</span>
+                  <h3>—</h3>
+                  <small>View HR reports</small>
                 </div>
-                <Link className="stat-link" to="/reports">View Details <ArrowRight size={13} /></Link>
+                <Link className="stat-link" to="/reports">
+                  View Details <ArrowRight size={13} />
+                </Link>
               </div>
 
           </div>

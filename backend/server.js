@@ -1427,7 +1427,7 @@ app.get("/api/dashboard", async (req, res) => {
             SELECT COUNT(DISTINCT employee_id)::int AS present_today
             FROM attendance
             WHERE attendance_date = CURRENT_DATE
-              AND LOWER(status) = 'present'
+              AND LOWER(status) IN ('present', 'late')
         `);
 
         const leavesResult = await pool.query(`
@@ -1435,6 +1435,44 @@ app.get("/api/dashboard", async (req, res) => {
             FROM leaves
             WHERE LOWER(status) = 'pending'
         `);
+
+        const onLeaveResult = await pool.query(`
+            SELECT COUNT(DISTINCT employee_id)::int AS on_leave
+            FROM leaves
+            WHERE LOWER(status) = 'approved'
+              AND from_date <= CURRENT_DATE
+              AND to_date >= CURRENT_DATE
+        `);
+
+        const newJoinersResult = await pool.query(`
+            SELECT COUNT(*)::int AS new_joiners
+            FROM employees
+            WHERE status = 'Active'
+              AND joining_date >= DATE_TRUNC('month', CURRENT_DATE)
+              AND joining_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+        `);
+
+        const departmentsResult = await pool.query(`
+            SELECT COUNT(DISTINCT department)::int AS departments
+            FROM employees
+            WHERE status = 'Active'
+              AND department IS NOT NULL
+              AND TRIM(department) <> ''
+        `);
+
+        let openPositions = 0;
+
+        try {
+            const jobsResult = await pool.query(`
+                SELECT COALESCE(SUM(openings), 0)::int AS open_positions
+                FROM public.jobs
+                WHERE LOWER(status) IN ('open', 'active')
+            `);
+
+            openPositions = jobsResult.rows[0].open_positions;
+        } catch (jobError) {
+            console.log("Jobs table not available yet:", jobError.message);
+        }
 
         let openTickets = 0;
 
@@ -1453,8 +1491,13 @@ app.get("/api/dashboard", async (req, res) => {
         res.json({
             totalEmployees: employeesResult.rows[0].total_employees,
             presentToday: attendanceResult.rows[0].present_today,
+            onLeave: onLeaveResult.rows[0].on_leave,
             pendingLeaves: leavesResult.rows[0].pending_leaves,
-            openTickets: openTickets
+            openTickets: openTickets,
+            openPositions,
+            newJoiners: newJoinersResult.rows[0].new_joiners,
+            departments: departmentsResult.rows[0].departments,
+            payrollStatus: null
         });
 
     } catch (error) {
@@ -1466,6 +1509,24 @@ app.get("/api/dashboard", async (req, res) => {
     }
 });
 
+app.get("/api/dashboard/departments", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                COALESCE(NULLIF(TRIM(department), ''), 'Unassigned') AS department,
+                COUNT(*)::int AS employee_count
+            FROM employees
+            WHERE status = 'Active'
+            GROUP BY COALESCE(NULLIF(TRIM(department), ''), 'Unassigned')
+            ORDER BY employee_count DESC, department ASC
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Error fetching department summary:", error);
+        res.status(500).json({ message: "Failed to fetch department summary" });
+    }
+});
 
         // =========================
 // JOB / RECRUITMENT APIs

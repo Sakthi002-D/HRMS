@@ -1,46 +1,11 @@
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import ReportChart from "../../components/layout/common/ReportChart";
 import "./PayrollReport.css";
 
 function PayrollReport() {
 
-    const payrollData = [
-        {
-            employeeID: "EMP001",
-            employeeName: "Sakthivel",
-            department: "IT",
-            basicSalary: "₹30,000",
-            allowances: "₹5,000",
-            deductions: "₹2,000",
-            netSalary: "₹33,000"
-        },
-        {
-            employeeID: "EMP002",
-            employeeName: "Sundhar",
-            department: "IT",
-            basicSalary: "₹28,000",
-            allowances: "₹4,000",
-            deductions: "₹1,500",
-            netSalary: "₹30,500"
-        },
-        {
-            employeeID: "EMP003",
-            employeeName: "John Doe",
-            department: "HR",
-            basicSalary: "₹35,000",
-            allowances: "₹6,000",
-            deductions: "₹2,500",
-            netSalary: "₹38,500"
-        },
-        {
-            employeeID: "EMP004",
-            employeeName: "Rahul",
-            department: "Finance",
-            basicSalary: "₹32,000",
-            allowances: "₹4,500",
-            deductions: "₹2,000",
-            netSalary: "₹34,500"
-        }
-    ];
+    const payrollData = [];
 
     return (
         <DashboardLayout>
@@ -48,37 +13,46 @@ function PayrollReport() {
             <div className="payroll-report-page">
 
                 <div className="payroll-report-header">
-                    <h1>Payroll Report</h1>
-                    <p>View salary, deductions and payroll information.</p>
+                    <div>
+                        <h1>Payroll Report</h1>
+                        <p>View salary, deductions and payroll information.</p>
+                    </div>
+                    <Link className="report-back-button" to="/reports">Back to Reports</Link>
                 </div>
 
                 <div className="payroll-report-summary">
 
                     <div className="payroll-report-card">
                         <h3>Total Payroll</h3>
-                        <h2>₹13.6L</h2>
-                        <p>Current month</p>
+                        <h2>—</h2>
+                        <p>No payroll data</p>
                     </div>
 
                     <div className="payroll-report-card">
                         <h3>Processed</h3>
-                        <h2>3</h2>
-                        <p>Employees processed</p>
+                        <h2>—</h2>
+                        <p>No payroll data</p>
                     </div>
 
                     <div className="payroll-report-card">
                         <h3>Pending</h3>
-                        <h2>1</h2>
-                        <p>Payroll pending</p>
+                        <h2>—</h2>
+                        <p>No payroll data</p>
                     </div>
 
                     <div className="payroll-report-card">
                         <h3>Employees</h3>
-                        <h2>4</h2>
-                        <p>Total employees</p>
+                        <h2>—</h2>
+                        <p>No payroll data</p>
                     </div>
 
                 </div>
+
+                <ReportChart
+                    title="Payroll Trend"
+                    labels={["No data"]}
+                    series={[{ name: "Net Payroll", color: "#ff7055", values: [0] }]}
+                />
 
                 <div className="payroll-report-table-container">
 
@@ -100,7 +74,9 @@ function PayrollReport() {
 
                         <tbody>
 
-                            {payrollData.map((employee) => (
+                            {payrollData.length === 0 ? (
+                                <tr><td colSpan="7">No payroll data available.</td></tr>
+                            ) : payrollData.map((employee) => (
                                 <tr key={employee.employeeID}>
 
                                     <td>{employee.employeeID}</td>

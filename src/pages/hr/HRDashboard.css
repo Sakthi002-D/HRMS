@@ -433,33 +433,6 @@ a {
   box-shadow: 0 10px 24px rgba(16,42,67,0.14);
 }
 
-.stat-card::after {
-  content: "";
-  position: absolute;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  right: -35px;
-  bottom: -40px;
-  opacity: 0.08;
-}
-
-.orange-card::after {
-  background: #ff6b35;
-}
-
-.teal-card::after {
-  background: #16b8a6;
-}
-
-.blue-card::after {
-  background: #3287f5;
-}
-
-.pink-card::after {
-  background: #ec4899;
-}
-
 .stat-top {
   position: relative;
   display: block;
@@ -526,7 +499,9 @@ a {
 }
 
 .stat-content {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
   margin-top: 14px;
 }
@@ -584,6 +559,7 @@ a {
   color: #718096;
   font-size: 12px;
   margin-bottom: 5px;
+  line-height: 1.25;
 }
 
 .stat-content h3 {
@@ -599,6 +575,32 @@ a {
   margin-top: 7px;
   font-size: 11px;
   color: #12a99b;
+}
+
+/* Keep Leave Management card styles from affecting the dashboard card. */
+.stats-grid .stat-card.leave-card::after {
+  display: none;
+}
+
+.stats-grid .stat-card.leave-card {
+  height: auto;
+  min-height: 150px;
+  padding: 16px;
+}
+
+.stats-grid .stat-card.leave-card .stat-content > span,
+.stats-grid .stat-card.leave-card .stat-content h3,
+.stats-grid .stat-card.leave-card .stat-content small {
+  position: static;
+  display: block;
+  transform: none;
+}
+
+.stats-grid .stat-card.leave-card .stat-content h3 {
+  margin: 0;
+  color: #102a43;
+  font-size: 27px;
+  line-height: 1.1;
 }
 
 .recruitment-icon {

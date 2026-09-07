@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CalendarDays, LayoutDashboard, LogOut } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import "./EmployeeDashboard.css";
 
@@ -169,7 +170,7 @@ function EmployeeDashboard() {
             <aside className="employee-sidebar">
 
                 <div className="employee-brand">
-                    HRMS
+                    <img src="/shelter logo.png" alt="Shelter Group" />
                 </div>
 
                 <div className="employee-menu-title">
@@ -179,7 +180,7 @@ function EmployeeDashboard() {
                 <div className="employee-menu">
 
                     <button className="employee-menu-item active">
-                        🏠
+                        <LayoutDashboard size={19} strokeWidth={2} />
                         <span>Dashboard</span>
                     </button>
 
@@ -187,7 +188,7 @@ function EmployeeDashboard() {
                         className="employee-menu-item"
                         onClick={() => setShowApplyLeave(true)}
                     >
-                        📅
+                        <CalendarDays size={19} strokeWidth={2} />
                         <span>Apply Leave</span>
                     </button>
 
@@ -197,7 +198,8 @@ function EmployeeDashboard() {
                     className="employee-logout"
                     onClick={logout}
                 >
-                    ↪ Logout
+                    <LogOut size={19} strokeWidth={2} />
+                    <span>Logout</span>
                 </button>
 
             </aside>

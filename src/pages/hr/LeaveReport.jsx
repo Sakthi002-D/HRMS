@@ -1,46 +1,27 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import ReportChart from "../../components/layout/common/ReportChart";
 import "./LeaveReport.css";
 
 function LeaveReport() {
 
-    const leaveData = [
-        {
-            employeeID: "EMP001",
-            employeeName: "Sakthivel",
-            department: "IT",
-            totalLeave: 12,
-            usedLeave: 4,
-            remainingLeave: 8,
-            status: "Good"
-        },
-        {
-            employeeID: "EMP002",
-            employeeName: "Sundhar",
-            department: "IT",
-            totalLeave: 12,
-            usedLeave: 5,
-            remainingLeave: 7,
-            status: "Good"
-        },
-        {
-            employeeID: "EMP003",
-            employeeName: "John Doe",
-            department: "HR",
-            totalLeave: 12,
-            usedLeave: 8,
-            remainingLeave: 4,
-            status: "Low"
-        },
-        {
-            employeeID: "EMP004",
-            employeeName: "Rahul",
-            department: "Finance",
-            totalLeave: 12,
-            usedLeave: 3,
-            remainingLeave: 9,
-            status: "Good"
-        }
-    ];
+    const [leaveData, setLeaveData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch("http://localhost:5000/api/leaves")
+            .then((response) => {
+                if (!response.ok) throw new Error("Unable to load leaves");
+                return response.json();
+            })
+            .then((data) => setLeaveData(Array.isArray(data) ? data : []))
+            .catch(() => setLeaveData([]))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const leaveTypes = useMemo(() => [...new Set(leaveData.map((leave) => leave.leave_type).filter(Boolean))].slice(0, 8), [leaveData]);
+    const statusCount = (status) => leaveData.filter((leave) => String(leave.status).toLowerCase() === status.toLowerCase()).length;
 
     return (
         <DashboardLayout>
@@ -48,37 +29,46 @@ function LeaveReport() {
             <div className="leave-report-page">
 
                 <div className="leave-report-header">
-                    <h1>Leave Report</h1>
-                    <p>View leave requests, approvals and leave usage.</p>
+                    <div>
+                        <h1>Leave Report</h1>
+                        <p>View leave requests, approvals and leave usage.</p>
+                    </div>
+                    <Link className="report-back-button" to="/reports">Back to Reports</Link>
                 </div>
 
                 <div className="leave-report-summary">
 
                     <div className="leave-report-card">
                         <h3>Total Leave Requests</h3>
-                        <h2>12</h2>
+                        <h2>{loading ? "—" : leaveData.length}</h2>
                         <p>This month</p>
                     </div>
 
                     <div className="leave-report-card">
                         <h3>Approved</h3>
-                        <h2>8</h2>
+                        <h2>{statusCount("Approved")}</h2>
                         <p>Approved requests</p>
                     </div>
 
                     <div className="leave-report-card">
                         <h3>Pending</h3>
-                        <h2>2</h2>
+                        <h2>{statusCount("Pending")}</h2>
                         <p>Waiting for approval</p>
                     </div>
 
                     <div className="leave-report-card">
                         <h3>Rejected</h3>
-                        <h2>2</h2>
+                        <h2>{statusCount("Rejected")}</h2>
                         <p>Rejected requests</p>
                     </div>
 
                 </div>
+
+                <ReportChart
+                    title="Leave Usage"
+                    labels={leaveTypes.length ? leaveTypes : ["No data"]}
+                    series={[{ name: "Approved", color: "#00bf65", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "approved").length) }, { name: "Pending", color: "#ffbd12", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "pending").length) }, { name: "Rejected", color: "#202b36", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "rejected").length) }]}
+                />
 
                 <div className="leave-report-table-container">
 
@@ -91,32 +81,36 @@ function LeaveReport() {
                                 <th>Employee ID</th>
                                 <th>Employee Name</th>
                                 <th>Department</th>
-                                <th>Total Leave</th>
-                                <th>Used Leave</th>
-                                <th>Remaining Leave</th>
+                                <th>Days</th>
+                                <th>Status</th>
+                                <th>Reason</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
 
                         <tbody>
 
-                            {leaveData.map((employee) => (
+                            {loading ? (
+                                <tr><td colSpan="7">Loading leave data...</td></tr>
+                            ) : leaveData.length === 0 ? (
+                                <tr><td colSpan="7">No leave data available.</td></tr>
+                            ) : leaveData.map((employee) => (
                                 <tr key={employee.employeeID}>
 
-                                    <td>{employee.employeeID}</td>
+                                    <td>{employee.employee_id}</td>
 
-                                    <td>{employee.employeeName}</td>
+                                    <td>{employee.employee_name}</td>
 
                                     <td>{employee.department}</td>
 
-                                    <td>{employee.totalLeave}</td>
+                                    <td>{employee.days}</td>
 
-                                    <td>{employee.usedLeave}</td>
+                                    <td>{employee.status}</td>
 
-                                    <td>{employee.remainingLeave}</td>
+                                    <td>{employee.reason || "-"}</td>
 
                                     <td>
-                                        <span className={`leave-report-status ${employee.status.toLowerCase()}`}>
+                                        <span className={`leave-report-status ${String(employee.status).toLowerCase()}`}>
                                             {employee.status}
                                         </span>
                                     </td>

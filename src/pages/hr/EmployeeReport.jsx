@@ -1,42 +1,40 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import ReportChart from "../../components/layout/common/ReportChart";
 import "./EmployeeReport.css";
 
 function EmployeeReport() {
 
-    const employees = [
-        {
-            id: "EMP001",
-            name: "Sakthivel",
-            department: "IT",
-            designation: "Frontend Developer",
-            joiningDate: "10 Jan 2025",
-            status: "Active",
-        },
-        {
-            id: "EMP002",
-            name: "Sundhar",
-            department: "IT",
-            designation: "Backend Developer",
-            joiningDate: "15 Feb 2025",
-            status: "Active",
-        },
-        {
-            id: "EMP003",
-            name: "John Doe",
-            department: "HR",
-            designation: "HR Executive",
-            joiningDate: "20 Mar 2025",
-            status: "Active",
-        },
-        {
-            id: "EMP004",
-            name: "Rahul",
-            department: "Finance",
-            designation: "Accountant",
-            joiningDate: "05 Apr 2025",
-            status: "Inactive",
-        },
-    ];
+    const [employees, setEmployees] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch("http://localhost:5000/api/employees")
+            .then((response) => {
+                if (!response.ok) throw new Error("Unable to load employees");
+                return response.json();
+            })
+            .then((data) => setEmployees(Array.isArray(data) ? data.map((employee) => ({
+                id: employee.id ?? employee.employee_id,
+                name: employee.name ?? "Unknown Employee",
+                department: employee.department ?? "Unassigned",
+                designation: employee.designation ?? "Employee",
+                joiningDate: employee.joining_date ?? employee.joiningDate ?? "",
+                status: employee.status ?? "Inactive",
+            })) : []))
+            .catch(() => setEmployees([]))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const departments = useMemo(
+        () => [...new Set(employees.map((employee) => employee.department).filter(Boolean))],
+        [employees]
+    );
+
+    const chartLabels = departments.slice(0, 8);
+    const activeByDepartment = chartLabels.map((department) => employees.filter((employee) => employee.department === department && employee.status === "Active").length);
+    const inactiveByDepartment = chartLabels.map((department) => employees.filter((employee) => employee.department === department && employee.status !== "Active").length);
 
     return (
         <DashboardLayout>
@@ -45,8 +43,11 @@ function EmployeeReport() {
 
                 {/* Header */}
                 <div className="report-header">
-                    <h1>Employee Report</h1>
-                    <p>View employee details and department information.</p>
+                    <div>
+                        <h1>Employee Report</h1>
+                        <p>View employee details and department information.</p>
+                    </div>
+                    <Link className="report-back-button" to="/reports">Back to Reports</Link>
                 </div>
 
                 {/* Summary */}
@@ -54,7 +55,7 @@ function EmployeeReport() {
 
                     <div className="report-card">
                         <h3>Total Employees</h3>
-                        <h2>{employees.length}</h2>
+                        <h2>{loading ? "—" : employees.length}</h2>
                         <p>All employees</p>
                     </div>
 
@@ -70,7 +71,7 @@ function EmployeeReport() {
 
                     <div className="report-card">
                         <h3>Departments</h3>
-                        <h2>3</h2>
+                        <h2>{departments.length}</h2>
                         <p>Active departments</p>
                     </div>
 
@@ -85,6 +86,12 @@ function EmployeeReport() {
                     </div>
 
                 </div>
+
+                <ReportChart
+                    title="Employee Growth"
+                    labels={chartLabels.length ? chartLabels : ["No data"]}
+                    series={[{ name: "Active Employees", color: "#08bf5b", values: activeByDepartment.length ? activeByDepartment : [0] }, { name: "Inactive Employees", color: "#dce2e7", values: inactiveByDepartment.length ? inactiveByDepartment : [0] }]}
+                />
 
                 {/* Employee Table */}
                 <div className="employee-report-table">
@@ -106,7 +113,11 @@ function EmployeeReport() {
 
                         <tbody>
 
-                            {employees.map((employee) => (
+                            {loading ? (
+                                <tr><td colSpan="6">Loading employee data...</td></tr>
+                            ) : employees.length === 0 ? (
+                                <tr><td colSpan="6">No employee data available.</td></tr>
+                            ) : employees.map((employee) => (
 
                                 <tr key={employee.id}>
 

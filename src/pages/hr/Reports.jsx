@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Grid2X2, LayoutList } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Reports.css";
@@ -5,6 +7,7 @@ import "./Reports.css";
 function Reports() {
 
     const navigate = useNavigate();
+    const [viewMode, setViewMode] = useState("list");
     return (
         <DashboardLayout>
 
@@ -12,45 +15,23 @@ function Reports() {
 
                 {/* Header */}
                 <div className="reports-header">
-                    <h1>Reports</h1>
-                    <p>View and analyze HR reports</p>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="reports-summary">
-
-                    <div className="report-card">
-                        <h3>Total Employees</h3>
-                        <h2>50</h2>
-                        <p>Active employees</p>
+                    <div>
+                        <h1>Reports</h1>
+                        <p>View and analyze HR reports</p>
                     </div>
-
-                    <div className="report-card">
-                        <h3>Attendance</h3>
-                        <h2>92%</h2>
-                        <p>Current month</p>
+                    <div className="reports-header-actions">
+                        <button className={`report-view-toggle ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label="List view">
+                            <LayoutList size={16} />
+                        </button>
+                        <button className={`report-view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label="Grid view">
+                            <Grid2X2 size={15} />
+                        </button>
                     </div>
-
-                    <div className="report-card">
-                        <h3>Leave Requests</h3>
-                        <h2>12</h2>
-                        <p>This month</p>
-                    </div>
-
-                    <div className="report-card">
-                        <h3>Payroll</h3>
-                        <h2>₹13.6L</h2>
-                        <p>Current month</p>
-                    </div>
-
                 </div>
 
                 {/* Report Sections */}
                 <div className="reports-container">
-
-                    <h2>HR Reports</h2>
-
-                    <div className="report-grid">
+                    <div className={`report-grid ${viewMode === "grid" ? "report-grid-view" : ""}`}>
 
                         <div className="report-item">
                             <h3>Employee Report</h3>

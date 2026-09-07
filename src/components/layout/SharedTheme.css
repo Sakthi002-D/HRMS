@@ -18,6 +18,28 @@
 }
 
 .dashboard-content
+  :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
+    .payroll-header, .tickets-header, .reports-header, .report-header,
+    .payroll-report-header, .leave-report-header) > div:first-child {
+  position: relative;
+  padding-left: 14px;
+}
+
+.dashboard-content
+  :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
+    .payroll-header, .tickets-header, .reports-header, .report-header,
+    .payroll-report-header, .leave-report-header) > div:first-child::before {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: #ff6b35;
+  content: "";
+}
+
+.dashboard-content
   :is(.employees-header h1, .attendance-header h1, .leave-header h1,
     .recruitment-header h1, .payroll-header h1, .tickets-header h1,
     .reports-header h1, .report-header h1, .payroll-report-header h1) {
@@ -111,5 +133,251 @@
 @media (max-width: 700px) {
   .dashboard-content {
     padding: 22px 16px 40px;
+  }
+}
+
+.report-chart {
+  min-height: 286px;
+  margin: 20px 0;
+  padding: 20px 22px 16px;
+  border: 1px solid #d3e2ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+.dashboard-content :is(.employee-report, .report-page, .leave-report-page, .payroll-report-page) {
+  min-height: calc(100vh - 80px);
+  color: #102a43;
+}
+
+.dashboard-content :is(.employee-report .report-header, .report-page .report-header,
+  .leave-report-header, .payroll-report-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.report-back-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #cfe3f1;
+  border-radius: 8px;
+  background: #e5f3fc;
+  color: #006cae;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.report-back-button:hover {
+  border-color: #ff6b35;
+  background: #fff4ef;
+  color: #e85d31;
+}
+
+.dashboard-content :is(.employee-report .report-header h1, .report-page .report-header h1,
+  .leave-report-header h1, .payroll-report-header h1) {
+  margin: 0 0 6px;
+  color: #0b2946;
+  font-size: 28px;
+  font-weight: 750;
+}
+
+.dashboard-content :is(.employee-report .report-header p, .report-page .report-header p,
+  .leave-report-header p, .payroll-report-header p) {
+  margin: 0;
+  color: #718096;
+  font-size: 13px;
+}
+
+.dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.dashboard-content :is(.report-summary .report-card, .leave-report-summary .leave-report-card,
+  .payroll-report-summary .payroll-report-card) {
+  min-height: 122px;
+  padding: 18px 20px;
+  border: 1px solid #d3e2ee;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(35, 91, 130, .07);
+}
+
+.dashboard-content :is(.report-summary .report-card h3, .leave-report-summary .leave-report-card h3,
+  .payroll-report-summary .payroll-report-card h3) {
+  margin: 0 0 12px;
+  color: #536b82;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.dashboard-content :is(.report-summary .report-card h2, .leave-report-summary .leave-report-card h2,
+  .payroll-report-summary .payroll-report-card h2) {
+  margin: 0 0 6px;
+  color: #102a43;
+  font-size: 28px;
+  font-weight: 750;
+}
+
+.dashboard-content :is(.report-summary .report-card p, .leave-report-summary .leave-report-card p,
+  .payroll-report-summary .payroll-report-card p) {
+  margin: 0;
+  color: #0ca99a;
+  font-size: 12px;
+}
+
+.dashboard-content :is(.employee-report-table, .report-table-container,
+  .leave-report-table-container, .payroll-report-table-container) {
+  overflow-x: auto;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #d3e2ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+@media (max-width: 900px) {
+  .dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-content :is(.employee-report .report-header, .report-page .report-header,
+    .leave-report-header, .payroll-report-header) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-chart-heading,
+.report-chart-legend {
+  display: flex;
+  align-items: center;
+}
+
+.report-chart-heading {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.report-chart-heading h2 {
+  margin: 0;
+  color: #102a43;
+  font-size: 18px;
+}
+
+.report-chart-heading select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d3e2ee;
+  border-radius: 8px;
+  background: #fff;
+  color: #173b5f;
+}
+
+.report-chart-legend {
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  color: #718096;
+  font-size: 12px;
+}
+
+.report-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.report-chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.report-chart-area {
+  position: relative;
+  height: 190px;
+  margin-top: 14px;
+  padding: 0 8px 28px;
+}
+
+.report-chart-grid {
+  position: absolute;
+  inset: 0 8px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.report-chart-grid i {
+  display: block;
+  width: 100%;
+  border-top: 1px solid #e6edf2;
+}
+
+.report-chart-bars {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 100%;
+}
+
+.report-chart-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #536b82;
+  font-size: 11px;
+}
+
+.report-chart-values {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  width: 44px;
+  height: 150px;
+}
+
+.report-chart-values b {
+  display: block;
+  width: 13px;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+}
+
+@media (max-width: 700px) {
+  .report-chart {
+    padding: 16px;
+  }
+
+  .report-chart-values {
+    width: 30px;
+  }
+
+  .report-chart-values b {
+    width: 9px;
   }
 }
