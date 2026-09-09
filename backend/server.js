@@ -5,14 +5,17 @@ import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
+import { randomBytes } from "node:crypto";
 
 
 const app = express();
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    : null;
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -128,6 +131,37 @@ app.get("/api/attendance", async (req, res) => {
         res.status(500).json({
             message: "Failed to fetch attendance"
         });
+    }
+});
+
+// Employee attendance summary for dashboard charts
+app.get("/api/attendance/employee/:employeeId/summary", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) IN ('present', 'on time')
+                      AND COALESCE(late_minutes, 0) = 0
+                ) AS on_time,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) = 'late'
+                       OR COALESCE(late_minutes, 0) > 0
+                ) AS late_attendance,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) IN ('work from home', 'wfh')
+                ) AS work_from_home,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) = 'absent'
+                ) AS absent
+             FROM attendance
+             WHERE employee_id = $1`,
+            [req.params.employeeId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error fetching employee attendance summary:", error);
+        res.status(500).json({ message: "Failed to fetch attendance summary" });
     }
 });
 
@@ -448,6 +482,18 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
                 e.religion,
                 e.marital_status,
                 e.children_count,
+                e.legal_entity,
+                e.worker_type,
+                e.employment_category,
+                e.project_role_id,
+                e.employment_end_date,
+                e.termination_reason,
+                e.last_date_worked,
+                e.position,
+                e.position_title,
+                e.assignment_start,
+                e.assignment_end,
+                e.make_primary,
                 COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
                 COALESCE((SELECT row_to_json(f) FROM employee_family_details f WHERE f.employee_id = e.employee_id ORDER BY f.id DESC LIMIT 1), '{}'::json) AS family,
                 COALESCE((SELECT row_to_json(ed) FROM employee_education ed WHERE ed.employee_id = e.employee_id ORDER BY ed.id DESC LIMIT 1), '{}'::json) AS education,
@@ -924,7 +970,19 @@ app.post("/api/employees", async (req, res) => {
             religion,
             marital_status,
             children_count,
-            status
+            status,
+            legal_entity,
+            worker_type,
+            employment_category,
+            project_role_id,
+            employment_end_date,
+            termination_reason,
+            last_date_worked,
+            position,
+            position_title,
+            assignment_start,
+            assignment_end,
+            make_primary
         } = req.body;
 
         const result = await pool.query(
@@ -948,9 +1006,21 @@ app.post("/api/employees", async (req, res) => {
                 religion,
                 marital_status,
                 children_count,
-                status
+                status,
+                legal_entity,
+                worker_type,
+                employment_category,
+                project_role_id,
+                employment_end_date,
+                termination_reason,
+                last_date_worked,
+                position,
+                position_title,
+                assignment_start,
+                assignment_end,
+                make_primary
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
             RETURNING *`,
             [
                 employee_id,
@@ -971,7 +1041,19 @@ app.post("/api/employees", async (req, res) => {
                 religion,
                 marital_status,
                 children_count === "" || children_count == null ? null : Number(children_count),
-                status || "Active"
+                status || "Active",
+                legal_entity || "SHLT",
+                worker_type || "Employee",
+                employment_category || null,
+                project_role_id || null,
+                employment_end_date || "Never",
+                termination_reason || null,
+                last_date_worked || null,
+                position || designation,
+                position_title || designation,
+                normalizeDateValue(assignment_start),
+                normalizeDateValue(assignment_end),
+                Boolean(make_primary)
             ]
         );
 
@@ -1011,7 +1093,19 @@ app.put("/api/employees/:employeeId", async (req, res) => {
         nationality,
         religion,
         marital_status,
-        children_count
+        children_count,
+        legal_entity,
+        worker_type,
+        employment_category,
+        project_role_id,
+        employment_end_date,
+        termination_reason,
+        last_date_worked,
+        position,
+        position_title,
+        assignment_start,
+        assignment_end,
+        make_primary
         } = req.body;
 
         const result = await pool.query(
@@ -1035,8 +1129,20 @@ app.put("/api/employees/:employeeId", async (req, res) => {
         nationality = $16,
         religion = $17,
         marital_status = $18,
-        children_count = $19
-    WHERE employee_id = $20
+        children_count = $19,
+        legal_entity = $20,
+        worker_type = $21,
+        employment_category = $22,
+        project_role_id = $23,
+        employment_end_date = $24,
+        termination_reason = $25,
+        last_date_worked = $26,
+        position = $27,
+        position_title = $28,
+        assignment_start = $29,
+        assignment_end = $30,
+        make_primary = $31
+    WHERE employee_id = $32
    RETURNING *`,
   [
     employee_id,
@@ -1058,6 +1164,18 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     religion,
     marital_status,
     children_count === "" || children_count == null ? null : Number(children_count),
+    legal_entity || "SHLT",
+    worker_type || "Employee",
+    employment_category || null,
+    project_role_id || null,
+    employment_end_date || "Never",
+    termination_reason || null,
+    last_date_worked || null,
+    position || designation,
+    position_title || designation,
+    normalizeDateValue(assignment_start),
+    normalizeDateValue(assignment_end),
+    Boolean(make_primary),
     employeeId
   ]
 );
@@ -1074,8 +1192,156 @@ app.put("/api/employees/:employeeId", async (req, res) => {
         console.error("Error updating employee:", error);
 
         res.status(500).json({
-            message: "Failed to update employee"
+            message: "Failed to update employee",
+            details: error.message
         });
+    }
+});
+
+// Set a custom password, or generate a one-time temporary password.
+app.post("/api/employees/:employeeId/reset-password", async (req, res) => {
+    try {
+        const customPassword = String(req.body?.custom_password || "").trim();
+        if (customPassword && customPassword.length < 6) {
+            return res.status(400).json({ message: "Custom password must be at least 6 characters" });
+        }
+
+        const password = customPassword || randomBytes(9).toString("base64url").slice(0, 12);
+        const passwordHash = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            `UPDATE employees
+             SET password = $1
+             WHERE employee_id = $2
+             RETURNING employee_id, name`,
+            [passwordHash, req.params.employeeId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        res.json({
+            message: customPassword ? "Password updated" : "Temporary password generated",
+            employee_id: result.rows[0].employee_id,
+            employee_name: result.rows[0].name,
+            temporary_password: password,
+            is_custom_password: Boolean(customPassword),
+        });
+    } catch (error) {
+        console.error("Error resetting employee password:", error);
+        res.status(500).json({ message: "Failed to reset employee password" });
+    }
+});
+
+app.post("/api/employees/:employeeId/change-password", async (req, res) => {
+    try {
+        const { current_password, new_password, repeat_password } = req.body || {};
+        if (!current_password || !new_password || !repeat_password) {
+            return res.status(400).json({ message: "All password fields are required" });
+        }
+        if (new_password.length < 6) {
+            return res.status(400).json({ message: "New password must be at least 6 characters" });
+        }
+        if (new_password !== repeat_password) {
+            return res.status(400).json({ message: "New password and repeat password do not match" });
+        }
+
+        const result = await pool.query(
+            "SELECT password FROM employees WHERE employee_id = $1 AND status = 'Active'",
+            [req.params.employeeId]
+        );
+        if (result.rows.length === 0 || !(await bcrypt.compare(current_password, result.rows[0].password))) {
+            return res.status(401).json({ message: "Current password is incorrect" });
+        }
+
+        const passwordHash = await bcrypt.hash(new_password, 10);
+        await pool.query("UPDATE employees SET password = $1 WHERE employee_id = $2", [passwordHash, req.params.employeeId]);
+        res.json({ message: "Password changed successfully" });
+    } catch (error) {
+        console.error("Employee change password error:", error);
+        res.status(500).json({ message: "Failed to change password" });
+    }
+});
+
+// =========================
+// EMPLOYEE SALARY APIs
+// =========================
+
+app.get("/api/payroll", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                s.payroll_id AS id,
+                s.employee_id AS "employeeID",
+                e.name AS "employeeName",
+                e.department,
+                e.designation,
+                e.email,
+                e.phone,
+                e.joining_date AS "joiningDate",
+                s.salary_month AS "salaryMonth",
+                s.basic_salary AS "basicSalary",
+                s.allowances,
+                s.deductions,
+                s.net_salary AS "netSalary",
+                s.status
+            FROM employee_payroll s
+            JOIN employees e ON e.employee_id = s.employee_id
+            ORDER BY s.salary_month DESC, s.employee_id ASC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Error fetching payroll:", error);
+        res.status(500).json({ message: "Failed to fetch payroll records" });
+    }
+});
+
+app.post("/api/payroll", async (req, res) => {
+    try {
+        const { employeeID, salaryMonth, basicSalary, allowances, deductions, status } = req.body;
+        if (!employeeID || !salaryMonth) {
+            return res.status(400).json({ message: "Employee ID and salary month are required" });
+        }
+        const result = await pool.query(`
+            INSERT INTO employee_payroll
+                (employee_id, salary_month, basic_salary, allowances, deductions, status)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [employeeID, salaryMonth, Number(basicSalary) || 0, Number(allowances) || 0, Number(deductions) || 0, status || "Pending"]);
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error("Error creating payroll:", error);
+        res.status(500).json({ message: "Failed to create salary record" });
+    }
+});
+
+app.put("/api/payroll/:id", async (req, res) => {
+    try {
+        const { employeeID, salaryMonth, basicSalary, allowances, deductions, status } = req.body;
+        const result = await pool.query(`
+            UPDATE employee_payroll
+            SET employee_id = $1, salary_month = $2, basic_salary = $3,
+                allowances = $4, deductions = $5, status = $6,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE payroll_id = $7
+            RETURNING *
+        `, [employeeID, salaryMonth, Number(basicSalary) || 0, Number(allowances) || 0, Number(deductions) || 0, status || "Pending", req.params.id]);
+        if (!result.rows.length) return res.status(404).json({ message: "Salary record not found" });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating payroll:", error);
+        res.status(500).json({ message: "Failed to update salary record" });
+    }
+});
+
+app.delete("/api/payroll/:id", async (req, res) => {
+    try {
+        const result = await pool.query("DELETE FROM employee_payroll WHERE payroll_id = $1 RETURNING payroll_id AS id", [req.params.id]);
+        if (!result.rows.length) return res.status(404).json({ message: "Salary record not found" });
+        res.json({ message: "Salary record deleted" });
+    } catch (error) {
+        console.error("Error deleting payroll:", error);
+        res.status(500).json({ message: "Failed to delete salary record" });
     }
 });
 
@@ -1872,6 +2138,12 @@ app.put("/api/job-applications/:id/status", async (req, res) => {
 
 app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
     try {
+        if (!supabase) {
+            return res.status(503).json({
+                message: "Resume upload is not configured on the backend",
+            });
+        }
+
         if (!req.file) {
             return res.status(400).json({
                 message: "Resume file is required",
@@ -2032,13 +2304,32 @@ const ensureEmployeePersonalInfoColumns = async () => {
     `);
 };
 
+const ensurePasswordResetTable = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            employee_id TEXT NOT NULL,
+            otp_hash TEXT NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            verified BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS password_resets_employee_id_idx
+        ON password_resets (employee_id, created_at DESC)
+    `);
+};
+
 ensureEmployeePersonalInfoColumns()
+    .then(ensurePasswordResetTable)
     .then(() => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);
         });
     })
     .catch((error) => {
-        console.error("Failed to prepare employee personal information columns:", error);
+        console.error("Failed to prepare database tables:", error);
         process.exit(1);
     });

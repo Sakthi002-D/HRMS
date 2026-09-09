@@ -8,6 +8,53 @@
     color: #172b4d;
 }
 
+.employee-notification {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 8px 2px;
+    text-align: center;
+}
+
+.employee-notification-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.employee-notification p {
+    max-width: 520px;
+    margin: 0;
+    color: #53657a;
+    font-size: 15px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.employee-notification button {
+    min-width: 92px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #16466d;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.employee-notification button:hover {
+    background: #0e3554;
+}
+
 .employee-details-topbar {
     display: flex;
     justify-content: space-between;
@@ -27,10 +74,16 @@
 .back-btn {
     padding: 7px 10px;
     border-radius: 5px; 
-    background: #fff;
-    border: 1px solid #e0e6ed;
-    color: #102a4c;
+    background: #e8f2ff;
+    border: 0;
+    color: #16466d;
     font-size: 14px;
+    box-shadow: none;
+}
+
+.back-btn:hover {
+    background: #d9ebff;
+    box-shadow: none;
 }
 
 .topbar-actions {
@@ -62,6 +115,7 @@
     color: #173456;
     font-size: 18px;
     line-height: 1;
+    box-shadow: none !important;
 }
 
 .employee-details-layout {
@@ -79,6 +133,261 @@
     background: #fff;
 }
 
+.password-management-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 18px;
+    padding: 22px 24px;
+    border: 1px solid #e1e6ec;
+    border-left: 4px solid #dc2626;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.password-management-panel h2 {
+    margin: 0 0 7px;
+    color: #173456;
+    font-size: 17px;
+}
+
+.password-management-panel p,
+.password-management-panel small {
+    display: block;
+    margin: 0;
+    color: #718096;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.password-management-panel small {
+    margin-top: 5px;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+.password-management-panel button,
+.password-reset-result button {
+    flex: 0 0 auto;
+    padding: 11px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #dc2626;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.password-management-panel button:hover,
+.password-reset-result button:hover {
+    background: #b91c1c;
+}
+
+.password-confirmation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 8px 2px;
+    text-align: center;
+}
+
+.password-confirmation-icon {
+    width: 62px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 7px solid #fff1f2;
+    border-radius: 18px;
+    background: #ffe4e6;
+    color: #dc2626;
+}
+
+.password-confirmation p,
+.password-confirmation small {
+    margin: 0;
+    color: #53657a;
+    line-height: 1.5;
+}
+
+.password-confirmation p {
+    margin-top: 1px;
+    color: #173456;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.custom-password-field {
+    display: flex;
+    width: min(100%, 360px);
+    flex-direction: column;
+    gap: 8px;
+    color: #53657a;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+}
+
+.custom-password-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 46px 13px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #173456;
+    font: inherit;
+    font-weight: 400;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.custom-password-field input:focus {
+    border-color: #dc2626;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
+.password-input-wrap {
+    position: relative;
+    display: block;
+}
+
+.password-visibility-button {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.password-visibility-button:hover {
+    background: #e2e8f0;
+    color: #173456;
+}
+
+.password-visibility-button:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 1px;
+}
+
+.password-helper-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #718096;
+    font-size: 12px;
+}
+
+.helper-divider {
+    color: #cbd5e1;
+}
+
+.password-confirmation-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.password-confirmation-actions button {
+    min-width: 118px;
+    padding: 11px 18px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.password-confirmation-actions button:hover {
+    transform: translateY(-1px);
+}
+
+.password-confirmation-actions button:focus-visible {
+    outline: 3px solid rgba(220, 38, 38, .2);
+    outline-offset: 2px;
+}
+
+.password-confirmation-actions button:not(.cancel-button) {
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 5px 12px rgba(220, 38, 38, .2);
+}
+
+.password-confirmation-actions button:not(.cancel-button):hover {
+    background: #b91c1c;
+    box-shadow: 0 7px 16px rgba(220, 38, 38, .28);
+}
+
+.password-confirmation-actions .cancel-button {
+    border-color: #dce3ea;
+    background: #eef1f4;
+    color: #344054;
+}
+
+.password-confirmation-actions .cancel-button:hover {
+    background: #e2e8ee;
+}
+
+.password-reset-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.password-success-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    place-items: center;
+    border: 7px solid #ecfdf3;
+    border-radius: 18px;
+    background: #d1fadf;
+    color: #15803d;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.password-reset-result p,
+.password-reset-result small {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.temporary-password {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-family: monospace;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-align: center;
+    user-select: all;
+}
+
 .employee-summary {
     position: relative;
     display: block;
@@ -92,7 +401,7 @@
     display: block;
     width: 100%;
     height: 91px;
-    background: linear-gradient(120deg, #ef6c00, #ff9e00 55%, #ed4b00);
+    background: #042330;
 }
 
 .profile-avatar-large {
@@ -176,7 +485,7 @@
 }
 
 .summary-actions a {
-    background: #ff7138;
+    background: linear-gradient(135deg, #03a9f4, #0288d1);
     color: #fff;
 }
 
@@ -274,6 +583,8 @@
     border: 0;
     background: transparent;
     cursor: pointer;
+    box-shadow: none !important;
+    outline: none;
 }
 
 .detail-panel header .panel-edit-button,
@@ -293,12 +604,14 @@
     font-size: 17px;
     font-weight: 700;
     line-height: 1;
+    box-shadow: none !important;
 }
 
 .detail-panel header .panel-toggle-button:hover,
 .collapse-btn:hover {
-    background: #eef4fb;
-    border-color: #b9cbe0;
+    background: #f8fafc;
+    border-color: #dfe5ec;
+    box-shadow: none !important;
 }
 
 .detail-panel-content {
@@ -359,24 +672,37 @@
     background: transparent;
     color: #172b4d;
     cursor: pointer;
+    box-shadow: none !important;
+    outline: none;
 }
 
 .project-tabs {
     display: flex;
-    gap: 22px;
+    align-items: flex-end;
+    gap: 8px;
     border-bottom: 1px solid #e6e9ed;
 }
 
 .project-tabs button {
-    padding: 0 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    height: 38px;
+    padding: 0 12px;
     border: 0;
+    border-radius: 8px 8px 0 0;
     background: transparent;
     color: #788496;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
 }
 
 .project-tabs button.active {
     border-bottom: 2px solid #ff7138;
+    background: #fff7f2;
     color: #ff7138;
 }
 
@@ -606,4 +932,6 @@
     .project-list { grid-template-columns: 1fr; }
     .edit-form-grid { grid-template-columns: 1fr; }
     .detail-panel-content { grid-template-columns: 1fr; }
+    .password-management-panel { align-items: flex-start; flex-direction: column; }
+    .password-management-panel button { width: 100%; }
 }

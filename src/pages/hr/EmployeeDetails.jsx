@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
+import Modal from "../../components/layout/common/Modal";
 import "./EmployeeDetails.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -29,6 +31,12 @@ function EmployeeDetails() {
     const [editForm, setEditForm] = useState({});
     const [sectionEditor, setSectionEditor] = useState(null);
     const [sectionForm, setSectionForm] = useState({});
+    const [notification, setNotification] = useState("");
+    const [resetPasswordResult, setResetPasswordResult] = useState(null);
+    const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
+    const [newPassword, setNewPassword] = useState("");
+    const [repeatPassword, setRepeatPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [activeWorkTab, setActiveWorkTab] = useState("projects");
     const [openPanels, setOpenPanels] = useState({
         about: true,
@@ -36,6 +44,8 @@ function EmployeeDetails() {
         family: false,
         education: false,
         experience: false,
+        employment: true,
+        position: true,
     });
 
     useEffect(() => {
@@ -130,6 +140,18 @@ function EmployeeDetails() {
             religion: employee.religion || "",
             marital_status: employee.marital_status || "",
             children_count: employee.children_count ?? "",
+            legal_entity: employee.legal_entity || "SHLT",
+            worker_type: employee.worker_type || "Employee",
+            employment_category: employee.employment_category || "",
+            project_role_id: employee.project_role_id || "",
+            employment_end_date: employee.employment_end_date || "Never",
+            termination_reason: employee.termination_reason || "",
+            last_date_worked: employee.last_date_worked || "",
+            position: employee.position || employee.designation || "",
+            position_title: employee.position_title || employee.designation || "",
+            assignment_start: employee.assignment_start ? String(employee.assignment_start).slice(0, 10) : "",
+            assignment_end: employee.assignment_end ? String(employee.assignment_end).slice(0, 10) : "",
+            make_primary: employee.make_primary || false,
         });
         setIsEditing(true);
     };
@@ -148,12 +170,17 @@ function EmployeeDetails() {
                 body: JSON.stringify(editForm),
             });
             const data = await readApiResponse(response);
-            if (!response.ok) throw new Error(data.message || "Failed to update employee");
+            if (!response.ok) {
+                throw new Error(
+                    [data.message, data.details].filter(Boolean).join(": ") ||
+                    "Failed to update employee"
+                );
+            }
             setEmployee((current) => ({ ...current, ...data }));
             setIsEditing(false);
         } catch (saveError) {
             console.error("Employee update error:", saveError);
-            alert(saveError.message);
+            setNotification(saveError.message);
         } finally {
             setIsSaving(false);
         }
@@ -187,9 +214,47 @@ function EmployeeDetails() {
             setEmployee((current) => ({ ...current, [sectionEditor]: data }));
             setSectionEditor(null);
         } catch (saveError) {
-            alert(saveError.message);
+            setNotification(saveError.message);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const resetEmployeePassword = async () => {
+        try {
+            const submittedNewPassword = newPassword.trim();
+            const submittedRepeatPassword = repeatPassword.trim();
+            if (submittedNewPassword.length < 6) {
+                setNotification("New password must be at least 6 characters.");
+                return;
+            }
+            if (submittedNewPassword !== submittedRepeatPassword) {
+                setNotification("New password and repeat password do not match.");
+                return;
+            }
+
+            const response = await fetch(
+                `${API_URL}/api/employees/${employee.employee_id}/reset-password`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ custom_password: submittedNewPassword }),
+                }
+            );
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to reset employee password");
+            }
+
+            setResetPasswordResult({
+                ...data,
+                is_custom_password: true,
+            });
+            setNewPassword("");
+            setRepeatPassword("");
+        } catch (resetError) {
+            setNotification(resetError.message || "Unable to reset employee password");
         }
     };
 
@@ -245,8 +310,9 @@ function EmployeeDetails() {
     ];
 
     return (
-        <DashboardLayout>
-            <div className="employee-details-page">
+        <>
+            <DashboardLayout>
+                <div className="employee-details-page">
                 <div className="employee-details-topbar">
                     <button className="back-btn" onClick={() => navigate("/employees")}>
                         ← Employee Details
@@ -307,6 +373,25 @@ function EmployeeDetails() {
                         <DetailPanel panelKey="about" isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title="About Employee" content={`Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`} onEdit={openEditor} />
                         <DetailPanel panelKey="bank" isOpen={openPanels.bank} onToggle={() => setOpenPanels((current) => ({ ...current, bank: !current.bank }))} title="Bank Information" onEdit={() => openSectionEditor("bank")} content={formatSection(employee.bank)} />
                         <DetailPanel panelKey="family" isOpen={openPanels.family} onToggle={() => setOpenPanels((current) => ({ ...current, family: !current.family }))} title="Family Information" onEdit={() => openSectionEditor("family")} content={formatSection(employee.family)} />
+                        <DetailPanel panelKey="employment" isOpen={openPanels.employment} onToggle={() => setOpenPanels((current) => ({ ...current, employment: !current.employment }))} title="Employment Details" content={formatSection({
+                            "Legal Entity": employee.legal_entity || "SHLT",
+                            "Worker Type": employee.worker_type || "Employee",
+                            "Personnel Number": employee.employee_id,
+                            "Employment Category": employee.employment_category,
+                            "Employment Start Date": formatDate(employee.joining_date),
+                            "Employment End Date": employee.employment_end_date || "Never",
+                            "Employment Type": employee.employment_type,
+                            "Project Role ID": employee.project_role_id,
+                            "Termination Reason": employee.termination_reason,
+                            "Last Date Worked": employee.last_date_worked,
+                        })} onEdit={openEditor} />
+                        <DetailPanel panelKey="position" isOpen={openPanels.position} onToggle={() => setOpenPanels((current) => ({ ...current, position: !current.position }))} title="Position Details" content={formatSection({
+                            "Position": employee.position || employee.designation,
+                            "Position Title": employee.position_title || employee.designation,
+                            "Assignment Start": formatDate(employee.assignment_start || employee.joining_date),
+                            "Assignment End": formatDate(employee.assignment_end),
+                            "Make Primary": employee.make_primary ? "Yes" : "No",
+                        })} onEdit={openEditor} />
                         <div className="detail-panel-row">
                             <DetailPanel panelKey="education" isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title="Education Details" onEdit={() => openSectionEditor("education")} content={formatSection(employee.education)} />
                             <DetailPanel panelKey="experience" isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title="Experience" onEdit={() => openSectionEditor("experience")} content={formatSection(employee.experience)} />
@@ -331,6 +416,20 @@ function EmployeeDetails() {
                                 <button className="section-edit-button" type="button" onClick={() => openSectionEditor("project")} aria-label="Edit projects">✎</button>
                             )}
                         </section>
+                        <section className="password-management-panel">
+                            <div>
+                                <h2>Password Management</h2>
+                                <p>
+                                    Generate a temporary password for this employee when they cannot access their account.
+                                </p>
+                                <small>
+                                    The employee should change this temporary password after logging in.
+                                </small>
+                            </div>
+                            <button type="button" onClick={() => setShowResetPasswordConfirm(true)}>
+                                Reset Password
+                            </button>
+                        </section>
                     </main>
                 </div>
 
@@ -352,7 +451,15 @@ function EmployeeDetails() {
                                     ["designation", "Designation", "text"],
                                     ["department", "Department", "text"],
                                     ["joining_date", "Joining Date", "date"],
+                                    ["assignment_start", "Assignment Start", "date"],
+                                    ["assignment_end", "Assignment End", "date"],
                                     ["emergency_contact", "Emergency Contact", "tel"],
+                                    ["position", "Position", "text"],
+                                    ["position_title", "Position Title", "text"],
+                                    ["employment_category", "Employment Category", "text"],
+                                    ["project_role_id", "Project Role ID", "text"],
+                                    ["termination_reason", "Termination Reason", "text"],
+                                    ["last_date_worked", "Last Date Worked", "text"],
                                 ].map(([name, label, type]) => (
                                     <label key={name}>{label}
                                         {type === "date" ? (
@@ -370,6 +477,22 @@ function EmployeeDetails() {
                                 <label>Employment Type
                                     <select name="employment_type" value={editForm.employment_type || ""} onChange={updateFormField}>
                                         <option value="">Select employment type</option><option>Full Time</option><option>Part Time</option><option>Contract</option><option>Intern</option>
+                                    </select>
+                                </label>
+                                <label>Employment End Date
+                                    <select name="employment_end_date" value={editForm.employment_end_date || "Never"} onChange={updateFormField}>
+                                        <option>Never</option><option>Fixed date</option>
+                                    </select>
+                                </label>
+                                <label>Legal Entity
+                                    <input name="legal_entity" type="text" value={editForm.legal_entity || "SHLT"} onChange={updateFormField} />
+                                </label>
+                                <label>Worker Type
+                                    <input name="worker_type" type="text" value={editForm.worker_type || "Employee"} onChange={updateFormField} />
+                                </label>
+                                <label>Make Primary
+                                    <select name="make_primary" value={editForm.make_primary ? "true" : "false"} onChange={(event) => setEditForm((current) => ({ ...current, make_primary: event.target.value === "true" }))}>
+                                        <option value="false">No</option><option value="true">Yes</option>
                                     </select>
                                 </label>
                                 <label>Status
@@ -431,8 +554,106 @@ function EmployeeDetails() {
                         </form>
                     </div>
                 )}
-            </div>
-        </DashboardLayout>
+                </div>
+            </DashboardLayout>
+            <Modal
+                isOpen={Boolean(notification)}
+                onClose={() => setNotification("")}
+                title="Unable to save changes"
+            >
+                <div className="employee-notification">
+                    <div className="employee-notification-icon">!</div>
+                    <p>{notification}</p>
+                    <button type="button" onClick={() => setNotification("")}>OK</button>
+                </div>
+            </Modal>
+            <Modal
+                isOpen={showResetPasswordConfirm}
+                onClose={() => {
+                    setShowResetPasswordConfirm(false);
+                    setNewPassword("");
+                    setRepeatPassword("");
+                    setShowPassword(false);
+                }}
+                title="Reset employee password"
+            >
+                <div className="password-confirmation">
+                    <div className="password-confirmation-icon">
+                        <KeyRound size={42} strokeWidth={2.2} />
+                    </div>
+                    <p>Set a new password for {employee.name}</p>
+                    <label className="custom-password-field">
+                        New password
+                        <span className="password-input-wrap">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={newPassword}
+                                onChange={(event) => setNewPassword(event.target.value)}
+                                placeholder="Enter new password"
+                                minLength={6}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="password-visibility-button"
+                                onClick={() => setShowPassword((visible) => !visible)}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </span>
+                    </label>
+                    <label className="custom-password-field">
+                        Repeat password
+                        <span className="password-input-wrap">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={repeatPassword}
+                                onChange={(event) => setRepeatPassword(event.target.value)}
+                                placeholder="Repeat new password"
+                                minLength={6}
+                                required
+                            />
+                        </span>
+                    </label>
+                    <small className="password-helper-text">
+                        <span>Minimum 6 characters</span>
+                        <span className="helper-divider">|</span>
+                        <span>Both passwords must match</span>
+                    </small>
+                    <div className="password-confirmation-actions">
+                        <button type="button" className="cancel-button" onClick={() => setShowResetPasswordConfirm(false)}>
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowResetPasswordConfirm(false);
+                                resetEmployeePassword();
+                            }}
+                        >
+                            Reset Password
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+            <Modal
+                isOpen={Boolean(resetPasswordResult)}
+                onClose={() => setResetPasswordResult(null)}
+                title="Password updated successfully"
+            >
+                <div className="password-reset-result">
+                    <div className="password-success-icon">✓</div>
+                    <p>
+                        The password for {resetPasswordResult?.employee_name} was updated successfully.
+                    </p>
+                    <small>
+                        The employee can now log in with the new password.
+                    </small>
+                    <button type="button" onClick={() => setResetPasswordResult(null)}>Done</button>
+                </div>
+            </Modal>
+        </>
     );
 }
 

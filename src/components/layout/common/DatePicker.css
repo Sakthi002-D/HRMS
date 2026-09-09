@@ -10,9 +10,10 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
-    border: 1px solid #cbddea;
+    border: 1px solid #d1d5db !important;
     border-radius: 8px;
-    background: #fbfdff;
+    background: #ffffff !important;
+    box-shadow: none !important;
     color: #334155;
     font: inherit;
     font-size: 14px;
@@ -22,7 +23,15 @@
 
 .date-picker-trigger:hover,
 .date-picker-trigger.is-open {
-    border-color: #2563eb;
+    border-color: #b8bec6 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+}
+
+.date-picker-trigger:focus-visible {
+    outline: none;
+    box-shadow: none !important;
+    border-color: #b8bec6 !important;
 }
 
 .date-picker-placeholder {
@@ -36,7 +45,7 @@
     left: 0;
     width: 280px;
     padding: 14px;
-    border: 1px solid #d3e2ee;
+    border: 1px solid #d1d5db;
     border-radius: 12px;
     background: #fff;
     box-shadow: 0 16px 35px rgba(15, 38, 60, .18);
@@ -63,21 +72,21 @@
     border: 0;
     border-radius: 5px;
     background: transparent;
-    color: #2563eb;
+    color: #475569;
     font: inherit;
     font-size: 14px;
     cursor: pointer;
 }
 
 .date-picker-year:hover {
-    background: #eff6ff;
+    background: transparent;
 }
 
 .date-picker-nav button,
 .date-picker-footer button {
     border: 0;
     background: transparent;
-    color: #2563eb;
+    color: #475569;
     cursor: pointer;
 }
 
@@ -90,7 +99,7 @@
 }
 
 .date-picker-nav button:hover {
-    background: #eff6ff;
+    background: transparent;
 }
 
 .date-picker-weekdays,
@@ -125,8 +134,8 @@
 
 .date-picker-days button:hover,
 .date-picker-days button.selected {
-    background: #2563eb;
-    color: #fff;
+    background: #eef0f2;
+    color: #1f2937;
 }
 
 .date-picker-years {
@@ -138,7 +147,7 @@
     padding-right: 4px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #94a3b8 #eef4f9;
+    scrollbar-color: #94a3b8 #f1f2f3;
 }
 
 .date-picker-years::-webkit-scrollbar {
@@ -146,7 +155,7 @@
 }
 
 .date-picker-years::-webkit-scrollbar-track {
-    background: #eef4f9;
+    background: #f1f2f3;
     border-radius: 6px;
 }
 
@@ -157,18 +166,18 @@
 
 .date-picker-years button {
     min-height: 38px;
-    border: 1px solid #dbe8f2;
+    border: 1px solid #d1d5db;
     border-radius: 7px;
-    background: #fbfdff;
+    background: #ffffff;
     color: #334155;
     cursor: pointer;
 }
 
 .date-picker-years button:hover,
 .date-picker-years button.selected {
-    border-color: #2563eb;
-    background: #2563eb;
-    color: #fff;
+    border-color: #b8bec6;
+    background: #eef0f2;
+    color: #1f2937;
 }
 
 .date-picker-footer {
