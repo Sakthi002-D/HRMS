@@ -1719,9 +1719,15 @@
 
 .employee-dashboard.leave-view .employee-leave-section .employee-summary .employee-stat-card:hover,
 .employee-dashboard.leave-view .employee-leave-section .employee-table-card:hover,
-.employee-dashboard.leave-view .employee-leave-section .employee-table-card tbody tr:hover,
-.employee-dashboard.leave-view .apply-leave-btn:hover {
+.employee-dashboard.leave-view .employee-leave-section .employee-table-card tbody tr:hover {
     transform: none;
     box-shadow: inherit;
-    background: inherit;
+    background: #fff;
+}
+
+.employee-dashboard.leave-view .apply-leave-btn:hover {
+    transform: none;
+    box-shadow: 0 5px 13px rgba(3, 169, 244, .2);
+    background: #0288d1;
+    color: #fff;
 }
