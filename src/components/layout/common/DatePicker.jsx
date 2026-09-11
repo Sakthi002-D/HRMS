@@ -2,9 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import "./DatePicker.css";
 
+const normalizeDateValue = (value) => {
+  const text = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "";
+  const normalized = text.slice(0, 10);
+  const parsed = new Date(`${normalized}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? "" : normalized;
+};
+
 const formatDisplayDate = (value) => {
-  if (!value) return "";
-  const [year, month, day] = value.split("-");
+  const normalized = normalizeDateValue(value);
+  if (!normalized) return "";
+  const [year, month, day] = normalized.split("-");
   return `${day}-${month}-${year}`;
 };
 
@@ -12,7 +21,8 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY" }) {
   const wrapperRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [yearPickerOpen, setYearPickerOpen] = useState(false);
-  const selectedDate = value ? new Date(`${value}T00:00:00`) : new Date();
+  const normalizedValue = normalizeDateValue(value);
+  const selectedDate = normalizedValue ? new Date(`${normalizedValue}T00:00:00`) : new Date();
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
   );
@@ -137,7 +147,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY" }) {
                       type="button"
                       key={`${visibleMonth.getMonth()}-${day}`}
                       className={
-                        value ===
+                        normalizedValue ===
                         `${visibleMonth.getFullYear()}-${String(
                           visibleMonth.getMonth() + 1
                         ).padStart(2, "0")}-${String(day).padStart(2, "0")}`

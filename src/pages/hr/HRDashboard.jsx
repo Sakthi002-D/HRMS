@@ -216,7 +216,7 @@ function HRDashboard() {
           <div className="welcome-copy">
             <h2>Welcome back, HR Admin</h2>
             <p>
-              You have <strong>{dashboardData?.pendingLeaves ?? "-"} pending approvals</strong> to review.
+              You have <strong> {dashboardData?.pendingLeaves ?? "-"} pending approvals</strong> to review.
             </p>
           </div>
           <div className="welcome-actions">

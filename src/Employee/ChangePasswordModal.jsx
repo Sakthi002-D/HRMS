@@ -1,0 +1,7 @@
+import { KeyRound } from "lucide-react";
+
+function ChangePasswordModal({ passwordForm, setPasswordForm, onSubmit, loading, onClose }) {
+    return <div className="employee-modal"><div className="employee-modal-card password-change-modal"><button className="modal-close" onClick={onClose}>×</button><div className="password-change-heading"><KeyRound size={22} /><div><h2>Change Password</h2><p>Update your employee account password</p></div></div><form onSubmit={onSubmit}><div className="form-group"><label>Current Password</label><input type="password" value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} required /></div><div className="form-group"><label>New Password</label><input type="password" minLength="6" value={passwordForm.new_password} onChange={(event) => setPasswordForm((current) => ({ ...current, new_password: event.target.value }))} required /></div><div className="form-group"><label>Repeat Password</label><input type="password" minLength="6" value={passwordForm.repeat_password} onChange={(event) => setPasswordForm((current) => ({ ...current, repeat_password: event.target.value }))} required /></div><div className="profile-edit-actions"><button type="button" className="profile-cancel-btn" onClick={onClose}>Cancel</button><button type="submit" className="profile-save-btn" disabled={loading}>{loading ? "Updating..." : "Update Password"}</button></div></form></div></div>;
+}
+
+export default ChangePasswordModal;

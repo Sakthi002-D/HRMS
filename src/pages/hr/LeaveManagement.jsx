@@ -4,8 +4,29 @@ import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./LeaveManagement.css";
 
-const API_URL =
-    "https://hrms-cuoq.onrender.com/api/leaves";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = `${API_BASE_URL}/api/leaves`;
+const POLICY_API_URL = API_URL.replace(/\/leaves$/, "/leave-policies");
+const DEFAULT_LEAVE_TYPES = [
+    "Annual Leave",
+    "Casual Leave",
+    "Sick Leave",
+    "Paternity Leave",
+    "Maternity Leave",
+    "Hajj Leave",
+    "Bereavement Leave",
+    "Emergency Leave",
+    "Compensatory Off",
+    "Unpaid Leave (LOP)",
+];
+const DEFAULT_QATAR_HOLIDAYS = [
+    { name: "National Day", date: "18 December", days: 1 },
+    { name: "National Sports Day", date: "Second Tuesday of February", days: 1 },
+    { name: "Eid al-Fitr", date: "Islamic calendar", days: 3 },
+    { name: "Eid al-Adha", date: "Islamic calendar", days: 3 },
+    { name: "Islamic New Year", date: "Islamic calendar", days: 1 },
+    { name: "Prophet's Birthday", date: "Islamic calendar", days: 1 },
+];
 
 /*
     Demo/default employee leave allocation.
@@ -67,6 +88,22 @@ function LeaveManagement() {
 
     const [updating, setUpdating] = useState(false);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    const [isPolicySetupOpen, setIsPolicySetupOpen] = useState(false);
+    const [leavePolicy, setLeavePolicy] = useState({
+        leaveTypes: DEFAULT_LEAVE_TYPES,
+        qatarHolidayCalendar: DEFAULT_QATAR_HOLIDAYS,
+        underFiveYearsMonthlyAccrual: 1.75,
+        underFiveYearsAnnualDays: 21,
+        fiveYearsAndAboveMonthlyAccrual: 2.33,
+        fiveYearsAndAboveAnnualDays: 28,
+        sickEligibleAfterMonths: 3,
+        maternityDays: 50,
+        bereavementDays: 3,
+        compensatoryOffValidityDays: 90,
+    });
+    const [policyLoading, setPolicyLoading] = useState(false);
+    const [policySaving, setPolicySaving] = useState(false);
+    const [policyMessage, setPolicyMessage] = useState("");
 
     // =========================================================
     // DATE FORMAT
@@ -171,6 +208,11 @@ function LeaveManagement() {
                       status:
                           leave.status || "Pending",
 
+                      cancelledBy:
+                          leave.cancelled_by ??
+                              leave.cancelledBy ??
+                              null,
+
                       /*
                         Backend support.
 
@@ -239,8 +281,94 @@ function LeaveManagement() {
         }
     };
 
+    const fetchLeavePolicy = async () => {
+        try {
+            setPolicyLoading(true);
+            const response = await fetch(POLICY_API_URL);
+            if (!response.ok) throw new Error("Failed to fetch leave policy");
+            const data = await response.json();
+            const policy = data.policy || data;
+            setLeavePolicy({
+                leaveTypes: Array.isArray(policy.leaveTypes) && policy.leaveTypes.length
+                    ? policy.leaveTypes
+                    : DEFAULT_LEAVE_TYPES,
+                qatarHolidayCalendar: Array.isArray(policy.qatarHolidayCalendar) && policy.qatarHolidayCalendar.length
+                    ? policy.qatarHolidayCalendar
+                    : DEFAULT_QATAR_HOLIDAYS,
+                underFiveYearsMonthlyAccrual: policy.annualLeave?.underFiveYearsMonthlyAccrual ?? 1.75,
+                underFiveYearsAnnualDays: policy.annualLeave?.underFiveYearsAnnualDays ?? 21,
+                fiveYearsAndAboveMonthlyAccrual: policy.annualLeave?.fiveYearsAndAboveMonthlyAccrual ?? 2.33,
+                fiveYearsAndAboveAnnualDays: policy.annualLeave?.fiveYearsAndAboveAnnualDays ?? 28,
+                sickEligibleAfterMonths: policy.sickLeave?.eligibleAfterMonths ?? 3,
+                maternityDays: policy.maternityLeave?.days ?? 50,
+                bereavementDays: policy.bereavementLeave?.immediateFamilyDays ?? 3,
+                compensatoryOffValidityDays: policy.compensatoryOff?.validityDays ?? 90,
+            });
+        } catch (error) {
+            console.error("Error fetching leave policy:", error);
+            setPolicyMessage("Unable to load saved policy");
+        } finally {
+            setPolicyLoading(false);
+        }
+    };
+
+    const saveLeavePolicy = async () => {
+        try {
+            setPolicySaving(true);
+            setPolicyMessage("");
+            const response = await fetch(POLICY_API_URL, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    policy: {
+                        leaveTypes: leavePolicy.leaveTypes,
+                        qatarHolidayCalendar: leavePolicy.qatarHolidayCalendar,
+                        annualLeave: {
+                            underFiveYearsMonthlyAccrual: Number(leavePolicy.underFiveYearsMonthlyAccrual),
+                            underFiveYearsAnnualDays: Number(leavePolicy.underFiveYearsAnnualDays),
+                            fiveYearsAndAboveMonthlyAccrual: Number(leavePolicy.fiveYearsAndAboveMonthlyAccrual),
+                            fiveYearsAndAboveAnnualDays: Number(leavePolicy.fiveYearsAndAboveAnnualDays),
+                        },
+                        sickLeave: {
+                            eligibleAfterMonths: Number(leavePolicy.sickEligibleAfterMonths),
+                            medicalCertificateRequired: true,
+                            salaryBands: [
+                                { days: 14, pay: "100%" },
+                                { days: 28, pay: "50%" },
+                                { days: 42, pay: "Unpaid" },
+                            ],
+                        },
+                        maternityLeave: {
+                            days: Number(leavePolicy.maternityDays),
+                            pay: "Full Pay",
+                            approval: "HR",
+                            medicalCertificateRequired: true,
+                        },
+                        bereavementLeave: {
+                            immediateFamilyDays: Number(leavePolicy.bereavementDays),
+                            approval: "Manager",
+                        },
+                        compensatoryOff: {
+                            eligibility: ["Worked on public holiday", "Worked on weekend"],
+                            validityDays: Number(leavePolicy.compensatoryOffValidityDays),
+                            approval: "Manager",
+                        },
+                    },
+                }),
+            });
+            if (!response.ok) throw new Error("Failed to save leave policy");
+            setPolicyMessage("Policy saved successfully");
+        } catch (error) {
+            console.error("Error saving leave policy:", error);
+            setPolicyMessage("Unable to save policy");
+        } finally {
+            setPolicySaving(false);
+        }
+    };
+
     useEffect(() => {
         fetchLeaves();
+        fetchLeavePolicy();
     }, [searchParams]);
 
     // =========================================================
@@ -727,6 +855,14 @@ function LeaveManagement() {
                     </div>
 
                     <div className="leave-header-actions">
+                        <button
+                            type="button"
+                            className="leave-policy-btn"
+                            onClick={() => setIsPolicySetupOpen((open) => !open)}
+                            aria-expanded={isPolicySetupOpen}
+                        >
+                            Leave Policy Setup
+                        </button>
                         <div className="leave-export-menu">
                             <button
                                 type="button"
@@ -753,6 +889,85 @@ function LeaveManagement() {
                     </div>
 
                 </div>
+
+                {isPolicySetupOpen && (
+                    <section className="leave-policy-panel" aria-label="Leave Policy Setup">
+                        <div className="leave-policy-heading">
+                            <div>
+                                <h2>Leave Policy Setup</h2>
+                                <p>Configure the annual leave allowance used for employee reviews.</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="leave-policy-close"
+                                onClick={() => setIsPolicySetupOpen(false)}
+                                aria-label="Close leave policy setup"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="leave-policy-fields">
+                            {[
+                                ["underFiveYearsMonthlyAccrual", "Under 5 Years Monthly Accrual", "days per month", "0.01"],
+                                ["underFiveYearsAnnualDays", "Under 5 Years Annual Days", "days per year", "1"],
+                                ["fiveYearsAndAboveMonthlyAccrual", "5+ Years Monthly Accrual", "days per month", "0.01"],
+                                ["fiveYearsAndAboveAnnualDays", "5+ Years Annual Days", "days per year", "1"],
+                                ["sickEligibleAfterMonths", "Sick Leave Eligible After", "months", "1"],
+                                ["maternityDays", "Maternity Leave Days", "days", "1"],
+                                ["bereavementDays", "Bereavement Days", "days", "1"],
+                                ["compensatoryOffValidityDays", "Comp Off Validity", "days validity", "1"],
+                            ].map(([name, label, unit, step]) => (
+                                <label key={name}>
+                                    {label}
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step={step}
+                                        value={leavePolicy[name]}
+                                        disabled={policyLoading || policySaving}
+                                        onChange={(event) => setLeavePolicy((current) => ({
+                                            ...current,
+                                            [name]: Math.max(0, Number(event.target.value)),
+                                        }))}
+                                    />
+                                    <span>{unit}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="leave-policy-types">
+                            <h3>Available Leave Types</h3>
+                            <div className="leave-policy-type-list">
+                                {leavePolicy.leaveTypes.map((leaveType) => (
+                                    <span key={leaveType}>{leaveType}</span>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="leave-holiday-calendar">
+                            <h3>Qatar Holiday Calendar</h3>
+                            <div className="leave-holiday-list">
+                                {leavePolicy.qatarHolidayCalendar.map((holiday) => (
+                                    <div className="leave-holiday-row" key={holiday.name}>
+                                        <strong>{holiday.name}</strong>
+                                        <span>{holiday.date}</span>
+                                        <b>{holiday.days} {holiday.days === 1 ? "day" : "days"}</b>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="leave-policy-rules">
+                            <p><strong>Sick Leave:</strong> Medical certificate required. First 14 days at 100% salary, next 28 days at 50%, additional 42 days unpaid.</p>
+                            <p><strong>Maternity Leave:</strong> Full pay, HR approval, medical certificate required.</p>
+                            <p><strong>Bereavement:</strong> Immediate family, manager approval.</p>
+                            <p><strong>Compensatory Off:</strong> Public holiday or weekend work, manager approval.</p>
+                        </div>
+                        <div className="leave-policy-footer">
+                            {policyMessage && <span>{policyMessage}</span>}
+                            <button type="button" onClick={saveLeavePolicy} disabled={policyLoading || policySaving}>
+                                {policySaving ? "Saving..." : "Save Policy"}
+                            </button>
+                        </div>
+                    </section>
+                )}
 
                 {/* =================================================
                     MONTHLY SUMMARY
@@ -897,6 +1112,7 @@ function LeaveManagement() {
                             <option value="Pending">Pending</option>
                             <option value="Approved">Approved</option>
                             <option value="Rejected">Rejected</option>
+                            <option value="Cancelled">Cancelled</option>
                         </select>
 
                         <select
@@ -1102,6 +1318,11 @@ function LeaveManagement() {
                                                                     leave.status
                                                                 }
                                                             </span>
+                                                            {leave.status?.toLowerCase() === "cancelled" && leave.cancelledBy && (
+                                                                <small className="cancelled-by-label">
+                                                                    Cancelled by {leave.cancelledBy}
+                                                                </small>
+                                                            )}
 
                                                         </td>
 

@@ -39,6 +39,219 @@
     font-size: 14px;
 }
 
+.leave-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.leave-policy-btn {
+    height: 42px;
+    padding: 0 16px;
+    border: 1px solid #123653;
+    border-radius: 7px;
+    background: #123653;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.leave-policy-btn:hover {
+    background: #0d2940;
+}
+
+.leave-policy-panel {
+    margin-bottom: 24px;
+    padding: 22px 24px;
+    border: 1px solid #dce5ed;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(18, 48, 74, 0.05);
+}
+
+.leave-policy-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.leave-policy-heading h2 {
+    margin: 0;
+    color: #12304a;
+    font-size: 20px;
+}
+
+.leave-policy-heading p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.leave-policy-close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d6dee8;
+    border-radius: 6px;
+    background: #fff;
+    color: #64748b;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.leave-policy-fields {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.leave-policy-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.leave-policy-fields input {
+    width: 100%;
+    height: 40px;
+    padding: 0 11px;
+    border: 1px solid #d6dee8;
+    border-radius: 6px;
+    color: #12304a;
+    font: inherit;
+    font-weight: 600;
+}
+
+.leave-policy-fields span {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.leave-policy-types {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e7edf3;
+}
+
+.leave-policy-types h3 {
+    margin: 0 0 12px;
+    color: #12304a;
+    font-size: 14px;
+}
+
+.leave-policy-type-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.leave-policy-type-list span {
+    padding: 7px 11px;
+    border: 1px solid #d6e5ee;
+    border-radius: 6px;
+    background: #f4fbfd;
+    color: #176b8f;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.leave-holiday-calendar {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e7edf3;
+}
+
+.leave-holiday-calendar h3 {
+    margin: 0 0 12px;
+    color: #12304a;
+    font-size: 14px;
+}
+
+.leave-holiday-list {
+    display: grid;
+    gap: 8px;
+}
+
+.leave-holiday-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 1.2fr) minmax(180px, 2fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 1px solid #e1eaf0;
+    border-radius: 6px;
+    background: #f8fbfc;
+    color: #53657a;
+    font-size: 12px;
+}
+
+.leave-holiday-row strong {
+    color: #123653;
+}
+
+.leave-holiday-row b {
+    color: #176b8f;
+    font-weight: 700;
+}
+
+.leave-policy-rules {
+    display: grid;
+    gap: 6px;
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-left: 3px solid #008db8;
+    background: #f6fbfd;
+    color: #53657a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.leave-policy-rules p {
+    margin: 0;
+}
+
+.leave-policy-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.leave-policy-footer span {
+    margin-right: auto;
+    color: #16834a;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.leave-policy-footer button {
+    min-width: 112px;
+    height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 6px;
+    background: #008db8;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.leave-policy-footer button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 /* =========================================================
    FILTERS
 ========================================================= */
@@ -212,11 +425,12 @@
 .leave-request-row {
     background: #ffffff;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .leave-request-row:hover {
-    background: #f8fafc;
+    background: #f4f8fb;
+    box-shadow: inset 3px 0 0 #d9e9f2;
 }
 
 .leave-request-row.pending-row,
@@ -226,7 +440,7 @@
 
 .leave-request-row.pending-row:hover,
 .leave-request-row.pending-row:hover td {
-    background: #f8fafc !important;
+    background: #f4f8fb !important;
 }
 
 .employee-id {
@@ -289,6 +503,22 @@
 .history-status.rejected {
     background: #ffebeb;
     color: #d43b3b;
+}
+
+.leave-status.cancelled,
+.request-status.cancelled,
+.history-status.cancelled {
+    background: #eef0f2;
+    color: #59636d;
+}
+
+.cancelled-by-label {
+    display: block;
+    margin-top: 5px;
+    color: #59636d;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 /* =========================================================

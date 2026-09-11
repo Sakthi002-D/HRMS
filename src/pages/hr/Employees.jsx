@@ -56,6 +56,16 @@ const formatPhoneInput = (value, countryCode) => {
   return groups.join(" ");
 };
 
+const fileToDataUrl = (file) => {
+  if (!file || typeof file === "string") return Promise.resolve(file || null);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 function Employees() {
 
   const navigate = useNavigate();
@@ -283,18 +293,48 @@ const resetForm = () => {
 
  const deleteEmployee = async (id) => {
   const confirmDelete = window.confirm(
-    "Are you sure you want to delete this employee?"
+    "This will remove the employee from active work while preserving their record. Continue?"
   );
 
   if (!confirmDelete) {
     return;
   }
 
+  const exitStatus = window.prompt(
+    "Enter exit status: Resigned, Retired, Dismissed, or Terminated",
+    "Resigned"
+  );
+  const normalizedStatus = exitStatus?.trim();
+  const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
+  if (!allowedStatuses.includes(normalizedStatus)) {
+    alert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
+    return;
+  }
+
+  const lastDateWorked = window.prompt(
+    "Enter last date worked (YYYY-MM-DD)",
+    new Date().toISOString().slice(0, 10)
+  );
+  if (!lastDateWorked) {
+    return;
+  }
+
+  const terminationReason = window.prompt(
+    "Enter the reason for leaving",
+    normalizedStatus
+  );
+
   try {
     const response = await fetch(
-      `${API_URL}/api/employees/${id}`,
+      `${API_URL}/api/employees/${id}/status`,
       {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: normalizedStatus,
+          last_date_worked: lastDateWorked,
+          termination_reason: terminationReason || normalizedStatus,
+        }),
       }
     );
 
@@ -307,7 +347,7 @@ const resetForm = () => {
 
     await fetchEmployees();
 
-    alert("Employee deleted successfully!");
+    alert("Employee archived successfully. Their record is still searchable.");
 
   } catch (error) {
     console.error("Error deleting employee:", error);
@@ -521,6 +561,7 @@ const resetForm = () => {
       alert("Please enter a valid phone number");
       return;
     }
+const profilePhoto = await fileToDataUrl(formData.profilePhoto);
 const employeeData = {
   employee_id: employeeId,
   name: formData.fullName.trim(),
@@ -555,6 +596,7 @@ const employeeData = {
   religion: formData.religion || null,
   marital_status: formData.maritalStatus || null,
   children_count: formData.childrenCount === "" ? null : Number(formData.childrenCount),
+  profile_photo: profilePhoto,
 };
 
     try {
@@ -774,6 +816,8 @@ const updateEmployee = async () => {
     return;
   }
 
+  const profilePhoto = await fileToDataUrl(formData.profilePhoto);
+
   // Data to send to backend
   const employeeData = {
   employee_id: employeeId,
@@ -809,6 +853,7 @@ const updateEmployee = async () => {
   religion: formData.religion || null,
   marital_status: formData.maritalStatus || null,
   children_count: formData.childrenCount === "" ? null : Number(formData.childrenCount),
+  profile_photo: profilePhoto,
 };
   try {
     const response = await fetch(
@@ -918,7 +963,7 @@ const updateEmployee = async () => {
       variant="danger"
       onClick={() => deleteEmployee(employee.id)}
     >
-      Delete
+      Archive
     </Button>
   ),
 },
@@ -1197,6 +1242,10 @@ const filteredEmployees =
                   <option value="All">All status</option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
+                  <option value="Resigned">Resigned</option>
+                  <option value="Retired">Retired</option>
+                  <option value="Dismissed">Dismissed</option>
+                  <option value="Terminated">Terminated</option>
                 </select>
               </div>
               {viewMode === "grid" ? (
@@ -1673,9 +1722,11 @@ const filteredEmployees =
                   Active
                 </option>
 
-                <option value="Inactive">
-                  Inactive
-                </option>
+                <option value="Inactive">Inactive</option>
+                <option value="Resigned">Resigned</option>
+                <option value="Retired">Retired</option>
+                <option value="Dismissed">Dismissed</option>
+                <option value="Terminated">Terminated</option>
 
               </select>
 

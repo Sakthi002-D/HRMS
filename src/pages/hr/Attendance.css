@@ -271,6 +271,11 @@
     font-weight: 600;
 }
 
+.punch-out-time {
+    color: #dc3545;
+    font-weight: 700;
+}
+
 .attendance-export-menu {
     position: relative;
     margin-left: auto;

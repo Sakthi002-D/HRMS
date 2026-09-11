@@ -31,6 +31,8 @@ function EmployeeDetails() {
     const [editForm, setEditForm] = useState({});
     const [sectionEditor, setSectionEditor] = useState(null);
     const [sectionForm, setSectionForm] = useState({});
+    const [educationEditorId, setEducationEditorId] = useState(null);
+    const [educationDeleteId, setEducationDeleteId] = useState(null);
     const [notification, setNotification] = useState("");
     const [resetPasswordResult, setResetPasswordResult] = useState(null);
     const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
@@ -119,6 +121,11 @@ function EmployeeDetails() {
         });
     };
 
+    const formatQid = (employeeId) => {
+        const idNumber = String(employeeId || "").replace(/^EMP/i, "");
+        return idNumber ? idNumber.padStart(3, "0") : "-";
+    };
+
     const openEditor = () => {
         setEditForm({
             employee_id: employee.employee_id || "",
@@ -142,6 +149,7 @@ function EmployeeDetails() {
             children_count: employee.children_count ?? "",
             legal_entity: employee.legal_entity || "SHLT",
             worker_type: employee.worker_type || "Employee",
+            profile_photo: employee.profile_photo || "",
             employment_category: employee.employment_category || "",
             project_role_id: employee.project_role_id || "",
             employment_end_date: employee.employment_end_date || "Never",
@@ -187,37 +195,101 @@ function EmployeeDetails() {
     };
 
     const sectionFields = {
+        about: [["about", "About Employee"]],
         bank: [["account_holder_name", "Account Holder Name"], ["account_number", "Account Number"], ["bank_name", "Bank Name"], ["branch_name", "Branch Name"], ["ifsc_code", "IFSC Code"], ["account_type", "Account Type"]],
         family: [["father_name", "Father Name"], ["mother_name", "Mother Name"], ["spouse_name", "Spouse Name"], ["spouse_employment", "Spouse Employment"], ["marital_status", "Marital Status"], ["children_count", "Children Count"]],
-        education: [["qualification", "Qualification"], ["institution", "Institution"], ["field_of_study", "Field of Study"], ["start_year", "Start Year"], ["end_year", "End Year"], ["grade", "Grade"]],
+        employment: [["legal_entity", "Legal Entity"], ["worker_type", "Worker Type"], ["employee_id", "Personnel Number"], ["employment_category", "Employment Category"], ["joining_date", "Employment Start Date"], ["employment_end_date", "Employment End Date"], ["employment_type", "Employment Type"], ["project_role_id", "Project Role ID"], ["termination_reason", "Termination Reason"], ["last_date_worked", "Last Date Worked"]],
+        position: [["position", "Position"], ["position_title", "Position Title"], ["assignment_start", "Assignment Start"], ["assignment_end", "Assignment End"], ["make_primary", "Make Primary"]],
+        education: [["qualification", "Degree / Qualification"], ["institution", "Institution / University"], ["field_of_study", "Field of Study"], ["specialization", "Specialization"], ["start_year", "Start Year"], ["end_year", "End Year"], ["grade", "Grade / CGPA"], ["education_type", "Education Type"], ["location", "Location"]],
         experience: [["company_name", "Company Name"], ["designation", "Designation"], ["start_date", "Start Date"], ["end_date", "End Date"], ["description", "Description"]],
         project: [["project_name", "Project Name"], ["description", "Description"], ["project_lead", "Project Lead"], ["start_date", "Start Date"], ["deadline", "Deadline"], ["status", "Status"]],
     };
 
-    const openSectionEditor = (section) => {
-        const current = employee[section] || {};
-        setSectionForm(Object.fromEntries((sectionFields[section] || []).map(([name]) => [name, current[name] ?? ""])));
+    const openSectionEditor = (section, recordId = null) => {
+        const records = section === "education" ? (Array.isArray(employee.education) ? employee.education : []) : [];
+        const source = section === "education" ? (records.find((record) => record.id === recordId) || {}) : ["about", "employment", "position"].includes(section) ? employee : employee[section] || {};
+
+        const nextSectionForm = Object.fromEntries((sectionFields[section] || []).map(([name]) => {
+            const value = source[name] ?? "";
+            return [name, name.includes("date") && value !== "Never" ? String(value).slice(0, 10) : value === "Never" ? "" : value];
+        }));
+        if (section === "education") {
+            nextSectionForm.currently_pursuing = Boolean(source.currently_pursuing);
+        }
+
+        setSectionForm(nextSectionForm);
+        setEducationEditorId(recordId);
         setSectionEditor(section);
     };
+
+    const addEducation = () => openSectionEditor("education");
 
     const saveSection = async (event) => {
         event.preventDefault();
         setIsSaving(true);
         try {
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/${sectionEditor}`, {
-                method: "PUT",
+            const isEducation = sectionEditor === "education";
+            const isEmployeeSection = ["employment", "position"].includes(sectionEditor);
+            const method = isEducation && !educationEditorId ? "POST" : "PUT";
+            const endpoint = isEducation
+                ? `${API_URL}/api/employees/${employee.employee_id}/education${educationEditorId ? `/${educationEditorId}` : ""}`
+                : isEmployeeSection
+                    ? `${API_URL}/api/employees/${employee.employee_id}`
+                    : `${API_URL}/api/employees/${employee.employee_id}/${sectionEditor}`;
+
+            const body = isEducation
+                ? { ...sectionForm, currently_pursuing: Boolean(sectionForm.currently_pursuing) }
+                : isEmployeeSection
+                    ? { ...employee, ...sectionForm, employment_end_date: sectionForm.employment_end_date || "Never", employee_id: employee.employee_id }
+                    : { ...sectionForm };
+            const response = await fetch(endpoint, {
+                method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(sectionForm),
+                body: JSON.stringify(body),
             });
             const data = await readApiResponse(response);
             if (!response.ok) throw new Error(data.message || "Failed to save details");
-            setEmployee((current) => ({ ...current, [sectionEditor]: data }));
+
+            setEmployee((current) => ({
+                ...current,
+                ...(isEducation
+                    ? {
+                        education: educationEditorId
+                            ? (current.education || []).map((record) => record.id === educationEditorId ? data : record)
+                            : [...(current.education || []), data],
+                    }
+                    : isEmployeeSection ? data : { [sectionEditor]: data }),
+            }));
             setSectionEditor(null);
+            setEducationEditorId(null);
         } catch (saveError) {
             setNotification(saveError.message);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const deleteEducation = async (educationId) => {
+        try {
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, {
+                method: "DELETE",
+            });
+            if (!response.ok) {
+                throw new Error("Unable to delete education record");
+            }
+            setEmployee((current) => ({
+                ...current,
+                education: (current.education || []).filter((record) => record.id !== educationId),
+            }));
+        } catch (deleteError) {
+            setNotification(deleteError.message || "Unable to delete education record");
+        } finally {
+            setEducationDeleteId(null);
+        }
+    };
+
+    const confirmDeleteEducation = async () => {
+        if (educationDeleteId) await deleteEducation(educationDeleteId);
     };
 
     const resetEmployeePassword = async () => {
@@ -301,6 +373,7 @@ function EmployeeDetails() {
 
     const detailRows = [
         ["Phone", employee.phone],
+        ["QID", formatQid(employee.employee_id)],
         ["Email", employee.email],
         ["Gender", employee.gender],
         ["Birthday", formatDate(employee.date_of_birth)],
@@ -308,6 +381,63 @@ function EmployeeDetails() {
         ["Employment Type", employee.employment_type],
         ["Address", employee.address],
     ];
+
+    const renderEducationContent = () => {
+        const educationRecords = Array.isArray(employee.education) ? employee.education : [];
+
+        if (educationRecords.length === 0) {
+            return (
+                <div className="education-records">
+                    <button type="button" className="add-education-button" onClick={addEducation}>+ Add Education</button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="education-records">
+                {educationRecords.map((education) => (
+                    <article className="education-record" key={education.id || `${education.qualification}-${education.institution}`}>
+                        <div>
+                            <strong>{education.qualification || "Qualification"}{education.specialization ? ` ${education.specialization}` : ""}</strong>
+                            <span>{education.institution || "-"}</span>
+                            <small>
+                                {education.start_year || "-"} - {education.currently_pursuing ? "Present" : education.end_year || "-"}
+                                {education.grade ? ` • ${education.grade}` : ""}
+                            </small>
+                        </div>
+                        <div>
+                            <button type="button" className="education-action-button edit" onClick={() => openSectionEditor("education", education.id)}>Edit</button>
+                            <button type="button" className="education-action-button delete" onClick={() => setEducationDeleteId(education.id)}>Delete</button>
+                        </div>
+                    </article>
+                ))}
+                <button type="button" className="add-education-button" onClick={addEducation}>+ Add Education</button>
+            </div>
+        );
+    };
+
+    const renderExperienceContent = () => {
+        return (
+            <div className="detail-content-grid">
+                <div className="detail-content-cell">
+                    <span>Company</span>
+                    <strong>{employee.experience?.company_name || "-"}</strong>
+                </div>
+                <div className="detail-content-cell">
+                    <span>Role</span>
+                    <strong>{employee.experience?.designation || "-"}</strong>
+                </div>
+                <div className="detail-content-cell">
+                    <span>Start</span>
+                    <strong>{formatDate(employee.experience?.start_date) || "-"}</strong>
+                </div>
+                <div className="detail-content-cell">
+                    <span>End</span>
+                    <strong>{formatDate(employee.experience?.end_date) || "-"}</strong>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -370,7 +500,7 @@ function EmployeeDetails() {
                     </aside>
 
                     <main className="employee-detail-content">
-                        <DetailPanel panelKey="about" isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title="About Employee" content={`Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`} onEdit={openEditor} />
+                        <DetailPanel panelKey="about" isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title="About Employee" content={`Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`} onEdit={() => openSectionEditor("about")} />
                         <DetailPanel panelKey="bank" isOpen={openPanels.bank} onToggle={() => setOpenPanels((current) => ({ ...current, bank: !current.bank }))} title="Bank Information" onEdit={() => openSectionEditor("bank")} content={formatSection(employee.bank)} />
                         <DetailPanel panelKey="family" isOpen={openPanels.family} onToggle={() => setOpenPanels((current) => ({ ...current, family: !current.family }))} title="Family Information" onEdit={() => openSectionEditor("family")} content={formatSection(employee.family)} />
                         <DetailPanel panelKey="employment" isOpen={openPanels.employment} onToggle={() => setOpenPanels((current) => ({ ...current, employment: !current.employment }))} title="Employment Details" content={formatSection({
@@ -384,17 +514,17 @@ function EmployeeDetails() {
                             "Project Role ID": employee.project_role_id,
                             "Termination Reason": employee.termination_reason,
                             "Last Date Worked": employee.last_date_worked,
-                        })} onEdit={openEditor} />
+                        })} onEdit={() => openSectionEditor("employment")} />
                         <DetailPanel panelKey="position" isOpen={openPanels.position} onToggle={() => setOpenPanels((current) => ({ ...current, position: !current.position }))} title="Position Details" content={formatSection({
                             "Position": employee.position || employee.designation,
                             "Position Title": employee.position_title || employee.designation,
                             "Assignment Start": formatDate(employee.assignment_start || employee.joining_date),
                             "Assignment End": formatDate(employee.assignment_end),
                             "Make Primary": employee.make_primary ? "Yes" : "No",
-                        })} onEdit={openEditor} />
+                        })} onEdit={() => openSectionEditor("position")} />
                         <div className="detail-panel-row">
-                            <DetailPanel panelKey="education" isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title="Education Details" onEdit={() => openSectionEditor("education")} content={formatSection(employee.education)} />
-                            <DetailPanel panelKey="experience" isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title="Experience" onEdit={() => openSectionEditor("experience")} content={formatSection(employee.experience)} />
+                            <DetailPanel panelKey="education" isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title="Education Details" onEdit={() => openSectionEditor("education")} content={renderEducationContent()} />
+                            <DetailPanel panelKey="experience" isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title="Experience" onEdit={() => openSectionEditor("experience")} content={renderExperienceContent()} />
                         </div>
                         <section className="projects-panel">
                             <div className="project-tabs" role="tablist" aria-label="Employee work details">
@@ -441,8 +571,9 @@ function EmployeeDetails() {
                                 <button type="button" onClick={() => setIsEditing(false)}>×</button>
                             </div>
                             <div className="edit-form-grid">
+                                <h3 className="employee-edit-section-title">Basic information</h3>
                                 {[
-                                    ["employee_id", "Employee ID", "text"],
+                                    ["employee_id", "QID", "text"],
                                     ["name", "Full Name", "text"],
                                     ["date_of_birth", "Date of Birth", "date"],
                                     ["phone", "Phone", "tel"],
@@ -451,15 +582,8 @@ function EmployeeDetails() {
                                     ["designation", "Designation", "text"],
                                     ["department", "Department", "text"],
                                     ["joining_date", "Joining Date", "date"],
-                                    ["assignment_start", "Assignment Start", "date"],
-                                    ["assignment_end", "Assignment End", "date"],
-                                    ["emergency_contact", "Emergency Contact", "tel"],
-                                    ["position", "Position", "text"],
-                                    ["position_title", "Position Title", "text"],
-                                    ["employment_category", "Employment Category", "text"],
-                                    ["project_role_id", "Project Role ID", "text"],
-                                    ["termination_reason", "Termination Reason", "text"],
-                                    ["last_date_worked", "Last Date Worked", "text"],
+                                    ["designation", "Designation / Role", "text"],
+                                    ["department", "Department", "text"],
                                 ].map(([name, label, type]) => (
                                     <label key={name}>{label}
                                         {type === "date" ? (
@@ -479,27 +603,12 @@ function EmployeeDetails() {
                                         <option value="">Select employment type</option><option>Full Time</option><option>Part Time</option><option>Contract</option><option>Intern</option>
                                     </select>
                                 </label>
-                                <label>Employment End Date
-                                    <select name="employment_end_date" value={editForm.employment_end_date || "Never"} onChange={updateFormField}>
-                                        <option>Never</option><option>Fixed date</option>
-                                    </select>
-                                </label>
-                                <label>Legal Entity
-                                    <input name="legal_entity" type="text" value={editForm.legal_entity || "SHLT"} onChange={updateFormField} />
-                                </label>
-                                <label>Worker Type
-                                    <input name="worker_type" type="text" value={editForm.worker_type || "Employee"} onChange={updateFormField} />
-                                </label>
-                                <label>Make Primary
-                                    <select name="make_primary" value={editForm.make_primary ? "true" : "false"} onChange={(event) => setEditForm((current) => ({ ...current, make_primary: event.target.value === "true" }))}>
-                                        <option value="false">No</option><option value="true">Yes</option>
-                                    </select>
-                                </label>
                                 <label>Status
                                     <select name="status" value={editForm.status || "Active"} onChange={updateFormField}>
                                         <option>Active</option><option>Inactive</option>
                                     </select>
                                 </label>
+                                <h3 className="employee-edit-section-title">Personal Information</h3>
                                 <label>Passport No
                                     <input name="passport_no" type="text" value={editForm.passport_no || ""} onChange={updateFormField} />
                                 </label>
@@ -521,6 +630,21 @@ function EmployeeDetails() {
                                 <label>No. of Children
                                     <input name="children_count" type="number" min="0" value={editForm.children_count ?? ""} onChange={updateFormField} />
                                 </label>
+                                <h3 className="employee-edit-section-title">Emergency Contact Number</h3>
+                                <label>Primary
+                                    <input name="emergency_contact" type="tel" value={editForm.emergency_contact || ""} onChange={updateFormField} />
+                                </label>
+                                <h3 className="employee-edit-section-title">Work information</h3>
+                                <label>Profile Photo
+                                    <input type="file" accept="image/*" onChange={(event) => {
+                                        const file = event.target.files[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onload = () => setEditForm((current) => ({ ...current, profile_photo: reader.result }));
+                                        reader.readAsDataURL(file);
+                                    }} />
+                                    {editForm.profile_photo && <img className="employee-edit-photo-preview" src={editForm.profile_photo} alt="Profile preview" />}
+                                </label>
                             </div>
                             <div className="edit-form-actions">
                                 <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
@@ -534,13 +658,29 @@ function EmployeeDetails() {
                         <form className="employee-edit-form" onSubmit={saveSection}>
                             <div className="edit-form-header">
                                 <h2>Edit {sectionEditor} Details</h2>
-                                <button type="button" onClick={() => setSectionEditor(null)}>×</button>
+                                <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>×</button>
                             </div>
                             <div className="edit-form-grid">
                                 {sectionFields[sectionEditor].map(([name, label]) => (
                                     <label key={name}>{label}
-                                        {name.includes("date") || name === "deadline" ? (
+                                        {name === "make_primary" ? (
+                                            <select name={name} value={sectionForm[name] ? "true" : "false"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value === "true" }))}>
+                                                <option value="false">No</option>
+                                                <option value="true">Yes</option>
+                                            </select>
+                                        ) : name.includes("date") || name === "deadline" ? (
                                             <DatePicker value={sectionForm[name] || ""} onChange={(value) => setSectionForm((current) => ({ ...current, [name]: value }))} />
+                                        ) : name === "start_year" || name === "end_year" ? (
+                                            <select name={name} value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
+                                                <option value="">Select year</option>
+                                                {Array.from({ length: 81 }, (_, index) => String(new Date().getFullYear() - index)).map((year) => <option key={year} value={year}>{year}</option>)}
+                                            </select>
+                                        ) : name === "education_type" ? (
+                                            <select name={name} value={sectionForm[name] || "Full Time"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
+                                                <option>Full Time</option>
+                                                <option>Part Time</option>
+                                                <option>Distance</option>
+                                            </select>
                                         ) : (
                                             <input name={name} type="text" value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))} />
                                         )}
@@ -548,7 +688,7 @@ function EmployeeDetails() {
                                 ))}
                             </div>
                             <div className="edit-form-actions">
-                                <button type="button" onClick={() => setSectionEditor(null)}>Cancel</button>
+                                <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>Cancel</button>
                                 <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</button>
                             </div>
                         </form>
@@ -637,6 +777,19 @@ function EmployeeDetails() {
                     </div>
                 </div>
             </Modal>
+            {educationDeleteId && (
+                <div className="education-delete-overlay" onClick={() => setEducationDeleteId(null)}>
+                    <div className="education-delete-card" role="dialog" aria-modal="true" aria-labelledby="education-delete-title" onClick={(event) => event.stopPropagation()}>
+                        <div className="education-delete-icon">🗑</div>
+                        <h2 id="education-delete-title">Delete education record?</h2>
+                        <p>This education record will be permanently removed from this employee profile.</p>
+                        <div className="education-delete-actions">
+                            <button type="button" className="education-delete-cancel" onClick={() => setEducationDeleteId(null)}>Cancel</button>
+                            <button type="button" className="education-delete-confirm" onClick={confirmDeleteEducation}>Delete Record</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <Modal
                 isOpen={Boolean(resetPasswordResult)}
                 onClose={() => setResetPasswordResult(null)}
@@ -679,7 +832,7 @@ function DetailPanel({ title, content, isOpen, onToggle, onEdit }) {
                 </button>
             </header>
             {isOpen && content && (
-                <div className={`detail-panel-content ${typeof content === "string" ? "plain" : ""}`}>
+                <div className={`detail-panel-content ${typeof content === "string" ? "plain" : ""} ${["Education Details", "Experience"].includes(title) ? "wide" : ""}`}>
                     {content}
                 </div>
             )}
@@ -688,8 +841,35 @@ function DetailPanel({ title, content, isOpen, onToggle, onEdit }) {
 }
 
 function formatSection(section) {
-    if (!section || Object.keys(section).length === 0) {
+    if (!section) {
         return "No details added yet.";
+    }
+
+    if (Array.isArray(section)) {
+        if (section.length === 0) {
+            return "No details added yet.";
+        }
+
+        return section.map((item, index) => {
+            const entries = Object.entries(item || {})
+                .filter(([key, value]) => !["id", "employee_id", "created_at", "updated_at"].includes(key) && value !== null && value !== "")
+                .map(([key, value]) => (
+                    <div className="detail-field" key={`${index}-${key}`}>
+                        <span>{key.replaceAll("_", " ")}</span>
+                        <strong>{typeof value === "object" ? JSON.stringify(value) : value}</strong>
+                    </div>
+                ));
+
+            return entries.length > 0 ? (
+                <div className="detail-section-group" key={`section-${index}`}>
+                    {entries}
+                </div>
+            ) : "No details added yet.";
+        });
+    }
+
+    if (typeof section !== "object") {
+        return String(section || "No details added yet.");
     }
 
     const entries = Object.entries(section)
@@ -697,7 +877,7 @@ function formatSection(section) {
         .map(([key, value]) => (
             <div className="detail-field" key={key}>
                 <span>{key.replaceAll("_", " ")}</span>
-                <strong>{value}</strong>
+                <strong>{typeof value === "object" ? JSON.stringify(value) : value}</strong>
             </div>
         ));
 
