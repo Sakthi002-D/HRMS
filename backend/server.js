@@ -9,10 +9,12 @@ import nodemailer from "nodemailer";
 
 const app = express();
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    : null;
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -1166,7 +1168,8 @@ app.put("/api/leaves/:id/status", async (req, res) => {
         const allowedStatuses = [
             "Pending",
             "Approved",
-            "Rejected"
+            "Rejected",
+            "Cancelled"
         ];
 
         if (!allowedStatuses.includes(status)) {
@@ -1878,6 +1881,12 @@ app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
             });
         }
 
+        if (!supabase) {
+            return res.status(503).json({
+                message: "Supabase storage is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to backend/.env.",
+            });
+        }
+
         const fileExtension = req.file.originalname.split(".").pop();
 
         const fileName = `resume-${Date.now()}.${fileExtension}`;
@@ -2032,13 +2041,22 @@ const ensureEmployeePersonalInfoColumns = async () => {
     `);
 };
 
-ensureEmployeePersonalInfoColumns()
-    .then(() => {
-        app.listen(PORT, "0.0.0.0", () => {
-            console.log(`HRMS Backend running on port ${PORT}`);
+if (process.env.DATABASE_URL) {
+    ensureEmployeePersonalInfoColumns()
+        .then(() => {
+            app.listen(PORT, "0.0.0.0", () => {
+                console.log(`HRMS Backend running on port ${PORT}`);
+            });
+        })
+        .catch((error) => {
+            console.error("Failed to prepare employee personal information columns:", error);
+            process.exit(1);
         });
-    })
-    .catch((error) => {
-        console.error("Failed to prepare employee personal information columns:", error);
-        process.exit(1);
+} else {
+    app.listen(PORT, "0.0.0.0", () => {
+        console.warn(
+            "DATABASE_URL is not configured. Backend started in limited mode; database-backed APIs will fail until you add DATABASE_URL to backend/.env."
+        );
+        console.log(`HRMS Backend running on port ${PORT}`);
     });
+}
