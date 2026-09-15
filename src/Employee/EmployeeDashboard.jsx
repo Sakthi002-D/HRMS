@@ -154,6 +154,50 @@ function EmployeeDashboard() {
         }
     };
 
+    const cancelLeave = async (leaveId) => {
+        const targetLeave = leaves.find((leave) => leave.id === leaveId);
+
+        if (!targetLeave) {
+            alert("Leave request not found.");
+            return;
+        }
+
+        const confirmCancel = window.confirm(
+            `Cancel the pending leave request from ${targetLeave.from_date} to ${targetLeave.to_date}?`
+        );
+
+        if (!confirmCancel) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${API_URL}/api/leaves/${leaveId}/status`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ status: "Cancelled" })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message || "Failed to cancel leave request");
+                return;
+            }
+
+            alert("Leave request cancelled successfully.");
+            fetchLeaves(employee.employee_id);
+
+        } catch (error) {
+            console.error("Cancel leave error:", error);
+            alert("Unable to cancel leave request right now.");
+        }
+    };
+
     const logout = () => {
      sessionStorage.removeItem("loggedInEmployee");
      navigate("/login", { replace: true });
@@ -187,6 +231,12 @@ function EmployeeDashboard() {
     const rejectedLeaves = leaves.filter(
         (leave) => leave.status === "Rejected"
     ).length;
+
+    const totalLeaveEntitlement = 42;
+    const approvedLeaveDays = leaves
+        .filter((leave) => leave.status === "Approved")
+        .reduce((total, leave) => total + (Number(leave.days) || 0), 0);
+    const leaveBalance = Math.max(totalLeaveEntitlement - approvedLeaveDays, 0);
 
     const profileValue = (value) => value || "-";
     const formatProfileDate = (value) => {
@@ -342,6 +392,14 @@ function EmployeeDashboard() {
                     </div>
 
                     <div className="employee-stat-card">
+                        <span>✕</span>
+                        <div>
+                            <small>Rejected</small>
+                            <strong>{rejectedLeaves}</strong>
+                        </div>
+                    </div>
+
+                    <div className="employee-stat-card">
                         <span>⏳</span>
                         <div>
                             <small>Pending</small>
@@ -358,10 +416,10 @@ function EmployeeDashboard() {
                     </div>
 
                     <div className="employee-stat-card">
-                        <span>✕</span>
+                        <span>📅</span>
                         <div>
-                            <small>Rejected</small>
-                            <strong>{rejectedLeaves}</strong>
+                            <small>Leave Balance</small>
+                            <strong>{leaveBalance}</strong>
                         </div>
                     </div>
 
@@ -402,6 +460,7 @@ function EmployeeDashboard() {
                                     <th>Days</th>
                                     <th>Reason</th>
                                     <th>Status</th>
+                                    <th>Cancel</th>
                                 </tr>
                             </thead>
 
@@ -410,7 +469,7 @@ function EmployeeDashboard() {
                                 {leaves.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan="6"
+                                            colSpan="7"
                                             className="no-leaves"
                                         >
                                             No leave requests found
@@ -446,6 +505,20 @@ function EmployeeDashboard() {
                                                 >
                                                     {leave.status}
                                                 </span>
+                                            </td>
+
+                                            <td className="employee-action-cell">
+                                                {leave.status === "Pending" ? (
+                                                    <button
+                                                        type="button"
+                                                        className="row-cancel-btn"
+                                                        onClick={() => cancelLeave(leave.id)}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                ) : (
+                                                    <span className="row-cancel-placeholder">-</span>
+                                                )}
                                             </td>
 
                                         </tr>
@@ -558,15 +631,25 @@ function EmployeeDashboard() {
                             </div>
 
 
-                            <button
-                                type="submit"
-                                className="submit-leave-btn"
-                                disabled={loading}
-                            >
-                                {loading
-                                    ? "Submitting..."
-                                    : "Submit Leave Request"}
-                            </button>
+                            <div className="employee-modal-actions">
+                                <button
+                                    type="button"
+                                    className="cancel-leave-btn"
+                                    onClick={() => setShowApplyLeave(false)}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="submit-leave-btn"
+                                    disabled={loading}
+                                >
+                                    {loading
+                                        ? "Submitting..."
+                                        : "Submit Leave Request"}
+                                </button>
+                            </div>
 
                         </form>
 
