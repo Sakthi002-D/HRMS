@@ -5,6 +5,7 @@ import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
+import assistantRouter from "./routes/assistant.js";
 
 
 const app = express();
@@ -25,6 +26,7 @@ const upload = multer({
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/assistant", assistantRouter);
 
 // Test API
 app.get("/", (req, res) => {

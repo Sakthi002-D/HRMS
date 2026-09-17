@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
+import HRAssistant from "../components/assistant/HRAssistant";
 import "./EmployeeDashboard.css";
 
 const API_URL = "http://localhost:5000";
@@ -658,6 +659,8 @@ function EmployeeDashboard() {
                 </div>
 
             )}
+
+            <HRAssistant />
 
         </div>
     );
