@@ -1239,6 +1239,91 @@ a {
 
 }
 
+/* Civil engineering visual system: concrete surfaces with safety-orange actions. */
+body {
+  background: #eef1f2;
+}
+
+.dashboard-main {
+  color: #172b4d;
+}
+
+.dashboard-header h1,
+.welcome-copy h2,
+.employee-request-review-heading h2,
+.panel-header h2,
+.stat-content h3 {
+  color: #172b4d;
+}
+
+.dashboard-header h1 {
+  letter-spacing: -0.03em;
+}
+
+.welcome-card,
+.employee-request-review-panel {
+  border-color: #d8dfe1;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(23, 43, 77, .07);
+}
+
+.welcome-card {
+  background: linear-gradient(110deg, #ffffff 0%, #fff8f2 100%);
+}
+
+.welcome-actions .primary-action,
+.dashboard-content :is(.add-employee-btn, .punch-in-btn, .resolve-btn, .progress-btn,
+  .report-item button, .modal-actions button:last-child) {
+  border-color: #e26d3f;
+  background: #e26d3f;
+  box-shadow: 0 5px 13px rgba(226, 109, 63, .2);
+}
+
+.stats-grid {
+  gap: 16px;
+}
+
+.stat-card,
+.dashboard-panel,
+.action-card {
+  border-color: #d8dfe1;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(23, 43, 77, .06);
+}
+
+.stat-card:hover,
+.action-card:hover {
+  border-color: #c5ced1;
+  box-shadow: 0 12px 24px rgba(23, 43, 77, .12);
+}
+
+.stat-link,
+.panel-header a,
+.review-btn {
+  color: #d65d32;
+}
+
+.stat-link:hover,
+.review-btn:hover {
+  color: #b84d28;
+}
+
+.employee-icon {
+  background: #e26d3f;
+}
+
+.attendance-icon {
+  background: #0f9f9a;
+}
+
+.leave-icon {
+  background: #526b86;
+}
+
+.payroll-icon {
+  background: #c94f79;
+}
+
 /* =========================================
    FONT SIZE IMPROVEMENT
    ========================================= */
@@ -1361,4 +1446,34 @@ a {
 .employee-avatar {
   font-size: 12px;
   font-weight: 600;
+}
+
+.dashboard-header {
+  position: relative;
+  padding-left: 14px;
+}
+
+.dashboard-header::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: #e26d3f;
+  content: "";
+}
+
+.section-heading h2 {
+  color: #172b4d;
+}
+
+.section-heading h2::after {
+  display: block;
+  width: 34px;
+  height: 3px;
+  margin-top: 7px;
+  border-radius: 3px;
+  background: #e26d3f;
+  content: "";
 }

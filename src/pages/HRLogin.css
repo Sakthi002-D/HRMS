@@ -377,3 +377,181 @@
     height: 65px;
   }
 }
+
+/* Shelter Group engineering brand refresh */
+.hr-login-page {
+  min-height: 100vh;
+  align-items: stretch;
+  background: #eef1f2;
+  color: #172b4d;
+}
+
+.hr-login-left {
+  width: 42%;
+  min-width: 430px;
+  display: flex;
+  flex-direction: column;
+  padding: 42px 56px;
+  background: #101923;
+  border-right: 1px solid #263544;
+}
+
+.hr-login-left::after {
+  position: absolute;
+  right: -90px;
+  bottom: -120px;
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(226, 109, 63, .42);
+  border-radius: 50%;
+  box-shadow: 0 0 0 22px rgba(226, 109, 63, .06), 0 0 0 44px rgba(226, 109, 63, .04);
+  content: "";
+}
+
+.brand {
+  gap: 12px;
+}
+
+.brand img {
+  width: 42px;
+  height: 42px;
+  background: transparent;
+}
+
+.brand span {
+  font-size: 18px;
+  letter-spacing: .08em;
+}
+
+.left-content {
+  margin-top: auto;
+  margin-bottom: auto;
+  max-width: 520px;
+}
+
+.welcome-text {
+  margin-bottom: 20px;
+  color: #e26d3f;
+  font-size: 11px;
+  letter-spacing: .28em;
+}
+
+.left-content h1 {
+  max-width: 500px;
+  margin-bottom: 24px;
+  color: #f7f8f7;
+  font-size: clamp(38px, 4vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+
+.description {
+  max-width: 440px;
+  color: #b9c2c8;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.hr-login-right {
+  width: 58%;
+  min-height: 100vh;
+  padding: 48px 32px;
+  background: #eef1f2;
+}
+
+.login-box {
+  width: min(450px, 100%);
+  max-width: 100%;
+  margin: auto;
+  padding: 40px 42px 34px;
+  border: 1px solid #d7dfe2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(23, 43, 77, .1);
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 22px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #101923;
+}
+
+.login-box h2 {
+  color: #172b4d;
+  font-size: 30px;
+  letter-spacing: -.02em;
+}
+
+.login-subtitle {
+  margin-bottom: 30px;
+  color: #71808b;
+  font-size: 13px;
+}
+
+.login-box form > label {
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.input-box {
+  height: 50px;
+  margin-bottom: 20px;
+  border-color: #cfd9dd;
+  border-radius: 7px;
+  background: #f9fbfb;
+}
+
+.input-box:focus-within {
+  border-color: #e26d3f;
+  box-shadow: 0 0 0 3px rgba(226, 109, 63, .14);
+  background: #fff;
+}
+
+.input-box input {
+  color: #172b4d;
+  font-size: 14px;
+}
+
+.password-toggle,
+.forgot-password {
+  color: #c9572f;
+}
+
+.sign-in-btn {
+  height: 50px;
+  border-radius: 7px;
+  background: #e26d3f;
+  box-shadow: 0 8px 16px rgba(226, 109, 63, .2);
+}
+
+.sign-in-btn:hover {
+  background: #c9572f;
+  box-shadow: 0 10px 20px rgba(226, 109, 63, .26);
+}
+
+.hrms-text {
+  margin-top: 28px;
+  color: #60717d;
+  font-size: 12px;
+}
+
+.copyright {
+  color: #9aa6ac;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .hr-login-left {
+    display: none;
+  }
+
+  .hr-login-right {
+    width: 100%;
+    padding: 24px 18px;
+  }
+}

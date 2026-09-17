@@ -64,7 +64,7 @@ function Login() {
 
       try {
         data = JSON.parse(text);
-      } catch (error) {
+      } catch {
         console.error("Backend returned non-JSON:", text);
 
         alert(
