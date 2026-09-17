@@ -14,8 +14,8 @@ import EmployeeRequestModal from "./EmployeeRequestModal";
 import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditModal";
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
+import API_URL from "../config/api";
 
-const API_URL = "http://localhost:5000";
 const DEFAULT_QATAR_HOLIDAYS = [
     { name: "National Day", date: "18 December", days: 1 },
     { name: "National Sports Day", date: "Second Tuesday of February", days: 1 },
