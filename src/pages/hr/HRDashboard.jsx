@@ -26,6 +26,61 @@ function HRDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [employeeRequests, setEmployeeRequests] = useState([]);
+  const [employeeRequestsLoading, setEmployeeRequestsLoading] = useState(true);
+  const hrProfile = (() => {
+    try {
+      const storedHR = sessionStorage.getItem("loggedInHR");
+      const parsed = storedHR ? JSON.parse(storedHR) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const hrDisplayName = (() => {
+    const possibleNames = [
+      hrProfile.name,
+      hrProfile.full_name,
+      hrProfile.employee_name,
+      hrProfile.display_name,
+      hrProfile.fullName,
+      hrProfile.first_name && hrProfile.last_name
+        ? `${hrProfile.first_name} ${hrProfile.last_name}`
+        : "",
+      hrProfile.first_name,
+      hrProfile.last_name,
+      hrProfile.username,
+    ];
+
+    const matchedName = possibleNames.find(
+      (value) => typeof value === "string" && value.trim()
+    );
+
+    return matchedName ? matchedName.trim() : "HR Administrator";
+  })();
+
+  const hrRoleLabel = "HR Administrator";
+  const hrProfilePhoto = typeof hrProfile.profile_photo === "string"
+    ? hrProfile.profile_photo.trim()
+    : "";
+  const hrInitials = hrDisplayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  const hrNotificationReadKey = `hrms-hr-read-notifications-${hrProfile.employee_id || hrDisplayName}`;
+
+  const getReadNotificationIds = () => {
+    try {
+      const storedIds = JSON.parse(localStorage.getItem(hrNotificationReadKey) || "[]");
+      return new Set(Array.isArray(storedIds) ? storedIds : []);
+    } catch {
+      return new Set();
+    }
+  };
 
   const loadDashboardData = () => {
     fetch("http://localhost:5000/api/dashboard")
@@ -39,13 +94,17 @@ function HRDashboard() {
 
   const loadNotifications = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/leaves");
+      const [leaveResponse, requestResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/leaves"),
+        fetch("http://localhost:5000/api/hr/employee-requests"),
+      ]);
 
-      if (!response.ok) {
+      if (!leaveResponse.ok || !requestResponse.ok) {
         throw new Error("Unable to load notifications");
       }
 
-      const leaves = await response.json();
+      const leaves = await leaveResponse.json();
+      const requests = await requestResponse.json();
       const pendingLeaves = leaves.filter(
         (leave) => leave.status?.toLowerCase() === "pending"
       );
@@ -61,12 +120,39 @@ function HRDashboard() {
         path: "/leave-management",
       }));
 
-      setNotifications(leaveNotifications);
+      const pendingRequestNotifications = requests
+        .filter((request) => request.status === "Pending")
+        .map((request) => ({
+          id: `employee-request-${request.id}`,
+          type: "request",
+          title: `${request.employee_name} submitted a request`,
+          message: request.request_type,
+          time: new Date(request.created_at).toLocaleDateString(),
+          path: "/hr-dashboard",
+        }));
+
+      const readIds = getReadNotificationIds();
+      setNotifications([...leaveNotifications, ...pendingRequestNotifications].map((notification) => ({
+        ...notification,
+        read: readIds.has(notification.id),
+      })));
+      setEmployeeRequests(requests);
     } catch {
       setNotifications([]);
     } finally {
       setNotificationsLoading(false);
+      setEmployeeRequestsLoading(false);
     }
+  };
+
+  const updateEmployeeRequest = async (requestId, status) => {
+    const response = await fetch(`http://localhost:5000/api/hr/employee-requests/${requestId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, hr_response: status === "Approved" ? "Your request has been approved." : "Your request was rejected. Please contact HR for details." }),
+    });
+    if (!response.ok) throw new Error("Unable to update employee request");
+    await loadNotifications();
   };
 
   useEffect(() => {
@@ -102,11 +188,17 @@ function HRDashboard() {
   }, []);
 
   const openNotification = (notification) => {
+    const readIds = getReadNotificationIds();
+    readIds.add(notification.id);
+    localStorage.setItem(hrNotificationReadKey, JSON.stringify([...readIds]));
+    setNotifications((current) => current.map((item) => (
+      item.id === notification.id ? { ...item, read: true } : item
+    )));
     setShowNotifications(false);
     navigate(notification.path);
   };
 
-  const unreadCount = notifications.length;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   return (
     <DashboardLayout>
@@ -168,7 +260,7 @@ function HRDashboard() {
                   ) : (
                     notifications.map((notification) => (
                       <button
-                        className="notification-item"
+                        className={`notification-item${notification.read ? " is-read" : ""}`}
                         key={notification.id}
                         type="button"
                         onClick={() => openNotification(notification)}
@@ -181,6 +273,7 @@ function HRDashboard() {
                           <strong>{notification.title}</strong>
                           <small>{notification.time}</small>
                           <span>{notification.message}</span>
+                          {notification.read && <em className="notification-status">Read</em>}
                         </span>
                         <ArrowRight className="notification-arrow" size={15} />
                       </button>
@@ -197,12 +290,16 @@ function HRDashboard() {
             <div className="profile">
 
               <div className="profile-avatar">
-                HR
+                {hrProfilePhoto ? (
+                  <img src={hrProfilePhoto} alt={`${hrDisplayName} profile`} />
+                ) : (
+                  hrInitials || "HR"
+                )}
               </div>
 
               <div className="profile-info">
-                <strong>HR Administrator</strong>
-                <small>People Operations</small>
+                <strong>{hrDisplayName}</strong>
+                <small>{hrRoleLabel}</small>
               </div>
 
             </div>
@@ -214,7 +311,7 @@ function HRDashboard() {
         <section className="welcome-card">
           <div className="welcome-avatar">HR</div>
           <div className="welcome-copy">
-            <h2>Welcome back, HR Admin</h2>
+            <h2>Welcome back, {hrDisplayName}</h2>
             <p>
               You have <strong> {dashboardData?.pendingLeaves ?? "-"} pending approvals</strong> to review.
             </p>
@@ -223,6 +320,39 @@ function HRDashboard() {
             <Link to="/employees">Manage Employees</Link>
             <Link to="/leave-management" className="primary-action">Review Requests</Link>
           </div>
+        </section>
+
+        <section className="employee-request-review-panel">
+          <div className="employee-request-review-heading">
+            <div>
+              <h2>Employee Requests</h2>
+              <p>Review and respond to employee submissions.</p>
+            </div>
+            <span>{employeeRequests.filter((request) => request.status === "Pending").length} pending</span>
+          </div>
+          {employeeRequestsLoading ? (
+            <div className="employee-request-review-empty">Loading requests...</div>
+          ) : employeeRequests.length === 0 ? (
+            <div className="employee-request-review-empty">No employee requests yet.</div>
+          ) : (
+            <div className="employee-request-review-list">
+              {employeeRequests.map((request) => (
+                <article className="employee-request-review-item" key={request.id}>
+                  <div>
+                    <strong>{request.request_type}</strong>
+                    <span>{request.employee_name} · {new Date(request.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="employee-request-review-actions">
+                    <span className={`employee-request-review-status ${request.status.toLowerCase()}`}>{request.status}</span>
+                    {request.status === "Pending" && <>
+                      <button type="button" className="approve-request-button" onClick={() => updateEmployeeRequest(request.id, "Approved")}>Approve</button>
+                      <button type="button" className="reject-request-button" onClick={() => updateEmployeeRequest(request.id, "Rejected")}>Reject</button>
+                    </>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
 

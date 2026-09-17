@@ -42,24 +42,23 @@ app.get("/", (req, res) => {
 
 app.get("/api/attendance", async (req, res) => {
     try {
-        const { date } = req.query;
-
-        let query;
-        let values = [];
-
-        if (date) {
-            query = `
+        const requestedDate = req.query.date || null;
+        const query = `
                 SELECT
                     a.id,
-                    a.employee_id,
+                    e.employee_id,
                     e.name AS employee_name,
                     e.department,
-                    a.attendance_date,
+                    COALESCE(a.attendance_date, COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)) AS attendance_date,
                     a.punch_in,
-                    a.status,
+                    CASE
+                        WHEN a.status IS NOT NULL THEN a.status
+                        WHEN COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date) < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date THEN 'Absent'
+                        ELSE 'Absent'
+                    END AS status,
                     a.punch_out,
-                    a.late_minutes,
-                    a.shift,
+                    COALESCE(a.late_minutes, 0) AS late_minutes,
+                    COALESCE(a.shift, '09:00 - 18:00') AS shift,
                     a.project,
 
                     CASE
@@ -84,66 +83,19 @@ app.get("/api/attendance", async (req, res) => {
                         ELSE NULL
                     END AS overtime_minutes
 
-                FROM attendance a
-
-                JOIN employees e
+                FROM employees e
+                LEFT JOIN attendance a
                     ON a.employee_id = e.employee_id
-
-                WHERE a.attendance_date = $1
-
-                ORDER BY a.id DESC
+                    AND a.attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)
+                WHERE LOWER(COALESCE(e.status, 'active')) = 'active'
+                  AND (
+                      a.id IS NOT NULL
+                      OR COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date) < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+                      OR (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time >= TIME '18:00'
+                  )
+                ORDER BY a.id DESC NULLS LAST, e.name ASC
             `;
-
-            values = [date];
-
-        } else {
-            query = `
-                SELECT
-                    a.id,
-                    a.employee_id,
-                    e.name AS employee_name,
-                    e.department,
-                    a.attendance_date,
-                    a.punch_in,
-                    a.status,
-                    a.punch_out,
-                    a.late_minutes,
-                    a.shift,
-                    a.project,
-
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN ROUND(
-                            EXTRACT(
-                                EPOCH FROM (a.punch_out - a.punch_in)
-                            ) / 60
-                        )
-                        ELSE NULL
-                    END AS working_minutes,
-
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN LEAST(ROUND(EXTRACT(EPOCH FROM (a.punch_out - a.punch_in)) / 60), 540)
-                        ELSE NULL
-                    END AS normal_working_minutes,
-
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN GREATEST(ROUND(EXTRACT(EPOCH FROM (a.punch_out - a.punch_in)) / 60) - 540, 0)
-                        ELSE NULL
-                    END AS overtime_minutes
-
-                FROM attendance a
-
-                JOIN employees e
-                    ON a.employee_id = e.employee_id
-
-                WHERE a.attendance_date =
-                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
-
-                ORDER BY a.id DESC
-            `;
-        }
+        const values = [requestedDate || null];
 
         const result = await pool.query(query, values);
 
@@ -498,6 +450,11 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
                 e.phone,
                 e.address,
                 e.profile_photo,
+                e.employment_contract_url,
+                e.offer_letter_url,
+                e.visa_copy_url,
+                e.qid_copy_url,
+                e.passport_copy_url,
                 e.joining_date,
                 e.employment_type,
                 e.status,
@@ -523,7 +480,7 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
                 COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
                 COALESCE((SELECT row_to_json(f) FROM employee_family_details f WHERE f.employee_id = e.employee_id ORDER BY f.id DESC LIMIT 1), '{}'::json) AS family,
                 COALESCE((SELECT json_agg(ed ORDER BY ed.id ASC) FROM employee_education ed WHERE ed.employee_id = e.employee_id), '[]'::json) AS education,
-                COALESCE((SELECT row_to_json(ex) FROM employee_experience ex WHERE ex.employee_id = e.id ORDER BY ex.id DESC LIMIT 1), '{}'::json) AS experience,
+                COALESCE((SELECT json_agg(ex ORDER BY ex.start_date DESC NULLS LAST, ex.id DESC) FROM employee_experience ex WHERE ex.employee_id = e.id), '[]'::json) AS experience,
                 COALESCE((SELECT row_to_json(p) FROM employee_projects p WHERE p.employee_id = e.employee_id ORDER BY p.id DESC LIMIT 1), '{}'::json) AS project
              FROM employees e
              WHERE e.employee_id = $1`,
@@ -552,6 +509,32 @@ app.put("/api/employees/:employeeId/about", async (req, res) => {
     } catch (error) {
         console.error("Error updating employee about:", error);
         res.status(500).json({ message: "Failed to update about details", details: error.message });
+    }
+});
+
+app.post("/api/employees/:employeeId/documents/:documentType", upload.single("document"), async (req, res) => {
+    const documentColumns = {
+        employment_contract: "employment_contract_url",
+        offer_letter: "offer_letter_url",
+        visa_copy: "visa_copy_url",
+        qid_copy: "qid_copy_url",
+        passport_copy: "passport_copy_url",
+    };
+    try {
+        const column = documentColumns[req.params.documentType];
+        if (!column || !req.file) return res.status(400).json({ message: "A valid document file is required" });
+        if (!supabase) return res.status(503).json({ message: "Document storage is not configured on the backend" });
+        const fileExtension = req.file.originalname.split(".").pop()?.toLowerCase() || "bin";
+        const fileName = `employee-documents/${req.params.employeeId}/${req.params.documentType}-${Date.now()}.${fileExtension}`;
+        const { error: uploadError } = await supabase.storage.from("employee-documents").upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("employee-documents").getPublicUrl(fileName);
+        const result = await pool.query(`UPDATE employees SET ${column} = $1 WHERE employee_id = $2 RETURNING ${column}`, [data.publicUrl, req.params.employeeId]);
+        if (!result.rows.length) return res.status(404).json({ message: "Employee not found" });
+        res.json({ documentType: req.params.documentType, url: result.rows[0][column] });
+    } catch (error) {
+        console.error("Employee document upload error:", error);
+        res.status(500).json({ message: "Failed to upload employee document", details: error.message });
     }
 });
 
@@ -642,7 +625,7 @@ for (const [section, config] of Object.entries(detailTableConfig)) {
     });
 }
 
-app.put("/api/employees/:employeeId/experience", async (req, res) => {
+app.post("/api/employees/:employeeId/experience", async (req, res) => {
     try {
         const employeeResult = await pool.query(
             "SELECT id FROM employees WHERE employee_id = $1",
@@ -652,29 +635,41 @@ app.put("/api/employees/:employeeId/experience", async (req, res) => {
             return res.status(404).json({ message: "Employee not found" });
         }
         const employeeDbId = employeeResult.rows[0].id;
-        const columns = ["company_name", "designation", "start_date", "end_date", "description"];
+        const columns = ["company_name", "designation", "department", "employment_type", "start_date", "end_date", "currently_working", "company_location", "job_description", "responsibilities", "skills", "reason_for_leaving"];
         const values = columns.map((column) => req.body[column] ?? null);
-        const existing = await pool.query(
-            "SELECT id FROM employee_experience WHERE employee_id = $1 ORDER BY id DESC LIMIT 1",
-            [employeeDbId]
+        const result = await pool.query(
+            `INSERT INTO employee_experience (employee_id, ${columns.join(", ")}) VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(", ")}) RETURNING *`,
+            [employeeDbId, ...values]
         );
-        let result;
-        if (existing.rows.length > 0) {
-            const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
-            result = await pool.query(
-                `UPDATE employee_experience SET ${assignments} WHERE id = $${values.length + 1} RETURNING *`,
-                [...values, existing.rows[0].id]
-            );
-        } else {
-            result = await pool.query(
-                `INSERT INTO employee_experience (employee_id, ${columns.join(", ")}) VALUES ($1, ${columns.map((_, index) => `$${index + 2}`).join(", ")}) RETURNING *`,
-                [employeeDbId, ...values]
-            );
-        }
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error("Error adding employee experience:", error);
+        res.status(500).json({ message: "Failed to add experience details", details: error.message });
+    }
+});
+
+app.put("/api/employees/:employeeId/experience/:experienceId", async (req, res) => {
+    try {
+        const columns = ["company_name", "designation", "department", "employment_type", "start_date", "end_date", "currently_working", "company_location", "job_description", "responsibilities", "skills", "reason_for_leaving"];
+        const values = columns.map((column) => column === "currently_working" ? Boolean(req.body[column]) : req.body[column] ?? null);
+        const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+        const result = await pool.query(`UPDATE employee_experience SET ${assignments} WHERE id = $${values.length + 1} AND employee_id = (SELECT id FROM employees WHERE employee_id = $${values.length + 2}) RETURNING *`, [...values, req.params.experienceId, req.params.employeeId]);
+        if (!result.rows.length) return res.status(404).json({ message: "Experience record not found" });
         res.json(result.rows[0]);
     } catch (error) {
         console.error("Error updating employee experience:", error);
-        res.status(500).json({ message: "Failed to update experience details" });
+        res.status(500).json({ message: "Failed to update experience details", details: error.message });
+    }
+});
+
+app.delete("/api/employees/:employeeId/experience/:experienceId", async (req, res) => {
+    try {
+        const result = await pool.query("DELETE FROM employee_experience WHERE id = $1 AND employee_id = (SELECT id FROM employees WHERE employee_id = $2) RETURNING id", [req.params.experienceId, req.params.employeeId]);
+        if (!result.rows.length) return res.status(404).json({ message: "Experience record not found" });
+        res.json({ id: result.rows[0].id });
+    } catch (error) {
+        console.error("Error deleting employee experience:", error);
+        res.status(500).json({ message: "Failed to delete experience details", details: error.message });
     }
 });
 
@@ -1312,6 +1307,150 @@ app.get("/api/payroll", async (req, res) => {
     } catch (error) {
         console.error("Error fetching payroll:", error);
         res.status(500).json({ message: "Failed to fetch payroll records" });
+    }
+});
+
+app.get("/api/payroll/employee/:employeeId", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                s.payroll_id AS id,
+                s.employee_id AS "employeeID",
+                e.name AS "employeeName",
+                s.salary_month AS "salaryMonth",
+                s.basic_salary AS "basicSalary",
+                s.allowances,
+                s.deductions,
+                s.net_salary AS "netSalary",
+                s.status,
+                CASE WHEN LOWER(COALESCE(s.status, '')) = 'processed' THEN 'Transferred' ELSE 'Pending' END AS "transferStatus"
+            FROM employee_payroll s
+            JOIN employees e ON e.employee_id = s.employee_id
+            WHERE s.employee_id = $1
+            ORDER BY s.salary_month DESC, s.payroll_id DESC
+        `, [req.params.employeeId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Error fetching employee payroll:", error);
+        res.status(500).json({ message: "Failed to fetch employee payroll" });
+    }
+});
+
+app.post("/api/employee-requests", async (req, res) => {
+    try {
+        const { employee_id, request_type, details = {} } = req.body;
+        if (!employee_id || !request_type) {
+            return res.status(400).json({ message: "Employee and request type are required" });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO employee_requests (employee_id, request_type, details)
+             VALUES ($1, $2, $3::jsonb)
+             RETURNING id, employee_id, request_type, details, status, hr_response, created_at, updated_at`,
+            [employee_id, request_type, JSON.stringify(details)]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error("Employee request creation error:", error);
+        res.status(500).json({ message: "Failed to submit employee request" });
+    }
+});
+
+app.get("/api/employee-requests/:employeeId", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, employee_id, request_type, details, status, hr_response, created_at, updated_at
+             FROM employee_requests WHERE employee_id = $1 ORDER BY created_at DESC, id DESC`,
+            [req.params.employeeId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Employee request fetch error:", error);
+        res.status(500).json({ message: "Failed to fetch employee requests" });
+    }
+});
+
+app.get("/api/hr/employee-requests", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT r.id, r.employee_id, e.name AS employee_name, r.request_type,
+                    r.details, r.status, r.hr_response, r.created_at, r.updated_at
+             FROM employee_requests r
+             JOIN employees e ON e.employee_id = r.employee_id
+             ORDER BY r.created_at DESC, r.id DESC`
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("HR employee request fetch error:", error);
+        res.status(500).json({ message: "Failed to fetch employee requests" });
+    }
+});
+
+app.put("/api/hr/employee-requests/:id", async (req, res) => {
+    try {
+        const { status, hr_response = "" } = req.body;
+        if (!["Approved", "Rejected"].includes(status)) {
+            return res.status(400).json({ message: "Status must be Approved or Rejected" });
+        }
+        const result = await pool.query(
+            `UPDATE employee_requests SET status = $1, hr_response = $2, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $3
+             RETURNING id, employee_id, request_type, details, status, hr_response, created_at, updated_at`,
+            [status, hr_response, req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Employee request not found" });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("HR employee request update error:", error);
+        res.status(500).json({ message: "Failed to update employee request" });
+    }
+});
+
+app.get("/api/notifications/employee/:employeeId", async (req, res) => {
+    try {
+        const [leaveResult, payrollResult, documentResult, requestResult] = await Promise.all([
+            pool.query(`SELECT id, leave_type, status, days, created_at FROM leaves WHERE employee_id = $1 AND LOWER(status) IN ('approved', 'rejected') ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 20`, [req.params.employeeId]),
+            pool.query(`SELECT payroll_id AS id, salary_month, status, updated_at FROM employee_payroll WHERE employee_id = $1 AND LOWER(COALESCE(status, '')) IN ('processed', 'released') ORDER BY updated_at DESC NULLS LAST, payroll_id DESC LIMIT 20`, [req.params.employeeId]),
+            pool.query(`SELECT passport_exp_date FROM employees WHERE employee_id = $1 AND passport_exp_date IS NOT NULL AND passport_exp_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'`, [req.params.employeeId]),
+            pool.query(`SELECT id, request_type, status, hr_response, updated_at FROM employee_requests WHERE employee_id = $1 AND status <> 'Pending' ORDER BY updated_at DESC LIMIT 20`, [req.params.employeeId]),
+        ]);
+        res.json([
+            ...leaveResult.rows.map((leave) => ({
+                id: `leave-${leave.id}-${leave.status}`,
+                type: "leave",
+                title: `Leave ${leave.status}`,
+                message: `${leave.leave_type} request (${leave.days || 1} day${Number(leave.days) === 1 ? "" : "s"})`,
+                time: "Leave request updated",
+                section: "leave",
+            })),
+            ...payrollResult.rows.map((payroll) => ({
+                id: `payroll-${payroll.id}`,
+                type: "payroll",
+                title: "Payroll Released",
+                message: "Your salary details and payslip are available.",
+                time: payroll.salary_month ? new Date(payroll.salary_month).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "Payroll updated",
+                section: "payroll",
+            })),
+            ...documentResult.rows.map((document) => ({
+                id: `document-${req.params.employeeId}-${document.passport_exp_date}`,
+                type: "document",
+                title: "Documents Expiring",
+                message: "Your passport/document is expiring soon.",
+                time: `Expires ${new Date(document.passport_exp_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
+                section: "documents",
+            })),
+            ...requestResult.rows.map((request) => ({
+                id: `employee-request-${request.id}-${request.status}`,
+                type: "request",
+                title: `${request.request_type} ${request.status}`,
+                message: request.hr_response || `Your request was ${request.status.toLowerCase()}.`,
+                time: "HR request update",
+                section: "dashboard",
+            })),
+        ]);
+    } catch (error) {
+        console.error("Error fetching employee notifications:", error);
+        res.status(500).json({ message: "Failed to fetch employee notifications" });
     }
 });
 
@@ -2650,10 +2789,28 @@ const ensureLeaveCancellationColumns = async () => {
     `);
 };
 
+const ensureEmployeeRequestsTable = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS employee_requests (
+            id BIGSERIAL PRIMARY KEY,
+            employee_id TEXT NOT NULL REFERENCES employees(employee_id) ON DELETE CASCADE,
+            request_type TEXT NOT NULL,
+            details JSONB NOT NULL DEFAULT '{}'::jsonb,
+            status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+            hr_response TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS employee_requests_employee_id_idx ON employee_requests(employee_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS employee_requests_status_idx ON employee_requests(status)`);
+};
+
 ensureEmployeePersonalInfoColumns()
     .then(ensurePasswordResetTable)
     .then(ensureLeavePolicyTable)
     .then(ensureLeaveCancellationColumns)
+    .then(ensureEmployeeRequestsTable)
     .then(() => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);

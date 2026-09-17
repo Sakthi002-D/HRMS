@@ -11,6 +11,13 @@ const initialPayrollData = [
 ];
 
 const formatCurrency = (value) => `₹${Number(value).toLocaleString("en-IN")}`;
+const dateInputValue = (value) => value ? String(value).slice(0, 10) : "";
+const formatDisplayDate = (value) => {
+    const normalized = dateInputValue(value);
+    if (!normalized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return value || "-";
+    const [year, month, day] = normalized.split("-");
+    return `${day} ${new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("en-IN", { month: "short" })} ${year}`;
+};
 
 function Payroll() {
     const [payrollData, setPayrollData] = useState([]);
@@ -58,7 +65,7 @@ function Payroll() {
 
     const exportPayroll = (format) => {
         const headers = ["Employee ID", "Name", "Email", "Phone", "Designation", "Joining Date", "Salary"];
-        const rows = filteredPayroll.map((employee) => [employee.employeeID, employee.employeeName, employee.email, employee.phone, employee.designation, employee.joiningDate, employee.netSalary]);
+        const rows = filteredPayroll.map((employee) => [employee.employeeID, employee.employeeName, employee.email, employee.phone, employee.designation, formatDisplayDate(employee.joiningDate), employee.netSalary]);
         const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
         const content = format === "excel"
             ? `<table><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>${rows.map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join("")}</tr>`).join("")}</table>`
@@ -165,7 +172,7 @@ function Payroll() {
                             <tbody>{loading ? <tr><td colSpan="9" className="payroll-empty">Loading salary records...</td></tr> : visiblePayroll.length ? visiblePayroll.map((employee) => <tr key={employee.id || employee.employeeID}>
                                 <td>{employee.employeeID}</td><td>{employee.employeeName}</td><td>{employee.email}</td><td>{employee.phone}</td>
                                 <td>{employee.designation}</td>
-                                <td>{employee.joiningDate}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
+                                <td>{formatDisplayDate(employee.joiningDate)}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
                                 <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={async () => { if (window.confirm(`Delete ${employee.employeeName} salary record?`)) { const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" }); if (response.ok) setPayrollData((previous) => previous.filter((item) => item.id !== employee.id)); } }}><Trash2 size={15} /></button></td>
                             </tr>) : <tr><td colSpan="9" className="payroll-empty">No salary records found</td></tr>}</tbody>
                         </table>
@@ -176,7 +183,7 @@ function Payroll() {
 
             {editingEmployee && <div className="salary-modal-overlay" onClick={() => setEditingEmployee(null)}><form className="salary-modal" onSubmit={saveSalary} onClick={(event) => event.stopPropagation()}>
                 <h2>{editingEmployee.employeeID ? "Edit Salary" : "Add Salary"}</h2>
-                <div className="salary-form-grid">{[["employeeID", "Emp ID", editingEmployee.employeeID || ""], ["employeeName", "Name", editingEmployee.employeeName || ""], ["email", "Email", editingEmployee.email || ""], ["phone", "Phone", editingEmployee.phone || ""], ["department", "Department", editingEmployee.department || ""], ["designation", "Designation", editingEmployee.designation || "Developer"], ["joiningDate", "Joining Date", editingEmployee.joiningDate || ""], ["salaryMonth", "Salary Month", editingEmployee.salaryMonth || "2026-08-01"], ["basicSalary", "Basic Salary", editingEmployee.basicSalary || ""], ["allowances", "Allowances", editingEmployee.allowances || ""], ["deductions", "Deductions", editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} defaultValue={value} required /></label>)}</div>
+                <div className="salary-form-grid">{[["employeeID", "Emp ID", editingEmployee.employeeID || ""], ["employeeName", "Name", editingEmployee.employeeName || ""], ["email", "Email", editingEmployee.email || ""], ["phone", "Phone", editingEmployee.phone || ""], ["department", "Department", editingEmployee.department || ""], ["designation", "Designation", editingEmployee.designation || "Developer"], ["joiningDate", "Joining Date", dateInputValue(editingEmployee.joiningDate)], ["salaryMonth", "Salary Month", dateInputValue(editingEmployee.salaryMonth) || "2026-08-01"], ["basicSalary", "Basic Salary", editingEmployee.basicSalary || ""], ["allowances", "Allowances", editingEmployee.allowances || ""], ["deductions", "Deductions", editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} type={name.includes("Date") || name === "salaryMonth" ? "date" : "text"} defaultValue={value} required /></label>)}</div>
                 <div className="salary-modal-actions"><button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button><button type="submit">Save Salary</button></div>
             </form></div>}
         </DashboardLayout>

@@ -1,0 +1,50 @@
+.employee-payroll-view {
+    display: none;
+    padding: 22px;
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+.employee-payroll-heading { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #e6edf3; color: #03a9f4; }
+.employee-payroll-heading h2 { margin: 3px 0 5px; color: #102a43; font-size: 24px; }
+.employee-payroll-heading p { margin: 0; color: #718096; font-size: 13px; }
+.employee-payroll-kicker { color: #07804b; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.employee-payroll-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+.employee-payroll-summary article { padding: 17px; border: 1px solid #e2eaf0; border-radius: 8px; background: #f9fbfd; }
+.employee-payroll-summary span, .employee-payroll-summary small { display: block; color: #718096; font-size: 14px; font-weight: 500; }
+.employee-payroll-summary strong { display: block; margin: 8px 0 4px; color: #173456; font-size: 26px; font-weight: 700; }
+.employee-payroll-summary strong.transferred { color: #07804b; font-size: 20px; }
+.employee-payroll-summary strong.pending { color: #c47a00; font-size: 20px; }
+.employee-payroll-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 22px; border: 1px solid #dfe8ef; border-radius: 8px; overflow: hidden; }
+.employee-payroll-breakdown div { display: flex; justify-content: space-between; gap: 12px; padding: 15px; border-right: 1px solid #e5edf2; color: #63758a; font-size: 15px; font-weight: 500; }
+.employee-payroll-breakdown div:last-child { border-right: 0; }
+.employee-payroll-breakdown strong { color: #173456; font-size: 15px; font-weight: 700; }
+.employee-payroll-breakdown .net { background: #eef9f4; color: #07804b; }
+.employee-payroll-breakdown .net strong { color: #07804b; font-size: 16px; font-weight: 700; }
+.employee-salary-history { border: 1px solid #dfe8ef; border-radius: 8px; overflow: hidden; }
+.employee-payroll-section-heading { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-bottom: 1px solid #e5edf2; }
+.employee-payroll-section-heading h3 { margin: 0; color: #173456; font-size: 18px; }
+.employee-payroll-section-heading span { color: #718096; font-size: 13px; }
+.employee-payroll-table-wrap { overflow-x: auto; }
+.employee-payroll-table-wrap table { width: 100%; min-width: 820px; border-collapse: collapse; }
+.employee-payroll-table-wrap th, .employee-payroll-table-wrap td { padding: 14px 14px; border-bottom: 1px solid #edf1f3; color: #526273; font-size: 13px; text-align: center; white-space: nowrap; }
+.employee-payroll-table-wrap th { background: #164d76; color: #fff; font-size: 13px; font-weight: 700; }
+.employee-payroll-table-wrap td { font-weight: 600; }
+.employee-payroll-table-wrap tr:last-child td { border-bottom: 0; }
+.employee-payroll-status { padding: 5px 9px; border-radius: 12px; background: #fff1d6; color: #a86200; font-size: 12px; font-weight: 700; }
+.employee-payroll-status.transferred { background: #dcfce7; color: #15803d; }
+.employee-payslip-button { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; border: 1px solid #cfe2ef; border-radius: 5px; background: #fff; color: #11618d; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.employee-payslip-button:hover { background: #eef8fd; }
+.employee-payroll-empty { padding: 48px 20px; color: #718096; text-align: center; }
+
+.employee-payroll-view :is(.employee-payroll-heading p, .employee-payroll-summary span, .employee-payroll-summary small, .employee-payroll-section-heading span, .employee-payroll-table-wrap td, .employee-payroll-empty) {
+    color: #000000 !important;
+}
+
+.employee-payroll-breakdown div:not(.net) {
+    color: #000000;
+}
+
+@media (max-width: 900px) { .employee-payroll-summary, .employee-payroll-breakdown { grid-template-columns: repeat(2, 1fr); } .employee-payroll-breakdown div:nth-child(2) { border-right: 0; } }
+@media (max-width: 560px) { .employee-payroll-summary, .employee-payroll-breakdown { grid-template-columns: 1fr; } .employee-payroll-breakdown div { border-right: 0; } }

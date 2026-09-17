@@ -1,7 +1,7 @@
 import { CalendarDays, Check, Clock3 } from "lucide-react";
 
 function EmployeeAttendance({
-    employee, greeting, liveTime, liveDate, todayHours, todayAttendance, weekHours, attendanceDays,
+    employee, greeting, liveTime, liveDate, todayHours, todayAttendance, todayStatus, weekHours, attendanceDays,
     monthHours, currentMonthAttendance, formatAttendanceTime, attendanceRows, setAttendanceRows,
     attendanceMonth, setAttendanceMonth, attendanceMonthOptions, attendanceYear, setAttendanceYear,
     attendanceYearOptions, attendanceSearch, setAttendanceSearch, attendanceStatus, setAttendanceStatus,
@@ -21,9 +21,9 @@ function EmployeeAttendance({
                         <div><small>Punch In</small><strong>{formatAttendanceTime(todayAttendance?.punch_in)}</strong></div>
                         <div><small>Punch Out</small><strong>{formatAttendanceTime(todayAttendance?.punch_out)}</strong></div>
                     </div>
-                    <span className="attendance-profile-note">{todayAttendance ? "Attendance recorded today" : "No punch-in recorded today"}</span>
+                    <span className="attendance-profile-note">{todayAttendance ? "Attendance recorded today" : todayStatus}</span>
                 </article>
-                <article className="attendance-bright-card orange"><span><Clock3 size={17} /></span><strong>{todayHours.toFixed(2)} <em>/ 9</em></strong><small>Total Hours Today</small><b>{todayAttendance?.status || "Not recorded"}</b></article>
+                <article className="attendance-bright-card orange"><span><Clock3 size={17} /></span><strong>{todayHours.toFixed(2)} <em>/ 9</em></strong><small>Total Hours Today</small><b>{todayStatus}</b></article>
                 <article className="attendance-bright-card green"><span><Check size={17} /></span><strong>{weekHours.toFixed(2)} <em>/ 40</em></strong><small>Total Hours This Week</small><b>{attendanceDays} attendance day(s)</b></article>
                 <article className="attendance-bright-card blue"><span><CalendarDays size={17} /></span><strong>{monthHours.toFixed(2)} <em>/ {currentMonthAttendance.length * 9}</em></strong><small>Total Hours Month</small><b>{currentMonthAttendance.length} recorded day(s)</b></article>
             </div>

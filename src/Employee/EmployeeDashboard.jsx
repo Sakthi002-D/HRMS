@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, Trash2, UserRound, X } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, ReceiptText, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import "./EmployeeDashboard.css";
 import ApplyLeaveModal from "./ApplyLeaveModal";
@@ -8,6 +8,9 @@ import ChangePasswordModal from "./ChangePasswordModal";
 import EmployeeAttendance from "./EmployeeAttendance";
 import EmployeeEditModal from "./EmployeeEditModal";
 import EmployeeProfile from "./EmployeeProfile";
+import EmployeePayroll from "./EmployeePayroll";
+import EmployeeDocuments from "./EmployeeDocuments";
+import EmployeeRequestModal from "./EmployeeRequestModal";
 import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditModal";
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
@@ -22,6 +25,12 @@ const DEFAULT_QATAR_HOLIDAYS = [
     { name: "Prophet's Birthday", date: "Islamic calendar", days: 1 },
 ];
 const EMPLOYEE_LEAVE_TYPES = ["Annual Leave", "Sick Leave", "Maternity Leave", "Paternity Leave", "Hajj Leave", "Emergency Leave", "Unpaid Leave (LOP)", "Compensatory Off", "Bereavement Leave"];
+const EMPLOYEE_REQUESTS = [
+    { label: "Salary Certificate", icon: ReceiptText, tone: "blue" },
+    { label: "NOC Request", icon: ShieldCheck, tone: "green" },
+    { label: "Letter Request", icon: FileText, tone: "orange" },
+    { label: "Expense Reimbursement", icon: ClipboardList, tone: "purple" },
+];
 const LEAVE_RULES = {
     annual: { eligibleMonths: 12, underFiveYears: { annual: 21, monthly: 1.75 }, fiveYearsAndAbove: { annual: 28, monthly: 28 / 12 } },
     sick: { eligibleMonths: 3, totalDays: 84 }, maternity: { days: 50 }, bereavement: { days: 3 }, compensatory: { validityDays: 90 },
@@ -31,6 +40,16 @@ const parseDateOnly = (value) => {
     const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
     const date = new Date(year, month - 1, day);
     return Number.isNaN(date.getTime()) ? null : date;
+};
+const localDateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const normalizeAttendanceSearchDate = (value) => {
+    const text = String(value || "").trim().toLowerCase();
+    if (!text) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    const dayFirstMatch = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (dayFirstMatch) return `${dayFirstMatch[3]}-${String(dayFirstMatch[2]).padStart(2, "0")}-${String(dayFirstMatch[1]).padStart(2, "0")}`;
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? "" : localDateKey(parsed);
 };
 const completedMonthsBetween = (startDate, endDate) => {
     if (!startDate || !endDate || endDate < startDate) return 0;
@@ -53,9 +72,14 @@ const formatAttendanceTime = (time) => {
 function EmployeeDashboard() {
     const navigate = useNavigate();
 
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [employee, setEmployee] = useState(null);
     const [leaves, setLeaves] = useState([]);
     const [attendance, setAttendance] = useState([]);
+    const [payrollRecords, setPayrollRecords] = useState([]);
+    const [payrollLoading, setPayrollLoading] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [monthlyAttendance, setMonthlyAttendance] = useState([]);
     const [holidays, setHolidays] = useState(DEFAULT_QATAR_HOLIDAYS);
     const [holidaysExpanded, setHolidaysExpanded] = useState(true);
@@ -70,14 +94,18 @@ function EmployeeDashboard() {
     const [attendancePage, setAttendancePage] = useState(1);
 
     const [showApplyLeave, setShowApplyLeave] = useState(false);
+    const [requestType, setRequestType] = useState(null);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", repeat_password: "" });
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [compactMode, setCompactMode] = useState(false);
+    const [language, setLanguage] = useState("English");
+    const [timeZone, setTimeZone] = useState("Asia/Qatar");
     const [profileDraft, setProfileDraft] = useState(null);
     const [sectionEditor, setSectionEditor] = useState(null);
     const [educationEditorId, setEducationEditorId] = useState(null);
+    const [experienceEditorId, setExperienceEditorId] = useState(null);
         const [educationDeleteId, setEducationDeleteId] = useState(null);
     const [sectionForm, setSectionForm] = useState({});
     const [profilePanels, setProfilePanels] = useState({
@@ -91,6 +119,29 @@ function EmployeeDashboard() {
     });
     const [profileWorkTab, setProfileWorkTab] = useState("projects");
     const [activeSection, setActiveSection] = useState("dashboard");
+
+    const submitEmployeeRequest = (request) => {
+        const { requestType, ...details } = request;
+        return fetch(`${API_URL}/api/employee-requests`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employee_id: employee.employee_id, request_type: requestType, details }),
+        }).then(async (response) => {
+            if (!response.ok) throw new Error("Unable to submit request");
+            await response.json();
+            fetchEmployeeNotifications(employee.employee_id);
+        });
+    };
+
+    const getReadNotificationIds = (employeeId = employee?.employee_id) => {
+        const employeeNotificationReadKey = `hrms-employee-read-notifications-${employeeId || "guest"}`;
+        try {
+            const storedIds = JSON.parse(localStorage.getItem(employeeNotificationReadKey) || "[]");
+            return new Set(Array.isArray(storedIds) ? storedIds : []);
+        } catch {
+            return new Set();
+        }
+    };
 
     const [formData, setFormData] = useState({
         leave_type: "Annual Leave",
@@ -121,6 +172,8 @@ function EmployeeDashboard() {
 
     fetchLeaves(employeeData.employee_id);
     fetchAttendance(employeeData.employee_id);
+    fetchPayroll(employeeData.employee_id);
+    fetchEmployeeNotifications(employeeData.employee_id);
     fetchHolidayPolicy();
 
     fetch(`${API_URL}/api/employees/${employeeData.employee_id}/details`)
@@ -150,6 +203,36 @@ function EmployeeDashboard() {
     };
 
 }, [navigate]);
+
+    const fetchEmployeeNotifications = async (employeeId) => {
+        try {
+            const response = await fetch(`${API_URL}/api/notifications/employee/${employeeId}`);
+            if (!response.ok) throw new Error("Failed to fetch notifications");
+            const readIds = getReadNotificationIds(employeeId);
+            const fetchedNotifications = await response.json();
+            setNotifications(fetchedNotifications.map((notification) => ({
+                ...notification,
+                read: readIds.has(notification.id),
+            })));
+        } catch (error) {
+            console.error("Error fetching employee notifications:", error);
+            setNotifications([]);
+        }
+    };
+
+    const fetchPayroll = async (employeeId) => {
+        try {
+            setPayrollLoading(true);
+            const response = await fetch(`${API_URL}/api/payroll/employee/${employeeId}`);
+            if (!response.ok) throw new Error("Failed to fetch payroll");
+            setPayrollRecords(await response.json());
+        } catch (error) {
+            console.error("Error fetching payroll:", error);
+            setPayrollRecords([]);
+        } finally {
+            setPayrollLoading(false);
+        }
+    };
 
     const fetchHolidayPolicy = async () => {
         try {
@@ -364,20 +447,23 @@ function EmployeeDashboard() {
     };
 
     const openSectionEditor = (section, recordId = null) => {
-        const records = section === "education" ? (Array.isArray(employee.education) ? employee.education : []) : [];
-        const source = section === "about" || section === "employment" || section === "position" ? employee : section === "education" ? (records.find((record) => record.id === recordId) || {}) : (employee[section] || {});
+        const records = section === "education" ? (Array.isArray(employee.education) ? employee.education : []) : section === "experience" ? (Array.isArray(employee.experience) ? employee.experience : []) : [];
+        const source = section === "about" || section === "employment" || section === "position" ? employee : ["education", "experience"].includes(section) ? (records.find((record) => record.id === recordId) || {}) : (employee[section] || {});
         const defaultAbout = `Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`;
         const nextSectionForm = Object.fromEntries(sectionFields[section].map(([name]) => {
             const value = source[name] ?? (name === "about" ? defaultAbout : "");
             return [name, name.includes("date") && value !== "Never" ? String(value).slice(0, 10) : value === "Never" ? "" : value];
         }));
         if (section === "education") nextSectionForm.currently_pursuing = Boolean(source.currently_pursuing);
+        if (section === "experience") nextSectionForm.currently_working = Boolean(source.currently_working);
         setSectionForm(nextSectionForm);
         setEducationEditorId(recordId);
+        setExperienceEditorId(section === "experience" ? recordId : null);
         setSectionEditor(section);
     };
 
     const addEducation = () => openSectionEditor("education");
+    const addExperience = () => openSectionEditor("experience");
 
     const updateSectionForm = (field, value) => {
         setSectionForm((current) => ({ ...current, [field]: value }));
@@ -390,18 +476,26 @@ function EmployeeDashboard() {
             setLoading(true);
             const isEmployeeSection = ["employment", "position"].includes(sectionEditor);
             const isEducation = sectionEditor === "education";
+            const isExperience = sectionEditor === "experience";
             const endpoint = sectionEditor === "about" ? `${employee.employee_id}/about` : isEmployeeSection ? employee.employee_id : `${employee.employee_id}/${sectionEditor}`;
             const body = isEmployeeSection ? { ...employee, ...sectionForm, employment_end_date: sectionForm.employment_end_date || "Never", employee_id: employee.employee_id } : { ...sectionForm };
             if (isEducation) body.currently_pursuing = Boolean(body.currently_pursuing);
             ["children_count", "start_year", "end_year"].forEach((field) => {
                 if (field in body) body[field] = body[field] === "" ? null : Number(body[field]);
             });
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}${isEducation ? `/education${educationEditorId ? `/${educationEditorId}` : ""}` : `/${sectionEditor === "about" ? "about" : isEmployeeSection ? "" : sectionEditor}`}`, { method: isEducation && !educationEditorId ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-            const data = await response.json();
+            const recordId = isEducation ? educationEditorId : isExperience ? experienceEditorId : null;
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}${isEducation ? `/education${recordId ? `/${recordId}` : ""}` : isExperience ? `/experience${recordId ? `/${recordId}` : ""}` : `/${sectionEditor === "about" ? "about" : isEmployeeSection ? "" : sectionEditor}`}`, { method: (isEducation || isExperience) && !recordId ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            const responseText = await response.text();
+            let data;
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch {
+                throw new Error(response.ok ? "Unexpected response from server" : `Server returned ${response.status}. Restart the backend and try again.`);
+            }
             if (!response.ok) throw new Error([data.message, data.details].filter(Boolean).join(": ") || "Unable to save section");
             setEmployee((current) => ({
                 ...current,
-                ...(isEmployeeSection ? data : sectionEditor === "about" ? { about: data.about } : isEducation ? { education: educationEditorId ? current.education.map((record) => record.id === educationEditorId ? data : record) : [...(current.education || []), data] } : { [sectionEditor]: data }),
+                ...(isEmployeeSection ? data : sectionEditor === "about" ? { about: data.about } : isEducation ? { education: educationEditorId ? current.education.map((record) => record.id === educationEditorId ? data : record) : [...(current.education || []), data] } : isExperience ? (() => { const experiences = Array.isArray(current.experience) ? current.experience : current.experience?.id ? [current.experience] : []; return { experience: experienceEditorId ? experiences.map((record) => record.id === experienceEditorId ? data : record) : [data, ...experiences] }; })() : { [sectionEditor]: data }),
             }));
             setSectionEditor(null);
         } catch (error) {
@@ -448,30 +542,54 @@ function EmployeeDashboard() {
         event.preventDefault();
         try {
             setLoading(true);
+
+            const normalizedProfile = {
+                ...profileDraft,
+                employee_id: employee.employee_id,
+                name: String(profileDraft.name ?? "").trim(),
+                phone: String(profileDraft.phone ?? "").trim(),
+                email: String(profileDraft.email ?? "").trim(),
+                address: String(profileDraft.address ?? "").trim(),
+                gender: profileDraft.gender || null,
+                date_of_birth: profileDraft.date_of_birth || null,
+                emergency_contact: String(profileDraft.emergency_contact ?? "").trim() || null,
+                nationality: String(profileDraft.nationality ?? "").trim() || null,
+                religion: String(profileDraft.religion ?? "").trim() || null,
+                marital_status: profileDraft.marital_status || null,
+                children_count: profileDraft.children_count === "" || profileDraft.children_count === null ? null : Number(profileDraft.children_count),
+                designation: String(profileDraft.designation ?? "").trim() || null,
+                department: String(profileDraft.department ?? "").trim() || null,
+                joining_date: profileDraft.joining_date || null,
+                employment_type: profileDraft.employment_type || null,
+                status: profileDraft.status || "Active",
+                passport_no: String(profileDraft.passport_no ?? "").trim() || null,
+                passport_exp_date: profileDraft.passport_exp_date || null,
+                position: String(profileDraft.position ?? "").trim() || null,
+                position_title: String(profileDraft.position_title ?? "").trim() || null,
+                employment_category: String(profileDraft.employment_category ?? "").trim() || null,
+                project_role_id: String(profileDraft.project_role_id ?? "").trim() || null,
+                employment_end_date: profileDraft.employment_end_date === "Never" ? "Never" : profileDraft.employment_end_date || null,
+                termination_reason: String(profileDraft.termination_reason ?? "").trim() || null,
+                last_date_worked: profileDraft.last_date_worked || null,
+                legal_entity: String(profileDraft.legal_entity ?? "").trim() || null,
+                worker_type: String(profileDraft.worker_type ?? "").trim() || null,
+                profile_photo: profileDraft.profile_photo || null,
+                assignment_start: profileDraft.assignment_start || null,
+                assignment_end: profileDraft.assignment_end || null,
+                make_primary: Boolean(profileDraft.make_primary),
+            };
+
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...profileDraft,
-                    employee_id: employee.employee_id,
-                    name: profileDraft.name.trim(),
-                    phone: profileDraft.phone.trim(),
-                    email: profileDraft.email.trim(),
-                    address: profileDraft.address.trim(),
-                    gender: profileDraft.gender || null,
-                    date_of_birth: profileDraft.date_of_birth || null,
-                    emergency_contact: profileDraft.emergency_contact.trim() || null,
-                    nationality: profileDraft.nationality.trim() || null,
-                    religion: profileDraft.religion.trim() || null,
-                    marital_status: profileDraft.marital_status || null,
-                    children_count: profileDraft.children_count === "" ? null : Number(profileDraft.children_count),
-                    profile_photo: profileDraft.profile_photo || null,
-                }),
+                body: JSON.stringify(normalizedProfile),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || "Unable to update profile");
-            setEmployee((current) => ({ ...current, ...data }));
-            sessionStorage.setItem("loggedInEmployee", JSON.stringify({ ...employee, ...data }));
+
+            const updatedEmployee = { ...employee, ...data };
+            setEmployee(updatedEmployee);
+            sessionStorage.setItem("loggedInEmployee", JSON.stringify(updatedEmployee));
             setShowEditProfile(false);
         } catch (error) {
             alert(error.message || "Unable to update profile");
@@ -601,10 +719,20 @@ function EmployeeDashboard() {
                     : selectedLeaveType === "Compensatory Off"
                         ? { eligible: true, remaining: null, ...leaveTypeDetails["Compensatory Off"] }
                         : { eligible: true, remaining: null, ...leaveTypeDetails[selectedLeaveType] };
-    const todayAttendance = attendance.find((record) => {
-        const recordDate = new Date(record.attendance_date).toISOString().slice(0, 10);
-        return recordDate === currentDate.toISOString().slice(0, 10);
-    });
+    const todayDateKey = localDateKey(currentDate);
+    const todayAttendance = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() !== "absent");
+    const todayAbsentRecord = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() === "absent");
+    const shiftEnded = currentDate.getHours() >= 18;
+    const attendanceForDisplay = todayAttendance || todayAbsentRecord || !shiftEnded ? attendance : [{
+        id: `absent-${employee.employee_id}-${todayDateKey}`,
+        employee_id: employee.employee_id,
+        attendance_date: todayDateKey,
+        status: "Absent",
+        punch_in: null,
+        punch_out: null,
+        late_minutes: 0,
+        working_minutes: 0,
+    }, ...attendance];
     const todayHours = Number(todayAttendance?.working_minutes || 0) / 60;
     const weekHours = attendance.reduce(
         (total, record) => {
@@ -637,11 +765,13 @@ function EmployeeDashboard() {
             .map((record) => String(record.attendance_date || "").slice(0, 4))
             .filter(Boolean)
     )].sort().reverse();
-    const filteredEmployeeAttendance = attendance.filter((record) => {
+    const filteredEmployeeAttendance = attendanceForDisplay.filter((record) => {
         const search = attendanceSearch.trim().toLowerCase();
         const status = String(record.status || "").toLowerCase();
-        const recordDate = String(record.attendance_date || "");
-        return (!search || `${record.attendance_date} ${record.status}`.toLowerCase().includes(search))
+        const recordDate = String(record.attendance_date || "").slice(0, 10);
+        const searchDate = normalizeAttendanceSearchDate(search);
+        const matchesSearchDate = searchDate ? recordDate === searchDate : false;
+        return (!search || matchesSearchDate || `${record.attendance_date} ${formatProfileDate(record.attendance_date)} ${record.status}`.toLowerCase().includes(search))
             && (attendanceMonth === "all" || recordDate.slice(5, 7) === attendanceMonth)
             && (attendanceYear === "all" || recordDate.slice(0, 4) === attendanceYear)
             && (attendanceStatus === "all" || status === attendanceStatus);
@@ -683,10 +813,12 @@ function EmployeeDashboard() {
     const chartBackground = chartTotal ? `conic-gradient(${chartGradient})` : "#dce5eb";
 
     return (
-        <div className={`employee-dashboard ${activeSection}-view ${compactMode ? "compact-mode" : ""}`}>
+        <div className={`employee-dashboard ${activeSection}-view ${compactMode ? "compact-mode" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
 
             <EmployeeSidebar
                 activeSection={activeSection}
+                collapsed={sidebarCollapsed}
+                onToggle={() => setSidebarCollapsed((current) => !current)}
                 onSectionChange={setActiveSection}
                 onProfile={openProfile}
                 onChangePassword={() => setShowChangePassword(true)}
@@ -711,6 +843,10 @@ function EmployeeDashboard() {
                                         ? "Settings"
                                         : activeSection === "attendance"
                                             ? "Employee Attendance"
+                                            : activeSection === "payroll"
+                                                ? "Payroll"
+                                                : activeSection === "documents"
+                                                    ? "Documents"
                                     : "Employee Dashboard"}
                         </h1>
                         <p>
@@ -722,16 +858,33 @@ function EmployeeDashboard() {
                                         ? "Manage your account and dashboard preferences"
                                     : activeSection === "attendance"
                                         ? "Review your recent attendance records"
+                                    : activeSection === "payroll"
+                                        ? "View your salary, benefits and payslips"
+                                    : activeSection === "documents"
+                                        ? "Access your important employment documents"
                                     : `Welcome back, ${employee.name}`}
                         </p>
                     </div>
+                    {activeSection === "dashboard" && <div className="employee-notification-wrapper">
+                        <button type="button" className="employee-notification-button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Open notifications" aria-expanded={notificationsOpen}>
+                            <Bell size={19} />
+                            {notifications.filter((notification) => !notification.read).length > 0 && <span className="employee-notification-count">{notifications.filter((notification) => !notification.read).length}</span>}
+                        </button>
+                        {notificationsOpen && <div className="employee-notification-dropdown"><div className="employee-notification-dropdown-header"><strong>Notifications</strong><span>{notifications.filter((notification) => !notification.read).length ? `${notifications.filter((notification) => !notification.read).length} unread update(s)` : "You are all caught up"}</span></div>{notifications.length ? notifications.map((notification) => <button type="button" className={`employee-notification-item${notification.read ? " is-read" : ""}`} key={notification.id} onClick={() => { const readIds = getReadNotificationIds(employee?.employee_id); const employeeNotificationReadKey = `hrms-employee-read-notifications-${employee?.employee_id || "guest"}`; readIds.add(notification.id); localStorage.setItem(employeeNotificationReadKey, JSON.stringify([...readIds])); setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item)); setNotificationsOpen(false); setActiveSection(notification.section); }}><span className={`employee-notification-item-icon ${notification.type}`}><Bell size={15} /></span><span><strong>{notification.title}</strong><small>{notification.message}</small><em>{notification.time}</em>{notification.read && <em className="employee-notification-status">Read</em>}</span></button>) : <div className="employee-notification-empty">No notifications</div>}</div>}
+                    </div>}
 
                 </header>
 
                 <section className="employee-overview-grid">
                     <article className="employee-identity-card">
                         <div className="identity-banner">
-                            <div className="large-avatar">{employee.name?.charAt(0)?.toUpperCase()}</div>
+                            <div className="large-avatar">
+                                {employee.profile_photo ? (
+                                    <img src={employee.profile_photo} alt={`${employee.name} profile`} />
+                                ) : (
+                                    employee.name?.charAt(0)?.toUpperCase()
+                                )}
+                            </div>
                             <div><h2>{employee.name}</h2><p>{employee.designation || "Employee"}</p></div>
                         </div>
                         <div className="identity-details">
@@ -779,15 +932,33 @@ function EmployeeDashboard() {
                 </section>
 
                 <section className="employee-work-metrics">
-                    <div className="work-metric-card attendance-metric"><div className="metric-icon"><Clock3 size={15} /></div><strong>{displayDate}</strong><small>Attendance</small><div className="metric-progress"><span style={{ width: `${attendanceProgress}%` }} /></div><b>{todayAttendance ? "Attendance recorded" : "No attendance recorded"}</b></div>
+                    <div className="work-metric-card attendance-metric"><div className="metric-icon"><Clock3 size={15} /></div><strong>{displayDate}</strong><small>Attendance</small><div className="metric-progress"><span style={{ width: `${attendanceProgress}%` }} /></div><b>{todayAttendance ? "Attendance recorded" : shiftEnded ? "Absent" : "No attendance yet"}</b></div>
                     <div className="work-metric-card"><div className="metric-icon dark"><Clock3 size={15} /></div><strong>{formatHours(todayHours)} <em>/ 9</em></strong><small>Total Hours Today</small><b className="metric-up">Actual attendance hours</b></div>
                     <div className="work-metric-card"><div className="metric-icon blue"><CalendarDays size={15} /></div><strong>{formatHours(weekHours)} <em>/ 40</em></strong><small>Total Hours Week</small><b className="metric-up">Last 7 days</b></div>
                     <div className="work-metric-card"><div className="metric-icon pink"><FileText size={15} /></div><strong>{approvedLeaveDaysThisYear}</strong><small>Approved Days This Year</small><b className="metric-up">From approved requests</b></div>
                 </section>
 
+                <section className="employee-requests-section">
+                    <div className="employee-section-header">
+                        <div>
+                            <h2>Employee Requests</h2>
+                            <p>Request documents and reimbursements from HR</p>
+                        </div>
+                    </div>
+                    <div className="employee-requests-grid">
+                        {EMPLOYEE_REQUESTS.map(({ label, icon: Icon, tone }) => (
+                            <button type="button" className="employee-request-card" key={label} onClick={() => setRequestType(label)}>
+                                <span className={`employee-request-icon ${tone}`}><Icon size={19} /></span>
+                                <span>{label}</span>
+                                <ChevronDown className="employee-request-arrow" size={16} />
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
                 <EmployeeAttendance
                     employee={employee} greeting={greeting} liveTime={liveTime} liveDate={liveDate}
-                    todayHours={todayHours} todayAttendance={todayAttendance} weekHours={weekHours}
+                    todayHours={todayHours} todayAttendance={todayAttendance} todayStatus={todayAttendance?.status || (shiftEnded ? "Absent" : "No attendance yet")} weekHours={weekHours}
                     attendanceDays={attendanceDays} monthHours={monthHours} currentMonthAttendance={currentMonthAttendance}
                     formatAttendanceTime={formatAttendanceTime} attendanceRows={attendanceRows} setAttendanceRows={setAttendanceRows}
                     attendanceMonth={attendanceMonth} setAttendanceMonth={setAttendanceMonth} attendanceMonthOptions={attendanceMonthOptions}
@@ -797,6 +968,10 @@ function EmployeeDashboard() {
                     visibleEmployeeAttendance={visibleEmployeeAttendance} formatProfileDate={formatProfileDate}
                     attendancePage={attendancePage} attendancePageCount={attendancePageCount} setAttendancePage={setAttendancePage}
                 />
+
+                <EmployeePayroll records={payrollRecords} loading={payrollLoading} />
+
+                <EmployeeDocuments employee={employee} />
 
                 <section className="employee-leave-section">
                     <div className="employee-section-header">
@@ -935,7 +1110,7 @@ function EmployeeDashboard() {
                 </section>
 
 
-                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profilePanelFields={profilePanelFields} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onEditProfile={openEditProfile} onEditSection={openSectionEditor} onAddEducation={addEducation} onDeleteEducation={deleteEducation} formatProfileDate={formatProfileDate} />
+                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profilePanelFields={profilePanelFields} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onEditProfile={openEditProfile} onEditSection={openSectionEditor} onAddEducation={addEducation} onAddExperience={addExperience} onDeleteEducation={deleteEducation} formatProfileDate={formatProfileDate} />
                 <section className="employee-profile-view legacy-profile-view">
                     <div className="employee-section-heading">
                         <div>
@@ -971,7 +1146,7 @@ function EmployeeDashboard() {
                     </div>
                 </section>
 
-                <EmployeeSettings employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled} compactMode={compactMode} setCompactMode={setCompactMode} onEditProfile={openEditProfile} onChangePassword={() => setShowChangePassword(true)} onLogout={logout} />
+                <EmployeeSettings employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled} compactMode={compactMode} setCompactMode={setCompactMode} language={language} setLanguage={setLanguage} timeZone={timeZone} setTimeZone={setTimeZone} onEditProfile={openEditProfile} onChangePassword={() => setShowChangePassword(true)} onLogout={logout} />
                 <section className="employee-settings-view legacy-settings-view">
                     <div className="settings-grid">
                         <article className="settings-card">
@@ -1028,6 +1203,7 @@ function EmployeeDashboard() {
 
 
             {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={EMPLOYEE_LEAVE_TYPES} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} />}
+            {requestType && <EmployeeRequestModal requestType={requestType} onSubmit={submitEmployeeRequest} onClose={() => setRequestType(null)} />}
 
             {showEditProfile && profileDraft && <EmployeeEditModal draft={profileDraft} updateDraft={updateProfileDraft} onSubmit={saveProfile} loading={loading} onClose={() => setShowEditProfile(false)} />}
             {sectionEditor && <EmployeeSectionEditModal section={sectionEditor} form={sectionForm} updateForm={updateSectionForm} onSubmit={saveSection} loading={loading} onClose={() => setSectionEditor(null)} />}

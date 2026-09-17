@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Eye, EyeOff, KeyRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Upload } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
 import Modal from "../../components/layout/common/Modal";
@@ -40,6 +40,7 @@ function EmployeeDetails() {
     const [repeatPassword, setRepeatPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [activeWorkTab, setActiveWorkTab] = useState("projects");
+    const [uploadingDocument, setUploadingDocument] = useState("");
     const [openPanels, setOpenPanels] = useState({
         about: true,
         bank: false,
@@ -191,6 +192,24 @@ function EmployeeDetails() {
             setNotification(saveError.message);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const uploadEmployeeDocument = async (documentType, file) => {
+        if (!file) return;
+        try {
+            setUploadingDocument(documentType);
+            const formData = new FormData();
+            formData.append("document", file);
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/documents/${documentType}`, { method: "POST", body: formData });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Failed to upload document");
+            setEmployee((current) => ({ ...current, [`${documentType}_url`]: data.url }));
+            setNotification("Document uploaded successfully");
+        } catch (uploadError) {
+            setNotification(uploadError.message);
+        } finally {
+            setUploadingDocument("");
         }
     };
 
@@ -546,6 +565,10 @@ function EmployeeDetails() {
                                 <button className="section-edit-button" type="button" onClick={() => openSectionEditor("project")} aria-label="Edit projects">✎</button>
                             )}
                         </section>
+                        <section className="employee-documents-admin-panel">
+                            <div className="employee-documents-admin-heading"><div><h2>Employee Documents</h2><p>Upload documents that will be visible in the employee portal.</p></div></div>
+                            <div className="employee-documents-admin-grid">{[["employment_contract", "Employment Contract"], ["offer_letter", "Offer Letter"], ["visa_copy", "Visa Copy"], ["qid_copy", "QID Copy"], ["passport_copy", "Passport Copy"]].map(([type, label]) => <label className="employee-document-upload-field" key={type}><span>{label}</span><input type="file" accept="application/pdf,image/*" onChange={(event) => uploadEmployeeDocument(type, event.target.files?.[0])} disabled={uploadingDocument === type} />{employee[`${type}_url`] ? <a href={employee[`${type}_url`]} target="_blank" rel="noreferrer">View uploaded document</a> : <small>{uploadingDocument === type ? "Uploading..." : "No document uploaded"}</small>}<Upload size={16} /></label>)}</div>
+                        </section>
                         <section className="password-management-panel">
                             <div>
                                 <h2>Password Management</h2>
@@ -661,31 +684,43 @@ function EmployeeDetails() {
                                 <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>×</button>
                             </div>
                             <div className="edit-form-grid">
-                                {sectionFields[sectionEditor].map(([name, label]) => (
-                                    <label key={name}>{label}
-                                        {name === "make_primary" ? (
-                                            <select name={name} value={sectionForm[name] ? "true" : "false"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value === "true" }))}>
-                                                <option value="false">No</option>
-                                                <option value="true">Yes</option>
-                                            </select>
-                                        ) : name.includes("date") || name === "deadline" ? (
-                                            <DatePicker value={sectionForm[name] || ""} onChange={(value) => setSectionForm((current) => ({ ...current, [name]: value }))} />
-                                        ) : name === "start_year" || name === "end_year" ? (
-                                            <select name={name} value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
-                                                <option value="">Select year</option>
-                                                {Array.from({ length: 81 }, (_, index) => String(new Date().getFullYear() - index)).map((year) => <option key={year} value={year}>{year}</option>)}
-                                            </select>
-                                        ) : name === "education_type" ? (
-                                            <select name={name} value={sectionForm[name] || "Full Time"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
-                                                <option>Full Time</option>
-                                                <option>Part Time</option>
-                                                <option>Distance</option>
-                                            </select>
-                                        ) : (
-                                            <input name={name} type="text" value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))} />
-                                        )}
-                                    </label>
-                                ))}
+                                {sectionFields[sectionEditor].map(([name, label]) => {
+                                    const isSingleField = sectionFields[sectionEditor].length === 1;
+
+                                    return (
+                                        <label key={name} className={isSingleField ? "wide-field" : ""}>
+                                            {label}
+                                            {name === "make_primary" ? (
+                                                <select name={name} value={sectionForm[name] ? "true" : "false"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value === "true" }))}>
+                                                    <option value="false">No</option>
+                                                    <option value="true">Yes</option>
+                                                </select>
+                                            ) : name.includes("date") || name === "deadline" ? (
+                                                <DatePicker value={sectionForm[name] || ""} onChange={(value) => setSectionForm((current) => ({ ...current, [name]: value }))} />
+                                            ) : name === "start_year" || name === "end_year" ? (
+                                                <select name={name} value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
+                                                    <option value="">Select year</option>
+                                                    {Array.from({ length: 81 }, (_, index) => String(new Date().getFullYear() - index)).map((year) => <option key={year} value={year}>{year}</option>)}
+                                                </select>
+                                            ) : name === "education_type" ? (
+                                                <select name={name} value={sectionForm[name] || "Full Time"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
+                                                    <option>Full Time</option>
+                                                    <option>Part Time</option>
+                                                    <option>Distance</option>
+                                                </select>
+                                            ) : name === "about" ? (
+                                                <textarea
+                                                    name={name}
+                                                    rows={4}
+                                                    value={sectionForm[name] || ""}
+                                                    onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}
+                                                />
+                                            ) : (
+                                                <input name={name} type="text" value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))} />
+                                            )}
+                                        </label>
+                                    );
+                                })}
                             </div>
                             <div className="edit-form-actions">
                                 <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>Cancel</button>

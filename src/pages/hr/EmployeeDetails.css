@@ -1,9 +1,9 @@
 .employee-details-page {
     box-sizing: border-box;
-    min-height: 100vh;
-    width: calc(100% + 80px);
-    margin: -35px -40px;
-    padding: 24px 40px 45px;
+    min-height: calc(100vh - 120px);
+    width: 100%;
+    margin: 0;
+    padding: 18px 20px 40px;
     background: #f7f8fa;
     color: #172b4d;
 }
@@ -122,7 +122,7 @@
     display: grid;
     grid-template-columns: minmax(350px, 415px) minmax(0, 1fr);
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .employee-summary,
@@ -131,6 +131,19 @@
     border: 1px solid #e1e6ec;
     border-radius: 6px;
     background: #fff;
+}
+
+.employee-summary,
+.employee-detail-content {
+    min-height: 100%;
+    align-self: stretch;
+}
+
+.employee-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 100%;
 }
 
 .password-management-panel {
@@ -887,10 +900,16 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+    align-items: stretch;
+}
+
+.detail-panel-row .detail-panel {
+    height: 100%;
 }
 
 .projects-panel {
     position: relative;
+    min-height: 180px;
     padding: 20px;
 }
 
@@ -1111,8 +1130,13 @@
     font-weight: 600;
 }
 
+.edit-form-grid label.wide-field {
+    grid-column: 1 / -1;
+}
+
 .edit-form-grid input,
-.edit-form-grid select {
+.edit-form-grid select,
+.edit-form-grid textarea {
     box-sizing: border-box;
     width: 100%;
     min-height: 40px;
@@ -1124,8 +1148,14 @@
     font: inherit;
 }
 
+.edit-form-grid textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
 .edit-form-grid input:focus,
-.edit-form-grid select:focus {
+.edit-form-grid select:focus,
+.edit-form-grid textarea:focus {
     outline: 2px solid rgba(255, 113, 56, .2);
     border-color: #ff7138;
 }
@@ -1185,3 +1215,15 @@
     .password-management-panel { align-items: flex-start; flex-direction: column; }
     .password-management-panel button { width: 100%; }
 }
+
+.employee-documents-admin-panel { margin-top: 20px; padding: 20px; border: 1px solid #d3e2ee; border-radius: 10px; background: #fff; box-shadow: 0 7px 22px rgba(35, 91, 130, .07); }
+.employee-documents-admin-heading { margin-bottom: 16px; }
+.employee-documents-admin-heading h2 { margin: 0 0 5px; color: #12304a; font-size: 18px; }
+.employee-documents-admin-heading p { margin: 0; color: #718096; font-size: 13px; }
+.employee-documents-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.employee-document-upload-field { position: relative; display: flex; flex-direction: column; gap: 7px; padding: 14px; border: 1px solid #dfe8ef; border-radius: 8px; background: #f9fbfd; color: #173456; font-size: 13px; font-weight: 700; }
+.employee-document-upload-field input { width: 100%; color: #63758a; font: inherit; font-size: 12px; font-weight: 400; }
+.employee-document-upload-field small { color: #a86200; font-size: 11px; font-weight: 600; }
+.employee-document-upload-field a { color: #087fb8; font-size: 11px; font-weight: 700; }
+.employee-document-upload-field > svg { position: absolute; top: 14px; right: 14px; color: #087fb8; }
+@media (max-width: 700px) { .employee-documents-admin-grid { grid-template-columns: 1fr; } }
