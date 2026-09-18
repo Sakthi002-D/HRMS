@@ -56,6 +56,16 @@ const formatPhoneInput = (value, countryCode) => {
   return groups.join(" ");
 };
 
+const fileToDataUrl = (file) => {
+  if (!file || typeof file === "string") return Promise.resolve(file || null);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 function Employees() {
 
   const navigate = useNavigate();
@@ -166,6 +176,18 @@ useEffect(() => {
     department: "",
     joiningDate: "",
     employmentType: "",
+    legalEntity: "SHLT",
+    workerType: "Employee",
+    employmentCategory: "",
+    projectRoleId: "",
+    employmentEndDate: "Never",
+    terminationReason: "Not applicable",
+    lastDateWorked: "Not applicable",
+    position: "",
+    positionTitle: "",
+    assignmentEnd: "",
+    assignmentStart: "",
+    makePrimary: false,
 
     status: "Active",
 
@@ -223,6 +245,18 @@ const resetForm = () => {
     department: "",
     joiningDate: "",
     employmentType: "",
+    legalEntity: "SHLT",
+    workerType: "Employee",
+    employmentCategory: "",
+    projectRoleId: "",
+    employmentEndDate: "Never",
+    terminationReason: "Not applicable",
+    lastDateWorked: "Not applicable",
+    position: "",
+    positionTitle: "",
+    assignmentEnd: "",
+    assignmentStart: "",
+    makePrimary: false,
 
     status: "Active",
 
@@ -259,18 +293,48 @@ const resetForm = () => {
 
  const deleteEmployee = async (id) => {
   const confirmDelete = window.confirm(
-    "Are you sure you want to delete this employee?"
+    "This will remove the employee from active work while preserving their record. Continue?"
   );
 
   if (!confirmDelete) {
     return;
   }
 
+  const exitStatus = window.prompt(
+    "Enter exit status: Resigned, Retired, Dismissed, or Terminated",
+    "Resigned"
+  );
+  const normalizedStatus = exitStatus?.trim();
+  const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
+  if (!allowedStatuses.includes(normalizedStatus)) {
+    alert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
+    return;
+  }
+
+  const lastDateWorked = window.prompt(
+    "Enter last date worked (YYYY-MM-DD)",
+    new Date().toISOString().slice(0, 10)
+  );
+  if (!lastDateWorked) {
+    return;
+  }
+
+  const terminationReason = window.prompt(
+    "Enter the reason for leaving",
+    normalizedStatus
+  );
+
   try {
     const response = await fetch(
-      `${API_URL}/api/employees/${id}`,
+      `${API_URL}/api/employees/${id}/status`,
       {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: normalizedStatus,
+          last_date_worked: lastDateWorked,
+          termination_reason: terminationReason || normalizedStatus,
+        }),
       }
     );
 
@@ -283,7 +347,7 @@ const resetForm = () => {
 
     await fetchEmployees();
 
-    alert("Employee deleted successfully!");
+    alert("Employee archived successfully. Their record is still searchable.");
 
   } catch (error) {
     console.error("Error deleting employee:", error);
@@ -396,7 +460,11 @@ const resetForm = () => {
 
   const addEmployee = async () => {
     const employeeId = formData.employeeId.trim();
-    const requiredFields = ["employeeId", "fullName", "designation", "department", "email", "phone"];
+    const requiredFields = [
+      "employeeId", "fullName", "designation", "department", "joiningDate", "employmentType",
+      "employmentCategory", "projectRoleId", "terminationReason", "lastDateWorked",
+      "position", "positionTitle", "assignmentEnd", "assignmentStart", "email", "phone"
+    ];
     const missingFields = requiredFields.reduce(
       (fields, field) => ({ ...fields, [field]: !formData[field].trim() }),
       {}
@@ -429,6 +497,34 @@ const resetForm = () => {
     if (!formData.department.trim()) {
       alert("Please enter Department");
       return;
+    }
+
+    if (!formData.joiningDate) {
+      alert("Please select Employment Start Date");
+      return;
+    }
+
+    if (!formData.employmentType) {
+      alert("Please select Employment Type");
+      return;
+    }
+
+    const markedFields = [
+      ["employmentCategory", "Please select Employment Category"],
+      ["projectRoleId", "Please select Project Role ID"],
+      ["terminationReason", "Please enter Termination Reason"],
+      ["lastDateWorked", "Please enter Last Date Worked"],
+      ["position", "Please select Position"],
+      ["positionTitle", "Please enter Position Title"],
+      ["assignmentEnd", "Please select Assignment End"],
+      ["assignmentStart", "Please select Assignment Start"],
+    ];
+
+    for (const [field, message] of markedFields) {
+      if (!String(formData[field] || "").trim()) {
+        alert(message);
+        return;
+      }
     }
 
     if (!formData.email.trim()) {
@@ -465,6 +561,7 @@ const resetForm = () => {
       alert("Please enter a valid phone number");
       return;
     }
+const profilePhoto = await fileToDataUrl(formData.profilePhoto);
 const employeeData = {
   employee_id: employeeId,
   name: formData.fullName.trim(),
@@ -477,6 +574,18 @@ const employeeData = {
   department: formData.department.trim(),
   joining_date: formData.joiningDate || null,
   employment_type: formData.employmentType || null,
+  legal_entity: formData.legalEntity,
+  worker_type: formData.workerType,
+  employment_category: formData.employmentCategory,
+  project_role_id: formData.projectRoleId,
+  employment_end_date: formData.employmentEndDate,
+  termination_reason: formData.terminationReason,
+  last_date_worked: formData.lastDateWorked,
+  position: formData.position,
+  position_title: formData.positionTitle,
+  assignment_end: formData.assignmentEnd,
+  assignment_start: formData.assignmentStart,
+  make_primary: formData.makePrimary,
   status: formData.status || "Active",
   emergency_contact: formData.emergencyContact
     ? `${formData.emergencyContactCountryCode} ${formData.emergencyContact}`
@@ -487,6 +596,7 @@ const employeeData = {
   religion: formData.religion || null,
   marital_status: formData.maritalStatus || null,
   children_count: formData.childrenCount === "" ? null : Number(formData.childrenCount),
+  profile_photo: profilePhoto,
 };
 
     try {
@@ -617,6 +727,19 @@ const employeeData = {
       employmentType:
         employee.employmentType || "",
 
+      legalEntity: employee.legalEntity || "SHLT",
+      workerType: employee.workerType || "Employee",
+      employmentCategory: employee.employmentCategory || "",
+      projectRoleId: employee.projectRoleId || "",
+      employmentEndDate: employee.employmentEndDate || "Never",
+      terminationReason: employee.terminationReason || "Not applicable",
+      lastDateWorked: employee.lastDateWorked || "Not applicable",
+      position: employee.position || employee.designation || "",
+      positionTitle: employee.positionTitle || employee.designation || "",
+      assignmentEnd: employee.assignmentEnd || "",
+      assignmentStart: employee.assignmentStart || employee.joiningDate || "",
+      makePrimary: Boolean(employee.makePrimary),
+
       status:
         employee.status || "Active",
 
@@ -693,6 +816,8 @@ const updateEmployee = async () => {
     return;
   }
 
+  const profilePhoto = await fileToDataUrl(formData.profilePhoto);
+
   // Data to send to backend
   const employeeData = {
   employee_id: employeeId,
@@ -706,6 +831,18 @@ const updateEmployee = async () => {
   department: formData.department,
   joining_date: formData.joiningDate || null,
   employment_type: formData.employmentType || null,
+  legal_entity: formData.legalEntity || "SHLT",
+  worker_type: formData.workerType || "Employee",
+  employment_category: formData.employmentCategory || null,
+  project_role_id: formData.projectRoleId || null,
+  employment_end_date: formData.employmentEndDate || "Never",
+  termination_reason: formData.terminationReason || null,
+  last_date_worked: formData.lastDateWorked || null,
+  position: formData.position || formData.designation,
+  position_title: formData.positionTitle || formData.designation,
+  assignment_start: formData.assignmentStart || formData.joiningDate || null,
+  assignment_end: formData.assignmentEnd || null,
+  make_primary: Boolean(formData.makePrimary),
   status: formData.status || "Active",
   emergency_contact: formData.emergencyContact
     ? `${formData.emergencyContactCountryCode} ${formData.emergencyContact}`
@@ -716,6 +853,7 @@ const updateEmployee = async () => {
   religion: formData.religion || null,
   marital_status: formData.maritalStatus || null,
   children_count: formData.childrenCount === "" ? null : Number(formData.childrenCount),
+  profile_photo: profilePhoto,
 };
   try {
     const response = await fetch(
@@ -825,7 +963,7 @@ const updateEmployee = async () => {
       variant="danger"
       onClick={() => deleteEmployee(employee.id)}
     >
-      Delete
+      Archive
     </Button>
   ),
 },
@@ -1104,6 +1242,10 @@ const filteredEmployees =
                   <option value="All">All status</option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
+                  <option value="Resigned">Resigned</option>
+                  <option value="Retired">Retired</option>
+                  <option value="Dismissed">Dismissed</option>
+                  <option value="Terminated">Terminated</option>
                 </select>
               </div>
               {viewMode === "grid" ? (
@@ -1205,6 +1347,9 @@ const filteredEmployees =
               <input
                 type="text"
                 placeholder="Enter employee ID"
+                required
+                aria-required="true"
+                aria-invalid={invalidFields.employeeId ? "true" : "false"}
 
                 className={invalidFields.employeeId ? "field-invalid" : ""}
                 value={formData.employeeId}
@@ -1486,7 +1631,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Joining Date
+                Employment Start Date <span className="required-mark">*</span>
               </label>
 
               <DatePicker
@@ -1506,13 +1651,17 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Employment Type
+                Employment Type <span className="required-mark">*</span>
               </label>
 
               <select
                 value={
                   formData.employmentType
                 }
+
+                required
+                aria-required="true"
+                aria-invalid={invalidFields.employmentType ? "true" : "false"}
 
                 onChange={(e) =>
                   setFormData({
@@ -1573,12 +1722,116 @@ const filteredEmployees =
                   Active
                 </option>
 
-                <option value="Inactive">
-                  Inactive
-                </option>
+                <option value="Inactive">Inactive</option>
+                <option value="Resigned">Resigned</option>
+                <option value="Retired">Retired</option>
+                <option value="Dismissed">Dismissed</option>
+                <option value="Terminated">Terminated</option>
 
               </select>
 
+            </div>
+
+            {/* ================= DETAILS ================= */}
+
+            <h3>Details</h3>
+
+            <div className="form-group">
+              <label>Legal Entity <span className="required-mark">*</span></label>
+              <input type="text" value={formData.legalEntity} disabled required />
+            </div>
+
+            <div className="form-group">
+              <label>Worker Type <span className="required-mark">*</span></label>
+              <input type="text" value={formData.workerType} disabled required />
+            </div>
+
+            <div className="form-group">
+              <label>Employment Category <span className="required-mark">*</span></label>
+              <select
+                value={formData.employmentCategory}
+                className={invalidFields.employmentCategory ? "field-invalid" : ""}
+                required
+                onChange={(e) => setFormData((previous) => ({ ...previous, employmentCategory: e.target.value }))}
+              >
+                <option value="">Select employment category</option>
+                <option value="Regular">Regular</option>
+                <option value="Temporary">Temporary</option>
+                <option value="Contractor">Contractor</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Project Role ID <span className="required-mark">*</span></label>
+              <select
+                value={formData.projectRoleId}
+                className={invalidFields.projectRoleId ? "field-invalid" : ""}
+                required
+                onChange={(e) => setFormData((previous) => ({ ...previous, projectRoleId: e.target.value }))}
+              >
+                <option value="">Select project role</option>
+                <option value="Developer">Developer</option>
+                <option value="Manager">Manager</option>
+                <option value="HR">HR</option>
+                <option value="Support">Support</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Employment End Date <span className="required-mark">*</span></label>
+              <select value={formData.employmentEndDate} required onChange={(e) => setFormData((previous) => ({ ...previous, employmentEndDate: e.target.value }))}>
+                <option value="Never">Never</option>
+                <option value="Fixed date">Fixed date</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Termination Reason <span className="required-mark">*</span></label>
+              <input type="text" value={formData.terminationReason} required className={invalidFields.terminationReason ? "field-invalid" : ""} onChange={(e) => updateFormField("terminationReason", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Last Date Worked <span className="required-mark">*</span></label>
+              <input type="text" value={formData.lastDateWorked} required className={invalidFields.lastDateWorked ? "field-invalid" : ""} onChange={(e) => updateFormField("lastDateWorked", e.target.value)} />
+            </div>
+
+            {/* ================= POSITION DETAILS ================= */}
+
+            <h3>Position Details</h3>
+
+            <div className="form-group">
+              <label>Position <span className="required-mark">*</span></label>
+              <select value={formData.position} required className={invalidFields.position ? "field-invalid" : ""} onChange={(e) => setFormData((previous) => ({ ...previous, position: e.target.value }))}>
+                <option value="">Select position</option>
+                <option value="Developer">Developer</option>
+                <option value="Designer">Designer</option>
+                <option value="Accountant">Accountant</option>
+                <option value="HR Executive">HR Executive</option>
+                <option value="Manager">Manager</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Position Title <span className="required-mark">*</span></label>
+              <input type="text" value={formData.positionTitle} required className={invalidFields.positionTitle ? "field-invalid" : ""} onChange={(e) => updateFormField("positionTitle", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Assignment End <span className="required-mark">*</span></label>
+              <DatePicker value={formData.assignmentEnd} onChange={(value) => setFormData((previous) => ({ ...previous, assignmentEnd: value }))} />
+            </div>
+
+            <div className="form-group">
+              <label>Assignment Start <span className="required-mark">*</span></label>
+              <DatePicker value={formData.assignmentStart} onChange={(value) => setFormData((previous) => ({ ...previous, assignmentStart: value }))} />
+            </div>
+
+            <div className="form-group">
+              <label>Make Primary <span className="required-mark">*</span></label>
+              <select value={formData.makePrimary ? "Yes" : "No"} required onChange={(e) => setFormData((previous) => ({ ...previous, makePrimary: e.target.value === "Yes" }))}>
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
             </div>
 
             {/* ================= OTHER DETAILS ================= */}

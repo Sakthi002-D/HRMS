@@ -163,9 +163,9 @@
     height: 38px;
     padding: 0 13px;
 
-    border: 1px solid #cbddea;
+    border: 1px solid #d1d5db;
     border-radius: 8px;
-    background: #fbfdff;
+    background: #ffffff;
 
     font-size: 13px;
 }
@@ -175,10 +175,10 @@
     height: 38px;
     padding: 0 11px;
 
-    border: 1px solid #cbddea;
+    border: 1px solid #d1d5db;
     border-radius: 8px;
 
-    background: #fbfdff;
+    background: #ffffff;
 
     font-size: 13px;
 }
@@ -269,6 +269,11 @@
 .punch-in-time {
     color: #15803d;
     font-weight: 600;
+}
+
+.punch-out-time {
+    color: #dc3545;
+    font-weight: 700;
 }
 
 .attendance-export-menu {

@@ -119,6 +119,89 @@ a {
   color: #fff;
 }
 
+.employee-request-review-panel {
+  margin-bottom: 28px;
+  padding: 20px 22px;
+  border: 1px solid #d7e7f3;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(35, 91, 130, .06);
+}
+
+.employee-request-review-heading,
+.employee-request-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.employee-request-review-heading {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.employee-request-review-heading h2 {
+  margin: 0;
+  color: #102a43;
+  font-size: 17px;
+}
+
+.employee-request-review-heading p {
+  margin: 5px 0 0;
+  color: #000;
+  font-size: 12px;
+}
+
+.employee-request-review-heading > span,
+.employee-request-review-status {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fff1d6;
+  color: #a86200;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.employee-request-review-list {
+  display: grid;
+}
+
+.employee-request-review-item {
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.employee-request-review-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.employee-request-review-item > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.employee-request-review-item strong { color: #102a43; font-size: 13px; }
+.employee-request-review-item span { color: #000; font-size: 11px; }
+.employee-request-review-actions { display: flex; align-items: center; gap: 7px; }
+.employee-request-review-status.approved { background: #dcfce7; color: #07804b; }
+.employee-request-review-status.rejected { background: #fee2e2; color: #b91c1c; }
+.approve-request-button,
+.reject-request-button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.approve-request-button { background: #07804b; }
+.reject-request-button { background: #b91c1c; }
+.employee-request-review-empty { padding: 22px 0 2px; color: #000; font-size: 12px; }
+
 .header-right {
   display: flex;
   align-items: center;
@@ -308,6 +391,19 @@ a {
   color: #03a9f4;
 }
 
+.notification-item.is-read,
+.notification-item.is-read .notification-arrow {
+  opacity: 0.7;
+}
+
+.notification-status {
+  margin-top: 4px;
+  color: #000;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .notification-empty {
   padding: 24px 17px;
   color: #718096;
@@ -333,6 +429,13 @@ a {
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-info {
@@ -349,7 +452,7 @@ a {
 
 .profile-info small {
   font-size: 11px;
-  color: #8a9aae;
+  color: #000000;
 }
 
 
@@ -505,7 +608,7 @@ a {
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .stat-link {
@@ -514,10 +617,10 @@ a {
   gap: 4px;
   width: fit-content;
   margin-top: auto;
-  padding-top: 10px;
+  padding-top: 12px;
   color: #03a9f4;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .stat-link:hover {
@@ -525,15 +628,15 @@ a {
 }
 
 .stat-content h3 {
-  font-size: 25px;
+  font-size: 34px;
 }
 
 .stat-content > span {
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .stat-content small {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .employee-icon {
@@ -559,24 +662,26 @@ a {
 .stat-content > span {
   display: block;
   color: #718096;
-  font-size: 12px;
-  margin-bottom: 5px;
-  line-height: 1.25;
+  font-size: 15px;
+  margin-bottom: 6px;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
 .stat-content h3 {
   margin: 0;
-  font-size: 27px;
+  font-size: 32px;
   line-height: 1.1;
   color: #102a43;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .stat-content small {
   display: block;
-  margin-top: 7px;
-  font-size: 11px;
+  margin-top: 8px;
+  font-size: 13px;
   color: #12a99b;
+  font-weight: 600;
 }
 
 /* Keep Leave Management card styles from affecting the dashboard card. */
@@ -601,7 +706,7 @@ a {
 .stats-grid .stat-card.leave-card .stat-content h3 {
   margin: 0;
   color: #102a43;
-  font-size: 27px;
+  font-size: 32px;
   line-height: 1.1;
 }
 
@@ -1043,6 +1148,35 @@ a {
 .clock-meta span:nth-child(3) { color: #ffbd12; }
 .clock-meta strong { display: block; margin-top: 4px; color: #173b5f; font-size: 10px; }
 .clock-person em { margin-left: 4px; padding: 2px 4px; border-radius: 3px; background: #e50914; color: #fff; font-size: 9px; font-style: normal; }
+
+/* Use black for the dashboard's secondary text. */
+.dashboard-main .dashboard-header p,
+.dashboard-main .welcome-copy p,
+.dashboard-main .welcome-actions a,
+.dashboard-main .notification-header span,
+.dashboard-main .notification-header button,
+.dashboard-main .notification-copy > small,
+.dashboard-main .notification-copy > span,
+.dashboard-main .notification-empty,
+.dashboard-main .profile-info small,
+.dashboard-main .section-heading p,
+.dashboard-main .today,
+.dashboard-main .stat-content > span,
+.dashboard-main .panel-header p,
+.dashboard-main .attendance-summary span,
+.dashboard-main .progress-label,
+.dashboard-main .leave-info span,
+.dashboard-main .employee-total,
+.dashboard-main .status-label,
+.dashboard-main .top-performer small,
+.dashboard-main .clock-person small,
+.dashboard-main .performance,
+.dashboard-main .gauge-inner,
+.dashboard-main .attendance-legend div,
+.dashboard-main .absentees-row,
+.dashboard-main .clock-meta span {
+  color: #000000;
+}
 
 
 /* ================= RESPONSIVE ================= */

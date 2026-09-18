@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import "./Sidebar.css";
+import { purgeAllChatStorage } from "../../assistant/HRAssistant";
 
 function Sidebar({ collapsed, onToggle }) {
   const navigate = useNavigate();
@@ -61,6 +62,8 @@ function Sidebar({ collapsed, onToggle }) {
           type="button"
           className="sidebar-link sidebar-button"
           onClick={() => {
+            purgeAllChatStorage();
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
             sessionStorage.removeItem("loggedInHR");
             navigate("/login", { replace: true });
           }}

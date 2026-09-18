@@ -9,8 +9,8 @@
   --bg-soft: #f5f7fb;
   --card-bg: #ffffff;
   --line: #dbe5ed;
-  --text: #12304a;
-  --muted: #64748b;
+  --text: #000000;
+  --muted: #000000;
   --shadow: rgba(18, 48, 74, 0.12);
 }
 
@@ -57,4 +57,25 @@ button,
   border: 0;
   border-radius: 8px;
   box-shadow: 0 6px 16px rgba(3, 169, 244, 0.18);
+}
+
+/* Use black for muted text and form values across the application. */
+:is(
+  .dashboard-content,
+  .employee-main,
+  .hero-content,
+  .features,
+  .login-card,
+  .login-box,
+  .forgot-password-page,
+  .reset-password-page,
+  .verify-otp-page,
+  .candidate-jobs-page
+) :is(p, small, label, td, em, input, select, textarea) {
+  color: #000000;
+}
+
+/* Keep intentionally light text on dark branding surfaces. */
+:is(.login-left, .hr-login-left, .employee-sidebar) :is(p, small, label, td, em) {
+  color: #ffffff;
 }

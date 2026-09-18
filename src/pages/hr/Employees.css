@@ -1600,8 +1600,12 @@
 .employees-page .modal-body {
     display: block !important;
     width: 100% !important;
-    padding: 24px !important;
+    padding: 10px 24px 24px !important;
     overflow-x: hidden !important;
+}
+
+.employees-page .employee-form > h3:first-child {
+    margin-top: 0;
 }
 
 /* Employee profile must be normal vertical flow */

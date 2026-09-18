@@ -47,7 +47,16 @@ const fetchAttendance = async () => {
             return;
         }
 
-        const formattedData = data.map((item) => ({
+        const formattedData = data.map((item) => {
+            const workingMinutes = Number(item.working_minutes) || 0;
+            const normalWorkingMinutes = item.normal_working_minutes == null
+                ? Math.min(workingMinutes, 540)
+                : Number(item.normal_working_minutes) || 0;
+            const overtimeMinutes = item.overtime_minutes == null
+                ? Math.max(0, workingMinutes - 540)
+                : Number(item.overtime_minutes) || 0;
+
+            return {
             employeeID: item.employee_id,
             employeeName: item.employee_name || "",
             department: item.department || "",
@@ -55,11 +64,13 @@ const fetchAttendance = async () => {
             punchIn: item.punch_in || "-",
             punchOut: item.punch_out || "-",
             status: item.status || "Present",
-            workingMinutes: Number(item.working_minutes) || 0,
+            workingMinutes,
+            normalWorkingMinutes,
+            overtimeMinutes,
             lateMinutes: Number(item.late_minutes) || 0,
-            shift: item.shift || "09:00 - 18:00",
-            project: item.project || "-"
-        }));
+            shift: item.shift || "09:00 - 18:00"
+            };
+        });
 
         console.log("Formatted attendance:", formattedData);
 
@@ -166,15 +177,17 @@ const fetchAttendance = async () => {
     };
 
     const formatWorkingHours = (minutes) => {
-    if (!minutes || minutes <= 0) {
-        return "0h 0m";
-    }
+        if (!minutes || minutes <= 0) return "00:00:00";
 
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
+        const totalSeconds = Math.round(Number(minutes) * 60);
+        const hours = Math.floor(totalSeconds / 3600);
+        const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
 
-    return `${hours}h ${remainingMinutes}m`;
-};
+        return [hours, remainingMinutes, seconds]
+            .map((value) => String(value).padStart(2, "0"))
+            .join(":");
+    };
 
     const formatAttendanceTime = (time) => {
         if (!time || time === "-") {
@@ -236,7 +249,7 @@ const fetchAttendance = async () => {
 
         const headers = [
             "Employee ID", "Employee Name", "Department", "Date", "Punch In",
-            "Status", "Punch Out", "Working Hours", "Late", "Shift", "Project",
+            "Status", "Punch Out", "Shift", "Normal Working Hours", "Overtime", "Late", "Working Hours",
         ];
         const rows = filteredAttendance.map((employee) => [
             employee.employeeID,
@@ -246,10 +259,11 @@ const fetchAttendance = async () => {
             formatAttendanceTime(employee.punchIn),
             employee.status,
             formatAttendanceTime(employee.punchOut),
-            employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes),
-            employee.lateMinutes > 0 ? `${employee.lateMinutes} min` : "0 min",
             employee.shift,
-            employee.project,
+            employee.punchOut === "-" ? "-" : formatWorkingHours(employee.normalWorkingMinutes),
+            employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes),
+            formatWorkingHours(employee.lateMinutes),
+            employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes),
         ]);
         const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
         const csv = [headers, ...rows]
@@ -403,10 +417,11 @@ const fetchAttendance = async () => {
                                 <th>Punch In</th>
                                 <th>Status</th>
                                 <th>Punch Out</th>
-                                <th>Working Hours</th>
-                                <th>Late</th>
                                 <th>Shift</th>
-                                <th>Project</th>
+                                <th>Normal Working Hours</th>
+                                <th>Overtime</th>
+                                <th>Late</th>
+                                <th>Working Hours</th>
                             </tr>
                         </thead>
 
@@ -461,27 +476,29 @@ const fetchAttendance = async () => {
                                     </td>
 
                                     <td>
-                                        {formatAttendanceTime(employee.punchOut)}
-                                    </td>
-
-                                    <td className="working-hours">
-                                        {employee.punchOut === "-"
-                                        ? "-"
-                                        : formatWorkingHours(employee.workingMinutes)}
-                                    </td>
-
-                                    <td>
-                                        {employee.lateMinutes > 0
-                                            ? `${employee.lateMinutes} min`
-                                            : "0 min"}
+                                        <span className="punch-out-time">
+                                            {formatAttendanceTime(employee.punchOut)}
+                                        </span>
                                     </td>
 
                                     <td>
                                         {employee.shift}
                                     </td>
 
-                                    <td>
-                                        {employee.project}
+                                    <td className="working-hours">
+                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.normalWorkingMinutes)}
+                                    </td>
+
+                                    <td className="overtime-hours">
+                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes)}
+                                    </td>
+
+                                    <td className="late-duration">
+                                        {formatWorkingHours(employee.lateMinutes)}
+                                    </td>
+
+                                    <td className="working-hours total-working-hours">
+                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes)}
                                     </td>
 
                                 </tr>

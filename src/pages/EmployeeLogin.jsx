@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./EmployeeLogin.css";
 
-const API_URL = "https://hrms-cuoq.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 function EmployeeLogin() {
     const navigate = useNavigate();
@@ -22,36 +22,27 @@ function EmployeeLogin() {
         try {
             setLoading(true);
 
-            const response = await fetch(
-                `${API_URL}/api/employees`
-            );
+            const response = await fetch(`${API_URL}/api/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    employee_id: employeeId.trim(),
+                    password,
+                }),
+            });
+
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error("Failed to fetch employees");
-            }
-
-            const employees = await response.json();
-
-            const employee = employees.find(
-                (item) =>
-                    String(item.employee_id).toLowerCase() ===
-                        employeeId.trim().toLowerCase() &&
-                    String(item.password) === password
-            );
-
-            if (!employee) {
-                alert("Invalid Employee ID or Password");
+                alert(data.message || "Invalid Employee ID or Password");
                 return;
             }
 
-            if (employee.status !== "Active") {
-                alert("Your employee account is inactive");
-                return;
-            }
-
-            localStorage.setItem(
+            sessionStorage.setItem(
                 "loggedInEmployee",
-                JSON.stringify(employee)
+                JSON.stringify(data.employee)
             );
 
             navigate("/employee-dashboard");

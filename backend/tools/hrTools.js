@@ -2,10 +2,11 @@ import pool from "../db.js";
 
 /**
  * HR / Admin Tools - Authorized functions available strictly to users with role === 'hr'.
+ * Provides company-wide read and administrative write preparation for HR managers.
  */
 
 // 1. Get Employee Listing
-export async function getEmployees({ department, status = "Active", limit = 20 }) {
+export async function getEmployees({ department, status = "Active", limit = 20 } = {}) {
     let query = `
         SELECT 
             id,
@@ -73,6 +74,10 @@ export async function getEmployeeDetails({ employeeId }) {
             e.address,
             e.employment_type,
             e.emergency_contact,
+            e.passport_no,
+            e.passport_exp_date,
+            e.nationality,
+            e.marital_status,
             e.role,
             COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
             COALESCE((SELECT row_to_json(ed) FROM employee_education ed WHERE ed.employee_id = e.employee_id ORDER BY ed.id DESC LIMIT 1), '{}'::json) AS education,
@@ -86,7 +91,29 @@ export async function getEmployeeDetails({ employeeId }) {
         return { error: `Employee not found with ID ${employeeId}` };
     }
 
-    return result.rows[0];
+    const emp = result.rows[0];
+    return {
+        employeeId: emp.employee_id,
+        name: emp.name,
+        department: emp.department,
+        designation: emp.designation,
+        email: emp.email,
+        phone: emp.phone,
+        status: emp.status,
+        role: emp.role,
+        joiningDate: emp.joining_date ? new Date(emp.joining_date).toISOString().slice(0, 10) : null,
+        dateOfBirth: emp.date_of_birth ? new Date(emp.date_of_birth).toISOString().slice(0, 10) : null,
+        gender: emp.gender,
+        address: emp.address,
+        employmentType: emp.employment_type,
+        emergencyContact: emp.emergency_contact,
+        nationality: emp.nationality,
+        maritalStatus: emp.marital_status,
+        passportNumber: emp.passport_no || "None",
+        passportExpiryDate: emp.passport_exp_date ? new Date(emp.passport_exp_date).toISOString().slice(0, 10) : "None",
+        bank: emp.bank?.bank_name ? { bankName: emp.bank.bank_name, accountType: emp.bank.account_type } : null,
+        education: emp.education?.qualification ? { qualification: emp.education.qualification, institution: emp.education.institution } : null
+    };
 }
 
 // 3. Get Employee Count & Department Breakdown
@@ -140,7 +167,7 @@ export async function getAttendanceOverview({ date } = {}) {
     const lateCount = countsRes.rows[0].late_count;
     const absentCount = Math.max(0, totalActive - presentCount);
 
-    // Get list of absent employees
+    // Sample list of absent employees
     const absentEmployeesRes = await pool.query(`
         SELECT e.employee_id, e.name, e.department
         FROM employees e
@@ -164,8 +191,48 @@ export async function getAttendanceOverview({ date } = {}) {
     };
 }
 
-// 5. Get Leave Requests Across Company
-export async function getLeaveRequests({ status = "Pending", limit = 15 }) {
+// 5. Get Attendance Details for a Specific Employee
+export async function getEmployeeAttendanceDetails({ employeeId, limit = 15 }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const [summaryRes, recordsRes] = await Promise.all([
+        pool.query(`
+            SELECT
+                COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('present', 'on time') AND COALESCE(late_minutes, 0) = 0) AS on_time,
+                COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) = 'late' OR COALESCE(late_minutes, 0) > 0) AS late_attendance,
+                COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('work from home', 'wfh')) AS work_from_home,
+                COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) = 'absent') AS absent,
+                COUNT(*) AS total_recorded_days,
+                COALESCE(SUM(late_minutes), 0) AS total_late_minutes
+            FROM attendance
+            WHERE employee_id = $1
+        `, [employeeId]),
+        pool.query(`
+            SELECT id, attendance_date, punch_in, punch_out, status, late_minutes, shift, project
+            FROM attendance
+            WHERE employee_id = $1
+            ORDER BY attendance_date DESC, id DESC
+            LIMIT $2
+        `, [employeeId, limit])
+    ]);
+
+    return {
+        employeeId,
+        summary: summaryRes.rows[0],
+        recentRecords: recordsRes.rows.map(r => ({
+            date: r.attendance_date ? new Date(r.attendance_date).toISOString().slice(0, 10) : null,
+            status: r.status,
+            punchIn: r.punch_in,
+            punchOut: r.punch_out,
+            lateMinutes: r.late_minutes || 0,
+            shift: r.shift,
+            project: r.project
+        }))
+    };
+}
+
+// 6. Get Leave Requests Across Company
+export async function getLeaveRequests({ status = "Pending", limit = 15 } = {}) {
     let query = `
         SELECT 
             l.id,
@@ -208,12 +275,12 @@ export async function getLeaveRequests({ status = "Pending", limit = 15 }) {
             days: row.days,
             reason: row.reason || "None",
             status: row.status,
-            appliedAt: row.created_at
+            appliedAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : null
         }))
     };
 }
 
-// 6. Prepare Approve or Reject Leave (Requires Confirmation)
+// 7. Prepare Approve or Reject Leave (Requires Confirmation)
 export async function prepareLeaveStatusChange({ leaveId, action }) {
     if (!leaveId || !action) {
         return { error: "Both leaveId and action ('Approve' or 'Reject') are required." };
@@ -253,7 +320,7 @@ export async function prepareLeaveStatusChange({ leaveId, action }) {
     };
 }
 
-// 7. Execute Confirmed Leave Status Change
+// 8. Execute Confirmed Leave Status Change
 export async function executeLeaveStatusChange({ leaveId, newStatus }) {
     const updateRes = await pool.query(`
         UPDATE leaves
@@ -275,7 +342,7 @@ export async function executeLeaveStatusChange({ leaveId, newStatus }) {
     };
 }
 
-// 8. Get Active Job Postings
+// 9. Get Active Job Postings
 export async function getJobOpenings() {
     try {
         const result = await pool.query(`
@@ -294,7 +361,7 @@ export async function getJobOpenings() {
     }
 }
 
-// 9. Get New Joiners
+// 10. Get New Joiners
 export async function getNewJoiners() {
     const result = await pool.query(`
         SELECT employee_id, name, department, designation, joining_date
@@ -317,8 +384,8 @@ export async function getNewJoiners() {
     };
 }
 
-// 10. Get Payroll Overview
-export async function getPayrollOverview({ employeeId, limit = 10 } = {}) {
+// 11. Get Payroll Overview (Company-Wide or Specific Employee)
+export async function getPayrollOverview({ employeeId, limit = 15 } = {}) {
     let query = `
         SELECT 
             p.payroll_id,
@@ -343,7 +410,7 @@ export async function getPayrollOverview({ employeeId, limit = 10 } = {}) {
     }
 
     params.push(limit);
-    query += ` ORDER BY p.salary_month DESC NULLS LAST LIMIT $${params.length}`;
+    query += ` ORDER BY p.salary_month DESC NULLS LAST, p.payroll_id DESC LIMIT $${params.length}`;
 
     try {
         const result = await pool.query(query, params);
@@ -354,10 +421,10 @@ export async function getPayrollOverview({ employeeId, limit = 10 } = {}) {
                 employeeId: r.employee_id,
                 employeeName: r.employee_name,
                 department: r.department,
-                basicSalary: r.basic_salary,
-                allowances: r.allowances,
-                deductions: r.deductions,
-                netSalary: r.net_salary,
+                basicSalary: Number(r.basic_salary) || 0,
+                allowances: Number(r.allowances) || 0,
+                deductions: Number(r.deductions) || 0,
+                netSalary: Number(r.net_salary) || 0,
                 status: r.status,
                 salaryMonth: r.salary_month ? new Date(r.salary_month).toISOString().slice(0, 7) : null
             }))
@@ -367,3 +434,143 @@ export async function getPayrollOverview({ employeeId, limit = 10 } = {}) {
     }
 }
 
+// 12. Get Company-Wide Employee Requests (NOC, Letters, etc.)
+export async function getCompanyEmployeeRequests({ status = "all", employeeId, limit = 15 } = {}) {
+    let query = `
+        SELECT 
+            r.id,
+            r.employee_id,
+            e.name AS employee_name,
+            e.department,
+            r.request_type,
+            r.details,
+            r.status,
+            r.hr_response,
+            r.created_at,
+            r.updated_at
+        FROM employee_requests r
+        LEFT JOIN employees e ON e.employee_id = r.employee_id
+        WHERE 1=1
+    `;
+    const params = [];
+
+    if (status && status.toLowerCase() !== "all") {
+        params.push(status);
+        query += ` AND LOWER(r.status) = LOWER($${params.length})`;
+    }
+
+    if (employeeId) {
+        params.push(employeeId);
+        query += ` AND r.employee_id = $${params.length}`;
+    }
+
+    params.push(limit);
+    query += ` ORDER BY r.created_at DESC, r.id DESC LIMIT $${params.length}`;
+
+    const result = await pool.query(query, params);
+    return {
+        filterStatus: status,
+        totalReturned: result.rows.length,
+        requests: result.rows.map(r => ({
+            requestId: r.id,
+            employeeId: r.employee_id,
+            employeeName: r.employee_name || "Unknown",
+            department: r.department || "-",
+            requestType: r.request_type,
+            details: r.details,
+            status: r.status,
+            hrResponse: r.hr_response || "None",
+            submittedAt: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : null
+        }))
+    };
+}
+
+// 13. Prepare Employee Request Status Change (NOC/Letter approval)
+export async function prepareEmployeeRequestStatusChange({ requestId, action, hrResponse = "" }) {
+    if (!requestId || !action) {
+        return { error: "Both requestId and action ('Approve' or 'Reject') are required." };
+    }
+
+    const normalizedAction = action.trim().toLowerCase() === "approve" ? "Approved" : "Rejected";
+
+    const checkRes = await pool.query(`
+        SELECT r.id, r.employee_id, e.name AS employee_name, r.request_type, r.status
+        FROM employee_requests r
+        LEFT JOIN employees e ON e.employee_id = r.employee_id
+        WHERE r.id = $1
+    `, [requestId]);
+
+    if (checkRes.rows.length === 0) {
+        return { error: `Employee request #${requestId} does not exist.` };
+    }
+
+    const req = checkRes.rows[0];
+    if (req.status !== "Pending") {
+        return { error: `Employee request #${requestId} is already marked as '${req.status}'.` };
+    }
+
+    return {
+        requiresConfirmation: true,
+        actionType: "UPDATE_EMPLOYEE_REQUEST_STATUS",
+        title: `Confirm Request ${normalizedAction}`,
+        summary: `${normalizedAction} ${req.request_type} request (#${req.id}) for ${req.employee_name || req.employee_id}`,
+        payload: {
+            requestId: req.id,
+            newStatus: normalizedAction,
+            hrResponse: (hrResponse || "").trim(),
+            employeeName: req.employee_name || req.employee_id
+        }
+    };
+}
+
+// 14. Execute Confirmed Employee Request Status Change
+export async function executeEmployeeRequestStatusChange({ requestId, newStatus, hrResponse }) {
+    const updateRes = await pool.query(`
+        UPDATE employee_requests
+        SET status = $1, hr_response = $2, updated_at = NOW()
+        WHERE id = $3 AND status = 'Pending'
+        RETURNING id, employee_id, request_type, status, hr_response
+    `, [newStatus, hrResponse || `Request ${newStatus.toLowerCase()} by HR`, requestId]);
+
+    if (updateRes.rows.length === 0) {
+        return { success: false, message: `Could not update request #${requestId}. It may have already been reviewed.` };
+    }
+
+    return {
+        success: true,
+        message: `Request #${requestId} has been successfully ${newStatus.toLowerCase()}.`,
+        request: updateRes.rows[0]
+    };
+}
+
+// 15. Get Employee Documents Admin View
+export async function getEmployeeDocumentsAdmin({ employeeId }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const res = await pool.query(`
+        SELECT employee_id, name, department, designation, passport_no, passport_exp_date,
+               employment_contract_url, offer_letter_url, visa_copy_url, qid_copy_url, passport_copy_url
+        FROM employees WHERE employee_id = $1
+    `, [employeeId]);
+
+    if (res.rows.length === 0) return { error: `Employee not found with ID ${employeeId}` };
+
+    const emp = res.rows[0];
+    const expDate = emp.passport_exp_date ? new Date(emp.passport_exp_date) : null;
+
+    return {
+        employeeId: emp.employee_id,
+        name: emp.name,
+        department: emp.department,
+        designation: emp.designation,
+        passportNumber: emp.passport_no || "None",
+        passportExpiryDate: expDate ? expDate.toISOString().slice(0, 10) : "None",
+        documentsUploaded: {
+            employmentContract: Boolean(emp.employment_contract_url),
+            offerLetter: Boolean(emp.offer_letter_url),
+            visaCopy: Boolean(emp.visa_copy_url),
+            qidCopy: Boolean(emp.qid_copy_url),
+            passportCopy: Boolean(emp.passport_copy_url)
+        }
+    };
+}

@@ -1,14 +1,14 @@
 import express from "express";
 import pool from "../db.js";
 import { processUnifiedAIMessage } from "../services/aiService.js";
-import { executeApplyLeave, executeCancelLeave } from "../tools/employeeTools.js";
-import { executeLeaveStatusChange } from "../tools/hrTools.js";
+import { executeApplyLeave, executeCancelLeave, executeSubmitRequest } from "../tools/employeeTools.js";
+import { executeLeaveStatusChange, executeEmployeeRequestStatusChange } from "../tools/hrTools.js";
 
 const router = express.Router();
 
 /**
  * Helper to authenticate user against the database.
- * Does NOT trust client-supplied role.
+ * Derives role strictly from the database, never trusting client input.
  */
 async function authenticateUser(employeeId) {
     if (!employeeId || typeof employeeId !== "string") {
@@ -56,7 +56,7 @@ router.post("/", async (req, res) => {
         if (!authUser) {
             return res.status(401).json({
                 success: false,
-                message: "Authentication failed. Please log in again to interact with the Shelter HR Assistant."
+                message: "Authentication failed. Please log in again to interact with the Shelter Assistant."
             });
         }
 
@@ -104,7 +104,23 @@ router.post("/", async (req, res) => {
                 });
             }
 
-            // 2C. Update Leave Status (HR Only)
+            // 2C. Submit Employee Request (NOC, Letter)
+            if (actionType === "SUBMIT_REQUEST") {
+                const result = await executeSubmitRequest({
+                    employeeId: authUser.employee_id,
+                    requestType: payload.requestType,
+                    reason: payload.reason
+                });
+
+                return res.json({
+                    success: result.success,
+                    message: result.message,
+                    actionCompleted: true,
+                    request: result.request
+                });
+            }
+
+            // 2D. Update Leave Status (HR Only)
             if (actionType === "UPDATE_LEAVE_STATUS") {
                 if (authUser.role !== "hr") {
                     return res.status(403).json({
@@ -125,6 +141,29 @@ router.post("/", async (req, res) => {
                 });
             }
 
+            // 2E. Update Employee Request Status (HR Only)
+            if (actionType === "UPDATE_EMPLOYEE_REQUEST_STATUS") {
+                if (authUser.role !== "hr") {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Unauthorized. Only HR administrators can approve or reject employee requests."
+                    });
+                }
+
+                const result = await executeEmployeeRequestStatusChange({
+                    requestId: payload.requestId,
+                    newStatus: payload.newStatus,
+                    hrResponse: payload.hrResponse
+                });
+
+                return res.json({
+                    success: result.success,
+                    message: result.message,
+                    actionCompleted: true,
+                    request: result.request
+                });
+            }
+
             return res.status(400).json({
                 success: false,
                 message: `Unknown action type: ${actionType}`
@@ -139,9 +178,16 @@ router.post("/", async (req, res) => {
             });
         }
 
+        // Sanitize conversation history: only retain valid user/assistant messages for the authenticated user
+        const sanitizedHistory = Array.isArray(history)
+            ? history
+                .filter(item => item && typeof item.text === "string" && (item.sender === "user" || item.sender === "assistant"))
+                .slice(-6)
+            : [];
+
         const result = await processUnifiedAIMessage({
             message: message.trim(),
-            history: Array.isArray(history) ? history : [],
+            history: sanitizedHistory,
             authUser
         });
 
@@ -157,4 +203,3 @@ router.post("/", async (req, res) => {
 });
 
 export default router;
-

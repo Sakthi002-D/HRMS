@@ -2,6 +2,7 @@ import pool from "../db.js";
 
 /**
  * Employee Tools - Authorized functions strictly scoped to the authenticated employee.
+ * All employee queries enforce employeeId === authUser.employee_id.
  */
 
 // 1. Get Employee Profile
@@ -50,14 +51,16 @@ export async function getMyProfile({ employeeId }) {
         email: emp.email,
         phone: emp.phone,
         status: emp.status,
-        joiningDate: emp.joining_date,
-        dateOfBirth: emp.date_of_birth,
+        joiningDate: emp.joining_date ? new Date(emp.joining_date).toISOString().slice(0, 10) : null,
+        dateOfBirth: emp.date_of_birth ? new Date(emp.date_of_birth).toISOString().slice(0, 10) : null,
         gender: emp.gender,
         address: emp.address,
         employmentType: emp.employment_type,
         emergencyContact: emp.emergency_contact,
         nationality: emp.nationality,
         maritalStatus: emp.marital_status,
+        passportNumber: emp.passport_no || "Not recorded",
+        passportExpiryDate: emp.passport_exp_date ? new Date(emp.passport_exp_date).toISOString().slice(0, 10) : null,
         bank: emp.bank?.bank_name ? { bankName: emp.bank.bank_name, accountType: emp.bank.account_type } : null,
         education: emp.education?.qualification ? { qualification: emp.education.qualification, institution: emp.education.institution } : null
     };
@@ -128,7 +131,7 @@ export async function getMyLeaveRequests({ employeeId, status, limit = 10 }) {
             days: row.days,
             reason: row.reason || "Not specified",
             status: row.status,
-            appliedAt: row.created_at
+            appliedAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : null
         }))
     };
 }
@@ -169,7 +172,299 @@ export async function getMyAttendance({ employeeId, limit = 10 }) {
     };
 }
 
-// 5. Prepare Apply Leave (Returns confirmation proposal, does NOT write to DB)
+// 5. Get Employee Attendance Summary (On time, Late, WFH, Absent, Total Days)
+export async function getMyAttendanceSummary({ employeeId }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const result = await pool.query(`
+        SELECT
+            COUNT(*) FILTER (
+                WHERE LOWER(COALESCE(status, '')) IN ('present', 'on time')
+                  AND COALESCE(late_minutes, 0) = 0
+            ) AS on_time,
+            COUNT(*) FILTER (
+                WHERE LOWER(COALESCE(status, '')) = 'late'
+                   OR COALESCE(late_minutes, 0) > 0
+            ) AS late_attendance,
+            COUNT(*) FILTER (
+                WHERE LOWER(COALESCE(status, '')) IN ('work from home', 'wfh')
+            ) AS work_from_home,
+            COUNT(*) FILTER (
+                WHERE LOWER(COALESCE(status, '')) = 'absent'
+            ) AS absent,
+            COUNT(*) AS total_recorded_days,
+            COALESCE(SUM(late_minutes), 0) AS total_late_minutes
+        FROM attendance
+        WHERE employee_id = $1
+    `, [employeeId]);
+
+    const row = result.rows[0];
+    return {
+        employeeId,
+        onTimeDays: Number(row.on_time) || 0,
+        lateDays: Number(row.late_attendance) || 0,
+        workFromHomeDays: Number(row.work_from_home) || 0,
+        absentDays: Number(row.absent) || 0,
+        totalRecordedDays: Number(row.total_recorded_days) || 0,
+        totalLateMinutes: Number(row.total_late_minutes) || 0
+    };
+}
+
+// 6. Get Employee Payroll & Payslip Details
+export async function getMyPayroll({ employeeId, limit = 6 }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const query = `
+        SELECT 
+            s.payroll_id AS id,
+            s.employee_id,
+            e.name AS employee_name,
+            s.salary_month,
+            s.basic_salary,
+            s.allowances,
+            s.deductions,
+            s.net_salary,
+            s.status,
+            CASE WHEN LOWER(COALESCE(s.status, '')) = 'processed' THEN 'Transferred' ELSE 'Pending' END AS transfer_status,
+            s.created_at
+        FROM employee_payroll s
+        JOIN employees e ON e.employee_id = s.employee_id
+        WHERE s.employee_id = $1
+        ORDER BY s.salary_month DESC NULLS LAST, s.payroll_id DESC
+        LIMIT $2
+    `;
+
+    const result = await pool.query(query, [employeeId, limit]);
+    if (result.rows.length === 0) {
+        return {
+            employeeId,
+            message: "No payroll records or payslips have been generated yet for your account. Please check back later or contact HR.",
+            recordsCount: 0,
+            latestPayslip: null,
+            history: []
+        };
+    }
+
+    const latest = result.rows[0];
+    return {
+        employeeId,
+        recordsCount: result.rows.length,
+        latestPayslip: {
+            salaryMonth: latest.salary_month ? new Date(latest.salary_month).toISOString().slice(0, 7) : "Current",
+            basicSalary: Number(latest.basic_salary) || 0,
+            allowances: Number(latest.allowances) || 0,
+            deductions: Number(latest.deductions) || 0,
+            netSalary: Number(latest.net_salary) || 0,
+            paymentStatus: latest.status,
+            transferStatus: latest.transfer_status
+        },
+        history: result.rows.map(r => ({
+            payrollId: r.id,
+            salaryMonth: r.salary_month ? new Date(r.salary_month).toISOString().slice(0, 7) : null,
+            basicSalary: Number(r.basic_salary) || 0,
+            allowances: Number(r.allowances) || 0,
+            deductions: Number(r.deductions) || 0,
+            netSalary: Number(r.net_salary) || 0,
+            status: r.status,
+            transferStatus: r.transfer_status
+        }))
+    };
+}
+
+// 7. Get Employee Uploaded Documents and Expiry Status
+export async function getMyDocuments({ employeeId }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const result = await pool.query(`
+        SELECT 
+            employee_id,
+            name,
+            passport_no,
+            passport_exp_date,
+            employment_contract_url,
+            offer_letter_url,
+            visa_copy_url,
+            qid_copy_url,
+            passport_copy_url
+        FROM employees
+        WHERE employee_id = $1
+    `, [employeeId]);
+
+    if (result.rows.length === 0) {
+        return { error: `Employee record not found for ID ${employeeId}` };
+    }
+
+    const emp = result.rows[0];
+    const expDate = emp.passport_exp_date ? new Date(emp.passport_exp_date) : null;
+    let isExpiringSoon = false;
+    let daysUntilExpiry = null;
+
+    if (expDate) {
+        const today = new Date();
+        const diffTime = expDate - today;
+        daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+    }
+
+    return {
+        employeeId,
+        passportNumber: emp.passport_no || "Not recorded",
+        passportExpiryDate: expDate ? expDate.toISOString().slice(0, 10) : "Not recorded",
+        daysUntilPassportExpiry: daysUntilExpiry,
+        passportExpiringSoon: isExpiringSoon,
+        documents: {
+            employmentContract: Boolean(emp.employment_contract_url),
+            offerLetter: Boolean(emp.offer_letter_url),
+            visaCopy: Boolean(emp.visa_copy_url),
+            qidCopy: Boolean(emp.qid_copy_url),
+            passportCopy: Boolean(emp.passport_copy_url)
+        }
+    };
+}
+
+// 8. Get Employee Requests (NOC, Letters, etc.)
+export async function getMyRequests({ employeeId, status, limit = 10 }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    let query = `
+        SELECT id, employee_id, request_type, details, status, hr_response, created_at, updated_at
+        FROM employee_requests
+        WHERE employee_id = $1
+    `;
+    const params = [employeeId];
+
+    if (status && status.toLowerCase() !== "all") {
+        query += ` AND LOWER(status) = LOWER($2)`;
+        params.push(status.toLowerCase());
+    }
+
+    query += ` ORDER BY created_at DESC, id DESC LIMIT $${params.length + 1}`;
+    params.push(limit);
+
+    const result = await pool.query(query, params);
+    return {
+        employeeId,
+        filterStatus: status || "all",
+        totalRequests: result.rows.length,
+        requests: result.rows.map(r => ({
+            requestId: r.id,
+            requestType: r.request_type,
+            details: r.details,
+            status: r.status,
+            hrResponse: r.hr_response || "Awaiting HR review",
+            submittedAt: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : null,
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : null
+        }))
+    };
+}
+
+// 9. Prepare Submit Request (e.g. NOC, Letter)
+export async function prepareSubmitRequest({ employeeId, requestType, reason = "" }) {
+    if (!employeeId || !requestType) {
+        return { error: "Employee ID and requestType (e.g., 'NOC Request', 'Experience Letter', 'Salary Certificate') are required." };
+    }
+
+    return {
+        requiresConfirmation: true,
+        actionType: "SUBMIT_REQUEST",
+        title: "Confirm Request Submission",
+        summary: `Submit a new ${requestType} request to HR`,
+        payload: {
+            employeeId,
+            requestType,
+            reason: (reason || "").trim()
+        }
+    };
+}
+
+// 10. Execute Confirmed Submit Request
+export async function executeSubmitRequest({ employeeId, requestType, reason }) {
+    const details = reason ? { reason } : {};
+    const insertQuery = `
+        INSERT INTO employee_requests (employee_id, request_type, details, status, created_at, updated_at)
+        VALUES ($1, $2, $3::jsonb, 'Pending', NOW(), NOW())
+        RETURNING id, employee_id, request_type, details, status, created_at
+    `;
+
+    const result = await pool.query(insertQuery, [employeeId, requestType, JSON.stringify(details)]);
+    const newReq = result.rows[0];
+    return {
+        success: true,
+        message: `Your ${requestType} request (#${newReq.id}) has been submitted successfully to HR. Current status is 'Pending'.`,
+        request: newReq
+    };
+}
+
+// 11. Get Employee Notifications
+export async function getMyNotifications({ employeeId }) {
+    if (!employeeId) throw new Error("Employee ID is required");
+
+    const [leaveResult, payrollResult, documentResult, requestResult] = await Promise.all([
+        pool.query(
+            `SELECT id, leave_type, status, days, created_at 
+             FROM leaves 
+             WHERE employee_id = $1 AND LOWER(status) IN ('approved', 'rejected') 
+             ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 5`,
+            [employeeId]
+        ),
+        pool.query(
+            `SELECT payroll_id AS id, salary_month, status, updated_at 
+             FROM employee_payroll 
+             WHERE employee_id = $1 AND LOWER(COALESCE(status, '')) IN ('processed', 'released') 
+             ORDER BY updated_at DESC NULLS LAST, payroll_id DESC LIMIT 5`,
+            [employeeId]
+        ),
+        pool.query(
+            `SELECT passport_exp_date 
+             FROM employees 
+             WHERE employee_id = $1 AND passport_exp_date IS NOT NULL 
+               AND passport_exp_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'`,
+            [employeeId]
+        ),
+        pool.query(
+            `SELECT id, request_type, status, hr_response, updated_at 
+             FROM employee_requests 
+             WHERE employee_id = $1 AND status <> 'Pending' 
+             ORDER BY updated_at DESC LIMIT 5`,
+            [employeeId]
+        )
+    ]);
+
+    const notifications = [
+        ...leaveResult.rows.map(leave => ({
+            type: "leave",
+            title: `Leave ${leave.status}`,
+            message: `${leave.leave_type} request (${leave.days || 1} days) has been ${leave.status}.`,
+            date: leave.created_at ? new Date(leave.created_at).toISOString().slice(0, 10) : null
+        })),
+        ...payrollResult.rows.map(payroll => ({
+            type: "payroll",
+            title: "Payroll Released",
+            message: `Your salary payslip is available for ${payroll.salary_month ? new Date(payroll.salary_month).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "the latest month"}.`,
+            date: payroll.updated_at ? new Date(payroll.updated_at).toISOString().slice(0, 10) : null
+        })),
+        ...documentResult.rows.map(doc => ({
+            type: "document",
+            title: "Passport Expiring Soon",
+            message: `Your passport is expiring on ${new Date(doc.passport_exp_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}. Please initiate renewal.`,
+            date: new Date().toISOString().slice(0, 10)
+        })),
+        ...requestResult.rows.map(req => ({
+            type: "request",
+            title: `Request ${req.status}`,
+            message: `Your ${req.request_type} request was ${req.status.toLowerCase()}.${req.hr_response ? ` HR Note: "${req.hr_response}"` : ""}`,
+            date: req.updated_at ? new Date(req.updated_at).toISOString().slice(0, 10) : null
+        }))
+    ];
+
+    return {
+        employeeId,
+        totalNotifications: notifications.length,
+        notifications
+    };
+}
+
+// 12. Prepare Apply Leave (Returns confirmation proposal, does NOT write to DB)
 export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave", fromDate, toDate, reason = "" }) {
     if (!employeeId) throw new Error("Employee ID is required");
     if (!fromDate || !toDate) {
@@ -199,12 +494,12 @@ export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave"
             fromDate,
             toDate,
             days,
-            reason: reason.trim()
+            reason: (reason || "").trim()
         }
     };
 }
 
-// 6. Execute Confirmed Apply Leave
+// 13. Execute Confirmed Apply Leave
 export async function executeApplyLeave({ employeeId, leaveType, fromDate, toDate, days, reason }) {
     const calculatedDays = days || Math.max(1, Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1);
 
@@ -229,18 +524,18 @@ export async function executeApplyLeave({ employeeId, leaveType, fromDate, toDat
         fromDate,
         toDate,
         calculatedDays,
-        reason || "Applied via Shelter HR Assistant"
+        reason || "Applied via Shelter Assistant"
     ]);
 
     const newLeave = result.rows[0];
     return {
         success: true,
-        message: `Leave application submitted successfully for ${newLeave.days} day(s) (${newLeave.from_date.toISOString().slice(0, 10)} to ${newLeave.to_date.toISOString().slice(0, 10)}). Status is currently 'Pending'.`,
+        message: `Leave application submitted successfully for ${newLeave.days} day(s) (${newLeave.from_date ? new Date(newLeave.from_date).toISOString().slice(0, 10) : fromDate} to ${newLeave.to_date ? new Date(newLeave.to_date).toISOString().slice(0, 10) : toDate}). Status is currently 'Pending'.`,
         leave: newLeave
     };
 }
 
-// 7. Prepare Cancel Leave (Requires Confirmation)
+// 14. Prepare Cancel Leave (Requires Confirmation)
 export async function prepareCancelLeave({ employeeId, leaveId }) {
     if (!employeeId || !leaveId) {
         return { error: "Leave ID and Employee ID are required to cancel a leave request." };
@@ -275,7 +570,7 @@ export async function prepareCancelLeave({ employeeId, leaveId }) {
     };
 }
 
-// 8. Execute Confirmed Cancel Leave
+// 15. Execute Confirmed Cancel Leave
 export async function executeCancelLeave({ employeeId, leaveId }) {
     const updateQuery = `
         UPDATE leaves
@@ -300,4 +595,3 @@ export async function executeCancelLeave({ employeeId, leaveId }) {
         message: `Leave request #${leaveId} has been successfully cancelled.`
     };
 }
-

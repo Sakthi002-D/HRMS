@@ -4,17 +4,18 @@
   left: 0;
   width: 250px;
   height: 100vh;
-  background: #0d1420;
+  background: #11161f;
   padding: 24px 16px;
   box-sizing: border-box;
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: width 0.2s ease;
+  box-shadow: 8px 0 24px rgba(15, 23, 42, .12);
 }
 
 .sidebar-section-title {
   margin: 28px 12px 13px;
-  color: #9bb6cc;
+  color: #a7adb7;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.6px;
@@ -27,7 +28,7 @@
   height: 90px;
   margin: -8px 0 6px;
   border-bottom: 1px solid rgba(255,255,255,.14);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -42,7 +43,7 @@
 .sidebar-collapse-button {
   position: absolute;
   top: 9px;
-  right: 0;
+  right: -12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -51,15 +52,21 @@
   padding: 0;
   border: 0;
   border-radius: 5px;
-  background: transparent;
+  background: #11161f;
   box-shadow: none;
-  color: #9bb6cc;
+  color: #ffffff;
+  outline: none;
   cursor: pointer;
 }
 
 .sidebar-collapse-button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #292f39;
   color: #ffffff;
+}
+
+.sidebar-collapse-button:focus-visible {
+  outline: 1px solid #ffffff;
+  outline-offset: 1px;
 }
 
 .sidebar-menu {
@@ -73,7 +80,7 @@
   align-items: center;
   gap: 14px;
   height: 46px;
-  color: #d7e5f0;
+  color: #d9dde3;
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
@@ -81,7 +88,7 @@
   padding: 0 15px;
   margin: 3px 0;
   border-radius: 9px;
-  transition: all 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s ease, background-color 0.2s ease;
 }
 
 .sidebar-link svg {
@@ -95,10 +102,11 @@
 .sidebar-link.active {
   background: #202733;
   box-shadow: none;
+  transform: translateX(4px);
 }
 
 .sidebar-link.active svg {
-  color: #08a7f8;
+  color: #ff7043;
 }
 
 .sidebar-button {
@@ -110,8 +118,13 @@
   cursor: pointer;
 }
 
+.sidebar-link:hover {
+  transform: translateX(4px);
+}
+
 .sidebar-account {
   margin-top: auto;
+  transform: translateY(32px);
 }
 
 .sidebar.collapsed {

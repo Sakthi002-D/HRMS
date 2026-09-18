@@ -8,10 +8,10 @@ import {
 
 const DEFAULT_GEMINI_MODELS = [
     "gemini-flash-latest",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.6-flash"
+    "gemini-flash-lite-latest"
 ];
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function processGeminiRequest({
     message,
@@ -63,104 +63,105 @@ export async function processGeminiRequest({
     let lastError = null;
 
     for (const targetModel of candidateModels) {
-        const contents = JSON.parse(JSON.stringify(initialContents));
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const contents = JSON.parse(JSON.stringify(initialContents));
 
-        try {
-            let turn = 0;
-            const maxTurns = 5;
+            try {
+                let turn = 0;
+                const maxTurns = 5;
 
-            while (turn < maxTurns) {
-                turn++;
+                while (turn < maxTurns) {
+                    turn++;
 
-                const response = await ai.models.generateContent({
-                    model: targetModel,
-                    contents,
-                    config: {
-                        systemInstruction,
-                        tools: geminiTools
-                    }
-                });
-
-                const candidate = response.candidates?.[0];
-                const functionCalls = response.functionCalls || 
-                    candidate?.content?.parts?.filter(p => p.functionCall).map(p => p.functionCall);
-
-                if (functionCalls && functionCalls.length > 0) {
-                    contents.push(candidate.content);
-
-                    const responseParts = [];
-                    let pendingConfirmation = null;
-
-                    for (const call of functionCalls) {
-                        const result = await executeToolByName(call.name, call.args || {}, authUser);
-
-                        if (result?.requiresConfirmation) {
-                            pendingConfirmation = result;
+                    const response = await ai.models.generateContent({
+                        model: targetModel,
+                        contents,
+                        config: {
+                            systemInstruction,
+                            tools: geminiTools
                         }
-
-                        responseParts.push({
-                            functionResponse: {
-                                name: call.name,
-                                response: { output: result }
-                            }
-                        });
-                    }
-
-                    contents.push({
-                        role: "user",
-                        parts: responseParts
                     });
 
-                    if (pendingConfirmation) {
-                        const followUp = await ai.models.generateContent({
-                            model: targetModel,
-                            contents,
-                            config: {
-                                systemInstruction
+                    const candidate = response.candidates?.[0];
+                    const functionCalls = response.functionCalls || 
+                        candidate?.content?.parts?.filter(p => p.functionCall).map(p => p.functionCall);
+
+                    if (functionCalls && functionCalls.length > 0) {
+                        contents.push(candidate.content);
+
+                        const responseParts = [];
+                        let pendingConfirmation = null;
+
+                        for (const call of functionCalls) {
+                            const result = await executeToolByName(call.name, call.args || {}, authUser);
+
+                            if (result?.requiresConfirmation) {
+                                pendingConfirmation = result;
                             }
+
+                            responseParts.push({
+                                functionResponse: {
+                                    name: call.name,
+                                    response: { output: result }
+                                }
+                            });
+                        }
+
+                        contents.push({
+                            role: "user",
+                            parts: responseParts
                         });
 
-                        return {
-                            success: true,
-                            message: followUp.text || "Please review and confirm the action below:",
-                            requiresConfirmation: true,
-                            confirmation: pendingConfirmation
-                        };
+                        if (pendingConfirmation) {
+                            const followUp = await ai.models.generateContent({
+                                model: targetModel,
+                                contents,
+                                config: {
+                                    systemInstruction
+                                }
+                            });
+
+                            return {
+                                success: true,
+                                message: followUp.text || "Please review and confirm the action below:",
+                                requiresConfirmation: true,
+                                confirmation: pendingConfirmation
+                            };
+                        }
+
+                        continue;
                     }
 
-                    continue;
+                    return {
+                        success: true,
+                        message: response.text || "I processed your request.",
+                        requiresConfirmation: false
+                    };
                 }
 
                 return {
                     success: true,
-                    message: response.text || "I processed your request.",
-                    requiresConfirmation: false
+                    message: "I processed your request, but the query required multiple steps. How else can I help?"
                 };
+
+            } catch (error) {
+                lastError = error;
+                const isRetryable = 
+                    error.status === 429 || 
+                    error.status === 503 || 
+                    error.status === 500 ||
+                    error.message?.includes("quota") || 
+                    error.message?.includes("RESOURCE_EXHAUSTED") ||
+                    error.message?.includes("high demand") ||
+                    error.message?.includes("UNAVAILABLE");
+
+                if (isRetryable && attempt === 0) {
+                    console.warn(`[GeminiAdapter] Attempt 1 for model '${targetModel}' failed (${error.status || error.message?.slice(0, 60)}). Retrying in 1500ms...`);
+                    await sleep(1500);
+                    continue;
+                }
+                break;
             }
-
-            return {
-                success: true,
-                message: "I processed your request, but the query required multiple steps. How else can I help?"
-            };
-
-        } catch (error) {
-            lastError = error;
-            const isRetryable = 
-                error.status === 429 || 
-                error.status === 404 || 
-                error.status === 503 ||
-                error.status === 500 ||
-                error.message?.includes("quota") || 
-                error.message?.includes("RESOURCE_EXHAUSTED") ||
-                error.message?.includes("no longer available") ||
-                error.message?.includes("high demand") ||
-                error.message?.includes("UNAVAILABLE");
-
-            if (isRetryable && candidateModels.indexOf(targetModel) < candidateModels.length - 1) {
-                console.warn(`[GeminiAdapter] Model '${targetModel}' hit error (${error.status || error.message?.slice(0, 60)}). Trying fallback model...`);
-                continue;
-            }
-            break;
         }
     }
 
@@ -171,7 +172,7 @@ export async function processGeminiRequest({
     if (lastError?.message?.includes("API_KEY_INVALID") || lastError?.message?.includes("API key not valid")) {
         userFacingError = "The configured Gemini API key appears to be invalid. Please check your backend/.env configuration.";
     } else if (lastError?.message?.includes("quota") || lastError?.message?.includes("RESOURCE_EXHAUSTED")) {
-        userFacingError = "Gemini API quota has been reached. Please try again shortly.";
+        userFacingError = "Gemini API rate limit has been reached. Please try again in a moment.";
     }
 
     return {
@@ -179,4 +180,3 @@ export async function processGeminiRequest({
         message: userFacingError
     };
 }
-

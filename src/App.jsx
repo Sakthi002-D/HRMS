@@ -33,6 +33,7 @@ import AttendanceReport from "./pages/hr/AttendanceReport";
 import LeaveReport from "./pages/hr/LeaveReport";
 import PayrollReport from "./pages/hr/PayrollReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
+import Settings from "./pages/hr/Settings";
 
 import "./App.css";
 
@@ -191,6 +192,11 @@ function App() {
           <Route
             path="/payroll-report"
             element={<PayrollReport />}
+          />
+
+          <Route
+            path="/settings"
+            element={<Settings />}
           />
 
         </Route>

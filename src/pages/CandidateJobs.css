@@ -93,7 +93,7 @@
     width: 100%;
 }
 
-.close-btn {
+.application-form .close-btn {
     position: absolute;
     right: 15px;
     top: 10px;

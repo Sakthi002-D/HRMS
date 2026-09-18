@@ -1,0 +1,17 @@
+.employee-documents-view { display: none; padding: 22px; border: 1px solid #d3e2ee; border-radius: 12px; background: #fff; box-shadow: 0 7px 22px rgba(35, 91, 130, .07); }
+.employee-documents-heading { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #e6edf3; color: #03a9f4; }
+.employee-documents-heading h2 { margin: 3px 0 5px; color: #102a43; font-size: 24px; }
+.employee-documents-heading p { margin: 0; color: #718096; font-size: 13px; }
+.employee-documents-kicker { color: #07804b; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.employee-document-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+.employee-document-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 13px; min-height: 100px; padding: 16px; border: 1px solid #dfe8ef; border-radius: 8px; background: #f9fbfd; }
+.employee-document-card h3 { margin: 0 0 5px; color: #173456; font-size: 15px; font-weight: 700; }
+.employee-document-card p { margin: 0; color: #718096; font-size: 12px; }
+.employee-document-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 9px; background: #e8f5fc; color: #087fb8; }
+.employee-document-status { grid-column: 2; color: #a86200; font-size: 11px; font-weight: 700; }
+.employee-document-view-link { grid-column: 2; width: fit-content; color: #087fb8; font-size: 11px; font-weight: 700; text-decoration: none; }
+.employee-document-card.request { background: #eef9f4; border-color: #cce9d9; }
+.employee-document-card.request .employee-document-icon { background: #d8f3e4; color: #07804b; }
+.employee-document-card.request button { grid-column: 2; width: fit-content; padding: 8px 13px; border: 0; border-radius: 6px; background: #07804b; color: #fff; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.employee-documents-view :is(.employee-documents-heading p, .employee-document-card p) { color: #000000 !important; }
+@media (max-width: 700px) { .employee-document-grid { grid-template-columns: 1fr; } }

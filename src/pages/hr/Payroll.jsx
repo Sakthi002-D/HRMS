@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Download, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "./Payroll.css";
@@ -11,9 +11,17 @@ const initialPayrollData = [
 ];
 
 const formatCurrency = (value) => `₹${Number(value).toLocaleString("en-IN")}`;
+const dateInputValue = (value) => value ? String(value).slice(0, 10) : "";
+const formatDisplayDate = (value) => {
+    const normalized = dateInputValue(value);
+    if (!normalized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return value || "-";
+    const [year, month, day] = normalized.split("-");
+    return `${day} ${new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("en-IN", { month: "short" })} ${year}`;
+};
 
 function Payroll() {
-    const [payrollData, setPayrollData] = useState(initialPayrollData);
+    const [payrollData, setPayrollData] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [selectedMonth, setSelectedMonth] = useState("August 2026");
     const [selectedDesignation, setSelectedDesignation] = useState("All");
@@ -22,6 +30,14 @@ function Payroll() {
     const [currentPage, setCurrentPage] = useState(1);
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
+
+    useEffect(() => {
+        fetch("http://localhost:5000/api/payroll")
+            .then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load payroll")))
+            .then(setPayrollData)
+            .catch((error) => console.error("Payroll loading error:", error))
+            .finally(() => setLoading(false));
+    }, []);
 
     const designations = [...new Set(payrollData.map((employee) => employee.designation))].sort();
 
@@ -49,7 +65,7 @@ function Payroll() {
 
     const exportPayroll = (format) => {
         const headers = ["Employee ID", "Name", "Email", "Phone", "Designation", "Joining Date", "Salary"];
-        const rows = filteredPayroll.map((employee) => [employee.employeeID, employee.employeeName, employee.email, employee.phone, employee.designation, employee.joiningDate, employee.netSalary]);
+        const rows = filteredPayroll.map((employee) => [employee.employeeID, employee.employeeName, employee.email, employee.phone, employee.designation, formatDisplayDate(employee.joiningDate), employee.netSalary]);
         const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
         const content = format === "excel"
             ? `<table><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>${rows.map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join("")}</tr>`).join("")}</table>`
@@ -64,13 +80,14 @@ function Payroll() {
         setIsExportOpen(false);
     };
 
-    const saveSalary = (event) => {
+    const saveSalary = async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const basicSalary = Number(form.get("basicSalary"));
         const allowances = Number(form.get("allowances"));
         const deductions = Number(form.get("deductions"));
         const employee = {
+            id: editingEmployee?.id,
             employeeID: form.get("employeeID").toUpperCase(),
             employeeName: form.get("employeeName"),
             department: form.get("department"),
@@ -78,15 +95,27 @@ function Payroll() {
             email: form.get("email"),
             phone: form.get("phone"),
             joiningDate: form.get("joiningDate"),
+            salaryMonth: form.get("salaryMonth"),
             basicSalary,
             allowances,
             deductions,
             netSalary: basicSalary + allowances - deductions,
             status: "Pending",
         };
-        setPayrollData((previous) => editingEmployee
-            ? previous.map((item) => item.employeeID === editingEmployee.employeeID ? employee : item)
-            : [...previous, employee]);
+        const response = await fetch(`http://localhost:5000/api/payroll${editingEmployee?.id ? `/${editingEmployee.id}` : ""}`, {
+            method: editingEmployee?.id ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(employee),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message || "Unable to save salary");
+            return;
+        }
+        const saved = await response.json();
+        setPayrollData((previous) => editingEmployee?.id
+            ? previous.map((item) => item.id === editingEmployee.id ? { ...item, ...saved, ...employee } : item)
+            : [{ ...saved, ...employee }, ...previous]);
         setEditingEmployee(null);
         setCurrentPage(1);
     };
@@ -140,11 +169,11 @@ function Payroll() {
                     <div className="payroll-table-scroll">
                         <table className="payroll-table">
                             <thead><tr><th>Emp ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Designation</th><th>Joining Date</th><th>Salary</th><th>Payslip</th><th>Actions</th></tr></thead>
-                            <tbody>{visiblePayroll.length ? visiblePayroll.map((employee) => <tr key={employee.employeeID}>
+                            <tbody>{loading ? <tr><td colSpan="9" className="payroll-empty">Loading salary records...</td></tr> : visiblePayroll.length ? visiblePayroll.map((employee) => <tr key={employee.id || employee.employeeID}>
                                 <td>{employee.employeeID}</td><td>{employee.employeeName}</td><td>{employee.email}</td><td>{employee.phone}</td>
                                 <td>{employee.designation}</td>
-                                <td>{employee.joiningDate}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
-                                <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={() => { if (window.confirm(`Delete ${employee.employeeName} salary record?`)) setPayrollData((previous) => previous.filter((item) => item.employeeID !== employee.employeeID)); }}><Trash2 size={15} /></button></td>
+                                <td>{formatDisplayDate(employee.joiningDate)}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
+                                <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={async () => { if (window.confirm(`Delete ${employee.employeeName} salary record?`)) { const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" }); if (response.ok) setPayrollData((previous) => previous.filter((item) => item.id !== employee.id)); } }}><Trash2 size={15} /></button></td>
                             </tr>) : <tr><td colSpan="9" className="payroll-empty">No salary records found</td></tr>}</tbody>
                         </table>
                     </div>
@@ -154,7 +183,7 @@ function Payroll() {
 
             {editingEmployee && <div className="salary-modal-overlay" onClick={() => setEditingEmployee(null)}><form className="salary-modal" onSubmit={saveSalary} onClick={(event) => event.stopPropagation()}>
                 <h2>{editingEmployee.employeeID ? "Edit Salary" : "Add Salary"}</h2>
-                <div className="salary-form-grid">{[["employeeID", "Emp ID", editingEmployee.employeeID || ""], ["employeeName", "Name", editingEmployee.employeeName || ""], ["email", "Email", editingEmployee.email || ""], ["phone", "Phone", editingEmployee.phone || ""], ["department", "Department", editingEmployee.department || ""], ["designation", "Designation", editingEmployee.designation || "Developer"], ["joiningDate", "Joining Date", editingEmployee.joiningDate || ""], ["basicSalary", "Basic Salary", editingEmployee.basicSalary || ""], ["allowances", "Allowances", editingEmployee.allowances || ""], ["deductions", "Deductions", editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} defaultValue={value} required /></label>)}</div>
+                <div className="salary-form-grid">{[["employeeID", "Emp ID", editingEmployee.employeeID || ""], ["employeeName", "Name", editingEmployee.employeeName || ""], ["email", "Email", editingEmployee.email || ""], ["phone", "Phone", editingEmployee.phone || ""], ["department", "Department", editingEmployee.department || ""], ["designation", "Designation", editingEmployee.designation || "Developer"], ["joiningDate", "Joining Date", dateInputValue(editingEmployee.joiningDate)], ["salaryMonth", "Salary Month", dateInputValue(editingEmployee.salaryMonth) || "2026-08-01"], ["basicSalary", "Basic Salary", editingEmployee.basicSalary || ""], ["allowances", "Allowances", editingEmployee.allowances || ""], ["deductions", "Deductions", editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} type={name.includes("Date") || name === "salaryMonth" ? "date" : "text"} defaultValue={value} required /></label>)}</div>
                 <div className="salary-modal-actions"><button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button><button type="submit">Save Salary</button></div>
             </form></div>}
         </DashboardLayout>
