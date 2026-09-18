@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./VerifyOTP.css";
-
-const API_URL = "http://localhost:5000";
+import API_URL from "../config/api";
 
 function VerifyOTP() {
   const navigate = useNavigate();

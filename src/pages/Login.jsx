@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
-
-const API_URL = "http://localhost:5000";
+import API_URL from "../config/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -64,7 +63,7 @@ function Login() {
 
       try {
         data = JSON.parse(text);
-      } catch (error) {
+      } catch {
         console.error("Backend returned non-JSON:", text);
 
         alert(

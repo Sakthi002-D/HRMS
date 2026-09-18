@@ -1,0 +1,95 @@
+.hr-assistant-launcher {
+  position: fixed;
+  right: 26px;
+  bottom: 26px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  background: #e26d3f;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(226, 109, 63, .3);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.hr-assistant-launcher:hover,
+.hr-assistant-launcher.is-open {
+  background: #c9572f;
+  transform: translateY(-3px);
+  box-shadow: 0 16px 28px rgba(226, 109, 63, .36);
+}
+
+.hr-assistant-panel {
+  position: fixed;
+  right: 26px;
+  bottom: 96px;
+  z-index: 80;
+  display: flex;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 130px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d7dfe2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 22px 55px rgba(23, 43, 77, .2);
+  animation: assistantIn .2s ease both;
+}
+
+@keyframes assistantIn {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hr-assistant-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: #172b3d;
+  color: #fff;
+}
+
+.hr-assistant-title,
+.hr-assistant-title > div {
+  display: flex;
+  align-items: center;
+}
+
+.hr-assistant-title { gap: 10px; }
+.hr-assistant-title > div { flex-direction: column; align-items: flex-start; gap: 2px; }
+.hr-assistant-title strong { font-size: 14px; }
+.hr-assistant-title small { color: #b9c2c8; font-size: 11px; }
+.hr-assistant-avatar { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #e26d3f; color: #fff; }
+.hr-assistant-close { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+.hr-assistant-close:hover { background: rgba(255,255,255,.16); }
+
+.hr-assistant-messages { display: flex; min-height: 180px; flex: 1; flex-direction: column; gap: 10px; overflow-y: auto; padding: 16px; background: #f7f8f7; }
+.hr-assistant-message { max-width: 88%; padding: 10px 12px; border-radius: 11px; color: #26384a; font-size: 12px; line-height: 1.5; }
+.hr-assistant-message.assistant { align-self: flex-start; border: 1px solid #dce4e5; background: #fff; }
+.hr-assistant-message.user { align-self: flex-end; background: #e26d3f; color: #fff; }
+.hr-assistant-message span { display: block; }
+.hr-assistant-message.assistant button { margin-top: 8px; padding: 6px 9px; border: 0; border-radius: 6px; background: #172b3d; color: #fff; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.hr-assistant-message.assistant button:hover { background: #e26d3f; }
+.hr-assistant-loading { align-self: flex-start; color: #71808b; font-size: 11px; font-style: italic; }
+
+.hr-assistant-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid #e6ecee; background: #fff; }
+.hr-assistant-suggestions button { padding: 6px 8px; border: 1px solid #d7dfe2; border-radius: 999px; background: #f8faf9; color: #52687a; font: inherit; font-size: 10px; cursor: pointer; }
+.hr-assistant-suggestions button:hover { border-color: #e26d3f; color: #c9572f; }
+
+.hr-assistant-input { display: flex; gap: 8px; padding: 12px 14px 14px; border-top: 1px solid #e6ecee; background: #fff; }
+.hr-assistant-input input { min-width: 0; flex: 1; height: 38px; padding: 0 11px; border: 1px solid #cfd9dd; border-radius: 7px; outline: none; background: #f9fbfb; color: #172b4d; font: inherit; font-size: 12px; }
+.hr-assistant-input input:focus { border-color: #e26d3f; box-shadow: 0 0 0 3px rgba(226,109,63,.12); background: #fff; }
+.hr-assistant-input button { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border: 0; border-radius: 7px; background: #e26d3f; color: #fff; cursor: pointer; }
+.hr-assistant-input button:hover { background: #c9572f; }
+
+@media (max-width: 650px) {
+  .hr-assistant-launcher { right: 16px; bottom: 16px; }
+  .hr-assistant-panel { right: 16px; bottom: 86px; }
+}

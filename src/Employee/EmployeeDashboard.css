@@ -1,7 +1,7 @@
 .employee-dashboard {
     min-height: 100vh;
     display: flex;
-    background: #f5f7fb;
+    background: linear-gradient(135deg, #f7f8f7 0%, #e9eef0 100%);
     color: #1f2937;
 }
 
@@ -128,7 +128,7 @@
 .employee-header h1 {
     margin: 0;
     font-size: 30px;
-    color: #12304a;
+    color: #172b4d;
 }
 
 .employee-header p {
@@ -1492,12 +1492,12 @@
     display: block;
     width: 4px;
     border-radius: 4px;
-    background: #03a9f4;
+    background: #e26d3f;
     content: "";
 }
 
 .employee-header h1 {
-    color: #0b2946;
+    color: #172b4d;
     font-size: 24px;
     line-height: 1.2;
     font-weight: 700;
@@ -2522,7 +2522,7 @@
     border-radius: inherit;
     object-fit: cover;
 }
-.identity-banner { display: flex; align-items: center; gap: 16px; min-height: 94px; padding: 16px 20px; background: #222629; color: #fff; transition: background .28s ease; }
+.identity-banner { display: flex; align-items: center; gap: 16px; min-height: 94px; padding: 16px 20px; background: #172b3d; color: #fff; transition: background .28s ease; }
 .employee-identity-card:hover .identity-banner { background: #182b3a; }
 .large-avatar { display: grid; width: 58px; height: 58px; flex: 0 0 58px; place-items: center; overflow: hidden; border: 2px solid #fff; border-radius: 50%; background: #ef6b2d; color: #fff; font-size: 23px; font-weight: 600; }
 .large-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -2532,7 +2532,7 @@
 .overview-card-heading { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #edf0f2; }.overview-card-heading h2 { margin: 0; color: #102a43; font-size: 16px; }.overview-card-heading span { display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border: 1px solid #e3e8ec; border-radius: 6px; color: #102a43; font-size: 12px; background: #f9fafb; }
 .leave-chart-content { display: flex; align-items: center; justify-content: space-around; gap: 26px; min-height: 216px; padding: 18px; }.leave-legend { display: grid; gap: 12px; color: #5f7187; font-size: 13px; line-height: 1.4; }.leave-legend div { display: flex; align-items: center; gap: 8px; white-space: nowrap; }.leave-legend i { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(16, 42, 67, 0.08); }.leave-legend strong { color: #1c2c3f; font-weight: 700; font-size: 15px; }.leave-legend em { color: #8291a1; font-size: 11px; font-style: normal; font-weight: 600; }.leave-bar-chart { display: flex; align-items: flex-end; justify-content: center; gap: 18px; width: 230px; height: 170px; padding: 18px 12px 8px; border-radius: 12px; background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(240,244,247,0.9)); border: 1px solid #e5edf3; }.leave-bar-column { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; height: 100%; width: 54px; }.leave-bar-track { display: flex; align-items: flex-end; width: 100%; height: 100%; border-radius: 8px 8px 0 0; background: rgba(49, 91, 130, 0.08); overflow: hidden; }.leave-bar-fill { display: block; width: 100%; border-radius: 8px 8px 0 0; transition: height 0.3s ease; }.leave-bar-column small { font-size: 11px; color: #536b82; font-weight: 600; }
 .leave-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 22px; padding: 22px 20px; }.leave-summary-grid strong { color: #102a43; font-size: 18px; font-weight: 700; }.employee-leave-summary-card .apply-leave-btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: calc(100% - 40px); margin: 0 20px 20px; padding: 11px; border-radius: 5px; background: #111a2a; box-shadow: none; }
-.employee-work-metrics { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 22px; margin-top: 23px; }.work-metric-card { min-height: 144px; padding: 19px; }.metric-icon { display: grid; width: 23px; height: 23px; margin-bottom: 10px; place-items: center; border-radius: 4px; background: #00be63; color: #fff; }.metric-icon.dark { background: #202629; }.metric-icon.blue { background: #2589f5; }.metric-icon.pink { background: #ee3b91; }.work-metric-card strong { display: block; color: #102a43; font-size: 26px; font-weight: 700; letter-spacing: -0.04em; }.work-metric-card strong em { color: #75869a; font-size: 16px; font-style: normal; font-weight: 600; }.work-metric-card b { display: block; margin-top: 16px; color: #64778c; font-size: 11px; font-weight: 700; letter-spacing: .01em; opacity: .95; }.metric-up { color: #1d9a66 !important; }.metric-down { color: #d0404b !important; }.metric-progress { height: 7px; margin-top: 14px; border-radius: 10px; background: #edf0f2; }.metric-progress span { display: block; height: 100%; border-radius: inherit; background: #00be63; }
+.employee-work-metrics { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 22px; margin-top: 23px; }.work-metric-card { min-height: 144px; padding: 19px; }.metric-icon { display: grid; width: 23px; height: 23px; margin-bottom: 10px; place-items: center; border-radius: 4px; background: #0f9f9a; color: #fff; }.metric-icon.dark { background: #3e5064; }.metric-icon.blue { background: #526b86; }.metric-icon.pink { background: #c94f79; }.work-metric-card strong { display: block; color: #172b4d; font-size: 26px; font-weight: 700; letter-spacing: -0.04em; }.work-metric-card strong em { color: #75869a; font-size: 16px; font-style: normal; font-weight: 600; }.work-metric-card b { display: block; margin-top: 16px; color: #64778c; font-size: 11px; font-weight: 700; letter-spacing: .01em; opacity: .95; }.metric-up { color: #1d9a66 !important; }.metric-down { color: #d0404b !important; }.metric-progress { height: 7px; margin-top: 14px; border-radius: 10px; background: #edf0f2; }.metric-progress span { display: block; height: 100%; border-radius: inherit; background: #e26d3f; }
 .employee-work-metrics .work-metric-card:not(.attendance-metric) small { font-weight: 400; }
 
 .employee-requests-section {

@@ -86,3 +86,116 @@
   cursor: pointer;
   font-size: 14px;
 }
+
+/* Match the civil-engineering login system */
+.verify-otp-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 32px 20px;
+  background: linear-gradient(135deg, #101923 0 38%, #eef1f2 38% 100%);
+}
+
+.verify-otp-page::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 4px;
+  background: #0f9f9a;
+  content: "";
+}
+
+.verify-otp-card {
+  position: relative;
+  width: min(450px, 100%);
+  max-width: 100%;
+  padding: 40px 42px 32px;
+  border: 1px solid #d7dfe2;
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(23, 43, 77, .12);
+  color: #172b4d;
+}
+
+.verify-otp-card::before {
+  position: absolute;
+  top: 0;
+  left: 38px;
+  width: 54px;
+  height: 4px;
+  border-radius: 0 0 4px 4px;
+  background: #0f9f9a;
+  content: "";
+}
+
+.verify-otp-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border-radius: 14px;
+  background: #172b3d;
+  color: #0f9f9a;
+  font-size: 27px;
+}
+
+.verify-otp-card h1 {
+  color: #172b4d;
+  font-size: 28px;
+  letter-spacing: -.02em;
+}
+
+.verify-otp-card p {
+  margin-bottom: 28px;
+  color: #71808b;
+  font-size: 13px;
+}
+
+.verify-otp-card label {
+  color: #334155;
+  font-size: 12px;
+}
+
+.verify-otp-card input {
+  height: 50px;
+  margin-bottom: 20px;
+  border-color: #cfd9dd;
+  border-radius: 7px;
+  background: #f9fbfb;
+  color: #172b4d;
+}
+
+.verify-otp-card input:focus {
+  border-color: #0f9f9a;
+  box-shadow: 0 0 0 3px rgba(15, 159, 154, .14);
+}
+
+.verify-otp-card form button {
+  height: 50px;
+  border-radius: 7px;
+  background: #e26d3f;
+  box-shadow: 0 8px 16px rgba(226, 109, 63, .2);
+}
+
+.verify-otp-card form button:hover {
+  background: #c9572f;
+}
+
+.verify-otp-card .back-login-btn {
+  color: #c9572f;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .verify-otp-page {
+    background: #eef1f2;
+  }
+
+  .verify-otp-page::before {
+    width: 100%;
+  }
+
+  .verify-otp-card {
+    padding: 34px 24px 28px;
+  }
+}
