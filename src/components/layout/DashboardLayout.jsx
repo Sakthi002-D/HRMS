@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Sidebar from "./common/Sidebar";
-import HRAssistant from "../hr/HRAssistant";
 import "./DashboardLayout.css";
 import "./SharedTheme.css";
 
@@ -16,7 +15,6 @@ function DashboardLayout({ children }) {
       />
 
       <main className="dashboard-content">
-        <HRAssistant />
         {children}
       </main>
       
