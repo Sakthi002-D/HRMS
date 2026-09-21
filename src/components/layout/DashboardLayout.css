@@ -18,6 +18,20 @@
   width: calc(100% - 78px);
 }
 
+.hr-dashboard-layout .sidebar {
+  width: 250px;
+}
+
+.hr-dashboard-layout .dashboard-content {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+}
+
+.hr-dashboard-layout.sidebar-collapsed .dashboard-content {
+  margin-left: 78px;
+  width: calc(100% - 78px);
+}
+
 @media (max-width: 650px) {
   .dashboard-layout .sidebar {
     display: none;
@@ -27,5 +41,10 @@
     width: 100%;
     margin-left: 0;
     padding: 22px 16px 40px;
+  }
+
+  .hr-dashboard-layout .dashboard-content {
+    width: 100%;
+    margin-left: 0;
   }
 }

@@ -122,7 +122,7 @@
     display: grid;
     grid-template-columns: minmax(350px, 415px) minmax(0, 1fr);
     gap: 24px;
-    align-items: stretch;
+    align-items: start;
 }
 
 .employee-summary,
@@ -133,17 +133,10 @@
     background: #fff;
 }
 
-.employee-summary,
-.employee-detail-content {
-    min-height: 100%;
-    align-self: stretch;
-}
-
 .employee-detail-content {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    min-height: 100%;
 }
 
 .password-management-panel {

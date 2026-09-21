@@ -54,7 +54,7 @@ const normalizeAttendanceSearchDate = (value) => {
 };
 const completedMonthsBetween = (startDate, endDate) => {
     if (!startDate || !endDate || endDate < startDate) return 0;
-    return Math.max(0, (endDate.getFullYear() - startDate.getFullYear()) * 12 + endDate.getMonth() - startDate.getMonth() + (endDate.getDate() >= startDate.getDate() ? 1 : 0));
+    return Math.max(0, (endDate.getFullYear() - startDate.getFullYear()) * 12 + endDate.getMonth() - startDate.getMonth() - (endDate.getDate() < startDate.getDate() ? 1 : 0));
 };
 const daysBetweenInclusive = (fromDate, toDate) => {
     if (!fromDate || !toDate || toDate < fromDate) return 0;
@@ -152,6 +152,14 @@ function EmployeeDashboard() {
     });
 
     const [loading, setLoading] = useState(false);
+    const [appAlert, setAppAlert] = useState(null);
+
+    const showAlert = (message, type = "error") => {
+        setAppAlert({
+            message,
+            type: message.toLowerCase().includes("success") ? "success" : type,
+        });
+    };
 
     useEffect(() => {
         const clock = window.setInterval(() => setLiveNow(new Date()), 1000);
@@ -305,22 +313,22 @@ function EmployeeDashboard() {
         e.preventDefault();
 
         if (!formData.from_date || !formData.to_date) {
-            alert("Please select From Date and To Date");
+            showAlert("Please select From Date and To Date");
             return;
         }
 
         if (formData.to_date < formData.from_date) {
-            alert("To Date must be after From Date");
+            showAlert("To Date must be after From Date");
             return;
         }
 
         if (!selectedLeaveInfo.eligible) {
-            alert(`${formData.leave_type} is not eligible yet. Please complete the required service period.`);
+            showAlert(`${formData.leave_type} is not eligible yet. Please complete the required service period.`);
             return;
         }
 
         if (selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
-            alert(`Only ${selectedLeaveInfo.remaining} day(s) remaining for ${formData.leave_type}.`);
+            showAlert(`Only ${selectedLeaveInfo.remaining} day(s) remaining for ${formData.leave_type}.`);
             return;
         }
 
@@ -347,11 +355,11 @@ function EmployeeDashboard() {
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.message || "Failed to apply leave");
+                showAlert(data.message || "Failed to apply leave");
                 return;
             }
 
-            alert("Leave applied successfully!");
+            showAlert("Leave applied successfully!", "success");
 
             setFormData({
                 leave_type: "Annual Leave",
@@ -366,7 +374,7 @@ function EmployeeDashboard() {
 
         } catch (error) {
             console.error("Apply leave error:", error);
-            alert("Unable to connect to backend");
+            showAlert("Unable to connect to backend");
         } finally {
             setLoading(false);
         }
@@ -381,13 +389,13 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) {
-                alert(data.message || "Unable to cancel leave request");
+                showAlert(data.message || "Unable to cancel leave request");
                 return;
             }
             setOpenTrackingId(null);
             fetchLeaves(employee.employee_id);
         } catch (error) {
-            alert("Unable to cancel leave request");
+            showAlert("Unable to cancel leave request");
             console.error("Cancel leave error:", error);
         }
     };
@@ -504,7 +512,7 @@ function EmployeeDashboard() {
             }));
             setSectionEditor(null);
         } catch (error) {
-            alert(error.message || "Unable to save section");
+            showAlert(error.message || "Unable to save section");
         } finally {
             setLoading(false);
         }
@@ -512,7 +520,7 @@ function EmployeeDashboard() {
 
     const deleteEducation = async (educationId) => {
         const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, { method: "DELETE" });
-        if (!response.ok) return alert("Unable to delete education");
+        if (!response.ok) return showAlert("Unable to delete education");
         setEmployee((current) => ({ ...current, education: (current.education || []).filter((record) => record.id !== educationId) }));
     };
 
@@ -533,11 +541,12 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || "Unable to change password");
-            alert("Password changed successfully");
+            showAlert("Password changed successfully", "success");
             setPasswordForm({ current_password: "", new_password: "", repeat_password: "" });
             setShowChangePassword(false);
+            setActiveSection("settings");
         } catch (error) {
-            alert(error.message || "Unable to change password");
+            showAlert(error.message || "Unable to change password");
         } finally {
             setLoading(false);
         }
@@ -597,7 +606,7 @@ function EmployeeDashboard() {
             sessionStorage.setItem("loggedInEmployee", JSON.stringify(updatedEmployee));
             setShowEditProfile(false);
         } catch (error) {
-            alert(error.message || "Unable to update profile");
+            showAlert(error.message || "Unable to update profile");
         } finally {
             setLoading(false);
         }
@@ -621,7 +630,6 @@ function EmployeeDashboard() {
         (leave) => leave.status?.trim().toLowerCase() === "rejected"
     ).length;
 
-    const totalLeaveEntitlement = 42;
     const profileValue = (value) => value || "-";
     const formatProfileDate = (value) => {
         if (!value) return "-";
@@ -637,7 +645,6 @@ function EmployeeDashboard() {
         (total, leave) => total + Number(leave.days || 0),
         0
     );
-    const leaveBalance = Math.max(totalLeaveEntitlement - approvedLeaveDays, 0);
     const approvedLeaveDaysThisYear = approvedLeaveRequests
         .filter((leave) => new Date(leave.from_date).getFullYear() === currentYear)
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
@@ -646,14 +653,12 @@ function EmployeeDashboard() {
     const serviceYears = Math.floor(serviceMonths / 12);
     const annualRule = serviceYears >= 5 ? LEAVE_RULES.annual.fiveYearsAndAbove : LEAVE_RULES.annual.underFiveYears;
     const yearStart = new Date(currentYear, 0, 1);
-    const annualAccruedMonths = joiningDate && joiningDate > yearStart
-        ? Math.min(12, completedMonthsBetween(joiningDate, currentDate))
-        : currentDate.getMonth() + 1;
-    const annualAccrued = serviceMonths >= LEAVE_RULES.annual.eligibleMonths
-        ? Number((annualRule.monthly * annualAccruedMonths).toFixed(2))
+    const annualAccruedMonths = joiningDate
+        ? completedMonthsBetween(joiningDate, currentDate)
         : 0;
+    const annualAccrued = Number((annualRule.monthly * annualAccruedMonths).toFixed(2));
     const annualTaken = approvedLeaveRequests
-        .filter((leave) => leave.leave_type === "Annual Leave" && parseDateOnly(leave.from_date)?.getFullYear() === currentYear)
+        .filter((leave) => leave.leave_type === "Annual Leave")
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
     const sickTaken = approvedLeaveRequests
         .filter((leave) => leave.leave_type === "Sick Leave" && parseDateOnly(leave.from_date)?.getFullYear() === currentYear)
@@ -669,10 +674,10 @@ function EmployeeDashboard() {
     const requestedDays = daysBetweenInclusive(selectedFromDate, selectedToDate);
     const selectedLeaveType = formData.leave_type;
     const selectedTrackingLeave = leaves.find((leave) => String(leave.id) === String(openTrackingId));
-    const annualEligible = serviceMonths >= LEAVE_RULES.annual.eligibleMonths;
+    const annualEligible = annualAccruedMonths > 0;
     const sickEligible = serviceMonths >= LEAVE_RULES.sick.eligibleMonths;
     const annualEligibleDate = joiningDate
-        ? new Date(joiningDate.getFullYear() + 1, joiningDate.getMonth(), joiningDate.getDate())
+        ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, joiningDate.getDate())
         : null;
     const sickEligibleDate = joiningDate
         ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 3, joiningDate.getDate())
@@ -716,7 +721,7 @@ function EmployeeDashboard() {
         },
     };
     const selectedLeaveInfo = selectedLeaveType === "Annual Leave"
-        ? { eligible: annualEligible, remaining: annualEligible ? Math.max(0, annualAccrued - annualTaken) : null, used: annualTaken, entitlement: `${annualRule.annual} days/year`, approval: "HR approval", document: "Not required", pay: "Paid leave", detail: annualEligible ? `${annualRule.monthly.toFixed(2)} days/month accrual` : `Eligible after: ${formatRuleDate(annualEligibleDate)}` }
+        ? { eligible: annualEligible, remaining: annualEligible ? Math.max(0, Number((annualAccrued - annualTaken).toFixed(2))) : null, used: annualTaken, entitlement: `${annualRule.monthly.toFixed(2)} days/month`, approval: "HR approval", document: "Not required", pay: "Paid leave", detail: annualEligible ? `${annualRule.monthly.toFixed(2)} days/month accrual with carry-forward` : `Eligible after: ${formatRuleDate(annualEligibleDate)}` }
         : selectedLeaveType === "Sick Leave"
             ? { eligible: sickEligible, remaining: sickEligible ? Math.max(0, LEAVE_RULES.sick.totalDays - sickTaken) : null, used: sickTaken, entitlement: "84 days maximum", approval: "HR approval", document: "Medical certificate mandatory", pay: "14 full + 28 half + 42 unpaid", detail: sickEligible ? "14 days full pay • 28 days half pay • 42 days unpaid" : `Eligible after: ${formatRuleDate(sickEligibleDate)}` }
             : selectedLeaveType === "Maternity Leave"
@@ -828,7 +833,7 @@ function EmployeeDashboard() {
                 onToggle={() => setSidebarCollapsed((current) => !current)}
                 onSectionChange={setActiveSection}
                 onProfile={openProfile}
-                onChangePassword={() => setShowChangePassword(true)}
+                onChangePassword={() => { setShowChangePassword(false); setActiveSection("change-password"); }}
                 onLeave={openLeaveDetails}
                 onLogout={logout}
             />
@@ -854,6 +859,8 @@ function EmployeeDashboard() {
                                                 ? "Payroll"
                                                 : activeSection === "documents"
                                                     ? "Documents"
+                                                : activeSection === "change-password"
+                                                    ? "Change Password"
                                     : "Employee Dashboard"}
                         </h1>
                         <p>
@@ -869,6 +876,8 @@ function EmployeeDashboard() {
                                         ? "View your salary, benefits and payslips"
                                     : activeSection === "documents"
                                         ? "Access your important employment documents"
+                                    : activeSection === "change-password"
+                                        ? "Update your employee account password"
                                     : `Welcome back, ${employee.name}`}
                         </p>
                     </div>
@@ -1153,12 +1162,12 @@ function EmployeeDashboard() {
                     </div>
                 </section>
 
-                <EmployeeSettings employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled} compactMode={compactMode} setCompactMode={setCompactMode} language={language} setLanguage={setLanguage} timeZone={timeZone} setTimeZone={setTimeZone} onEditProfile={openEditProfile} onChangePassword={() => setShowChangePassword(true)} onLogout={logout} />
+                <EmployeeSettings employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled} compactMode={compactMode} setCompactMode={setCompactMode} language={language} setLanguage={setLanguage} timeZone={timeZone} setTimeZone={setTimeZone} onEditProfile={openEditProfile} onChangePassword={() => { setShowChangePassword(false); setActiveSection("change-password"); }} onLogout={logout} />
                 <section className="employee-settings-view legacy-settings-view">
                     <div className="settings-grid">
                         <article className="settings-card">
                             <div className="settings-card-heading"><span className="settings-icon blue"><KeyRound size={18} /></span><div><h3>Account &amp; Security</h3><p>Protect your account access</p></div></div>
-                            <div className="settings-row"><div><strong>Password</strong><small>Change your account password anytime</small></div><button type="button" onClick={() => setShowChangePassword(true)}>Change Password</button></div>
+                            <div className="settings-row"><div><strong>Password</strong><small>Change your account password anytime</small></div><button type="button" onClick={() => { setShowChangePassword(false); setActiveSection("change-password"); }}>Change Password</button></div>
                             <div className="settings-row"><div><strong>Account status</strong><small>Your employee account is active</small></div><span className="settings-status">Active</span></div>
                         </article>
                         <article className="settings-card">
@@ -1177,6 +1186,8 @@ function EmployeeDashboard() {
                     </div>
                     <div className="settings-session"><span><SettingsIcon size={17} /> Signed in as {employee.employee_id}</span><button type="button" onClick={logout}>Log out</button></div>
                 </section>
+
+                {activeSection === "change-password" && <ChangePasswordModal inline passwordForm={passwordForm} setPasswordForm={setPasswordForm} onSubmit={changePassword} loading={loading} onClose={() => setActiveSection("settings")} />}
 
             </main>
 
@@ -1215,7 +1226,19 @@ function EmployeeDashboard() {
             {showEditProfile && profileDraft && <EmployeeEditModal draft={profileDraft} updateDraft={updateProfileDraft} onSubmit={saveProfile} loading={loading} onClose={() => setShowEditProfile(false)} />}
             {sectionEditor && <EmployeeSectionEditModal section={sectionEditor} form={sectionForm} updateForm={updateSectionForm} onSubmit={saveSection} loading={loading} onClose={() => setSectionEditor(null)} />}
 
-            {showChangePassword && <ChangePasswordModal passwordForm={passwordForm} setPasswordForm={setPasswordForm} onSubmit={changePassword} loading={loading} onClose={() => setShowChangePassword(false)} />}
+
+            {appAlert && (
+                <div className="app-alert-overlay" role="presentation" onClick={() => setAppAlert(null)}>
+                    <section className={`app-alert-dialog ${appAlert.type}`} role="alertdialog" aria-modal="true" aria-labelledby="app-alert-title" onClick={(event) => event.stopPropagation()}>
+                        <div className="app-alert-icon">{appAlert.type === "success" ? "✓" : "!"}</div>
+                        <div className="app-alert-copy">
+                            <h2 id="app-alert-title">{appAlert.type === "success" ? "Success" : "Please check"}</h2>
+                            <p>{appAlert.message}</p>
+                        </div>
+                        <button type="button" className="app-alert-close" onClick={() => setAppAlert(null)}>OK</button>
+                    </section>
+                </div>
+            )}
 
         </div>
     );

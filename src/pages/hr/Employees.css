@@ -749,6 +749,26 @@
     background: #fecaca;
 }
 
+.employee-view-button {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #cfe3f2;
+    border-radius: 6px;
+    background: #eaf6ff;
+    color: #087df5;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.employee-view-button:hover {
+    border-color: #087df5;
+    background: #d8efff;
+    color: #0369a1;
+}
+
 /* =========================================================
    FORM
 ========================================================= */

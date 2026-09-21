@@ -1593,7 +1593,7 @@ app.get("/api/leaves", async (req, res) => {
             FROM leaves l
             JOIN employees e
                 ON l.employee_id = e.employee_id
-            ORDER BY l.id ASC
+            ORDER BY CASE WHEN LOWER(l.status) = 'pending' THEN 0 ELSE 1 END, l.id DESC
         `);
 
         res.json(result.rows);
@@ -1751,13 +1751,17 @@ app.put("/api/leaves/:id/cancel", async (req, res) => {
 // =====================================================
 
 const LEAVE_RULES = {
-    annualEligibleMonths: 12,
     sickEligibleMonths: 3,
     sickTotalDays: 84,
 };
 
 const parseDateOnly = (value) => {
     if (!value) return null;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime())
+            ? null
+            : new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
     const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
     const date = new Date(year, month - 1, day);
     return Number.isNaN(date.getTime()) ? null : date;
@@ -1767,24 +1771,16 @@ const completedMonthsBetween = (startDate, endDate) => {
     if (!startDate || !endDate || endDate < startDate) return 0;
     return Math.max(0, (endDate.getFullYear() - startDate.getFullYear()) * 12
         + endDate.getMonth() - startDate.getMonth()
-        + (endDate.getDate() >= startDate.getDate() ? 1 : 0));
+        - (endDate.getDate() < startDate.getDate() ? 1 : 0));
 };
 
 const getAnnualLeaveBalance = (joiningDate, asOfDate, approvedTaken) => {
     const serviceMonths = completedMonthsBetween(joiningDate, asOfDate);
-    if (serviceMonths < LEAVE_RULES.annualEligibleMonths) {
-        return { eligible: false, balance: 0, serviceMonths };
-    }
-
     const monthlyAccrual = Math.floor(serviceMonths / 12) >= 5 ? 28 / 12 : 1.75;
-    const yearStart = new Date(asOfDate.getFullYear(), 0, 1);
-    const accruedMonths = joiningDate > yearStart
-        ? Math.min(12, completedMonthsBetween(joiningDate, asOfDate))
-        : asOfDate.getMonth() + 1;
-    const accrued = monthlyAccrual * accruedMonths;
+    const accrued = monthlyAccrual * serviceMonths;
 
     return {
-        eligible: true,
+        eligible: serviceMonths > 0,
         balance: Math.max(0, Number((accrued - approvedTaken).toFixed(2))),
         serviceMonths,
     };
@@ -1887,9 +1883,7 @@ app.post("/api/leaves", async (req, res) => {
              FROM leaves
              WHERE employee_id = $1
                AND status = 'Approved'
-               AND leave_type = $2
-               AND from_date >= DATE_TRUNC('year', CURRENT_DATE)::date
-               AND from_date < (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year')::date`,
+                             AND leave_type = $2`,
             [employee_id, leave_type]
         );
         const approvedTaken = Number(approvedTakenResult.rows[0].total_days || 0);
@@ -1898,7 +1892,7 @@ app.post("/api/leaves", async (req, res) => {
             const annualBalance = getAnnualLeaveBalance(joiningDate, today, approvedTaken);
             if (!annualBalance.eligible) {
                 return res.status(400).json({
-                    message: "Annual Leave is available after completing 12 months of continuous service",
+                    message: "Annual Leave is available after completing one month of service",
                     completed_months: annualBalance.serviceMonths,
                 });
             }

@@ -112,7 +112,7 @@
 .employee-main {
     margin-left: 240px;
     width: calc(100% - 240px);
-    padding: 35px 42px;
+    padding: 30px 38px 50px;
     box-sizing: border-box;
 }
 
@@ -915,8 +915,23 @@
     display: none;
 }
 
+.employee-dashboard.change-password-view > .employee-main > :not(.employee-header):not(.employee-password-view) {
+    display: none;
+}
+
 .employee-settings-view {
     display: none;
+}
+
+.employee-password-view {
+    display: block;
+    width: min(640px, 100%);
+    margin: 0 auto;
+    padding: 30px;
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
 }
 
 .employee-dashboard.settings-view .employee-settings-view {
@@ -1152,6 +1167,79 @@
     color: #000;
     margin: 7px 0 26px;
     font-size: 13px;
+}
+
+.app-alert-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(15, 30, 45, .58);
+    backdrop-filter: blur(5px);
+}
+
+.app-alert-dialog {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px 16px;
+    width: min(440px, 100%);
+    padding: 24px;
+    border: 1px solid #d9e5ee;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(16, 42, 67, .3);
+    animation: requestModalIn .2s ease-out both;
+}
+
+.app-alert-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff1f2;
+    color: #dc2626;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.app-alert-dialog.success .app-alert-icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.app-alert-copy h2 {
+    margin: 2px 0 5px;
+    color: #12304a;
+    font-size: 17px;
+}
+
+.app-alert-copy p {
+    margin: 0;
+    color: #53657a;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.app-alert-close {
+    grid-column: 2;
+    justify-self: end;
+    min-width: 76px;
+    padding: 9px 18px;
+    border: 0;
+    border-radius: 7px;
+    background: #087df5;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.app-alert-close:hover {
+    background: #0668cc;
 }
 
 .password-change-heading {
@@ -1469,19 +1557,20 @@
 .employee-main {
     margin-left: 250px;
     width: calc(100% - 250px);
-    padding: 30px 34px 50px;
+    padding: 30px 38px 50px;
 }
 
 .employee-header {
     position: relative;
     align-items: center;
     margin-bottom: 30px;
-    padding-left: 14px;
+    padding-left: 0;
 }
 
 .employee-header > div:first-child {
     flex: 1;
     min-width: 0;
+    padding-left: 14px;
 }
 
 .employee-header > div:first-child::before {
@@ -2165,6 +2254,10 @@
     margin-bottom: 20px;
 }
 
+.employee-section-heading > div {
+    padding-left: 14px;
+}
+
 .employee-section-heading h2,
 .employee-detail-group h3 {
     margin: 0;
@@ -2535,6 +2628,37 @@
 .employee-work-metrics { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 22px; margin-top: 23px; }.work-metric-card { min-height: 144px; padding: 19px; }.metric-icon { display: grid; width: 23px; height: 23px; margin-bottom: 10px; place-items: center; border-radius: 4px; background: #0f9f9a; color: #fff; }.metric-icon.dark { background: #3e5064; }.metric-icon.blue { background: #526b86; }.metric-icon.pink { background: #c94f79; }.work-metric-card strong { display: block; color: #172b4d; font-size: 26px; font-weight: 700; letter-spacing: -0.04em; }.work-metric-card strong em { color: #75869a; font-size: 16px; font-style: normal; font-weight: 600; }.work-metric-card b { display: block; margin-top: 16px; color: #64778c; font-size: 11px; font-weight: 700; letter-spacing: .01em; opacity: .95; }.metric-up { color: #1d9a66 !important; }.metric-down { color: #d0404b !important; }.metric-progress { height: 7px; margin-top: 14px; border-radius: 10px; background: #edf0f2; }.metric-progress span { display: block; height: 100%; border-radius: inherit; background: #e26d3f; }
 .employee-work-metrics .work-metric-card:not(.attendance-metric) small { font-weight: 400; }
 
+/* Match the HR dashboard typography for shared metric and action labels. */
+.employee-work-metrics .work-metric-card small {
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: 0;
+}
+
+.employee-work-metrics .attendance-metric small {
+    font-weight: 700;
+}
+
+.employee-work-metrics .work-metric-card strong {
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.employee-request-card {
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.employee-work-metrics .work-metric-card .metric-up,
+.employee-work-metrics .work-metric-card .metric-down {
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .employee-requests-section {
     display: none;
     margin-top: 24px;
@@ -2594,6 +2718,21 @@
     border-color: #03a9f4;
     box-shadow: 0 6px 16px rgba(21, 65, 97, .1);
     transform: translateY(-2px);
+}
+
+/* Final typography overrides for the highlighted dashboard labels. */
+.employee-work-metrics .work-metric-card small,
+.employee-work-metrics .attendance-metric small {
+    font-weight: 700;
+}
+
+.employee-work-metrics .work-metric-card:not(.attendance-metric) small {
+    font-weight: 700;
+}
+
+.employee-requests-section .employee-section-header p,
+.employee-request-card {
+    font-weight: 700;
 }
 
 .employee-request-icon {

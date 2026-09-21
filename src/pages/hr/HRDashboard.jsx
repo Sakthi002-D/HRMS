@@ -204,7 +204,7 @@ function HRDashboard() {
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout className="hr-dashboard-layout">
       <div className="dashboard-main">
 
         {/* ================= HEADER ================= */}

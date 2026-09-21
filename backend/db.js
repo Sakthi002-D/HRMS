@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
 import pg from "pg";
+import { fileURLToPath } from "node:url";
 
-dotenv.config();
+const sharedEnvPath = fileURLToPath(new URL("../../backend/.env", import.meta.url));
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || sharedEnvPath });
 
 const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;

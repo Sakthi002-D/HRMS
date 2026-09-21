@@ -3,11 +3,11 @@ import Sidebar from "./common/Sidebar";
 import "./DashboardLayout.css";
 import "./SharedTheme.css";
 
-function DashboardLayout({ children }) {
+function DashboardLayout({ children, className = "" }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className={`dashboard-layout${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+    <div className={`dashboard-layout ${className}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
 
       <Sidebar
         collapsed={sidebarCollapsed}

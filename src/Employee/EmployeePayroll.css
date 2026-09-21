@@ -7,6 +7,7 @@
     box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
 }
 .employee-payroll-heading { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #e6edf3; color: #03a9f4; }
+.employee-payroll-heading > div { padding-left: 14px; }
 .employee-payroll-heading h2 { margin: 3px 0 5px; color: #102a43; font-size: 24px; }
 .employee-payroll-heading p { margin: 0; color: #718096; font-size: 13px; }
 .employee-payroll-kicker { color: #07804b; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }

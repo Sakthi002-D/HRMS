@@ -28,10 +28,6 @@ function EmployeeSidebar({ activeSection, collapsed, onToggle, onSectionChange, 
                     <UserRound size={19} strokeWidth={2} />
                     <span>Profile</span>
                 </button>
-                <button className="employee-menu-item" onClick={onChangePassword}>
-                    <KeyRound size={19} strokeWidth={2} />
-                    <span>Change Password</span>
-                </button>
                 <button className={`employee-menu-item ${activeSection === "attendance" ? "active" : ""}`} onClick={() => onSectionChange("attendance")}>
                     <Clock3 size={19} strokeWidth={2} />
                     <span>Attendance</span>
@@ -47,6 +43,10 @@ function EmployeeSidebar({ activeSection, collapsed, onToggle, onSectionChange, 
                 <button className={`employee-menu-item ${activeSection === "leave" ? "active" : ""}`} onClick={onLeave}>
                     <CalendarDays size={19} strokeWidth={2} />
                     <span>Apply Leave</span>
+                </button>
+                <button className={`employee-menu-item ${activeSection === "change-password" ? "active" : ""}`} onClick={onChangePassword}>
+                    <KeyRound size={19} strokeWidth={2} />
+                    <span>Change Password</span>
                 </button>
             </nav>
 

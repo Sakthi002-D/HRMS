@@ -70,6 +70,12 @@ export async function getMyProfile({ employeeId }) {
 export async function getMyLeaveBalance({ employeeId }) {
     if (!employeeId) throw new Error("Employee ID is required");
 
+    const employeeRes = await pool.query(`
+        SELECT joining_date
+        FROM employees
+        WHERE employee_id = $1
+    `, [employeeId]);
+
     const leavesRes = await pool.query(`
         SELECT id, leave_type, from_date, to_date, days, status
         FROM leaves
@@ -77,7 +83,19 @@ export async function getMyLeaveBalance({ employeeId }) {
     `, [employeeId]);
 
     const leaves = leavesRes.rows;
-    const totalEntitlement = 42; // Standard annual entitlement in Shelter HRMS
+    const joiningDateValue = employeeRes.rows[0]?.joining_date;
+    const joiningDate = joiningDateValue
+        ? new Date(`${String(joiningDateValue).slice(0, 10)}T00:00:00`)
+        : null;
+    const asOfDate = new Date();
+    const serviceMonths = joiningDate
+        ? Math.max(0, (asOfDate.getFullYear() - joiningDate.getFullYear()) * 12 + asOfDate.getMonth() - joiningDate.getMonth() - (asOfDate.getDate() < joiningDate.getDate() ? 1 : 0))
+        : 0;
+    const monthlyAccrual = Math.floor(serviceMonths / 12) >= 5 ? 28 / 12 : 1.75;
+    const totalEntitlement = Number((serviceMonths * monthlyAccrual).toFixed(2));
+    const approvedAnnualLeaveDays = leaves
+        .filter(l => (l.status || "").toLowerCase() === "approved" && l.leave_type === "Annual Leave")
+        .reduce((sum, l) => sum + (Number(l.days) || 0), 0);
     const approvedLeaveDays = leaves
         .filter(l => (l.status || "").toLowerCase() === "approved")
         .reduce((sum, l) => sum + (Number(l.days) || 0), 0);
@@ -85,12 +103,14 @@ export async function getMyLeaveBalance({ employeeId }) {
     const pendingRequests = leaves.filter(l => (l.status || "").toLowerCase() === "pending").length;
     const approvedRequests = leaves.filter(l => (l.status || "").toLowerCase() === "approved").length;
     const rejectedRequests = leaves.filter(l => (l.status || "").toLowerCase() === "rejected").length;
-    const remainingBalance = Math.max(totalEntitlement - approvedLeaveDays, 0);
+    const remainingBalance = Math.max(totalEntitlement - approvedAnnualLeaveDays, 0);
 
     return {
         employeeId,
         totalEntitlementDays: totalEntitlement,
         approvedLeaveDays,
+        annualLeaveEntitlementDays: totalEntitlement,
+        approvedAnnualLeaveDays,
         remainingBalanceDays: remainingBalance,
         pendingRequestsCount: pendingRequests,
         approvedRequestsCount: approvedRequests,

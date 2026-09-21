@@ -16,6 +16,7 @@ import {
   UserPlus,
   Users,
   UserX,
+  Eye,
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -945,12 +946,15 @@ const updateEmployee = async () => {
       key: "view",
       label: "View",
       render: (employee) => (
-        <Button
-          variant="secondary"
+        <button
+          type="button"
+          className="employee-view-button"
           onClick={() => viewEmployee(employee)}
+          aria-label={`View ${employee.name}`}
+          title={`View ${employee.name}`}
         >
-          View
-        </Button>
+          <Eye size={18} strokeWidth={2} aria-hidden="true" />
+        </button>
       ),
     },
 
