@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
+import API_URL from "../../config/api";
 import "./Attendance.css";
-
-const API_URL = "http://localhost:5000";
 
 function Attendance() {
     const [search, setSearch] = useState("");
