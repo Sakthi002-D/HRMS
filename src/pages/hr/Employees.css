@@ -1178,6 +1178,107 @@
 }
 
 /* =========================================================
+   ARCHIVE EMPLOYEE MODAL
+========================================================= */
+
+.employees-page .archive-modal-body {
+    padding: 8px 18px 18px;
+}
+
+.employees-page .archive-modal-title {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.employees-page .archive-modal-text {
+    margin: 0 0 18px;
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.employees-page .archive-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+
+.employees-page .archive-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.employees-page .archive-form-group label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.employees-page .archive-form-group select,
+.employees-page .archive-form-group input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.employees-page .archive-form-group select:focus,
+.employees-page .archive-form-group input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.employees-page .archive-form-group-full {
+    margin-top: 2px;
+}
+
+.employees-page .archive-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.employees-page .archive-cancel-btn,
+.employees-page .archive-confirm-btn {
+    min-width: 92px;
+    height: 42px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.employees-page .archive-cancel-btn {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.employees-page .archive-confirm-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+}
+
+.employees-page .archive-cancel-btn:hover,
+.employees-page .archive-confirm-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* =========================================================
    PAGINATION
 ========================================================= */
 

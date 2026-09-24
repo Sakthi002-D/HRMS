@@ -76,6 +76,14 @@ function Employees() {
 
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [archiveModal, setArchiveModal] = useState({
+    open: false,
+    employeeId: null,
+    employeeName: "",
+    exitStatus: "Resigned",
+    lastDateWorked: new Date().toISOString().slice(0, 10),
+    terminationReason: "Resigned",
+  });
 
 const fetchEmployees = async () => {
   setLoading(true);
@@ -292,69 +300,68 @@ const resetForm = () => {
   // DELETE EMPLOYEE
   // =========================
 
- const deleteEmployee = async (id) => {
-  const confirmDelete = window.confirm(
-    "This will remove the employee from active work while preserving their record. Continue?"
-  );
+ const deleteEmployee = (employee) => {
+  setArchiveModal({
+    open: true,
+    employeeId: employee.id,
+    employeeName: employee.name,
+    exitStatus: "Resigned",
+    lastDateWorked: new Date().toISOString().slice(0, 10),
+    terminationReason: "Resigned",
+  });
+};
 
-  if (!confirmDelete) {
-    return;
-  }
+  const confirmArchiveEmployee = async () => {
+    const { employeeId, exitStatus, lastDateWorked, terminationReason } = archiveModal;
+    const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
 
-  const exitStatus = window.prompt(
-    "Enter exit status: Resigned, Retired, Dismissed, or Terminated",
-    "Resigned"
-  );
-  const normalizedStatus = exitStatus?.trim();
-  const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
-  if (!allowedStatuses.includes(normalizedStatus)) {
-    alert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
-    return;
-  }
-
-  const lastDateWorked = window.prompt(
-    "Enter last date worked (YYYY-MM-DD)",
-    new Date().toISOString().slice(0, 10)
-  );
-  if (!lastDateWorked) {
-    return;
-  }
-
-  const terminationReason = window.prompt(
-    "Enter the reason for leaving",
-    normalizedStatus
-  );
-
-  try {
-    const response = await fetch(
-      `${API_URL}/api/employees/${id}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: normalizedStatus,
-          last_date_worked: lastDateWorked,
-          termination_reason: terminationReason || normalizedStatus,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      alert(data.message || "Failed to delete employee");
+    if (!allowedStatuses.includes(exitStatus)) {
+      alert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
       return;
     }
 
-    await fetchEmployees();
+    if (!lastDateWorked) {
+      alert("Please select last date worked.");
+      return;
+    }
 
-    alert("Employee archived successfully. Their record is still searchable.");
+    try {
+      const response = await fetch(
+        `${API_URL}/api/employees/${employeeId}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: exitStatus,
+            last_date_worked: lastDateWorked,
+            termination_reason: terminationReason || exitStatus,
+          }),
+        }
+      );
 
-  } catch (error) {
-    console.error("Error deleting employee:", error);
-    alert("Unable to connect to backend");
-  }
-};
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to delete employee");
+        return;
+      }
+
+      setArchiveModal({
+        open: false,
+        employeeId: null,
+        employeeName: "",
+        exitStatus: "Resigned",
+        lastDateWorked: new Date().toISOString().slice(0, 10),
+        terminationReason: "Resigned",
+      });
+
+      await fetchEmployees();
+      alert("Employee archived successfully. Their record is still searchable.");
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+      alert("Unable to connect to backend");
+    }
+  };
 
   const exportEmployeesToCSV = () => {
   if (employees.length === 0) {
@@ -965,7 +972,7 @@ const updateEmployee = async () => {
   render: (employee) => (
     <Button
       variant="danger"
-      onClick={() => deleteEmployee(employee.id)}
+      onClick={() => deleteEmployee(employee)}
     >
       Archive
     </Button>
@@ -1314,6 +1321,91 @@ const filteredEmployees =
           )}
 
         </div>
+
+        <Modal
+          isOpen={archiveModal.open}
+          closeOnOverlayClick={false}
+          onClose={() =>
+            setArchiveModal({
+              open: false,
+              employeeId: null,
+              employeeName: "",
+              exitStatus: "Resigned",
+              lastDateWorked: new Date().toISOString().slice(0, 10),
+              terminationReason: "Resigned",
+            })
+          }
+          title="Archive Employee"
+        >
+          <div className="archive-modal-body">
+            <p className="archive-modal-title">{archiveModal.employeeName || "Employee"}</p>
+            <p className="archive-modal-text">This will remove the employee from active work while preserving their record. Continue?</p>
+
+            <div className="archive-form-grid">
+              <div className="archive-form-group">
+                <label htmlFor="archive-status">Exit status</label>
+                <select
+                  id="archive-status"
+                  value={archiveModal.exitStatus}
+                  onChange={(event) =>
+                    setArchiveModal((previous) => ({
+                      ...previous,
+                      exitStatus: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="Inactive">Inactive</option>
+                  <option value="Resigned">Resigned</option>
+                  <option value="Retired">Retired</option>
+                  <option value="Dismissed">Dismissed</option>
+                  <option value="Terminated">Terminated</option>
+                </select>
+              </div>
+
+              <div className="archive-form-group">
+                <label htmlFor="archive-last-date">Last date worked</label>
+                <input
+                  id="archive-last-date"
+                  type="date"
+                  value={archiveModal.lastDateWorked}
+                  onChange={(event) =>
+                    setArchiveModal((previous) => ({
+                      ...previous,
+                      lastDateWorked: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="archive-form-group archive-form-group-full">
+                <label htmlFor="archive-reason">Reason</label>
+                <input
+                  id="archive-reason"
+                  type="text"
+                  value={archiveModal.terminationReason}
+                  onChange={(event) =>
+                    setArchiveModal((previous) => ({
+                      ...previous,
+                      terminationReason: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="archive-modal-actions">
+              <button type="button" className="archive-cancel-btn" onClick={() => setArchiveModal({
+                open: false,
+                employeeId: null,
+                employeeName: "",
+                exitStatus: "Resigned",
+                lastDateWorked: new Date().toISOString().slice(0, 10),
+                terminationReason: "Resigned",
+              })}>Cancel</button>
+              <button type="button" className="archive-confirm-btn" onClick={confirmArchiveEmployee}>OK</button>
+            </div>
+          </div>
+        </Modal>
 
         {/* ================= MODAL ================= */}
 
