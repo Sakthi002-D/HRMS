@@ -172,6 +172,7 @@ function EmployeeDetails() {
     const saveEmployee = async (event) => {
         event.preventDefault();
         setIsSaving(true);
+        setNotification("");
         try {
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
                 method: "PUT",
@@ -186,6 +187,7 @@ function EmployeeDetails() {
                 );
             }
             setEmployee((current) => ({ ...current, ...data }));
+            await fetchEmployee();
             setIsEditing(false);
         } catch (saveError) {
             console.error("Employee update error:", saveError);
@@ -628,7 +630,12 @@ function EmployeeDetails() {
                                 </label>
                                 <label>Status
                                     <select name="status" value={editForm.status || "Active"} onChange={updateFormField}>
-                                        <option>Active</option><option>Inactive</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="Resigned">Resigned</option>
+                                        <option value="Retired">Retired</option>
+                                        <option value="Dismissed">Dismissed</option>
+                                        <option value="Terminated">Terminated</option>
                                     </select>
                                 </label>
                                 <h3 className="employee-edit-section-title">Personal Information</h3>
