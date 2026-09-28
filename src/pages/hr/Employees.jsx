@@ -170,7 +170,10 @@ useEffect(() => {
 
   const [formData, setFormData] = useState({
     employeeId: "",
-    fullName: "",
+    title: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
     dateOfBirth: "",
     gender: "",
 
@@ -197,6 +200,14 @@ useEffect(() => {
     assignmentEnd: "",
     assignmentStart: "",
     makePrimary: false,
+
+    accountNumber: "",
+    reAccountNumber: "",
+    bankName: "",
+    branchName: "",
+    ifscCode: "",
+    accountType: "",
+    branchAddress: "",
 
     status: "Active",
 
@@ -240,7 +251,10 @@ const resetForm = () => {
   setInvalidFields({});
   setFormData({
     employeeId: "",
-    fullName: "",
+    title: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
     dateOfBirth: "",
     gender: "",
 
@@ -266,6 +280,14 @@ const resetForm = () => {
     assignmentEnd: "",
     assignmentStart: "",
     makePrimary: false,
+
+    accountNumber: "",
+    reAccountNumber: "",
+    bankName: "",
+    branchName: "",
+    ifscCode: "",
+    accountType: "",
+    branchAddress: "",
 
     status: "Active",
 
@@ -460,6 +482,27 @@ const resetForm = () => {
   // Other countries
   return digits.length >= 7 && digits.length <= 15;
 };
+  // Backend still stores a single "name" field
+  const buildFullName = ({ firstName, middleName, lastName }) =>
+    [firstName, middleName, lastName]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(" ");
+
+  const splitFullName = (name = "") => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length <= 1) {
+      return { firstName: parts[0] || "", middleName: "", lastName: "" };
+    }
+
+    return {
+      firstName: parts[0],
+      middleName: parts.slice(1, -1).join(" "),
+      lastName: parts[parts.length - 1],
+    };
+  };
+
   // =========================
   // ADD EMPLOYEE
   // =========================
@@ -469,7 +512,7 @@ const resetForm = () => {
   const addEmployee = async () => {
     const employeeId = formData.employeeId.trim();
     const requiredFields = [
-      "employeeId", "fullName", "designation", "department", "joiningDate", "employmentType",
+      "employeeId", "title", "firstName", "lastName", "designation", "department", "joiningDate", "employmentType",
       "employmentCategory", "projectRoleId", "terminationReason", "lastDateWorked",
       "position", "positionTitle", "assignmentEnd", "assignmentStart", "email", "phone"
     ];
@@ -492,8 +535,18 @@ const resetForm = () => {
       return;
     }
 
-    if (!formData.fullName.trim()) {
-      alert("Please enter Full Name");
+    if (!formData.title) {
+      alert("Title is required.");
+      return;
+    }
+
+    if (!formData.firstName.trim()) {
+      alert("First Name is required.");
+      return;
+    }
+
+    if (!formData.lastName.trim()) {
+      alert("Last Name is required.");
       return;
     }
 
@@ -572,7 +625,7 @@ const resetForm = () => {
 const profilePhoto = await fileToDataUrl(formData.profilePhoto);
 const employeeData = {
   employee_id: employeeId,
-  name: formData.fullName.trim(),
+  name: buildFullName(formData),
   date_of_birth: formData.dateOfBirth || null,
   gender: formData.gender || null,
   phone: `${formData.phoneCountryCode} ${formData.phone.trim()}`,
@@ -701,7 +754,8 @@ const employeeData = {
     setFormData({
       employeeId: employee.id,
 
-      fullName: employee.name || "",
+      title: "",
+      ...splitFullName(employee.name),
 
       dateOfBirth:
         employee.dateOfBirth || "",
@@ -748,6 +802,14 @@ const employeeData = {
       assignmentStart: employee.assignmentStart || employee.joiningDate || "",
       makePrimary: Boolean(employee.makePrimary),
 
+      accountNumber: "",
+      reAccountNumber: "",
+      bankName: "",
+      branchName: "",
+      ifscCode: "",
+      accountType: "",
+      branchAddress: "",
+
       status:
         employee.status || "Active",
 
@@ -774,7 +836,7 @@ const employeeData = {
 
 const updateEmployee = async () => {
   const employeeId = formData.employeeId.trim();
-  const requiredFields = ["employeeId", "fullName", "designation", "department", "email", "phone"];
+  const requiredFields = ["employeeId", "firstName", "lastName", "designation", "department", "email", "phone"];
   const missingFields = requiredFields.reduce(
     (fields, field) => ({ ...fields, [field]: !formData[field].trim() }),
     {}
@@ -799,8 +861,13 @@ const updateEmployee = async () => {
     return;
   }
 
-  if (!formData.fullName.trim()) {
-    alert("Please enter Full Name");
+  if (!formData.firstName.trim()) {
+    alert("First Name is required.");
+    return;
+  }
+
+  if (!formData.lastName.trim()) {
+    alert("Last Name is required.");
     return;
   }
 
@@ -829,7 +896,7 @@ const updateEmployee = async () => {
   // Data to send to backend
   const employeeData = {
   employee_id: employeeId,
-  name: formData.fullName,
+  name: buildFullName(formData),
   date_of_birth: formData.dateOfBirth || null,
   gender: formData.gender || null,
   phone: `${formData.phoneCountryCode} ${formData.phone}`,
@@ -1457,23 +1524,100 @@ const filteredEmployees =
 
             </div>
 
-            {/* Full Name */}
+            {/* Title */}
 
             <div className="form-group">
 
               <label>
-                Full Name <span className="required-mark">*</span>
+                Title <span className="required-mark">*</span>
+              </label>
+
+              <select
+                required
+                aria-required="true"
+                aria-invalid={invalidFields.title ? "true" : "false"}
+
+                className={invalidFields.title ? "field-invalid" : ""}
+                value={formData.title}
+
+                onChange={(e) =>
+                  updateFormField("title", e.target.value)
+                }
+              >
+                <option value="">Select title</option>
+                <option value="Mr">Mr</option>
+                <option value="Ms">Ms</option>
+                <option value="Mrs">Mrs</option>
+                <option value="Dr">Dr</option>
+              </select>
+
+            </div>
+
+            {/* First Name */}
+
+            <div className="form-group">
+
+              <label>
+                First Name <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter full name"
+                placeholder="Enter first name"
+                required
+                aria-required="true"
+                aria-invalid={invalidFields.firstName ? "true" : "false"}
 
-                className={invalidFields.fullName ? "field-invalid" : ""}
-                value={formData.fullName}
+                className={invalidFields.firstName ? "field-invalid" : ""}
+                value={formData.firstName}
 
                 onChange={(e) =>
-                  updateFormField("fullName", e.target.value)
+                  updateFormField("firstName", e.target.value)
+                }
+              />
+
+            </div>
+
+            {/* Middle Name */}
+
+            <div className="form-group">
+
+              <label>
+                Middle Name
+              </label>
+
+              <input
+                type="text"
+                placeholder="Enter middle name"
+                value={formData.middleName}
+
+                onChange={(e) =>
+                  updateFormField("middleName", e.target.value)
+                }
+              />
+
+            </div>
+
+            {/* Last Name */}
+
+            <div className="form-group">
+
+              <label>
+                Last Name <span className="required-mark">*</span>
+              </label>
+
+              <input
+                type="text"
+                placeholder="Enter last name"
+                required
+                aria-required="true"
+                aria-invalid={invalidFields.lastName ? "true" : "false"}
+
+                className={invalidFields.lastName ? "field-invalid" : ""}
+                value={formData.lastName}
+
+                onChange={(e) =>
+                  updateFormField("lastName", e.target.value)
                 }
               />
 
@@ -1928,6 +2072,49 @@ const filteredEmployees =
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
               </select>
+            </div>
+
+            {/* ================= BANK DETAILS ================= */}
+
+            <h3>Bank Details</h3>
+
+            <div className="form-group">
+              <label>Account Number</label>
+              <input type="text" inputMode="numeric" placeholder="Enter account number" value={formData.accountNumber} onChange={(e) => updateFormField("accountNumber", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Re-Account Number</label>
+              <input type="text" inputMode="numeric" placeholder="Re-enter account number" value={formData.reAccountNumber} onChange={(e) => updateFormField("reAccountNumber", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Bank Name</label>
+              <input type="text" placeholder="Enter bank name" value={formData.bankName} onChange={(e) => updateFormField("bankName", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Branch Name</label>
+              <input type="text" placeholder="Enter branch name" value={formData.branchName} onChange={(e) => updateFormField("branchName", e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>IFSC Code</label>
+              <input type="text" placeholder="Enter IFSC code" value={formData.ifscCode} onChange={(e) => updateFormField("ifscCode", e.target.value.toUpperCase())} />
+            </div>
+
+            <div className="form-group">
+              <label>Account Type</label>
+              <select value={formData.accountType} onChange={(e) => setFormData((previous) => ({ ...previous, accountType: e.target.value }))}>
+                <option value="">Select account type</option>
+                <option value="Savings">Savings</option>
+                <option value="Current">Current</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Branch Address</label>
+              <textarea placeholder="Enter branch address" value={formData.branchAddress} onChange={(e) => updateFormField("branchAddress", e.target.value)} />
             </div>
 
             {/* ================= OTHER DETAILS ================= */}
