@@ -1,4 +1,6 @@
 import pool from "../db.js";
+import { validateLeaveDates } from "../services/leaveDateRules.js";
+import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "../services/annualLeaveBalance.js";
 
 /**
  * Employee Tools - Authorized functions strictly scoped to the authenticated employee.
@@ -70,12 +72,6 @@ export async function getMyProfile({ employeeId }) {
 export async function getMyLeaveBalance({ employeeId }) {
     if (!employeeId) throw new Error("Employee ID is required");
 
-    const employeeRes = await pool.query(`
-        SELECT joining_date
-        FROM employees
-        WHERE employee_id = $1
-    `, [employeeId]);
-
     const leavesRes = await pool.query(`
         SELECT id, leave_type, from_date, to_date, days, status
         FROM leaves
@@ -83,19 +79,9 @@ export async function getMyLeaveBalance({ employeeId }) {
     `, [employeeId]);
 
     const leaves = leavesRes.rows;
-    const joiningDateValue = employeeRes.rows[0]?.joining_date;
-    const joiningDate = joiningDateValue
-        ? new Date(`${String(joiningDateValue).slice(0, 10)}T00:00:00`)
-        : null;
-    const asOfDate = new Date();
-    const serviceMonths = joiningDate
-        ? Math.max(0, (asOfDate.getFullYear() - joiningDate.getFullYear()) * 12 + asOfDate.getMonth() - joiningDate.getMonth() - (asOfDate.getDate() < joiningDate.getDate() ? 1 : 0))
-        : 0;
-    const monthlyAccrual = Math.floor(serviceMonths / 12) >= 5 ? 28 / 12 : 1.75;
-    const totalEntitlement = Number((serviceMonths * monthlyAccrual).toFixed(2));
-    const approvedAnnualLeaveDays = leaves
-        .filter(l => (l.status || "").toLowerCase() === "approved" && l.leave_type === "Annual Leave")
-        .reduce((sum, l) => sum + (Number(l.days) || 0), 0);
+    const annual = await getAnnualLeaveBalance(employeeId);
+    const totalEntitlement = annual?.accrued ?? 0;
+    const approvedAnnualLeaveDays = annual?.used ?? 0;
     const approvedLeaveDays = leaves
         .filter(l => (l.status || "").toLowerCase() === "approved")
         .reduce((sum, l) => sum + (Number(l.days) || 0), 0);
@@ -103,7 +89,7 @@ export async function getMyLeaveBalance({ employeeId }) {
     const pendingRequests = leaves.filter(l => (l.status || "").toLowerCase() === "pending").length;
     const approvedRequests = leaves.filter(l => (l.status || "").toLowerCase() === "approved").length;
     const rejectedRequests = leaves.filter(l => (l.status || "").toLowerCase() === "rejected").length;
-    const remainingBalance = Math.max(totalEntitlement - approvedAnnualLeaveDays, 0);
+    const remainingBalance = annual?.remaining ?? 0;
 
     return {
         employeeId,
@@ -112,6 +98,8 @@ export async function getMyLeaveBalance({ employeeId }) {
         annualLeaveEntitlementDays: totalEntitlement,
         approvedAnnualLeaveDays,
         remainingBalanceDays: remainingBalance,
+        pendingAnnualLeaveDays: annual?.pending ?? 0,
+        availableAnnualLeaveToApplyDays: annual?.available ?? 0,
         pendingRequestsCount: pendingRequests,
         approvedRequestsCount: approvedRequests,
         rejectedRequestsCount: rejectedRequests,
@@ -499,9 +487,21 @@ export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave"
         };
     }
 
+    const dateError = validateLeaveDates(fromDate, toDate);
+    if (dateError) {
+        return { error: dateError };
+    }
+
     const start = new Date(fromDate);
     const end = new Date(toDate);
     const days = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
+    if (leaveType === ANNUAL_LEAVE_TYPE) {
+        const annualError = await checkAnnualLeaveRequest(employeeId, days);
+        if (annualError) {
+            return { error: annualError };
+        }
+    }
 
     return {
         requiresConfirmation: true,
@@ -521,6 +521,20 @@ export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave"
 
 // 13. Execute Confirmed Apply Leave
 export async function executeApplyLeave({ employeeId, leaveType, fromDate, toDate, days, reason }) {
+    // Re-check: the confirmed payload comes back from the client
+    const dateError = validateLeaveDates(fromDate, toDate);
+    if (dateError) {
+        return { success: false, message: dateError };
+    }
+
+    if (leaveType === ANNUAL_LEAVE_TYPE) {
+        const requestedDays = Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1;
+        const annualError = await checkAnnualLeaveRequest(employeeId, requestedDays);
+        if (annualError) {
+            return { success: false, message: annualError };
+        }
+    }
+
     const calculatedDays = days || Math.max(1, Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1);
 
     const insertQuery = `

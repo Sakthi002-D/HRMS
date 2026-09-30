@@ -98,6 +98,17 @@ a {
   color: #03a9f4;
 }
 
+/* "pending approvals" opens the Resignation page when resignations wait for HR */
+.welcome-approvals-link {
+  text-decoration: underline;
+  text-decoration-color: rgba(3, 169, 244, .45);
+  text-underline-offset: 3px;
+}
+
+.welcome-approvals-link:hover {
+  text-decoration-color: #03a9f4;
+}
+
 .welcome-actions {
   display: flex;
   gap: 9px;
@@ -199,6 +210,18 @@ a {
   cursor: pointer;
 }
 .approve-request-button { background: #07804b; }
+.review-request-button {
+  padding: 7px 10px;
+  border: 1px solid #cfe3f1;
+  border-radius: 6px;
+  background: #e5f3fc;
+  color: #006cae;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
 .reject-request-button { background: #b91c1c; }
 .employee-request-review-empty { padding: 22px 0 2px; color: #000; font-size: 12px; }
 

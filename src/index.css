@@ -1,4 +1,11 @@
 :root {
+  /* Stacking scale: sidebar < header < modals < dialogs (confirm/alert) < toasts */
+  --z-sidebar: 100;
+  --z-header: 200;
+  --z-modal: 1000;
+  --z-dialog: 2000;
+  --z-toast: 3000;
+
   --navy-900: #0b1f2d;
   --navy-800: #12304a;
   --navy-700: #16466d;

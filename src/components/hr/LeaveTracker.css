@@ -1,0 +1,303 @@
+/* =========================================================
+   LEAVE TRACKER
+   Colours / radii follow LeaveManagement.css
+========================================================= */
+
+.leave-tracker {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 14px 13px 12px;
+    background: #f7f9fb;
+    border-radius: 8px;
+}
+
+.leave-tracker-head {
+    margin-bottom: 16px;
+}
+
+.leave-tracker-eyebrow {
+    margin: 0 0 7px;
+    color: #718096;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.leave-tracker-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #12304a;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.leave-tracker-status::before {
+    content: "";
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16834a;
+}
+
+.leave-tracker-status.tone-current::before { background: #ff6333; }
+.leave-tracker-status.tone-overdue::before { background: #d97706; }
+.leave-tracker-status.tone-rejected::before { background: #d43b3b; }
+.leave-tracker-status.tone-cancelled::before { background: #b07a7a; }
+
+/* ---------- Steps (horizontal) ---------- */
+
+.leave-tracker-steps {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.leave-tracker-step {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+    text-align: center;
+}
+
+/* Connector to the next node */
+.leave-tracker-step::after {
+    content: "";
+    position: absolute;
+    top: 13px;
+    left: calc(50% + 18px);
+    right: calc(-50% + 18px);
+    height: 2px;
+    border-radius: 2px;
+    background: #e1e8f0;
+}
+
+.leave-tracker-step:last-child::after {
+    display: none;
+}
+
+.leave-tracker-step.is-completed::after {
+    background: #16834a;
+}
+
+.leave-tracker-node {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #cfd8e3;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.leave-tracker-text {
+    min-width: 0;
+}
+
+.leave-tracker-label {
+    color: #718096;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.leave-tracker-caption {
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.leave-tracker-date {
+    margin-top: 3px;
+    color: #718096;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+/* ---------- States ---------- */
+
+.leave-tracker-step.is-completed .leave-tracker-node {
+    border-color: #16834a;
+    background: #16834a;
+}
+
+.leave-tracker-step.is-completed .leave-tracker-label {
+    color: #12304a;
+}
+
+.leave-tracker-step.is-current .leave-tracker-node {
+    border-color: #ff6333;
+    background: #ff6333;
+    animation: leaveTrackerPulse 1.6s ease-out infinite;
+}
+
+.leave-tracker-step.is-current .leave-tracker-node::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.leave-tracker-step.is-current .leave-tracker-label {
+    color: #12304a;
+    font-weight: 800;
+}
+
+.leave-tracker-step.is-current .leave-tracker-caption {
+    color: #ff6333;
+    font-weight: 700;
+}
+
+.leave-tracker-step.is-rejected .leave-tracker-node {
+    border-color: #d43b3b;
+    background: #d43b3b;
+}
+
+.leave-tracker-step.is-rejected .leave-tracker-label {
+    color: #d43b3b;
+    font-weight: 700;
+}
+
+.leave-tracker-step.is-cancelled .leave-tracker-node {
+    border-color: #b07a7a;
+    background: #b07a7a;
+}
+
+.leave-tracker-step.is-cancelled .leave-tracker-label {
+    color: #8f5f5f;
+    font-weight: 700;
+}
+
+.leave-tracker-step.is-overdue .leave-tracker-node {
+    border-color: #d97706;
+    background: #d97706;
+}
+
+.leave-tracker-step.is-overdue .leave-tracker-label {
+    color: #12304a;
+    font-weight: 700;
+}
+
+.leave-tracker-step.is-overdue .leave-tracker-caption {
+    color: #b45309;
+    font-weight: 700;
+}
+
+@keyframes leaveTrackerPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 99, 51, 0.45); }
+    70% { box-shadow: 0 0 0 9px rgba(255, 99, 51, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 99, 51, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leave-tracker-step.is-current .leave-tracker-node {
+        animation: none;
+        box-shadow: 0 0 0 4px rgba(255, 99, 51, 0.2);
+    }
+}
+
+/* ---------- Mark as resumed (HR) ---------- */
+
+.leave-tracker-resume {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.leave-tracker-resume label {
+    color: #718096;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.leave-tracker-resume input[type="date"] {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #e1e8f0;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #12304a;
+    font: inherit;
+    font-size: 12px;
+}
+
+.leave-tracker-resume button {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid #16834a;
+    border-radius: 7px;
+    background: #16834a;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.leave-tracker-resume button:hover:not(:disabled) {
+    background: #126b3c;
+}
+
+.leave-tracker-resume button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ---------- Vertical stepper under 640px ---------- */
+
+@media (max-width: 639.98px) {
+    .leave-tracker-steps {
+        flex-direction: column;
+    }
+
+    .leave-tracker-step {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 0 0 18px;
+        text-align: left;
+    }
+
+    .leave-tracker-step:last-child {
+        padding-bottom: 0;
+    }
+
+    .leave-tracker-step::after {
+        top: 32px;
+        bottom: 4px;
+        left: 13px;
+        right: auto;
+        width: 2px;
+        height: auto;
+    }
+
+    .leave-tracker-text {
+        padding-top: 5px;
+    }
+
+    .leave-tracker-resume {
+        justify-content: flex-start;
+    }
+}

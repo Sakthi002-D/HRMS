@@ -17,7 +17,7 @@
 
     background: rgba(10, 29, 47, 0.58);
 
-    z-index: 9999;
+    z-index: var(--z-modal);
 
     overflow-y: auto;
     box-sizing: border-box;

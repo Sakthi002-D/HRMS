@@ -19,7 +19,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { purgeAllChatStorage } from "../../components/assistant/HRAssistant";
+import { api, formatDate, isPendingHR } from "../../components/resignation/resignationApi";
+import "../../components/recruitment/recruitment.css";
 import "./HRDashboard.css";
+
+const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
 function HRDashboard() {
   const navigate = useNavigate();
@@ -29,6 +33,8 @@ function HRDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [employeeRequests, setEmployeeRequests] = useState([]);
   const [employeeRequestsLoading, setEmployeeRequestsLoading] = useState(true);
+  const [resignations, setResignations] = useState([]);
+  const [endOfService, setEndOfService] = useState([]);
   const hrProfile = (() => {
     try {
       const storedHR = sessionStorage.getItem("loggedInHR");
@@ -132,8 +138,24 @@ function HRDashboard() {
           path: "/hr-dashboard",
         }));
 
+      // Manpower Request / recruitment notifications for this HR user
+      let recruitmentNotifications = [];
+      if (hrProfile.employee_id) {
+        const inboxResponse = await fetch(`http://localhost:5000/api/notifications/inbox/${encodeURIComponent(hrProfile.employee_id)}`, { cache: "no-store" });
+        if (inboxResponse.ok) {
+          recruitmentNotifications = (await inboxResponse.json()).map((item) => ({
+            id: `inbox-${item.id}`,
+            type: "request",
+            title: item.title,
+            message: item.message,
+            time: new Date(item.created_at).toLocaleDateString(),
+            path: String(item.link || "").startsWith("resignation:") ? "/resignations" : "/recruitment",
+          }));
+        }
+      }
+
       const readIds = getReadNotificationIds();
-      setNotifications([...leaveNotifications, ...pendingRequestNotifications].map((notification) => ({
+      setNotifications([...recruitmentNotifications, ...leaveNotifications, ...pendingRequestNotifications].map((notification) => ({
         ...notification,
         read: readIds.has(notification.id),
       })));
@@ -180,9 +202,27 @@ function HRDashboard() {
     };
   }, [navigate]);
 
+  // Resignations (for the pending approvals count; they're managed on the Resignation page)
+  // and the Pending End of Service list
+  const loadResignations = async () => {
+    if (!hrProfile.employee_id) return;
+    const id = encodeURIComponent(hrProfile.employee_id);
+    try {
+      const [resignationRows, endOfServiceRows] = await Promise.all([
+        api(`/api/hr/resignations?employee_id=${id}`),
+        api(`/api/hr/end-of-service?employee_id=${id}`),
+      ]);
+      setResignations(resignationRows);
+      setEndOfService(endOfServiceRows);
+    } catch (error) {
+      console.error("Unable to load resignations:", error);
+    }
+  };
+
   useEffect(() => {
     loadNotifications();
     loadDashboardData();
+    loadResignations();
 
     const refreshDashboard = () => loadDashboardData();
     window.addEventListener("focus", refreshDashboard);
@@ -202,6 +242,9 @@ function HRDashboard() {
   };
 
   const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const pendingEmployeeRequests = employeeRequests.filter((request) => request.status === "Pending").length;
+  const pendingHRResignations = resignations.filter(isPendingHR).length;
+  const pendingApprovals = dashboardData ? (dashboardData.pendingLeaves ?? 0) + pendingHRResignations : "-";
 
   return (
     <DashboardLayout className="hr-dashboard-layout">
@@ -316,7 +359,15 @@ function HRDashboard() {
           <div className="welcome-copy">
             <h2>Welcome back, {hrDisplayName}</h2>
             <p>
-              You have <strong> {dashboardData?.pendingLeaves ?? "-"} pending approvals</strong> to review.
+              You have{" "}
+              {pendingHRResignations > 0 ? (
+                <Link to="/resignations" className="welcome-approvals-link" title={`${pendingHRResignations} resignation${pendingHRResignations === 1 ? "" : "s"} waiting for HR`}>
+                  <strong>{pendingApprovals} pending approvals</strong>
+                </Link>
+              ) : (
+                <strong>{pendingApprovals} pending approvals</strong>
+              )}{" "}
+              to review.
             </p>
           </div>
           <div className="welcome-actions">
@@ -331,7 +382,7 @@ function HRDashboard() {
               <h2>Employee Requests</h2>
               <p>Review and respond to employee submissions.</p>
             </div>
-            <span>{employeeRequests.filter((request) => request.status === "Pending").length} pending</span>
+            <span>{pendingEmployeeRequests} pending</span>
           </div>
           {employeeRequestsLoading ? (
             <div className="employee-request-review-empty">Loading requests...</div>
@@ -357,6 +408,34 @@ function HRDashboard() {
             </div>
           )}
         </section>
+
+        <section className="employee-request-review-panel">
+          <div className="employee-request-review-heading">
+            <div>
+              <h2>Pending End of Service</h2>
+              <p>Employees whose resignation completed after their last working day. End of Service processing will follow.</p>
+            </div>
+            <span>{endOfService.length} pending</span>
+          </div>
+          {endOfService.length === 0 ? (
+            <div className="employee-request-review-empty">No employees pending End of Service.</div>
+          ) : (
+            <div className="employee-request-review-list">
+              {endOfService.map((row) => (
+                <article className="employee-request-review-item" key={row.id}>
+                  <div>
+                    <strong>{row.employee_name} ({row.employee_id})</strong>
+                    <span>{row.department || "—"} · Last working day {formatDate(row.last_working_day)}{row.resignation_no ? ` · ${row.resignation_no}` : ""}</span>
+                  </div>
+                  <div className="employee-request-review-actions">
+                    <Link className="review-request-button" to={`/employees/employeedetails/${employeeSlug(row.employee_name)}`}>View employee</Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
 
 
         {/* ================= OVERVIEW ================= */}

@@ -1,0 +1,484 @@
+/* =========================================================
+   Recruitment / Manpower Request additions
+   Colours follow Recruitment.css (#12304a navy, #198754 green, #64748b muted)
+========================================================= */
+
+/* ---------- Page tabs + 4 cards ---------- */
+
+.recruitment-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.recruitment-tabs button {
+    padding: 11px 16px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.recruitment-tabs button.active {
+    border-bottom-color: #12304a;
+    color: #12304a;
+}
+
+.recruitment-cards.four {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1100px) {
+    .recruitment-cards.four {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .recruitment-cards.four {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Status pills ---------- */
+
+.mpr-status,
+.job-status.tone-open,
+.job-status.tone-progress,
+.job-status.tone-done {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mpr-status.draft { background: #eef0f2; color: #475569; }
+.mpr-status.pending { background: #fff3d8; color: #b45309; }
+.mpr-status.warning { background: #ffedd5; color: #c2410c; }
+.mpr-status.danger { background: #ffebeb; color: #d43b3b; }
+.mpr-status.muted { background: #eef0f2; color: #59636d; }
+.mpr-status.done { background: #dcfce7; color: #15803d; }
+
+.job-status.tone-progress { background: #e0f2fe; color: #0369a1; }
+.job-status.tone-done { background: #eef0f2; color: #475569; }
+
+.job-badge {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.job-badge.deadline { background: #ffebeb; color: #d43b3b; }
+.job-badge.legacy { background: #eef0f2; color: #59636d; }
+
+.mpr-budget-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mpr-budget-pill.within { background: #dcfce7; color: #15803d; }
+.mpr-budget-pill.exception { background: #ffebeb; color: #d43b3b; }
+
+.mpr-chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.jobs-table .job-actions {
+    display: flex;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.jobs-table .job-actions .create-job-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+/* ---------- MPR list ---------- */
+
+.mpr-module {
+    display: flex;
+    flex-direction: column;
+}
+
+.mpr-subtabs {
+    display: flex;
+    gap: 4px;
+}
+
+.mpr-subtabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mpr-subtabs button.active {
+    border-color: #12304a;
+    background: #12304a;
+    color: #ffffff;
+}
+
+.mpr-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: #ff6333;
+    color: #ffffff;
+    font-size: 11px;
+    text-align: center;
+}
+
+.mpr-row-awaiting td {
+    background: #fffbeb;
+}
+
+.mpr-notice {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mpr-muted {
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* ---------- MPR form ---------- */
+
+.mpr-form .mpr-form-section {
+    margin: 22px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    color: #12304a;
+    font-size: 15px;
+}
+
+.mpr-form form > .mpr-form-section:first-child {
+    margin-top: 6px;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.mpr-form .form-group textarea,
+.mpr-actions-panel textarea,
+.mpr-plan-modal textarea {
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+}
+
+.mpr-form .form-group textarea:focus {
+    border-color: #12304a;
+}
+
+.mpr-full {
+    grid-column: 1 / -1;
+}
+
+.mpr-inline {
+    margin-top: 16px;
+}
+
+.mpr-form-note {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #ffedd5;
+    color: #c2410c;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mpr-form-error {
+    margin: 14px 0 0;
+    color: #d43b3b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* SharedTheme forces dashboard <p> text black (!important); errors stay red */
+.dashboard-content .mpr-form-error {
+    color: #d43b3b !important;
+}
+
+.mpr-checklist,
+.mpr-panel-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mpr-checklist label,
+.mpr-panel-list label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mpr-checklist label.checked,
+.mpr-panel-list label.checked {
+    border-color: #12304a;
+    background: #f1f5f9;
+    color: #12304a;
+}
+
+.mpr-checklist input,
+.mpr-panel-list input {
+    height: auto;
+    margin: 0;
+}
+
+.mpr-panel-list {
+    max-height: 190px;
+    margin-top: 8px;
+    overflow-y: auto;
+}
+
+.mpr-panel-list small {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* ---------- Budget badge ---------- */
+
+.mpr-budget {
+    margin: 16px 0 4px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid;
+}
+
+.mpr-budget.within { border-color: #bbf7d0; background: #f0fdf4; }
+.mpr-budget.exception { border-color: #fecaca; background: #fef2f2; }
+
+.mpr-budget-badge {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mpr-budget.within .mpr-budget-badge { background: #dcfce7; color: #15803d; }
+.mpr-budget.exception .mpr-budget-badge { background: #ffebeb; color: #d43b3b; }
+
+.mpr-budget p {
+    margin: 0;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.mpr-budget b {
+    color: #d43b3b;
+}
+
+.mpr-budget.within p b {
+    color: #15803d;
+}
+
+.mpr-budget:has(.mpr-budget-badge:only-child) .mpr-budget-badge {
+    margin-bottom: 0;
+}
+
+/* Budget details (pop-ups and MPR detail): green when within, red when exceeded */
+.mpr-budget-box {
+    margin: 10px 0 0;
+    padding: 12px 14px;
+    border: 1px solid;
+    border-radius: 8px;
+    white-space: normal;
+}
+
+.mpr-budget-box.within { border-color: #bbf7d0; background: #f0fdf4; }
+.mpr-budget-box.exception { border-color: #fecaca; background: #fef2f2; }
+
+.mpr-budget-box dl {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+}
+
+.mpr-budget-box dl > div {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.mpr-budget-box dt {
+    display: inline;
+    color: #53657a;
+}
+
+.mpr-budget-box dd {
+    display: inline;
+    margin: 0;
+    color: #12304a;
+    font-weight: 600;
+}
+
+.mpr-budget-box.exception dd b { color: #d43b3b; }
+.mpr-budget-box.within .mpr-budget-note dd { color: #15803d; }
+
+.mpr-budget-box small {
+    display: block;
+    margin-top: 6px;
+    color: #718096;
+    font-size: 11px;
+}
+
+.mpr-budget-legacy {
+    margin: 0;
+    color: #334155;
+    font-size: 13px;
+}
+
+/* ---------- MPR detail ---------- */
+
+.mpr-detail .leave-tracker {
+    margin: 16px 0;
+}
+
+.mpr-detail-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.mpr-actions-panel {
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+}
+
+.mpr-actions-panel textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.mpr-warning {
+    margin: 0 0 10px;
+    color: #b45309;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mpr-warning-text {
+    color: #b45309 !important;
+}
+
+.mpr-action-buttons,
+.mpr-owner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.mpr-owner-actions {
+    margin: 0 0 16px;
+}
+
+.mpr-btn {
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mpr-btn.success { border: 1px solid #198754; background: #198754; color: #ffffff; }
+.mpr-btn.warning { border: 1px solid #fdba74; background: #fff7ed; color: #c2410c; }
+.mpr-btn.danger { border: 1px solid #f1baba; background: #fff0f0; color: #d43b3b; }
+
+.mpr-btn:disabled,
+.save-job-btn:disabled,
+.cancel-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.mpr-log td small {
+    color: #64748b;
+}
+
+.mpr-log th,
+.mpr-log td {
+    padding: 10px;
+    font-size: 13px;
+}
+
+.mpr-plan-modal .form-group input[type="search"] {
+    height: 38px;
+}
+
+@media (max-width: 640px) {
+    .recruitment-tabs {
+        overflow-x: auto;
+    }
+
+    .mpr-subtabs button {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .mpr-action-buttons button,
+    .mpr-owner-actions button {
+        flex: 1;
+    }
+}
+
+/* Budget check on the MPR detail (approvers) */
+.mpr-budget-summary {
+    margin: 12px 0 4px;
+}
+
+.mpr-budget-justification {
+    margin: 8px 0 0;
+    color: #334155;
+    font-size: 13px;
+}

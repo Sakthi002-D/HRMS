@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import API_URL from "../../config/api";
 import "./HRAssistant.css";
+import { useAlert } from "../common/dialog/dialogContext";
 
 const API_BASE_URL = API_URL;
 
@@ -121,6 +122,7 @@ function buildWelcomeMessage(currentUser, currentRole) {
 }
 
 export default function HRAssistant({ role: propRole, user: propUser }) {
+    const showAlert = useAlert();
     const activeRole = (propRole || propUser?.role || (sessionStorage.getItem("loggedInHR") ? "hr" : "employee")).toLowerCase();
 
     const activeUser = propUser || (() => {
@@ -413,7 +415,7 @@ export default function HRAssistant({ role: propRole, user: propUser }) {
 
         } catch (err) {
             console.error("Action confirmation error:", err);
-            alert("Error confirming action. Please try again.");
+            showAlert("Error confirming action. Please try again.");
         } finally {
             setActionLoading(false);
         }

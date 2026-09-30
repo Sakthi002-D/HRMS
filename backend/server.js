@@ -6,6 +6,23 @@ import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import assistantRouter from "./routes/assistant.js";
+import recruitmentRouter from "./routes/recruitment.js";
+import ticketsRouter from "./routes/tickets.js";
+import resignationsRouter from "./routes/resignations.js";
+import { ensureTicketSchema } from "./services/ticketSchema.js";
+import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
+import { ensureNotificationSchema, getInbox, sendQueuedEmails } from "./services/notificationService.js";
+import { FILLED_APPLICATION_STATUSES, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
+import { getCompanyToday } from "./services/leaveDateRules.js";
+import { validateLeaveDates } from "./services/leaveDateRules.js";
+import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
+import {
+    ensureAnnualLeaveAccrualSchema,
+    exportAnnualLeaveAccrualForFinance,
+    getAnnualLeaveAccrualReport,
+    runAnnualLeaveAccrual,
+    startAnnualLeaveAccrualScheduler,
+} from "./services/annualLeaveAccrual.js";
 import { randomBytes } from "node:crypto";
 
 
@@ -30,6 +47,12 @@ app.use(express.json({ limit: "10mb" }));
 
 // AI Assistant Router
 app.use("/api/assistant", assistantRouter);
+// Manpower Requests, approval settings, masters, recruitment plan, in-app notifications
+app.use("/api", recruitmentRouter);
+// Support tickets, ticket categories, support agents, comments
+app.use("/api", ticketsRouter);
+// Resignation requests, approvals, Pending End of Service
+app.use("/api", resignationsRouter);
 
 // Test API
 app.get("/", (req, res) => {
@@ -1451,6 +1474,15 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 time: "HR request update",
                 section: "dashboard",
             })),
+            // Manpower Request / resignation notifications (hr_notifications inbox)
+            ...(await getInbox(req.params.employeeId)).map((item) => ({
+                id: `inbox-${item.id}`,
+                type: "request",
+                title: item.title,
+                message: item.message,
+                time: new Date(item.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+                section: String(item.link || "").startsWith("resignation:") ? "resignation" : "manpower",
+            })),
         ]);
     } catch (error) {
         console.error("Error fetching employee notifications:", error);
@@ -1589,7 +1621,12 @@ app.get("/api/leaves", async (req, res) => {
                 l.reason,
                 l.status,
                 l.cancelled_by,
-                l.cancelled_at
+                l.cancelled_at,
+                l.created_at,
+                l.reviewed_at,
+                TO_CHAR(l.from_date, 'YYYY-MM-DD') AS from_day,
+                TO_CHAR(l.to_date, 'YYYY-MM-DD') AS to_day,
+                TO_CHAR(l.resumed_on, 'YYYY-MM-DD') AS resumed_on
             FROM leaves l
             JOIN employees e
                 ON l.employee_id = e.employee_id
@@ -1639,11 +1676,15 @@ app.put("/api/leaves/:id/status", async (req, res) => {
         const result = await pool.query(
             `
             UPDATE leaves
-            SET status = $1
+            SET status = $1,
+                reviewed_at = CASE
+                    WHEN $3::boolean THEN CURRENT_TIMESTAMP
+                    ELSE reviewed_at
+                END
             WHERE id = $2
             RETURNING *
             `,
-            [status, id]
+            [status, id, status === "Approved" || status === "Rejected"]
         );
 
         if (result.rows.length === 0) {
@@ -1663,6 +1704,56 @@ app.put("/api/leaves/:id/status", async (req, res) => {
         res.status(500).json({
             message: "Failed to update leave status",
             error: error.message
+        });
+    }
+});
+
+
+// =========================
+// HR - MARK LEAVE AS RESUMED
+// =========================
+
+app.put("/api/leaves/:id/resume", async (req, res) => {
+    try {
+        const { resumed_on } = req.body || {};
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(resumed_on || ""))) {
+            return res.status(400).json({
+                message: "A valid resumption date (YYYY-MM-DD) is required"
+            });
+        }
+
+        // Only approved leaves, after the leave has ended.
+        // CURRENT_DATE + 1 allows for company timezones ahead of the server.
+        const result = await pool.query(
+            `
+            UPDATE leaves
+            SET resumed_on = $2::date
+            WHERE id = $1
+              AND LOWER(status) = 'approved'
+              AND $2::date > to_date
+              AND $2::date <= CURRENT_DATE + 1
+            RETURNING id, TO_CHAR(resumed_on, 'YYYY-MM-DD') AS resumed_on
+            `,
+            [req.params.id, resumed_on]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(400).json({
+                message: "Resumption can only be recorded for an approved leave, after its end date and not in the future"
+            });
+        }
+
+        res.json({
+            message: "Resumption recorded successfully",
+            leave: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Error recording leave resumption:", error);
+
+        res.status(500).json({
+            message: "Failed to record resumption"
         });
     }
 });
@@ -1774,17 +1865,70 @@ const completedMonthsBetween = (startDate, endDate) => {
         - (endDate.getDate() < startDate.getDate() ? 1 : 0));
 };
 
-const getAnnualLeaveBalance = (joiningDate, asOfDate, approvedTaken) => {
-    const serviceMonths = completedMonthsBetween(joiningDate, asOfDate);
-    const monthlyAccrual = Math.floor(serviceMonths / 12) >= 5 ? 28 / 12 : 1.75;
-    const accrued = monthlyAccrual * serviceMonths;
+// Annual Leave balance for the Apply Leave card and HR review modal.
+// Always calculated live; never cached.
+app.get("/api/employees/:employeeId/annual-leave-balance", async (req, res) => {
+    try {
+        const balance = await getAnnualLeaveBalance(req.params.employeeId);
 
-    return {
-        eligible: serviceMonths > 0,
-        balance: Math.max(0, Number((accrued - approvedTaken).toFixed(2))),
-        serviceMonths,
-    };
-};
+        if (!balance) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
+
+        res.set("Cache-Control", "no-store");
+        res.json(balance);
+    } catch (error) {
+        console.error("Error fetching annual leave balance:", error);
+        res.status(500).json({ message: "Failed to fetch annual leave balance" });
+    }
+});
+
+// =====================================================
+// ANNUAL LEAVE ACCRUAL LEDGER (Finance)
+// =====================================================
+
+const ACCRUAL_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// HR report: days and amount accrued per employee (optional ?month=YYYY-MM)
+app.get("/api/reports/annual-leave-accrual", async (req, res) => {
+    try {
+        const month = req.query.month || null;
+        if (month && !ACCRUAL_MONTH_PATTERN.test(month)) {
+            return res.status(400).json({ message: "Month must be YYYY-MM" });
+        }
+
+        res.set("Cache-Control", "no-store");
+        res.json(await getAnnualLeaveAccrualReport({ month }));
+    } catch (error) {
+        console.error("Error fetching annual leave accrual report:", error);
+        res.status(500).json({ message: "Failed to fetch annual leave accrual report" });
+    }
+});
+
+// "Export for Finance": marks the month's rows as posted (GL posting is a placeholder)
+app.post("/api/reports/annual-leave-accrual/export-finance", async (req, res) => {
+    try {
+        const month = req.body?.month;
+        if (!ACCRUAL_MONTH_PATTERN.test(String(month || ""))) {
+            return res.status(400).json({ message: "Month (YYYY-MM) is required" });
+        }
+
+        res.json(await exportAnnualLeaveAccrualForFinance({ month }));
+    } catch (error) {
+        console.error("Error exporting annual leave accrual:", error);
+        res.status(500).json({ message: "Failed to export annual leave accrual" });
+    }
+});
+
+// Run the accrual job now (idempotent; the scheduler also runs it daily)
+app.post("/api/annual-leave-accrual/run", async (req, res) => {
+    try {
+        res.json(await runAnnualLeaveAccrual());
+    } catch (error) {
+        console.error("Error running annual leave accrual:", error);
+        res.status(500).json({ message: "Failed to run annual leave accrual" });
+    }
+});
 
 app.post("/api/leaves", async (req, res) => {
     try {
@@ -1870,6 +2014,24 @@ app.post("/api/leaves", async (req, res) => {
             });
         }
 
+        // No past dates (company timezone)
+        const leaveDateError = validateLeaveDates(from_date, to_date);
+
+        if (leaveDateError) {
+            return res.status(400).json({
+                message: leaveDateError
+            });
+        }
+
+        // Accepted resignation: no leave after the last working day
+        const resignationLeaveError = await checkLeaveAgainstResignation(pool, employee_id, from_date, to_date);
+
+        if (resignationLeaveError) {
+            return res.status(400).json({
+                message: resignationLeaveError
+            });
+        }
+
 
         // Calculate leave days
         const difference =
@@ -1888,18 +2050,11 @@ app.post("/api/leaves", async (req, res) => {
         );
         const approvedTaken = Number(approvedTakenResult.rows[0].total_days || 0);
 
-        if (leave_type === "Annual Leave") {
-            const annualBalance = getAnnualLeaveBalance(joiningDate, today, approvedTaken);
-            if (!annualBalance.eligible) {
+        if (leave_type === ANNUAL_LEAVE_TYPE) {
+            const annualError = await checkAnnualLeaveRequest(employee_id, difference);
+            if (annualError) {
                 return res.status(400).json({
-                    message: "Annual Leave is available after completing one month of service",
-                    completed_months: annualBalance.serviceMonths,
-                });
-            }
-            if (difference > annualBalance.balance) {
-                return res.status(400).json({
-                    message: `Only ${annualBalance.balance} Annual Leave day(s) remaining`,
-                    remaining_days: annualBalance.balance,
+                    message: annualError,
                 });
             }
         }
@@ -2032,12 +2187,12 @@ const DEFAULT_LEAVE_POLICY = {
         "Compensatory Off",
         "Unpaid Leave (LOP)",
     ],
+    // FRD SHELTER-HCM-LA-15-001: accrual_rate = yearly_entitlement_days ÷ 12
     annualLeave: {
-        underFiveYearsMonthlyAccrual: 1.75,
-        underFiveYearsAnnualDays: 21,
-        fiveYearsAndAboveMonthlyAccrual: 2.33,
-        fiveYearsAndAboveAnnualDays: 28,
+        yearly_entitlement_days: 30,
+        grade_overrides: {},
     },
+    leave_accrual_salary_basis: "total",
     sickLeave: {
         eligibleAfterMonths: 3,
         medicalCertificateRequired: true,
@@ -2162,11 +2317,15 @@ app.get("/api/dashboard", async (req, res) => {
         let openPositions = 0;
 
         try {
+            // Unfilled openings on jobs still recruiting
             const jobsResult = await pool.query(`
-                SELECT COALESCE(SUM(openings), 0)::int AS open_positions
-                FROM public.jobs
-                WHERE LOWER(status) IN ('open', 'active')
-            `);
+                SELECT COALESCE(SUM(GREATEST(j.openings - (
+                    SELECT COUNT(*) FROM public.job_applications a
+                    WHERE a.job_id = j.job_id AND LOWER(a.status) = ANY($1::text[])
+                ), 0)), 0)::int AS open_positions
+                FROM public.jobs j
+                WHERE LOWER(j.status) IN ('open', 'active', 'recruitment in progress')
+            `, [FILLED_APPLICATION_STATUSES]);
 
             openPositions = jobsResult.rows[0].open_positions;
         } catch (jobError) {
@@ -2234,22 +2393,46 @@ app.get("/api/dashboard/departments", async (req, res) => {
 // GET all jobs
 app.get("/api/jobs", async (req, res) => {
     try {
+        // Filled = applications marked Hired/Joined. accepting_applications is
+        // false once the job is closed or its application deadline has passed.
         const result = await pool.query(`
             SELECT
-                id,
-                job_id,
-                title,
-                department,
-                openings,
-                experience,
-                location,
-                employment_type,
-                status,
-                created_at
-            FROM public.jobs
-            ORDER BY id DESC
-        `);
+                j.id,
+                j.job_id,
+                j.title,
+                j.department,
+                j.openings,
+                j.experience,
+                j.location,
+                j.employment_type,
+                j.status,
+                j.created_at,
+                j.job_description,
+                j.skills,
+                j.compensation,
+                j.mpr_id,
+                m.mpr_no,
+                COALESCE(j.request_type, m.request_type) AS request_type,
+                j.sourcing,
+                j.agency_id,
+                a.name AS agency_name,
+                TO_CHAR(j.application_deadline, 'YYYY-MM-DD') AS application_deadline,
+                j.recruiter_employee_id,
+                r.name AS recruiter_name,
+                j.interview_panel,
+                (SELECT COUNT(*)::int FROM public.job_applications ja
+                  WHERE ja.job_id = j.job_id AND LOWER(ja.status) = ANY($2::text[])) AS filled,
+                (j.application_deadline IS NOT NULL AND j.application_deadline < $1::date) AS deadline_passed,
+                (LOWER(COALESCE(j.status, '')) IN ('open', 'recruitment in progress', 'active')
+                  AND (j.application_deadline IS NULL OR j.application_deadline >= $1::date)) AS accepting_applications
+            FROM public.jobs j
+            LEFT JOIN manpower_requests m ON m.id = j.mpr_id
+            LEFT JOIN recruitment_agencies a ON a.id = j.agency_id
+            LEFT JOIN employees r ON r.employee_id = j.recruiter_employee_id
+            ORDER BY j.id DESC
+        `, [getCompanyToday(), FILLED_APPLICATION_STATUSES]);
 
+        res.set("Cache-Control", "no-store");
         res.json(result.rows);
 
     } catch (error) {
@@ -2262,83 +2445,12 @@ app.get("/api/jobs", async (req, res) => {
 });
 
 
-// CREATE new job
-app.post("/api/jobs", async (req, res) => {
-    try {
-        const {
-            title,
-            department,
-            openings,
-            experience,
-            location,
-            employment_type,
-            job_description,
-            skills,
-            compensation
-        } = req.body;
-
-        if (!title || !department || !openings || !location) {
-            return res.status(400).json({
-                message: "Please provide all required job details"
-            });
-        }
-
-        const jobIdResult = await pool.query(`
-            SELECT
-                'JOB' ||
-                LPAD(
-                    (COALESCE(MAX(id), 0) + 1)::text,
-                    3,
-                    '0'
-                ) AS job_id
-            FROM public.jobs
-        `);
-
-        const jobId = jobIdResult.rows[0].job_id;
-
-        const result = await pool.query(
-            `
-            INSERT INTO public.jobs
-            (
-                job_id,
-                title,
-                department,
-                openings,
-                experience,
-                location,
-                employment_type,
-                job_description,
-                skills,
-                compensation,
-                status
-            )
-            VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Open')
-            RETURNING *
-            `,
-            [
-                jobId,
-                title,
-                department,
-                openings,
-                experience,
-                location,
-                employment_type || "Full Time",
-                job_description,
-                skills,
-                compensation
-            ]
-        );
-
-        res.status(201).json(result.rows[0]);
-
-    } catch (error) {
-        console.error("Error creating job:", error);
-
-        res.status(500).json({
-            message: "Failed to create job"
-        });
-    }
+// Direct job creation is disabled (FRD SHELTER-HCM-RC-01-001): job openings are
+// created automatically when a Manpower Request is fully approved.
+app.post("/api/jobs", (req, res) => {
+    res.status(410).json({
+        message: "Jobs can no longer be created directly. Raise a Manpower Request; the job opening is created when it is fully approved."
+    });
 });
 
 
@@ -2410,6 +2522,24 @@ app.post("/api/job-applications", async (req, res) => {
             return res.status(400).json({
                 message: "Job ID, candidate name and email are required"
             });
+        }
+
+        // Stop new applications once the job is closed or its deadline has passed
+        const jobCheck = await pool.query(
+            `SELECT status, application_deadline < $2::date AS deadline_passed
+             FROM public.jobs WHERE job_id = $1`,
+            [job_id, getCompanyToday()]
+        );
+        const targetJob = jobCheck.rows[0];
+
+        if (!targetJob) {
+            return res.status(404).json({ message: "Job opening not found" });
+        }
+        if (targetJob.deadline_passed) {
+            return res.status(400).json({ message: "The application deadline for this job has passed" });
+        }
+        if (!["open", "recruitment in progress", "active"].includes(String(targetJob.status || "").toLowerCase())) {
+            return res.status(400).json({ message: "This job is no longer accepting applications" });
         }
 
         const applicationIdResult = await pool.query(`
@@ -2551,6 +2681,9 @@ app.put("/api/job-applications/:id/status", async (req, res) => {
                 message: "Application not found"
             });
         }
+
+        // Close the job once hired/joined applications reach the openings
+        await refreshJobFill(pool, result.rows[0].job_id);
 
         res.json(result.rows[0]);
 
@@ -2794,6 +2927,14 @@ const ensureLeaveCancellationColumns = async () => {
     `);
 };
 
+const ensureLeaveTrackingColumns = async () => {
+    await pool.query(`
+        ALTER TABLE leaves
+        ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS resumed_on DATE
+    `);
+};
+
 const ensureEmployeeRequestsTable = async () => {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS employee_requests (
@@ -2815,11 +2956,23 @@ ensureEmployeePersonalInfoColumns()
     .then(ensurePasswordResetTable)
     .then(ensureLeavePolicyTable)
     .then(ensureLeaveCancellationColumns)
+    .then(ensureLeaveTrackingColumns)
     .then(ensureEmployeeRequestsTable)
+    .then(() => ensureAnnualLeaveAccrualSchema())
+    .then(() => ensureNotificationSchema())
+    .then(() => ensureManpowerSchema())
+    .then(() => ensureTicketSchema())
+    .then(() => ensureResignationSchema())
     .then(() => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);
         });
+
+        // Daily annual leave accrual (first run backfills from joining dates)
+        startAnnualLeaveAccrualScheduler();
+
+        // Daily: complete resignations the day after the last working day
+        startResignationScheduler({ onEmails: sendQueuedEmails });
     })
     .catch((error) => {
         console.error("Failed to prepare database tables:", error);

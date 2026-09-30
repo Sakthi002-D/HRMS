@@ -1,0 +1,143 @@
+/* Annual Leave Accrual report — extends LeaveReport.css */
+
+.accrual-report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.accrual-report-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.accrual-report-toolbar label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.accrual-report-toolbar input[type="month"] {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #d6dee8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #12304a;
+    font: inherit;
+}
+
+.accrual-link-button {
+    height: 40px;
+    border: 0;
+    background: transparent;
+    color: #176b8f;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.accrual-link-button:disabled {
+    color: #94a3b8;
+    cursor: default;
+}
+
+.accrual-report-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.accrual-secondary-button,
+.accrual-primary-button {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.accrual-secondary-button {
+    border: 1px solid #d6dee8;
+    background: #ffffff;
+    color: #12304a;
+}
+
+.accrual-primary-button {
+    border: 1px solid #12304a;
+    background: #12304a;
+    color: #ffffff;
+}
+
+.accrual-secondary-button:disabled,
+.accrual-primary-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.accrual-report-message {
+    margin: -8px 0 18px;
+    color: #16834a;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.leave-report-table .accrual-number {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.accrual-basis {
+    text-transform: capitalize;
+}
+
+.leave-report-table tfoot td {
+    background: #f1f5f9;
+    color: #12304a;
+    font-weight: 700;
+}
+
+.accrual-status {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.accrual-status.posted {
+    background: #e7f7ee;
+    color: #16834a;
+}
+
+.accrual-status.open {
+    background: #eef0f2;
+    color: #59636d;
+}
+
+.accrual-status.missing {
+    background: #fff3d8;
+    color: #b45309;
+}
+
+@media (max-width: 700px) {
+    .accrual-report-header {
+        flex-direction: column;
+    }
+
+    .accrual-report-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .accrual-report-actions button {
+        flex: 1;
+    }
+}

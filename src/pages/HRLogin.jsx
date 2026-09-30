@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./HRLogin.css";
 import API_URL from "../config/api";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function HRLogin() {
+  const showAlert = useAlert();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -15,7 +17,7 @@ function HRLogin() {
     e.preventDefault();
 
     if (!username.trim() || !password.trim()) {
-      alert("Please enter username and password");
+      showAlert("Please enter username and password");
       return;
     }
 
@@ -36,14 +38,14 @@ function HRLogin() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Invalid username or password");
+        showAlert(data.message || "Invalid username or password");
         return;
       }
 
       const user = data.employee;
 
       if (!user) {
-        alert("User details not found");
+        showAlert("User details not found");
         return;
       }
 
@@ -85,11 +87,11 @@ function HRLogin() {
         return;
       }
 
-      alert("Invalid user role. Please contact administrator.");
+      showAlert("Invalid user role. Please contact administrator.");
 
     } catch (error) {
       console.error("HR Login error:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     } finally {
       setLoading(false);
     }

@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ForgotPassword.css";
 import API_URL from "../config/api";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function ForgotPassword() {
+  const showAlert = useAlert();
   const navigate = useNavigate();
 
   const [employeeId, setEmployeeId] = useState("");
@@ -13,7 +15,7 @@ function ForgotPassword() {
     e.preventDefault();
 
     if (!employeeId.trim()) {
-      alert("Please enter Employee ID");
+      showAlert("Please enter Employee ID");
       return;
     }
 
@@ -36,13 +38,11 @@ function ForgotPassword() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Unable to send OTP");
+        showAlert(data.message || "Unable to send OTP");
         return;
       }
 
-      alert(
-        `OTP generated successfully.\nRegistered email: ${data.email}`
-      );
+      await showAlert({ variant: "success", title: "OTP sent", message: `OTP generated successfully.\nRegistered email: ${data.email}` });
 
       // Temporarily store Employee ID
       localStorage.setItem(
@@ -54,7 +54,7 @@ function ForgotPassword() {
 
     } catch (error) {
       console.error("Forgot password error:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     } finally {
       setLoading(false);
     }

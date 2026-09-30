@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import LeaveTracker from "../../components/hr/LeaveTracker";
+import {
+    addDays,
+    getCompanyToday,
+    getTrackerState,
+} from "../../components/hr/leaveTrackerState";
 import "./LeaveManagement.css";
+import { useAlert } from "../../components/common/dialog/dialogContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const API_URL = `${API_BASE_URL}/api/leaves`;
@@ -56,6 +63,7 @@ const MONTHS = [
 ];
 
 function LeaveManagement() {
+    const showAlert = useAlert();
     const [searchParams] = useSearchParams();
 
     // =========================================================
@@ -87,15 +95,18 @@ function LeaveManagement() {
     const [error, setError] = useState("");
 
     const [updating, setUpdating] = useState(false);
+    const [resuming, setResuming] = useState(false);
+    const [annualBalanceState, setAnnualBalanceState] = useState({ employeeId: null, data: null });
+    const [resumeDraft, setResumeDraft] = useState({ id: null, date: "" });
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
     const [isPolicySetupOpen, setIsPolicySetupOpen] = useState(false);
     const [leavePolicy, setLeavePolicy] = useState({
         leaveTypes: DEFAULT_LEAVE_TYPES,
         qatarHolidayCalendar: DEFAULT_QATAR_HOLIDAYS,
-        underFiveYearsMonthlyAccrual: 1.75,
-        underFiveYearsAnnualDays: 21,
-        fiveYearsAndAboveMonthlyAccrual: 2.33,
-        fiveYearsAndAboveAnnualDays: 28,
+        // Annual Leave (FRD SHELTER-HCM-LA-15-001): accrual = entitlement ÷ 12
+        annualYearlyEntitlementDays: 30,
+        annualGradeOverrides: [],
+        leaveAccrualSalaryBasis: "total",
         sickEligibleAfterMonths: 3,
         maternityDays: 50,
         bereavementDays: 3,
@@ -213,6 +224,14 @@ function LeaveManagement() {
                               leave.cancelledBy ??
                               null,
 
+                      // Leave tracker fields
+                      fromDay: leave.from_day ?? null,
+                      toDay: leave.to_day ?? null,
+                      appliedAt: leave.created_at ?? null,
+                      reviewedAt: leave.reviewed_at ?? null,
+                      resumedOn: leave.resumed_on ?? null,
+                      cancelledAt: leave.cancelled_at ?? null,
+
                       /*
                         Backend support.
 
@@ -295,10 +314,10 @@ function LeaveManagement() {
                 qatarHolidayCalendar: Array.isArray(policy.qatarHolidayCalendar) && policy.qatarHolidayCalendar.length
                     ? policy.qatarHolidayCalendar
                     : DEFAULT_QATAR_HOLIDAYS,
-                underFiveYearsMonthlyAccrual: policy.annualLeave?.underFiveYearsMonthlyAccrual ?? 1.75,
-                underFiveYearsAnnualDays: policy.annualLeave?.underFiveYearsAnnualDays ?? 21,
-                fiveYearsAndAboveMonthlyAccrual: policy.annualLeave?.fiveYearsAndAboveMonthlyAccrual ?? 2.33,
-                fiveYearsAndAboveAnnualDays: policy.annualLeave?.fiveYearsAndAboveAnnualDays ?? 28,
+                annualYearlyEntitlementDays: policy.annualLeave?.yearly_entitlement_days ?? 30,
+                annualGradeOverrides: Object.entries(policy.annualLeave?.grade_overrides || {})
+                    .map(([grade, days]) => ({ grade, days: Number(days) })),
+                leaveAccrualSalaryBasis: policy.leave_accrual_salary_basis === "basic" ? "basic" : "total",
                 sickEligibleAfterMonths: policy.sickLeave?.eligibleAfterMonths ?? 3,
                 maternityDays: policy.maternityLeave?.days ?? 50,
                 bereavementDays: policy.bereavementLeave?.immediateFamilyDays ?? 3,
@@ -324,11 +343,14 @@ function LeaveManagement() {
                         leaveTypes: leavePolicy.leaveTypes,
                         qatarHolidayCalendar: leavePolicy.qatarHolidayCalendar,
                         annualLeave: {
-                            underFiveYearsMonthlyAccrual: Number(leavePolicy.underFiveYearsMonthlyAccrual),
-                            underFiveYearsAnnualDays: Number(leavePolicy.underFiveYearsAnnualDays),
-                            fiveYearsAndAboveMonthlyAccrual: Number(leavePolicy.fiveYearsAndAboveMonthlyAccrual),
-                            fiveYearsAndAboveAnnualDays: Number(leavePolicy.fiveYearsAndAboveAnnualDays),
+                            yearly_entitlement_days: Number(leavePolicy.annualYearlyEntitlementDays) || 30,
+                            grade_overrides: Object.fromEntries(
+                                leavePolicy.annualGradeOverrides
+                                    .filter((row) => row.grade.trim() && Number(row.days) > 0)
+                                    .map((row) => [row.grade.trim(), Number(row.days)])
+                            ),
                         },
+                        leave_accrual_salary_basis: leavePolicy.leaveAccrualSalaryBasis,
                         sickLeave: {
                             eligibleAfterMonths: Number(leavePolicy.sickEligibleAfterMonths),
                             medicalCertificateRequired: true,
@@ -370,6 +392,45 @@ function LeaveManagement() {
         fetchLeaves();
         fetchLeavePolicy();
     }, [searchParams]);
+
+    // =========================================================
+    // ANNUAL LEAVE BALANCE (live from backend)
+    // Refetched when the modal opens and after every status change,
+    // so Approve / Reject reflect instantly.
+    // =========================================================
+
+    const reviewEmployeeID = selectedEmployee?.employeeID;
+    const reviewIsAnnual = selectedEmployee?.leaveType === "Annual Leave";
+    const reviewStatus = selectedEmployee?.status;
+
+    useEffect(() => {
+        if (!reviewEmployeeID || !reviewIsAnnual) return undefined;
+
+        let ignore = false;
+
+        fetch(
+            `${API_BASE_URL}/api/employees/${reviewEmployeeID}/annual-leave-balance`,
+            { cache: "no-store" }
+        )
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch annual leave balance");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (!ignore) {
+                    setAnnualBalanceState({ employeeId: reviewEmployeeID, data });
+                }
+            })
+            .catch((err) => {
+                console.error("Error fetching annual leave balance:", err);
+            });
+
+        return () => {
+            ignore = true;
+        };
+    }, [reviewEmployeeID, reviewIsAnnual, reviewStatus]);
 
     // =========================================================
     // LEAVE TYPES
@@ -537,6 +598,10 @@ function LeaveManagement() {
                 updatedLeave?.status ||
                 newStatus;
 
+            const reviewedAt =
+                updatedLeave?.leave?.reviewed_at ??
+                null;
+
             // UPDATE TABLE
             setLeaveData(
                 (previousLeaves) =>
@@ -546,6 +611,9 @@ function LeaveManagement() {
                                 ? {
                                       ...leave,
                                       status: finalStatus,
+                                      reviewedAt:
+                                          reviewedAt ??
+                                          leave.reviewedAt,
                                   }
                                 : leave
                     )
@@ -565,6 +633,9 @@ function LeaveManagement() {
                     return {
                         ...previousEmployee,
                         status: finalStatus,
+                        reviewedAt:
+                            reviewedAt ??
+                            previousEmployee.reviewedAt,
                     };
                 }
             );
@@ -576,7 +647,7 @@ function LeaveManagement() {
                 err
             );
 
-            alert(
+            showAlert(
                 "Failed to update leave status. Please try again."
             );
 
@@ -590,16 +661,12 @@ function LeaveManagement() {
     // APPROVE
     // =========================================================
 
+    // The modal stays open so HR sees the refreshed balance straight away
     const handleApprove = async (id) => {
-        const success =
-            await updateLeaveStatus(
-                id,
-                "Approved"
-            );
-
-        if (success) {
-            setSelectedEmployee(null);
-        }
+        await updateLeaveStatus(
+            id,
+            "Approved"
+        );
     };
 
     // =========================================================
@@ -607,14 +674,73 @@ function LeaveManagement() {
     // =========================================================
 
     const handleReject = async (id) => {
-        const success =
-            await updateLeaveStatus(
-                id,
-                "Rejected"
+        await updateLeaveStatus(
+            id,
+            "Rejected"
+        );
+    };
+
+    // =========================================================
+    // MARK AS RESUMED
+    // =========================================================
+
+    const handleMarkResumed = async (id) => {
+        try {
+            setResuming(true);
+
+            const response = await fetch(
+                `${API_URL}/${id}/resume`,
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    body: JSON.stringify({
+                        resumed_on: resumeDate,
+                    }),
+                }
             );
 
-        if (success) {
-            setSelectedEmployee(null);
+            const result = await response
+                .json()
+                .catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message ||
+                        "Failed to record resumption"
+                );
+            }
+
+            const resumedOn =
+                result.leave?.resumed_on ||
+                resumeDate;
+
+            setLeaveData((previousLeaves) =>
+                previousLeaves.map((leave) =>
+                    leave.id === id
+                        ? { ...leave, resumedOn }
+                        : leave
+                )
+            );
+
+            setSelectedEmployee((previousEmployee) =>
+                previousEmployee?.id === id
+                    ? { ...previousEmployee, resumedOn }
+                    : previousEmployee
+            );
+        } catch (err) {
+            console.error(
+                "Error recording resumption:",
+                err
+            );
+
+            showAlert(err.message);
+        } finally {
+            setResuming(false);
         }
     };
 
@@ -716,8 +842,23 @@ function LeaveManagement() {
     // APPROVED DAYS
     // =========================================================
 
-    const selectedEmployeeApprovedDays =
-        selectedEmployeeLeaves
+    // Annual Leave requests use the backend balance (single source of truth)
+    const isAnnualRequest =
+        selectedEmployee?.leaveType === "Annual Leave";
+
+    const selectedAnnualBalance =
+        isAnnualRequest &&
+        annualBalanceState.employeeId ===
+            selectedEmployee.employeeID
+            ? annualBalanceState.data
+            : null;
+
+    const annualBalanceLoading =
+        isAnnualRequest && !selectedAnnualBalance;
+
+    const selectedEmployeeApprovedDays = isAnnualRequest
+        ? selectedAnnualBalance?.used ?? 0
+        : selectedEmployeeLeaves
             .filter(
                 (leave) =>
                     leave.status?.toLowerCase() ===
@@ -767,8 +908,9 @@ function LeaveManagement() {
     // EMPLOYEE TOTAL LEAVE
     // =========================================================
 
-    const selectedEmployeeTotalLeave =
-        selectedEmployeeLeaves.find(
+    const selectedEmployeeTotalLeave = isAnnualRequest
+        ? selectedAnnualBalance?.accrued ?? 0
+        : selectedEmployeeLeaves.find(
             (leave) =>
                 leave.totalLeave !== null
         )?.totalLeave ||
@@ -788,8 +930,9 @@ function LeaveManagement() {
     // EMPLOYEE REMAINING LEAVE
     // =========================================================
 
-    const selectedEmployeeRemainingLeave =
-        backendBalance !== undefined
+    const selectedEmployeeRemainingLeave = isAnnualRequest
+        ? selectedAnnualBalance?.remaining ?? 0
+        : backendBalance !== undefined
             ? backendBalance
             : Math.max(
                   selectedEmployeeTotalLeave -
@@ -811,6 +954,23 @@ function LeaveManagement() {
     const hasSufficientBalance =
         selectedEmployeeRemainingLeave >=
         requestedDays;
+
+    // =========================================================
+    // LEAVE TRACKER (company timezone)
+    // =========================================================
+
+    const selectedEmployeeTracker = selectedEmployee
+        ? getTrackerState(
+              selectedEmployee,
+              getCompanyToday()
+          )
+        : null;
+
+    // "Resumed on" defaults to today until HR picks a date for this leave
+    const resumeDate =
+        resumeDraft.id === selectedEmployee?.id
+            ? resumeDraft.date
+            : selectedEmployeeTracker?.today || "";
 
     // =========================================================
     // LEAVE USAGE %
@@ -907,11 +1067,39 @@ function LeaveManagement() {
                             </button>
                         </div>
                         <div className="leave-policy-fields">
+                            <label>
+                                Annual Leave Yearly Entitlement
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="0.5"
+                                    value={leavePolicy.annualYearlyEntitlementDays}
+                                    disabled={policyLoading || policySaving}
+                                    onChange={(event) => setLeavePolicy((current) => ({
+                                        ...current,
+                                        annualYearlyEntitlementDays: Math.max(0, Number(event.target.value)),
+                                    }))}
+                                />
+                                <span>
+                                    days per year • accrues {(Number(leavePolicy.annualYearlyEntitlementDays || 0) / 12).toFixed(2)} days/month
+                                </span>
+                            </label>
+                            <label>
+                                Leave Accrual Salary Basis
+                                <select
+                                    value={leavePolicy.leaveAccrualSalaryBasis}
+                                    disabled={policyLoading || policySaving}
+                                    onChange={(event) => setLeavePolicy((current) => ({
+                                        ...current,
+                                        leaveAccrualSalaryBasis: event.target.value,
+                                    }))}
+                                >
+                                    <option value="total">Total salary (basic + allowances)</option>
+                                    <option value="basic">Basic salary</option>
+                                </select>
+                                <span>amount accrued = salary ÷ 12 per month</span>
+                            </label>
                             {[
-                                ["underFiveYearsMonthlyAccrual", "Under 5 Years Monthly Accrual", "days per month", "0.01"],
-                                ["underFiveYearsAnnualDays", "Under 5 Years Annual Days", "days per year", "1"],
-                                ["fiveYearsAndAboveMonthlyAccrual", "5+ Years Monthly Accrual", "days per month", "0.01"],
-                                ["fiveYearsAndAboveAnnualDays", "5+ Years Annual Days", "days per year", "1"],
                                 ["sickEligibleAfterMonths", "Sick Leave Eligible After", "months", "1"],
                                 ["maternityDays", "Maternity Leave Days", "days", "1"],
                                 ["bereavementDays", "Bereavement Days", "days", "1"],
@@ -933,6 +1121,62 @@ function LeaveManagement() {
                                     <span>{unit}</span>
                                 </label>
                             ))}
+                        </div>
+                        <div className="leave-policy-grades">
+                            <h3>Annual Leave Entitlement by Grade</h3>
+                            <p>Overrides the yearly entitlement for employees in a grade. Other employees use the default above.</p>
+                            {leavePolicy.annualGradeOverrides.map((row, index) => (
+                                <div className="leave-policy-grade-row" key={index}>
+                                    <input
+                                        type="text"
+                                        placeholder="Grade (e.g. G5)"
+                                        value={row.grade}
+                                        disabled={policyLoading || policySaving}
+                                        onChange={(event) => setLeavePolicy((current) => ({
+                                            ...current,
+                                            annualGradeOverrides: current.annualGradeOverrides.map((item, itemIndex) =>
+                                                itemIndex === index ? { ...item, grade: event.target.value } : item
+                                            ),
+                                        }))}
+                                    />
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="0.5"
+                                        value={row.days}
+                                        disabled={policyLoading || policySaving}
+                                        onChange={(event) => setLeavePolicy((current) => ({
+                                            ...current,
+                                            annualGradeOverrides: current.annualGradeOverrides.map((item, itemIndex) =>
+                                                itemIndex === index ? { ...item, days: Math.max(0, Number(event.target.value)) } : item
+                                            ),
+                                        }))}
+                                    />
+                                    <span>days/year • {(Number(row.days || 0) / 12).toFixed(2)}/month</span>
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove grade ${row.grade}`}
+                                        disabled={policyLoading || policySaving}
+                                        onClick={() => setLeavePolicy((current) => ({
+                                            ...current,
+                                            annualGradeOverrides: current.annualGradeOverrides.filter((_, itemIndex) => itemIndex !== index),
+                                        }))}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="leave-policy-add-grade"
+                                disabled={policyLoading || policySaving}
+                                onClick={() => setLeavePolicy((current) => ({
+                                    ...current,
+                                    annualGradeOverrides: [...current.annualGradeOverrides, { grade: "", days: 30 }],
+                                }))}
+                            >
+                                + Add grade
+                            </button>
                         </div>
                         <div className="leave-policy-types">
                             <h3>Available Leave Types</h3>
@@ -1410,9 +1654,11 @@ function LeaveManagement() {
                                         </h3>
 
                                         <p>
-                                            Check available
-                                            balance before
-                                            approving.
+                                            {isAnnualRequest
+                                                ? selectedAnnualBalance
+                                                    ? `Annual Leave accrued to date (${selectedAnnualBalance.monthlyAccrual} days/month).`
+                                                    : "Loading Annual Leave balance..."
+                                                : "Check available balance before approving."}
                                         </p>
 
                                     </div>
@@ -1641,6 +1887,65 @@ function LeaveManagement() {
 
                                     </div>
 
+                                    {/* LEAVE TRACKER */}
+
+                                    <LeaveTracker
+                                        leave={
+                                            selectedEmployee
+                                        }
+                                    />
+
+                                    {selectedEmployeeTracker?.canMarkResumed && (
+                                        <div className="leave-tracker-resume">
+
+                                            <label htmlFor="resumed-on">
+                                                Resumed on
+                                            </label>
+
+                                            <input
+                                                id="resumed-on"
+                                                type="date"
+                                                value={
+                                                    resumeDate
+                                                }
+                                                min={addDays(
+                                                    selectedEmployeeTracker.leaveEnd,
+                                                    1
+                                                )}
+                                                max={
+                                                    selectedEmployeeTracker.today
+                                                }
+                                                onChange={(e) =>
+                                                    setResumeDraft({
+                                                        id: selectedEmployee.id,
+                                                        date: e.target.value,
+                                                    })
+                                                }
+                                                disabled={
+                                                    resuming
+                                                }
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleMarkResumed(
+                                                        selectedEmployee.id
+                                                    )
+                                                }
+                                                disabled={
+                                                    resuming ||
+                                                    !resumeDate
+                                                }
+                                            >
+                                                {resuming
+                                                    ? "Saving..."
+                                                    : "Mark as resumed"}
+                                            </button>
+
+                                        </div>
+                                    )}
+
                                 </div>
 
                             </div>
@@ -1650,7 +1955,7 @@ function LeaveManagement() {
                             ================================================= */}
 
                             {selectedEmployee.status?.toLowerCase() ===
-                                "pending" && (
+                                "pending" && !annualBalanceLoading && (
                                 <div
                                     className={
                                         hasSufficientBalance
@@ -1839,6 +2144,7 @@ function LeaveManagement() {
                                         }
                                         disabled={
                                             updating ||
+                                            annualBalanceLoading ||
                                             !hasSufficientBalance
                                         }
                                     >

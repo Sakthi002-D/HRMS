@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import EmployeeDashboard from "./Employee/EmployeeDashboard";
 
@@ -8,6 +8,7 @@ import CandidateJobs from "./pages/CandidateJobs";
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
 import LeaveManagement from "./pages/hr/LeaveManagement";
+import Resignations from "./pages/hr/Resignations";
 import Payroll from "./pages/hr/Payroll";
 import Tickets from "./pages/hr/Tickets";
 import Reports from "./pages/hr/Reports";
@@ -32,13 +33,16 @@ import EmployeeReport from "./pages/hr/EmployeeReport";
 import AttendanceReport from "./pages/hr/AttendanceReport";
 import LeaveReport from "./pages/hr/LeaveReport";
 import PayrollReport from "./pages/hr/PayrollReport";
+import AnnualLeaveAccrualReport from "./pages/hr/AnnualLeaveAccrualReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
 
+import DialogProvider from "./components/common/dialog/DialogProvider";
 import "./App.css";
 
 function App() {
   return (
+    <DialogProvider>
     <BrowserRouter>
 
       <Routes>
@@ -153,6 +157,16 @@ function App() {
           />
 
           <Route
+            path="/resignations"
+            element={<Resignations />}
+          />
+
+          <Route
+            path="/hr/resignations"
+            element={<Navigate to="/resignations" replace />}
+          />
+
+          <Route
             path="/payroll"
             element={<Payroll />}
           />
@@ -195,6 +209,11 @@ function App() {
           />
 
           <Route
+            path="/annual-leave-accrual-report"
+            element={<AnnualLeaveAccrualReport />}
+          />
+
+          <Route
             path="/settings"
             element={<Settings />}
           />
@@ -204,6 +223,7 @@ function App() {
       </Routes>
 
     </BrowserRouter>
+    </DialogProvider>
   );
 }
 

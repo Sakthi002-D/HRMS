@@ -18,6 +18,7 @@ import {
   UserX,
   Eye,
 } from "lucide-react";
+import { useAlert } from "../../components/common/dialog/dialogContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -68,6 +69,7 @@ const fileToDataUrl = (file) => {
 };
 
 function Employees() {
+  const showAlert = useAlert();
 
   const navigate = useNavigate();
   // =========================
@@ -338,12 +340,12 @@ const resetForm = () => {
     const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
 
     if (!allowedStatuses.includes(exitStatus)) {
-      alert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
+      showAlert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
       return;
     }
 
     if (!lastDateWorked) {
-      alert("Please select last date worked.");
+      showAlert("Please select last date worked.");
       return;
     }
 
@@ -364,7 +366,7 @@ const resetForm = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to delete employee");
+        showAlert(data.message || "Failed to delete employee");
         return;
       }
 
@@ -378,16 +380,16 @@ const resetForm = () => {
       });
 
       await fetchEmployees();
-      alert("Employee archived successfully. Their record is still searchable.");
+      showAlert({ variant: "success", message: "Employee archived successfully. Their record is still searchable." });
     } catch (error) {
       console.error("Error deleting employee:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     }
   };
 
   const exportEmployeesToCSV = () => {
   if (employees.length === 0) {
-    alert("No employees to export");
+    showAlert({ variant: "info", title: "Nothing to export", message: "No employees to export" });
     return;
   }
 
@@ -526,47 +528,47 @@ const resetForm = () => {
     }
 
     if (!employeeId) {
-      alert("Please enter Employee ID");
+      showAlert("Please enter Employee ID");
       return;
     }
 
     if (isEmployeeIdExists(employeeId)) {
-      alert("Employee ID already exists!");
+      showAlert("Employee ID already exists!");
       return;
     }
 
     if (!formData.title) {
-      alert("Title is required.");
+      showAlert("Title is required.");
       return;
     }
 
     if (!formData.firstName.trim()) {
-      alert("First Name is required.");
+      showAlert("First Name is required.");
       return;
     }
 
     if (!formData.lastName.trim()) {
-      alert("Last Name is required.");
+      showAlert("Last Name is required.");
       return;
     }
 
     if (!formData.designation.trim()) {
-      alert("Please enter Designation");
+      showAlert("Please enter Designation");
       return;
     }
 
     if (!formData.department.trim()) {
-      alert("Please enter Department");
+      showAlert("Please enter Department");
       return;
     }
 
     if (!formData.joiningDate) {
-      alert("Please select Employment Start Date");
+      showAlert("Please select Employment Start Date");
       return;
     }
 
     if (!formData.employmentType) {
-      alert("Please select Employment Type");
+      showAlert("Please select Employment Type");
       return;
     }
 
@@ -583,23 +585,23 @@ const resetForm = () => {
 
     for (const [field, message] of markedFields) {
       if (!String(formData[field] || "").trim()) {
-        alert(message);
+        showAlert(message);
         return;
       }
     }
 
     if (!formData.email.trim()) {
-      alert("Please enter Email");
+      showAlert("Please enter Email");
       return;
     }
 
     if (!isValidEmail(formData.email)) {
-      alert("Please enter a valid email address");
+      showAlert("Please enter a valid email address");
       return;
     }
 
     if (!formData.phone.trim()) {
-      alert("Please enter phone number");
+      showAlert("Please enter phone number");
       return;
     }
 
@@ -610,7 +612,7 @@ const resetForm = () => {
         phoneDigits.length !== 10 ||
         !/^[6-9]\d{9}$/.test(phoneDigits)
       ) {
-        alert("Please enter a valid 10-digit Indian phone number");
+        showAlert("Please enter a valid 10-digit Indian phone number");
         return;
       }
     } else if (
@@ -619,7 +621,7 @@ const resetForm = () => {
         formData.phoneCountryCode
       )
     ) {
-      alert("Please enter a valid phone number");
+      showAlert("Please enter a valid phone number");
       return;
     }
 const profilePhoto = await fileToDataUrl(formData.profilePhoto);
@@ -676,7 +678,7 @@ const employeeData = {
 
       if (!response.ok) {
         console.error("Backend error:", data);
-        alert(data.message || "Failed to add employee");
+        showAlert(data.message || "Failed to add employee");
         return;
       }
 
@@ -685,14 +687,14 @@ const employeeData = {
       // Get the latest data from the database
       await fetchEmployees();
 
-      alert("Employee added successfully!");
+      showAlert({ variant: "success", message: "Employee added successfully!" });
 
       setIsModalOpen(false);
       setEditingEmployeeId(null);
       resetForm();
     } catch (error) {
       console.error("Error adding employee:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     }
   };
 
@@ -847,7 +849,7 @@ const updateEmployee = async () => {
   }
 
   if (!employeeId) {
-    alert("Please enter Employee ID");
+    showAlert("Please enter Employee ID");
     return;
   }
 
@@ -857,37 +859,37 @@ const updateEmployee = async () => {
       editingEmployeeId
     )
   ) {
-    alert("Employee ID already exists!");
+    showAlert("Employee ID already exists!");
     return;
   }
 
   if (!formData.firstName.trim()) {
-    alert("First Name is required.");
+    showAlert("First Name is required.");
     return;
   }
 
   if (!formData.lastName.trim()) {
-    alert("Last Name is required.");
+    showAlert("Last Name is required.");
     return;
   }
 
   if (!formData.designation.trim()) {
-    alert("Please enter Designation");
+    showAlert("Please enter Designation");
     return;
   }
 
   if (!formData.department.trim()) {
-    alert("Please enter Department");
+    showAlert("Please enter Department");
     return;
   }
 
   if (!formData.email.trim()) {
-    alert("Please enter Email");
+    showAlert("Please enter Email");
     return;
   }
 
   if (!formData.phone.trim()) {
-    alert("Please enter Phone Number");
+    showAlert("Please enter Phone Number");
     return;
   }
 
@@ -945,14 +947,14 @@ const updateEmployee = async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || "Failed to update employee");
+      showAlert(data.message || "Failed to update employee");
       return;
     }
 
     // Get the latest data from the database
     await fetchEmployees();
 
-    alert("Employee updated successfully!");
+    showAlert({ variant: "success", message: "Employee updated successfully!" });
 
     setEditingEmployeeId(null);
     setIsModalOpen(false);
@@ -960,7 +962,7 @@ const updateEmployee = async () => {
 
   } catch (error) {
     console.error("Error updating employee:", error);
-    alert("Unable to connect to backend");
+    showAlert("Unable to connect to backend");
   }
 };
 

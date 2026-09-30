@@ -187,3 +187,27 @@
     font-size: 12px;
     font-weight: 600;
 }
+
+/* Disabled dates / navigation (minDate) */
+
+.date-picker-days button:disabled,
+.date-picker-days button:disabled:hover {
+    background: transparent;
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.date-picker-footer button:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+/* Floating popup (autoPosition): rendered in <body>, placed by JS */
+
+.date-picker-popup.is-floating {
+    position: fixed;
+    z-index: calc(var(--z-dialog) - 10);
+    top: 0;
+    left: 0;
+    max-width: calc(100vw - 16px);
+}

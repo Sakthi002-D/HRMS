@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Download, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import { useAlert, useConfirm } from "../../components/common/dialog/dialogContext";
 import "./Payroll.css";
 
 const initialPayrollData = [
@@ -20,6 +21,8 @@ const formatDisplayDate = (value) => {
 };
 
 function Payroll() {
+    const confirm = useConfirm();
+    const showAlert = useAlert();
     const [payrollData, setPayrollData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -80,6 +83,22 @@ function Payroll() {
         setIsExportOpen(false);
     };
 
+    const deleteSalary = (employee) => confirm({
+        variant: "danger",
+        title: "Delete salary record?",
+        message: <>The salary record for <strong>{employee.employeeName}</strong> will be permanently deleted.</>,
+        confirmText: "Delete",
+        loadingText: "Deleting…",
+        onConfirm: async () => {
+            const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || "Unable to delete salary record");
+            }
+            setPayrollData((previous) => previous.filter((item) => item.id !== employee.id));
+        },
+    });
+
     const saveSalary = async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
@@ -109,7 +128,7 @@ function Payroll() {
         });
         if (!response.ok) {
             const error = await response.json();
-            alert(error.message || "Unable to save salary");
+            showAlert({ variant: "danger", message: error.message || "Unable to save salary" });
             return;
         }
         const saved = await response.json();
@@ -173,7 +192,7 @@ function Payroll() {
                                 <td>{employee.employeeID}</td><td>{employee.employeeName}</td><td>{employee.email}</td><td>{employee.phone}</td>
                                 <td>{employee.designation}</td>
                                 <td>{formatDisplayDate(employee.joiningDate)}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
-                                <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={async () => { if (window.confirm(`Delete ${employee.employeeName} salary record?`)) { const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" }); if (response.ok) setPayrollData((previous) => previous.filter((item) => item.id !== employee.id)); } }}><Trash2 size={15} /></button></td>
+                                <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={() => deleteSalary(employee)}><Trash2 size={15} /></button></td>
                             </tr>) : <tr><td colSpan="9" className="payroll-empty">No salary records found</td></tr>}</tbody>
                         </table>
                     </div>

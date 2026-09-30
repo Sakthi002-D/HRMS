@@ -1,26 +1,36 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
+import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
+import { api, formatDate, getSessionEmployeeId, statusTone } from "../../components/recruitment/recruitmentApi";
 import "./Recruitment.css";
+import "../../components/recruitment/recruitment.css";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-console.log("API URL:", API_URL);
+const TABS = [
+    { id: "manpower", label: "Manpower Requests" },
+    { id: "jobs", label: "Job Openings" },
+    { id: "applications", label: "Job Applications" },
+];
 
 function Recruitment() {
-    const [showForm, setShowForm] = useState(false);
+    const hrId = getSessionEmployeeId();
+    const [activeTab, setActiveTab] = useState("manpower");
+    const [mprFormOpen, setMprFormOpen] = useState(false);
 
     const [applications, setApplications] = useState([]);
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [showApplication, setShowApplication] = useState(false);
 
     const [jobs, setJobs] = useState([]);
-useEffect(() => {
-        fetchJobs();
-        fetchApplications();
-    }, []);
+    const [jobSearch, setJobSearch] = useState("");
+    const [summary, setSummary] = useState(null);
+    const [meta, setMeta] = useState(null);
+    const [planJob, setPlanJob] = useState(null);
 
     const fetchJobs = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/jobs`);
+            const response = await fetch(`${API_URL}/api/jobs`, { cache: "no-store" });
 
             if (!response.ok) {
             throw new Error("Failed to fetch jobs");
@@ -34,11 +44,23 @@ useEffect(() => {
         }
     };
 
+    // Card counts (pending MPR approvals, open jobs, unfilled positions, departments)
+    const fetchSummary = async () => {
+        try {
+            setSummary(await api("/api/mprs/summary"));
+        } catch (error) {
+            console.error("Error fetching recruitment summary:", error);
+        }
+    };
+
+    // After an MPR action or plan save: refresh the cards and the job table
+    const refreshRecruitment = () => {
+        fetchJobs();
+        fetchSummary();
+    };
+
 
     const fetchApplications = async () => {
-
-            console.log("API URL:", API_URL);
-
     try {
         const response = await fetch(`${API_URL}/api/job-applications`);
 
@@ -47,15 +69,6 @@ useEffect(() => {
         }
 
         const data = await response.json();
-                console.log("FULL APPLICATION DATA:", data);
-
-                data.forEach((application) => {
-                console.log(
-                "APPLICATION:",
-                application.application_id,
-                application
-            );
-        });
         setApplications(data);
 
     } catch (error) {
@@ -64,81 +77,33 @@ useEffect(() => {
 };
 
 const handleViewApplication = (application) => {
-        console.log("SELECTED APPLICATION:", application);
-
-
     setSelectedApplication(application);
     setShowApplication(true);
 };
 
-    const [formData, setFormData] = useState({
-        title: "",
-        department: "",
-        openings: "",
-        experience: "",
-        location: "",
-        type: "Full Time",
-        job_description: "",
-        skills: "",
-        compensation: "",
-    });
+    useEffect(() => {
+        fetchJobs();
+        fetchApplications();
+        fetchSummary();
+        api(`/api/recruitment/meta?employee_id=${encodeURIComponent(hrId || "")}`)
+            .then(setMeta)
+            .catch((error) => console.error("Error fetching recruitment options:", error));
+    }, [hrId]);
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
+    const openNewManpowerRequest = () => {
+        setActiveTab("manpower");
+        setMprFormOpen(true);
     };
 
-   const handleCreateJob = async (e) => {
-    e.preventDefault();
+    const search = jobSearch.trim().toLowerCase();
+    const visibleJobs = jobs.filter(
+        (job) =>
+            !search ||
+            [job.job_id, job.title, job.department, job.mpr_no, job.location]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search))
+    );
 
-    try {
-        const response = await fetch(`${API_URL}/api/jobs`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                title: formData.title,
-                department: formData.department,
-                openings: Number(formData.openings),
-                experience: formData.experience,
-                location: formData.location,
-                employment_type: formData.type,
-                job_description: formData.job_description,
-                skills: formData.skills,
-                compensation: formData.compensation,
-            }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || "Failed to create job");
-        }
-
-        setJobs((prevJobs) => [data, ...prevJobs]);
-
-        setFormData({
-            title: "",
-            department: "",
-            openings: "",
-            experience: "",
-            location: "",
-            type: "Full Time",
-            job_description: "",
-            skills: "",
-            compensation: "",
-        });
-
-        setShowForm(false);
-
-    } catch (error) {
-        console.error("Error creating job:", error);
-        alert("Failed to create job");
-    }
-};
     return (
         <DashboardLayout>
             <div className="recruitment-page">
@@ -146,222 +111,67 @@ const handleViewApplication = (application) => {
                 <div className="recruitment-header">
                     <div>
                         <h1>Recruitment</h1>
-                        <p>Manage job openings and recruitment activities</p>
+                        <p>Manage manpower requests, job openings and recruitment activities</p>
                     </div>
 
                     <button
                         className="create-job-btn"
-                        onClick={() => setShowForm(true)}
+                        onClick={openNewManpowerRequest}
                     >
-                        + Create Job
+                        + New Manpower Request
                     </button>
                 </div>
 
-                <div className="recruitment-cards">
+                <div className="recruitment-cards four">
 
                     <div className="recruitment-card">
-                        <h3>Open Positions</h3>
-                        <h2>
-                            {jobs.filter(
-                                (job) => job.status === "Open"
-                            ).length}
-                        </h2>
+                        <h3>Pending MPR Approvals</h3>
+                        <h2>{summary?.pending_mpr_approvals ?? "—"}</h2>
                     </div>
 
                     <div className="recruitment-card">
-                        <h3>Total Openings</h3>
-                        <h2>
-                            {jobs.reduce(
-                                (total, job) =>
-                                    total + Number(job.openings || 0),
-                                0
-                            )}
-                        </h2>
+                        <h3>Open Jobs</h3>
+                        <h2>{summary?.open_jobs ?? "—"}</h2>
+                    </div>
+
+                    <div className="recruitment-card">
+                        <h3>Open Positions</h3>
+                        <h2>{summary?.open_positions ?? "—"}</h2>
                     </div>
 
                     <div className="recruitment-card">
                         <h3>Departments</h3>
-                        <h2>
-                            {
-                                new Set(
-                                    jobs.map((job) => job.department)
-                                ).size
-                            }
-                        </h2>
+                        <h2>{summary?.departments ?? "—"}</h2>
                     </div>
 
                 </div>
 
-                {showForm && (
-                    <div className="job-form-container">
+                <div className="recruitment-tabs" role="tablist">
+                    {TABS.map((tab) => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === tab.id}
+                            className={activeTab === tab.id ? "active" : ""}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
 
-                        <div className="job-form-header">
-                            <h2>Create Job Opening</h2>
-
-                            <button
-                                className="close-btn"
-                                onClick={() => setShowForm(false)}
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleCreateJob}>
-
-                            <div className="form-grid">
-
-                                <div className="form-group">
-                                    <label>Job Title</label>
-                                    <input
-                                        type="text"
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleChange}
-                                        placeholder="e.g. Frontend Developer"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Department</label>
-                                    <select
-                                        name="department"
-                                        value={formData.department}
-                                        onChange={handleChange}
-                                        required
-                                    >
-                                        <option value="">
-                                            Select Department
-                                        </option>
-                                        <option value="IT">
-                                            IT
-                                        </option>
-                                        <option value="HR">
-                                            HR
-                                        </option>
-                                        <option value="Finance">
-                                            Finance
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>No. of Openings</label>
-                                    <input
-                                        type="number"
-                                        name="openings"
-                                        min="1"
-                                        value={formData.openings}
-                                        onChange={handleChange}
-                                        placeholder="e.g. 2"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Experience</label>
-                                    <input
-                                        type="text"
-                                        name="experience"
-                                        value={formData.experience}
-                                        onChange={handleChange}
-                                        placeholder="e.g. 0-2 Years"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Location</label>
-                                    <input
-                                        type="text"
-                                        name="location"
-                                        value={formData.location}
-                                        onChange={handleChange}
-                                        placeholder="e.g. Chennai"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Employment Type</label>
-                                    <select
-                                        name="type"
-                                        value={formData.type}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="Full Time">
-                                            Full Time
-                                        </option>
-                                        <option value="Part Time">
-                                            Part Time
-                                        </option>
-                                        <option value="Contract">
-                                            Contract
-                                        </option>
-                                    </select>
-                                </div>
-
-                            <div className="form-group">
-                               <label>Job Description</label>
-                                <textarea
-                                 name="job_description"
-                                 value={formData.job_description}
-                                 onChange={handleChange}
-                                 placeholder="Enter job description"
-                                 rows="4"
-                                 required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Required Skills</label>
-                                <input
-                                    type="text"
-                                    name="skills"
-                                    value={formData.skills}
-                                    onChange={handleChange}
-                                    placeholder="e.g. React, Node.js, MongoDB"
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Compensation</label>
-                                <input
-                                 type="text"
-                                 name="compensation"
-                                 value={formData.compensation}
-                                 onChange={handleChange}
-                                 placeholder="e.g. ₹4 - ₹6 LPA"
-                                 required
-                            />
-                            </div>
-
-                            </div>
-
-                            <div className="form-actions">
-
-                                <button
-                                    type="button"
-                                    className="cancel-btn"
-                                    onClick={() => setShowForm(false)}
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    className="save-job-btn"
-                                >
-                                    Create Job
-                                </button>
-
-                            </div>
-
-                        </form>
-                    </div>
+                {activeTab === "manpower" && (
+                    <ManpowerRequests
+                        actorId={hrId}
+                        formOpen={mprFormOpen}
+                        onFormOpenChange={setMprFormOpen}
+                        onChanged={refreshRecruitment}
+                        showNewButton={false}
+                    />
                 )}
 
+                {activeTab === "jobs" && (
                 <div className="jobs-section">
 
                     <div className="jobs-section-header">
@@ -371,6 +181,8 @@ const handleViewApplication = (application) => {
                             type="text"
                             placeholder="Search jobs..."
                             className="job-search"
+                            value={jobSearch}
+                            onChange={(event) => setJobSearch(event.target.value)}
                         />
                     </div>
 
@@ -381,22 +193,35 @@ const handleViewApplication = (application) => {
                             <thead>
                                 <tr>
                                     <th>Job ID</th>
+                                    <th>MPR No</th>
                                     <th>Job Title</th>
                                     <th>Department</th>
-                                    <th>Openings</th>
+                                    <th>Request Type</th>
+                                    <th>Filled / Openings</th>
                                     <th>Experience</th>
                                     <th>Location</th>
                                     <th>Type</th>
+                                    <th>Application Deadline</th>
+                                    <th>Agency</th>
                                     <th>Status</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
 
                             <tbody>
 
-                                {jobs.map((job) => (
+                                {visibleJobs.length === 0 && (
+                                    <tr><td colSpan="13">No job openings found.</td></tr>
+                                )}
+
+                                {visibleJobs.map((job) => (
                                     <tr key={job.id}>
 
                                         <td>{job.job_id}</td>
+
+                                        <td>
+                                            {job.mpr_no || <span className="job-badge legacy">No MPR (legacy)</span>}
+                                        </td>
 
                                         <td>
                                             <strong>
@@ -406,7 +231,9 @@ const handleViewApplication = (application) => {
 
                                         <td>{job.department}</td>
 
-                                        <td>{job.openings}</td>
+                                        <td>{job.request_type || "—"}</td>
+
+                                        <td>{job.filled ?? 0}/{job.openings}</td>
 
                                         <td>{job.experience}</td>
 
@@ -415,9 +242,36 @@ const handleViewApplication = (application) => {
                                         <td>{job.employment_type}</td>
 
                                         <td>
-                                            <span className="job-status">
+                                            {job.application_deadline ? formatDate(job.application_deadline) : "—"}
+                                            {job.deadline_passed && (
+                                                <>
+                                                    <br />
+                                                    <span className="job-badge deadline">Deadline passed</span>
+                                                </>
+                                            )}
+                                        </td>
+
+                                        <td>
+                                            {job.sourcing === "Internal" ? "Internal" : job.agency_name || "—"}
+                                        </td>
+
+                                        <td>
+                                            <span className={`job-status tone-${statusTone(job.status)}`}>
                                                 {job.status}
                                             </span>
+                                        </td>
+
+                                        <td>
+                                            <div className="job-actions">
+                                                <button
+                                                    type="button"
+                                                    className="create-job-btn"
+                                                    onClick={() => setPlanJob(job)}
+                                                    disabled={!meta || String(job.status).toLowerCase() === "closed"}
+                                                >
+                                                    Edit Recruitment Plan
+                                                </button>
+                                            </div>
                                         </td>
 
                                     </tr>
@@ -430,10 +284,24 @@ const handleViewApplication = (application) => {
                     </div>
 
                 </div>
+                )}
 
-            </div>
+                {planJob && meta && (
+                    <RecruitmentPlanModal
+                        job={planJob}
+                        meta={meta}
+                        actorId={hrId}
+                        onClose={() => setPlanJob(null)}
+                        onSaved={() => {
+                            setPlanJob(null);
+                            refreshRecruitment();
+                        }}
+                    />
+                )}
+
                             {/* JOB APPLICATIONS */}
 
+                {activeTab === "applications" && (
                 <div className="jobs-section">
 
                     <div className="jobs-section-header">
@@ -505,6 +373,9 @@ const handleViewApplication = (application) => {
                     </div>
 
                 </div>
+                )}
+
+            </div>
 
                                 {/* APPLICATION DETAILS MODAL */}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, ReceiptText, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, DoorOpen, FileText, Hourglass, KeyRound, Moon, ReceiptText, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
 import "./EmployeeDashboard.css";
@@ -11,7 +11,12 @@ import EmployeeEditModal from "./EmployeeEditModal";
 import EmployeeProfile from "./EmployeeProfile";
 import EmployeePayroll from "./EmployeePayroll";
 import EmployeeDocuments from "./EmployeeDocuments";
+import ManpowerRequests from "../components/recruitment/ManpowerRequests";
 import EmployeeRequestModal from "./EmployeeRequestModal";
+import EmployeeResignation from "./EmployeeResignation";
+import AlertDialog from "../components/common/dialog/AlertDialog";
+import "../components/resignation/resignation.css";
+import { api as resignationApi, daysLabel, formatDate as formatResignationDate, isServingNotice } from "../components/resignation/resignationApi";
 import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditModal";
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
@@ -31,9 +36,10 @@ const EMPLOYEE_REQUESTS = [
     { label: "NOC Request", icon: ShieldCheck, tone: "green" },
     { label: "Letter Request", icon: FileText, tone: "orange" },
     { label: "Expense Reimbursement", icon: ClipboardList, tone: "purple" },
+    // Opens the Resignation page instead of the request modal
+    { label: "Resignation", icon: DoorOpen, tone: "red", section: "resignation" },
 ];
 const LEAVE_RULES = {
-    annual: { eligibleMonths: 12, underFiveYears: { annual: 21, monthly: 1.75 }, fiveYearsAndAbove: { annual: 28, monthly: 28 / 12 } },
     sick: { eligibleMonths: 3, totalDays: 84 }, maternity: { days: 50 }, bereavement: { days: 3 }, compensatory: { validityDays: 90 },
 };
 const parseDateOnly = (value) => {
@@ -76,6 +82,12 @@ function EmployeeDashboard() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [employee, setEmployee] = useState(null);
     const [leaves, setLeaves] = useState([]);
+    const [annualBalance, setAnnualBalance] = useState(null);
+    // Manpower Requests section: only for Department Coordinators and MPR approvers
+    const [showManpower, setShowManpower] = useState(false);
+    // Resignation page data; also drives the serving-notice banner and the leave cut-off
+    const [resignationInfo, setResignationInfo] = useState(null);
+    const [resignationError, setResignationError] = useState("");
     const [attendance, setAttendance] = useState([]);
     const [payrollRecords, setPayrollRecords] = useState([]);
     const [payrollLoading, setPayrollLoading] = useState(false);
@@ -180,6 +192,9 @@ function EmployeeDashboard() {
     setEmployee(employeeData);
 
     fetchLeaves(employeeData.employee_id);
+    fetchAnnualBalance(employeeData.employee_id);
+    fetchRecruitmentAccess(employeeData.employee_id);
+    fetchResignation(employeeData.employee_id);
     fetchAttendance(employeeData.employee_id);
     fetchPayroll(employeeData.employee_id);
     fetchEmployeeNotifications(employeeData.employee_id);
@@ -278,6 +293,50 @@ function EmployeeDashboard() {
         }
     };
 
+    // Always fresh: calculated live by the backend, never cached
+    const fetchAnnualBalance = async (employeeId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/api/employees/${employeeId}/annual-leave-balance`,
+                { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch annual leave balance");
+            }
+
+            setAnnualBalance(await response.json());
+        } catch (error) {
+            console.error("Error fetching annual leave balance:", error);
+        }
+    };
+
+    const fetchRecruitmentAccess = async (employeeId) => {
+        try {
+            const response = await fetch(`${API_URL}/api/recruitment/meta?employee_id=${encodeURIComponent(employeeId)}`, { cache: "no-store" });
+            if (!response.ok) return;
+            const meta = await response.json();
+            setShowManpower(Boolean(meta.canRaise || meta.isApprover));
+        } catch (error) {
+            console.error("Error fetching recruitment access:", error);
+        }
+    };
+
+    const fetchResignation = async (employeeId) => {
+        try {
+            setResignationInfo(await resignationApi(`/api/resignations/employee/${encodeURIComponent(employeeId)}`));
+            setResignationError("");
+        } catch (error) {
+            console.error("Error fetching resignation:", error);
+            setResignationError(error.message || "Unable to load resignation");
+        }
+    };
+
+    const openApplyLeave = () => {
+        fetchAnnualBalance(employee.employee_id);
+        setShowApplyLeave(true);
+    };
+
     const fetchAttendance = async (employeeId) => {
         const today = new Date();
         const dates = Array.from({ length: 30 }, (_, index) => {
@@ -322,12 +381,24 @@ function EmployeeDashboard() {
             return;
         }
 
+        // Accepted resignation: no leave after the last working day
+        if (servingNotice && formData.to_date > activeResignation.last_working_day) {
+            showAlert(`Leave can't include dates after your last working day (${formatResignationDate(activeResignation.last_working_day)}).`);
+            return;
+        }
+
         if (!selectedLeaveInfo.eligible) {
             showAlert(`${formData.leave_type} is not eligible yet. Please complete the required service period.`);
             return;
         }
 
-        if (selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
+        // Annual Leave: requested ≤ balance − pending (same number the card shows)
+        if (formData.leave_type === "Annual Leave") {
+            if (selectedLeaveInfo.available !== null && requestedDays > selectedLeaveInfo.available) {
+                showAlert(`Available to apply: ${selectedLeaveInfo.available} day(s)`);
+                return;
+            }
+        } else if (selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
             showAlert(`Only ${selectedLeaveInfo.remaining} day(s) remaining for ${formData.leave_type}.`);
             return;
         }
@@ -371,6 +442,7 @@ function EmployeeDashboard() {
             setShowApplyLeave(false);
 
             fetchLeaves(employee.employee_id);
+            fetchAnnualBalance(employee.employee_id);
 
         } catch (error) {
             console.error("Apply leave error:", error);
@@ -616,6 +688,9 @@ function EmployeeDashboard() {
         return <div className="employee-loading">Loading...</div>;
     }
 
+    const activeResignation = resignationInfo?.active || null;
+    const servingNotice = isServingNotice(activeResignation);
+
     const pendingLeaves = leaves.filter(
         (leave) => leave.status?.trim().toLowerCase() === "pending"
     ).length;
@@ -650,16 +725,8 @@ function EmployeeDashboard() {
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
     const joiningDate = parseDateOnly(employee.joining_date);
     const serviceMonths = completedMonthsBetween(joiningDate, currentDate);
-    const serviceYears = Math.floor(serviceMonths / 12);
-    const annualRule = serviceYears >= 5 ? LEAVE_RULES.annual.fiveYearsAndAbove : LEAVE_RULES.annual.underFiveYears;
     const yearStart = new Date(currentYear, 0, 1);
-    const annualAccruedMonths = joiningDate
-        ? completedMonthsBetween(joiningDate, currentDate)
-        : 0;
-    const annualAccrued = Number((annualRule.monthly * annualAccruedMonths).toFixed(2));
-    const annualTaken = approvedLeaveRequests
-        .filter((leave) => leave.leave_type === "Annual Leave")
-        .reduce((total, leave) => total + Number(leave.days || 0), 0);
+    // Annual Leave balance comes only from the backend (GET .../annual-leave-balance)
     const sickTaken = approvedLeaveRequests
         .filter((leave) => leave.leave_type === "Sick Leave" && parseDateOnly(leave.from_date)?.getFullYear() === currentYear)
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
@@ -674,11 +741,7 @@ function EmployeeDashboard() {
     const requestedDays = daysBetweenInclusive(selectedFromDate, selectedToDate);
     const selectedLeaveType = formData.leave_type;
     const selectedTrackingLeave = leaves.find((leave) => String(leave.id) === String(openTrackingId));
-    const annualEligible = annualAccruedMonths > 0;
     const sickEligible = serviceMonths >= LEAVE_RULES.sick.eligibleMonths;
-    const annualEligibleDate = joiningDate
-        ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 1, joiningDate.getDate())
-        : null;
     const sickEligibleDate = joiningDate
         ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 3, joiningDate.getDate())
         : null;
@@ -721,7 +784,7 @@ function EmployeeDashboard() {
         },
     };
     const selectedLeaveInfo = selectedLeaveType === "Annual Leave"
-        ? { eligible: annualEligible, remaining: annualEligible ? Math.max(0, Number((annualAccrued - annualTaken).toFixed(2))) : null, used: annualTaken, entitlement: `${annualRule.monthly.toFixed(2)} days/month`, approval: "HR approval", document: "Not required", pay: "Paid leave", detail: annualEligible ? `${annualRule.monthly.toFixed(2)} days/month accrual with carry-forward` : `Eligible after: ${formatRuleDate(annualEligibleDate)}` }
+        ? { eligible: true, remaining: annualBalance ? annualBalance.remaining : null, balanceLabel: "Used / Balance", used: annualBalance?.used ?? 0, pending: annualBalance?.pending ?? 0, available: annualBalance?.available ?? null, entitlement: annualBalance ? `${annualBalance.yearlyEntitlementDays} days/year (${annualBalance.monthlyAccrual.toFixed(2)} days/month)` : "-", approval: "HR approval", document: "Not required", pay: "Paid leave", detail: annualBalance ? `${annualBalance.monthlyAccrual.toFixed(2)} days accrue every completed month, with carry-forward` : "Loading Annual Leave balance..." }
         : selectedLeaveType === "Sick Leave"
             ? { eligible: sickEligible, remaining: sickEligible ? Math.max(0, LEAVE_RULES.sick.totalDays - sickTaken) : null, used: sickTaken, entitlement: "84 days maximum", approval: "HR approval", document: "Medical certificate mandatory", pay: "14 full + 28 half + 42 unpaid", detail: sickEligible ? "14 days full pay • 28 days half pay • 42 days unpaid" : `Eligible after: ${formatRuleDate(sickEligibleDate)}` }
             : selectedLeaveType === "Maternity Leave"
@@ -835,7 +898,9 @@ function EmployeeDashboard() {
                 onProfile={openProfile}
                 onChangePassword={() => { setShowChangePassword(false); setActiveSection("change-password"); }}
                 onLeave={openLeaveDetails}
+                onResignation={() => { fetchResignation(employee.employee_id); setActiveSection("resignation"); }}
                 onLogout={logout}
+                showManpower={showManpower}
             />
 
 
@@ -859,6 +924,10 @@ function EmployeeDashboard() {
                                                 ? "Payroll"
                                                 : activeSection === "documents"
                                                     ? "Documents"
+                                                : activeSection === "manpower"
+                                                    ? "Manpower Requests"
+                                                : activeSection === "resignation"
+                                                    ? "Resignation"
                                                 : activeSection === "change-password"
                                                     ? "Change Password"
                                     : "Employee Dashboard"}
@@ -876,6 +945,10 @@ function EmployeeDashboard() {
                                         ? "View your salary, benefits and payslips"
                                     : activeSection === "documents"
                                         ? "Access your important employment documents"
+                                    : activeSection === "manpower"
+                                        ? "Raise manpower requests and review the ones awaiting your approval"
+                                    : activeSection === "resignation"
+                                        ? "Submit and track your resignation"
                                     : activeSection === "change-password"
                                         ? "Update your employee account password"
                                     : `Welcome back, ${employee.name}`}
@@ -890,6 +963,13 @@ function EmployeeDashboard() {
                     </div>}
 
                 </header>
+
+                {servingNotice && (
+                    <div className="resignation-banner employee-resignation-banner" role="status">
+                        Serving notice – {daysLabel(activeResignation.days_remaining)} remaining. Last working day: {formatResignationDate(activeResignation.last_working_day)}
+                        <button type="button" onClick={() => setActiveSection("resignation")}>View resignation</button>
+                    </div>
+                )}
 
                 <section className="employee-overview-grid">
                     <article className="employee-identity-card">
@@ -962,8 +1042,8 @@ function EmployeeDashboard() {
                         </div>
                     </div>
                     <div className="employee-requests-grid">
-                        {EMPLOYEE_REQUESTS.map(({ label, icon: Icon, tone }) => (
-                            <button type="button" className="employee-request-card" key={label} onClick={() => setRequestType(label)}>
+                        {EMPLOYEE_REQUESTS.map(({ label, icon: Icon, tone, section }) => (
+                            <button type="button" className="employee-request-card" key={label} onClick={() => (section ? setActiveSection(section) : setRequestType(label))}>
                                 <span className={`employee-request-icon ${tone}`}><Icon size={19} /></span>
                                 <span>{label}</span>
                                 <ChevronDown className="employee-request-arrow" size={16} />
@@ -989,10 +1069,26 @@ function EmployeeDashboard() {
 
                 <EmployeeDocuments employee={employee} />
 
+                {activeSection === "manpower" && showManpower && (
+                    <section className="employee-manpower-view">
+                        <ManpowerRequests actorId={employee.employee_id} />
+                    </section>
+                )}
+
+                {activeSection === "resignation" && (
+                    <EmployeeResignation
+                        employee={employee}
+                        info={resignationInfo}
+                        error={resignationError}
+                        onReload={() => { fetchResignation(employee.employee_id); fetchEmployeeNotifications(employee.employee_id); }}
+                        onCancel={() => setActiveSection("dashboard")}
+                    />
+                )}
+
                 <section className="employee-leave-section">
                     <div className="employee-section-header">
                         <span />
-                        <button className="apply-leave-btn" onClick={() => setShowApplyLeave(true)}>
+                        <button className="apply-leave-btn" onClick={openApplyLeave}>
                             <CalendarDays size={15} /> Apply Leave
                         </button>
                     </div>
@@ -1220,25 +1316,19 @@ function EmployeeDashboard() {
             )}
 
 
-            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={EMPLOYEE_LEAVE_TYPES} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} />}
+            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={EMPLOYEE_LEAVE_TYPES} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} timeZone={timeZone} />}
             {requestType && <EmployeeRequestModal requestType={requestType} onSubmit={submitEmployeeRequest} onClose={() => setRequestType(null)} />}
 
             {showEditProfile && profileDraft && <EmployeeEditModal draft={profileDraft} updateDraft={updateProfileDraft} onSubmit={saveProfile} loading={loading} onClose={() => setShowEditProfile(false)} />}
             {sectionEditor && <EmployeeSectionEditModal section={sectionEditor} form={sectionForm} updateForm={updateSectionForm} onSubmit={saveSection} loading={loading} onClose={() => setSectionEditor(null)} />}
 
 
-            {appAlert && (
-                <div className="app-alert-overlay" role="presentation" onClick={() => setAppAlert(null)}>
-                    <section className={`app-alert-dialog ${appAlert.type}`} role="alertdialog" aria-modal="true" aria-labelledby="app-alert-title" onClick={(event) => event.stopPropagation()}>
-                        <div className="app-alert-icon">{appAlert.type === "success" ? "✓" : "!"}</div>
-                        <div className="app-alert-copy">
-                            <h2 id="app-alert-title">{appAlert.type === "success" ? "Success" : "Please check"}</h2>
-                            <p>{appAlert.message}</p>
-                        </div>
-                        <button type="button" className="app-alert-close" onClick={() => setAppAlert(null)}>OK</button>
-                    </section>
-                </div>
-            )}
+            <AlertDialog
+                open={Boolean(appAlert)}
+                variant={appAlert?.type === "success" ? "success" : "danger"}
+                message={appAlert?.message}
+                onClose={() => setAppAlert(null)}
+            />
 
         </div>
     );

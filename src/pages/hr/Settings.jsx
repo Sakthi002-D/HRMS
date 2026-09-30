@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Bell, Check, ChevronDown, Globe2, LockKeyhole, Mail, Palette, Save, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Briefcase, Check, ChevronDown, DoorOpen, GitBranch, Globe2, LockKeyhole, Mail, Palette, Save, ShieldCheck, UserRound } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import { api, getSessionEmployeeId } from "../../components/recruitment/recruitmentApi";
+import ApprovalWorkflowSettings from "./settings/ApprovalWorkflowSettings";
+import RecruitmentMastersSettings from "./settings/RecruitmentMastersSettings";
+import { ResignationNoticeSettings } from "./settings/ResignationSettings";
 import "./Settings.css";
 
 const settingGroups = [
@@ -10,7 +14,13 @@ const settingGroups = [
     { id: "system", label: "System Settings", icon: ShieldCheck },
     { id: "financial", label: "Financial Settings", icon: Save },
     { id: "other", label: "Other Settings", icon: UserRound },
+    { id: "approval", label: "Approval Workflows", icon: GitBranch },
+    { id: "recruitment", label: "Recruitment Masters", icon: Briefcase },
+    { id: "resignation", label: "Resignation", icon: DoorOpen },
 ];
+
+// These groups save through their own buttons (stored on the server)
+const SERVER_GROUPS = ["approval", "recruitment", "resignation"];
 
 const initialSettings = {
     companyName: "Shelter Group",
@@ -47,6 +57,12 @@ function Settings() {
     const saveSettings = () => {
         localStorage.setItem("hrmsSettings", JSON.stringify(settings));
         setSaved(true);
+
+        // Manpower Requests use the company currency, so share it with the server
+        api("/api/recruitment/settings", {
+            method: "PUT",
+            body: { actor_id: getSessionEmployeeId(), settings: { currency: settings.currency, currencySymbol: settings.currencySymbol } },
+        }).catch((error) => console.error("Unable to sync currency for recruitment:", error));
     };
 
     return (
@@ -83,11 +99,16 @@ function Settings() {
                             {activeGroup === "system" && <SystemSettings settings={settings} updateSetting={updateSetting} />}
                             {activeGroup === "financial" && <FinancialSettings settings={settings} updateSetting={updateSetting} />}
                             {activeGroup === "other" && <OtherSettings settings={settings} updateSetting={updateSetting} />}
+                            {activeGroup === "approval" && <ApprovalWorkflowSettings />}
+                            {activeGroup === "recruitment" && <RecruitmentMastersSettings />}
+                            {activeGroup === "resignation" && <ResignationNoticeSettings />}
 
-                            <div className="settings-card-footer">
-                                {saved && <span className="settings-saved"><Check size={15} /> Changes saved</span>}
-                                <button className="settings-save-button" onClick={saveSettings}><Save size={15} /> Save Changes</button>
-                            </div>
+                            {!SERVER_GROUPS.includes(activeGroup) && (
+                                <div className="settings-card-footer">
+                                    {saved && <span className="settings-saved"><Check size={15} /> Changes saved</span>}
+                                    <button className="settings-save-button" onClick={saveSettings}><Save size={15} /> Save Changes</button>
+                                </div>
+                            )}
                         </section>
                     </main>
                 </div>

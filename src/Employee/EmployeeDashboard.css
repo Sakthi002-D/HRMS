@@ -181,7 +181,7 @@
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
-    z-index: 100;
+    z-index: var(--z-header);
     width: 330px;
     overflow: visible;
     position: relative;
@@ -584,7 +584,7 @@
 .cancel-confirm-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2200;
+    z-index: calc(var(--z-modal) + 20);
     display: grid;
     place-items: center;
     padding: 20px;
@@ -712,7 +712,7 @@
 .leave-tracking-modal {
     position: fixed;
     inset: 0;
-    z-index: 2100;
+    z-index: calc(var(--z-modal) + 10);
     display: grid;
     place-items: center;
     padding: 20px;
@@ -1118,7 +1118,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    z-index: 2000;
+    z-index: var(--z-modal);
     padding: 20px;
     overflow-y: auto;
 }
@@ -1156,6 +1156,45 @@
     animation: requestModalIn .22s ease-out both;
 }
 
+/* Manpower Requests section (coordinators / MPR approvers) */
+.employee-dashboard.manpower-view > .employee-main > :not(.employee-header):not(.employee-manpower-view) {
+    display: none;
+}
+
+/* Resignation section */
+.employee-dashboard.resignation-view > .employee-main > :not(.employee-header):not(.employee-resignation-view) {
+    display: none;
+}
+
+.employee-resignation-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Serving-notice banner: dashboard only */
+.employee-resignation-banner {
+    display: none;
+    margin-bottom: 18px;
+}
+
+.employee-dashboard.dashboard-view .employee-resignation-banner {
+    display: flex;
+}
+
+/* Apply for Leave: date popups float outside the card, so never scroll sideways */
+.employee-modal-card.apply-leave-card {
+    overflow-x: hidden;
+}
+
+.apply-leave-card .date-field-error {
+    display: block;
+    margin-top: 6px;
+    color: #d43b3b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .employee-modal-card h2 {
     margin: 0;
     color: #12304a;
@@ -1169,78 +1208,7 @@
     font-size: 13px;
 }
 
-.app-alert-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 5000;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: rgba(15, 30, 45, .58);
-    backdrop-filter: blur(5px);
-}
-
-.app-alert-dialog {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 14px 16px;
-    width: min(440px, 100%);
-    padding: 24px;
-    border: 1px solid #d9e5ee;
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 24px 70px rgba(16, 42, 67, .3);
-    animation: requestModalIn .2s ease-out both;
-}
-
-.app-alert-icon {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    border-radius: 50%;
-    background: #fff1f2;
-    color: #dc2626;
-    font-size: 22px;
-    font-weight: 800;
-}
-
-.app-alert-dialog.success .app-alert-icon {
-    background: #dcfce7;
-    color: #16a34a;
-}
-
-.app-alert-copy h2 {
-    margin: 2px 0 5px;
-    color: #12304a;
-    font-size: 17px;
-}
-
-.app-alert-copy p {
-    margin: 0;
-    color: #53657a;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.app-alert-close {
-    grid-column: 2;
-    justify-self: end;
-    min-width: 76px;
-    padding: 9px 18px;
-    border: 0;
-    border-radius: 7px;
-    background: #087df5;
-    color: #fff;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.app-alert-close:hover {
-    background: #0668cc;
-}
+/* App alert dialog styles: src/components/common/dialog/Dialog.css */
 
 .password-change-heading {
     display: flex;
@@ -2026,7 +1994,7 @@
 .education-delete-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2300;
+    z-index: calc(var(--z-modal) + 30);
     display: grid;
     place-items: center;
     padding: 20px;
@@ -2692,7 +2660,7 @@
 
 .employee-requests-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -2748,6 +2716,7 @@
 .employee-request-icon.green { background: #e3f8ed; color: #07804b; }
 .employee-request-icon.orange { background: #fff1dc; color: #c47a00; }
 .employee-request-icon.purple { background: #f0eaff; color: #7651d6; }
+.employee-request-icon.red { background: #ffebeb; color: #d43b3b; }
 
 .employee-request-arrow {
     margin-left: auto;
@@ -2860,6 +2829,12 @@
     .employee-request-modal-actions .submit-leave-btn {
         width: 100%;
         min-height: 44px;
+    }
+}
+
+@media (max-width: 1280px) {
+    .employee-requests-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

@@ -1,0 +1,202 @@
+/* HR portal → Resignation (builds on Recruitment.css: header, cards, jobs-table) */
+
+.resignation-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 25px;
+}
+
+.resignation-summary-card {
+    border: 2px solid transparent;
+    border-left: 4px solid #cbd5e1;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resignation-summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+}
+
+.resignation-summary-card:focus-visible {
+    outline: 2px solid #12304a;
+    outline-offset: 2px;
+}
+
+.resignation-summary-card.tone-pending-lm,
+.resignation-summary-card.tone-pending-hr { border-left-color: #f59e0b; }
+.resignation-summary-card.tone-serving { border-left-color: #0284c7; }
+.resignation-summary-card.tone-completed { border-left-color: #16a34a; }
+.resignation-summary-card.tone-closed { border-left-color: #94a3b8; }
+
+.resignation-summary-card.active {
+    border-color: #12304a;
+    background: #f8fafc;
+}
+
+.resignation-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.resignation-filters select,
+.resignation-filters input[type="month"] {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    font-size: 14px;
+}
+
+.resignation-clear-filters {
+    height: 40px;
+    padding: 0 12px;
+    border: 0;
+    background: transparent;
+    color: #12304a;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.resignation-rows-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    color: #475569;
+    font-size: 14px;
+}
+
+.resignation-employee-id {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.resignation-flag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.resignation-flag.yes { background: #ffedd5; color: #c2410c; }
+.resignation-flag.no { background: #eef0f2; color: #59636d; }
+
+.resignations-page .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 0 0;
+}
+
+.resignations-page .pagination button {
+    min-width: 40px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.resignations-page .pagination button:hover:not(:disabled) { background: #f3f4f6; }
+.resignations-page .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.resignations-page .pagination button.active-page {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+}
+
+@media (max-width: 1100px) {
+    .resignation-summary-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .resignation-summary-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .resignation-filters .job-search {
+        width: 100%;
+    }
+
+    .resignation-rows-control {
+        margin-left: 0;
+    }
+}
+
+/* Success / error banner after an HR decision (above modals and dialogs) */
+.resignation-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    z-index: var(--z-toast);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: min(560px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 12px 14px 12px 18px;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(16, 42, 67, 0.18);
+    font-size: 14px;
+    font-weight: 600;
+    transform: translateX(-50%);
+    animation: resignationToastIn 0.2s ease-out both;
+}
+
+.resignation-toast.success {
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.resignation-toast.error {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.resignation-toast button {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.resignation-toast button:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+@keyframes resignationToastIn {
+    from { opacity: 0; transform: translate(-50%, -8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}

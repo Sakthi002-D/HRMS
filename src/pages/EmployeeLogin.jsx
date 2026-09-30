@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./EmployeeLogin.css";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 function EmployeeLogin() {
+    const showAlert = useAlert();
     const navigate = useNavigate();
 
     const [employeeId, setEmployeeId] = useState("");
@@ -15,7 +17,7 @@ function EmployeeLogin() {
         e.preventDefault();
 
         if (!employeeId.trim() || !password.trim()) {
-            alert("Please enter Employee ID and Password");
+            showAlert("Please enter Employee ID and Password");
             return;
         }
 
@@ -36,7 +38,7 @@ function EmployeeLogin() {
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.message || "Invalid Employee ID or Password");
+                showAlert(data.message || "Invalid Employee ID or Password");
                 return;
             }
 
@@ -49,7 +51,7 @@ function EmployeeLogin() {
 
         } catch (error) {
             console.error("Employee login error:", error);
-            alert("Unable to connect to backend");
+            showAlert("Unable to connect to backend");
         } finally {
             setLoading(false);
         }

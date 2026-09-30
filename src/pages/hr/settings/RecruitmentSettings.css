@@ -1,0 +1,50 @@
+/* Settings → Approval Workflows / Recruitment Masters (matches Settings.css) */
+
+.rs-panel { padding: 8px 24px 24px; color: #334155; font-size: 14px; }
+.rs-section { padding: 20px 0; border-bottom: 1px solid #edf0f4; }
+.rs-section:last-child { border-bottom: 0; }
+.rs-section h3 { margin: 0 0 4px; color: #102a43; font-size: 15px; }
+.rs-section > p { margin: 0 0 14px; color: #536b82; font-size: 13px; }
+
+.rs-success, .rs-error { margin: 16px 0 0; padding: 10px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; }
+.rs-success { background: #e7f7ee; color: #07804b; }
+.rs-error { background: #ffebeb; color: #d43b3b; }
+
+.rs-workflows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.rs-workflow { padding: 14px; border: 1px solid #d3e2ee; border-radius: 10px; background: #fbfdff; }
+.rs-workflow h4 { margin: 0 0 10px; color: #102a43; font-size: 14px; }
+.rs-workflow ol { margin: 0 0 10px; padding: 0; list-style: none; }
+.rs-workflow li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid #e5eaf0; border-radius: 7px; background: #fff; font-weight: 600; }
+.rs-workflow li div { display: flex; gap: 4px; }
+.rs-workflow li button, .rs-icon-button { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #536b82; cursor: pointer; }
+.rs-workflow li button:disabled { opacity: .4; cursor: not-allowed; }
+.rs-icon-button:hover { border-color: #f1baba; color: #d43b3b; }
+
+.rs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+
+.rs-panel select, .rs-panel input { height: 40px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 7px; background: #fff; color: #334155; font: inherit; font-size: 14px; outline: none; }
+.rs-panel select:focus, .rs-panel input:focus { border-color: #91b9d3; }
+.rs-workflow select { width: 100%; }
+
+.rs-actions { display: flex; justify-content: flex-end; padding: 16px 0; border-bottom: 1px solid #edf0f4; }
+.rs-panel .settings-save-button:disabled { opacity: .6; cursor: not-allowed; }
+
+.rs-add-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.rs-add-row input, .rs-add-row select { flex: 1 1 160px; min-width: 0; }
+
+.rs-table { width: 100%; border-collapse: collapse; }
+.rs-table th { padding: 10px; background: #f7fafc; color: #536b82; font-size: 12px; text-align: left; }
+.rs-table td { padding: 10px; border-bottom: 1px solid #edf0f4; font-size: 13px; }
+
+.rs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rs-chips button { padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 20px; background: #f1f5f9; color: #94a3b8; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.rs-chips button.active { border-color: #b3e5fc; background: #e1f5fe; color: #0277bd; }
+
+.rs-toggle { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 20px; background: #f1f5f9; color: #64748b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.rs-toggle.on { border-color: #bbf7d0; background: #e7f7ee; color: #07804b; }
+
+@media (max-width: 800px) {
+    .rs-workflows, .rs-grid { grid-template-columns: 1fr; }
+    .rs-panel { padding: 8px 16px 16px; }
+    .rs-table { display: block; overflow-x: auto; }
+}

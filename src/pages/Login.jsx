@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 import API_URL from "../config/api";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function Login() {
+  const showAlert = useAlert();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -39,7 +41,7 @@ function Login() {
     const userPassword = password;
 
     if (!employeeId || !userPassword) {
-      alert("Please enter Employee ID and password");
+      showAlert("Please enter Employee ID and password");
       return;
     }
 
@@ -66,7 +68,7 @@ function Login() {
       } catch {
         console.error("Backend returned non-JSON:", text);
 
-        alert(
+        showAlert(
           `Login API error (${response.status}). Check backend /api/login route.`
         );
 
@@ -74,7 +76,7 @@ function Login() {
       }
 
       if (!response.ok) {
-        alert(
+        showAlert(
           data.message || "Invalid username or password"
         );
         return;
@@ -83,7 +85,7 @@ function Login() {
       const employee = data.employee;
 
       if (!employee) {
-        alert("Employee details not received from server");
+        showAlert("Employee details not received from server");
         return;
       }
 
@@ -139,14 +141,14 @@ function Login() {
       // ==================================================
       // UNKNOWN ROLE
       // ==================================================
-      alert(
+      showAlert(
         `Invalid role "${employee.role}". Please contact administrator.`
       );
 
     } catch (error) {
       console.error("Login error:", error);
 
-      alert(
+      showAlert(
         "Unable to connect to backend. Please make sure the server is running."
       );
     } finally {

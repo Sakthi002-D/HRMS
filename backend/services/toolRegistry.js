@@ -15,7 +15,7 @@ export const UNIVERSAL_EMPLOYEE_TOOLS = [
     },
     {
         name: "getMyLeaveBalance",
-        description: "Retrieve the employee's cumulative Annual Leave balance. Annual Leave accrues at 1.75 days per completed month for employees under five years and carries forward; other leave types have separate policy entitlements.",
+        description: "Retrieve the employee's cumulative Annual Leave balance. Annual Leave accrues every completed month at the yearly entitlement ÷ 12 (e.g. 30 days → 2.5 days/month) and carries forward; pending requests reduce what can still be applied for (availableAnnualLeaveToApplyDays). Other leave types have separate policy entitlements.",
         parameters: {
             type: "object",
             properties: {},

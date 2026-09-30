@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./VerifyOTP.css";
 import API_URL from "../config/api";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function VerifyOTP() {
+  const showAlert = useAlert();
   const navigate = useNavigate();
 
   const [otp, setOtp] = useState("");
@@ -15,7 +17,7 @@ function VerifyOTP() {
     e.preventDefault();
 
     if (!otp.trim()) {
-      alert("Please enter OTP");
+      showAlert("Please enter OTP");
       return;
     }
 
@@ -39,7 +41,7 @@ function VerifyOTP() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Invalid OTP");
+        showAlert(data.message || "Invalid OTP");
         return;
       }
 
@@ -49,7 +51,7 @@ function VerifyOTP() {
 
     } catch (error) {
       console.error("OTP verification error:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     } finally {
       setLoading(false);
     }

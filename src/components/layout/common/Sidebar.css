@@ -4,6 +4,9 @@
   left: 0;
   width: 250px;
   height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background: #11161f;
   padding: 24px 16px;
   box-sizing: border-box;
@@ -11,6 +14,7 @@
   -webkit-font-smoothing: antialiased;
   transition: width 0.2s ease;
   box-shadow: 8px 0 24px rgba(15, 23, 42, .12);
+  z-index: var(--z-sidebar);
 }
 
 .sidebar-section-title {
@@ -30,6 +34,45 @@
   border-bottom: 1px solid rgba(255,255,255,.14);
   overflow: visible;
   position: relative;
+  flex-shrink: 0;
+}
+
+/* MAIN MENU scrolls between the fixed logo and the ACCOUNT section.
+   The side margins give the hover/active translateX(4px) room and put the
+   scrollbar in the sidebar padding; the gutter keeps link widths unchanged. */
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -12px 0 -8px;
+  padding: 0 6px 0 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+/* Firefox (Chrome/Edge ignore ::-webkit-scrollbar when these are set) */
+@supports not selector(::-webkit-scrollbar) {
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #3a414d #11161f;
+  }
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: #11161f;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #3a414d;
+  border-radius: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5b6472;
 }
 
 .sidebar-logo img {
@@ -123,8 +166,8 @@
 }
 
 .sidebar-account {
+  flex-shrink: 0;
   margin-top: auto;
-  transform: translateY(32px);
 }
 
 .sidebar.collapsed {
@@ -150,4 +193,35 @@
 .sidebar.collapsed .sidebar-link {
   justify-content: center;
   padding: 0;
+}
+/* Count badge on a menu item (e.g. resignations waiting for HR) */
+.sidebar-link {
+  position: relative;
+}
+
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: #ff7043;
+  color: #ffffff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.sidebar.collapsed .sidebar-badge {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
 }

@@ -135,6 +135,95 @@
     font-weight: 500;
 }
 
+.leave-policy-fields select {
+    width: 100%;
+    height: 40px;
+    padding: 0 8px;
+    border: 1px solid #d6dee8;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #12304a;
+    font: inherit;
+    font-weight: 600;
+}
+
+/* Annual Leave entitlement by grade */
+
+.leave-policy-grades {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e7edf3;
+}
+
+.leave-policy-grades h3 {
+    margin: 0 0 4px;
+    color: #12304a;
+    font-size: 14px;
+}
+
+.leave-policy-grades p {
+    margin: 0 0 12px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.leave-policy-grade-row {
+    display: grid;
+    grid-template-columns: minmax(0, 180px) minmax(0, 120px) 1fr 34px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.leave-policy-grade-row input {
+    width: 100%;
+    height: 38px;
+    padding: 0 11px;
+    border: 1px solid #d6dee8;
+    border-radius: 6px;
+    color: #12304a;
+    font: inherit;
+    font-weight: 600;
+}
+
+.leave-policy-grade-row span {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.leave-policy-grade-row button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #f1baba;
+    border-radius: 6px;
+    background: #fff0f0;
+    color: #d43b3b;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.leave-policy-add-grade {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px dashed #b8c7d6;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #176b8f;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .leave-policy-grade-row {
+        grid-template-columns: 1fr 1fr 34px;
+    }
+
+    .leave-policy-grade-row span {
+        display: none;
+    }
+}
+
 .leave-policy-types {
     margin-top: 20px;
     padding-top: 18px;
@@ -563,7 +652,7 @@
 
     backdrop-filter: blur(3px);
 
-    z-index: 99999 !important;
+    z-index: var(--z-modal) !important;
 
     overflow-y: auto !important;
     overflow-x: hidden !important;

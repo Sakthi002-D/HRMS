@@ -5,7 +5,10 @@
   "main": "db.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate:tickets": "node scripts/migrateTickets.js",
+    "test:resignation": "node scripts/testResignation.js",
+    "test:mpr-budget": "node scripts/testMprBudget.js"
   },
   "keywords": [],
   "author": "",

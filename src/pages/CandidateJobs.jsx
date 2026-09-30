@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import DatePicker from "../components/layout/common/DatePicker";
 import "./CandidateJobs.css";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function CandidateJobs() {
+    const showAlert = useAlert();
     const [jobs, setJobs] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
 
@@ -56,7 +58,8 @@ function CandidateJobs() {
 
             const data = await response.json();
 
-            setJobs(data.filter((job) => job.status === "Open"));
+            // Only jobs still accepting applications (not closed, deadline not passed)
+            setJobs(data.filter((job) => job.accepting_applications ?? job.status === "Open"));
         } catch (error) {
             console.error("Error fetching jobs:", error);
         }
@@ -182,7 +185,7 @@ function CandidateJobs() {
             );
         }
 
-        alert("Application submitted successfully!");
+        showAlert({ variant: "success", message: "Application submitted successfully!" });
 
         // Reset form
 
@@ -230,7 +233,7 @@ function CandidateJobs() {
             error
         );
 
-        alert(
+        showAlert(
             error.message || "Failed to submit application"
         );
     }

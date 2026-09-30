@@ -1,3 +1,55 @@
 .employee-sidebar {
     flex: 0 0 250px;
 }
+
+/* Full-height fixed sidebar: logo on top, EMPLOYEE PORTAL menu scrolls,
+   ACCOUNT (Settings + Logout) stays at the bottom. */
+aside.employee-sidebar {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    z-index: var(--z-sidebar);
+}
+
+aside.employee-sidebar .employee-brand,
+aside.employee-sidebar .employee-account,
+aside.employee-sidebar .employee-logout {
+    flex-shrink: 0;
+}
+
+/* The side margins give the hover/active translateX(4px) room and put the
+   scrollbar in the sidebar padding; the gutter keeps item widths unchanged. */
+.employee-sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    margin: 0 -12px 0 -8px;
+    padding: 0 6px 0 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+/* Firefox (Chrome/Edge ignore ::-webkit-scrollbar when these are set) */
+@supports not selector(::-webkit-scrollbar) {
+    .employee-sidebar-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #3a414d #11161f;
+    }
+}
+
+.employee-sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.employee-sidebar-scroll::-webkit-scrollbar-track {
+    background: #11161f;
+}
+
+.employee-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: #3a414d;
+    border-radius: 3px;
+}
+
+.employee-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: #5b6472;
+}

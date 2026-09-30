@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ResetPassword.css";
 import API_URL from "../config/api";
+import { useAlert } from "../components/common/dialog/dialogContext";
 
 function ResetPassword() {
+  const showAlert = useAlert();
   const navigate = useNavigate();
 
   const [newPassword, setNewPassword] = useState("");
@@ -17,22 +19,22 @@ function ResetPassword() {
     e.preventDefault();
 
     if (!newPassword || !confirmPassword) {
-      alert("Please enter both passwords");
+      showAlert("Please enter both passwords");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match");
+      showAlert("Passwords do not match");
       return;
     }
 
     if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters");
+      showAlert("Password must be at least 6 characters");
       return;
     }
 
     if (!employeeId || otpVerified !== "true") {
-      alert("OTP verification required");
+      showAlert("OTP verification required");
       navigate("/forgot-password");
       return;
     }
@@ -57,11 +59,11 @@ function ResetPassword() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to reset password");
+        showAlert(data.message || "Failed to reset password");
         return;
       }
 
-      alert("Password reset successfully!");
+      await showAlert({ variant: "success", message: "Password reset successfully!" });
 
       // Clear reset information
       localStorage.removeItem("resetEmployeeId");
@@ -71,7 +73,7 @@ function ResetPassword() {
 
     } catch (error) {
       console.error("Reset password error:", error);
-      alert("Unable to connect to backend");
+      showAlert("Unable to connect to backend");
     } finally {
       setLoading(false);
     }

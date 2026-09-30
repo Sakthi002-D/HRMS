@@ -65,6 +65,14 @@ function Reports() {
                             </button>
                         </div>
 
+                        <div className="report-item">
+                            <h3>Annual Leave Accrual</h3>
+                            <p>Monthly annual leave days and liability amount per employee, for Finance.</p>
+                            <button onClick={() => navigate("/annual-leave-accrual-report")}>
+                                View Report
+                            </button>
+                        </div>
+
                     </div>
 
                 </div>
