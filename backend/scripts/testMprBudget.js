@@ -38,7 +38,7 @@ try {
     const mprBody = (openings, salaryMax, extra = {}) => ({
         request_type: "New Position", title: "Accountant", department: "Finance", openings, experience: "2 years",
         location: "Budget Test Location", employment_type: "Full Time", job_description: "Books", skills: "Excel",
-        salary_min: 5000, salary_max: salaryMax, required_by: `${YEAR}-12-15`, justification: "", ...extra,
+        salary_min: 5000, salary_max: salaryMax, application_start_date: `${YEAR}-12-15`, application_end_date: `${YEAR}-12-31`, justification: "", ...extra,
     });
     const submit = (body) => saveMpr(db, { body, actorId: hr, action: "submit" });
 

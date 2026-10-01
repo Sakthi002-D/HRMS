@@ -155,8 +155,8 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                                 <div><label>Experience</label><p>{mpr.experience || "—"}</p></div>
                                 <div><label>Location</label><p>{mpr.location || "—"}</p></div>
                                 <div><label>Employment Type</label><p>{mpr.employment_type || "—"}</p></div>
-                                <div><label>Grade</label><p>{mpr.grade || "—"}</p></div>
-                                <div><label>Required By</label><p>{formatDate(mpr.required_by)}</p></div>
+                                <div><label>Application Start Date</label><p>{formatDate(mpr.application_start_date)}</p></div>
+                                <div><label>Application End Date</label><p>{formatDate(mpr.application_end_date)}</p></div>
                                 <div><label>Required Skills</label><p>{mpr.skills || "—"}</p></div>
                                 {mpr.request_type === "Replacement" && (
                                     <>

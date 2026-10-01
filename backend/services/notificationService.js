@@ -61,7 +61,9 @@ export async function createNotifications(db, recipientIds, { type = "general", 
     return emails.rows.map((row) => ({ to: row.email, name: row.name, subject: title, text: message }));
 }
 
-// Fire-and-forget: email failures never break the workflow
+// Fire-and-forget: email failures never break the workflow.
+// Optional per mail: plainSubject (no "HRMS:" prefix) and signature (default "HRMS"),
+// for emails to people outside the company such as job applicants.
 export function sendQueuedEmails(queue) {
     const mailer = getTransporter();
     if (!mailer || !queue?.length) return;
@@ -69,10 +71,10 @@ export function sendQueuedEmails(queue) {
     queue.forEach((mail) => {
         mailer
             .sendMail({
-                from: `"HRMS" <${process.env.EMAIL_USER}>`,
+                from: `"${mail.plainSubject ? "Shelter Group Careers" : "HRMS"}" <${process.env.EMAIL_USER}>`,
                 to: mail.to,
-                subject: `HRMS: ${mail.subject}`,
-                text: `Hello ${mail.name || ""},\n\n${mail.text}\n\nRegards,\nHRMS`,
+                subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
+                text: `Hello ${mail.name || ""},\n\n${mail.text}\n\nRegards,\n${mail.signature || "HRMS"}`,
             })
             .catch((error) => console.error("Notification email failed:", error.message));
     });

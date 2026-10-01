@@ -8,7 +8,9 @@
     "start": "node server.js",
     "migrate:tickets": "node scripts/migrateTickets.js",
     "test:resignation": "node scripts/testResignation.js",
-    "test:mpr-budget": "node scripts/testMprBudget.js"
+    "test:mpr-budget": "node scripts/testMprBudget.js",
+    "test:careers": "node scripts/testCareers.js",
+    "test:mpr-period": "node scripts/testMprApplicationPeriod.js"
   },
   "keywords": [],
   "author": "",

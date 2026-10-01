@@ -5,7 +5,8 @@ import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import MprDetail from "./MprDetail";
 import MprForm from "./MprForm";
-import { api, formatDate, notifyMprsChanged, statusTone } from "./recruitmentApi";
+import { Eye } from "lucide-react";
+import { api, formatDateRange, notifyMprsChanged, statusTone } from "./recruitmentApi";
 
 function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, showNewButton = true }) {
     const [meta, setMeta] = useState(null);
@@ -116,7 +117,7 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                                 <th>Budget</th>
                                 <th>Status</th>
                                 <th>Raised By</th>
-                                <th>Required By</th>
+                                <th>Application Period</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -145,10 +146,10 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                                     </td>
                                     <td><span className={`mpr-status ${statusTone(mpr.status)}`}>{mpr.status}</span></td>
                                     <td>{mpr.requested_by_name || mpr.requested_by || "—"}</td>
-                                    <td>{formatDate(mpr.required_by)}</td>
+                                    <td>{formatDateRange(mpr.application_start_date, mpr.application_end_date)}</td>
                                     <td>
-                                        <button type="button" className="create-job-btn" onClick={() => setSelectedId(mpr.id)}>
-                                            {mpr.awaiting_me ? "Review" : "View"}
+                                        <button type="button" className="employee-view-button" onClick={() => setSelectedId(mpr.id)} aria-label="View" title="View">
+                                            <Eye size={18} strokeWidth={2} aria-hidden="true" />
                                         </button>
                                     </td>
                                 </tr>

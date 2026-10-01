@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import EmployeeDashboard from "./Employee/EmployeeDashboard";
 
 import EmployeeDetails from "./pages/hr/EmployeeDetails";
-import CandidateJobs from "./pages/CandidateJobs";
+import Careers from "./pages/Careers";
+import CareerJobDetail from "./pages/CareerJobDetail";
 
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
 import LeaveManagement from "./pages/hr/LeaveManagement";
 import Resignations from "./pages/hr/Resignations";
+import EmployeeRequests from "./pages/hr/EmployeeRequests";
 import Payroll from "./pages/hr/Payroll";
 import Tickets from "./pages/hr/Tickets";
 import Reports from "./pages/hr/Reports";
@@ -92,6 +94,23 @@ function App() {
           element={<ResetPassword />}
         />
 
+        {/* Careers: open job openings + application form (no login) */}
+        <Route
+          path="/careers"
+          element={<Careers />}
+        />
+
+        <Route
+          path="/careers/:jobId"
+          element={<CareerJobDetail />}
+        />
+
+        {/* Old Careers link */}
+        <Route
+          path="/candidate-jobs"
+          element={<Navigate to="/careers" replace />}
+        />
+
 
         {/* =========================================
             EMPLOYEE PROTECTED ROUTE
@@ -127,8 +146,8 @@ function App() {
           />
 
           <Route
-            path="/candidate-jobs"
-            element={<CandidateJobs />}
+            path="/hr/employee-requests"
+            element={<EmployeeRequests />}
           />
 
           <Route

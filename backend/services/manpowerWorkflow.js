@@ -205,7 +205,15 @@ export async function ensureManpowerSchema(db = pool) {
         ADD COLUMN IF NOT EXISTS application_deadline DATE,
         ADD COLUMN IF NOT EXISTS recruiter_employee_id TEXT REFERENCES employees(employee_id) ON DELETE SET NULL,
         ADD COLUMN IF NOT EXISTS interview_panel JSONB NOT NULL DEFAULT '[]'::jsonb,
-        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS application_start_date DATE
+    `);
+
+    // Application period (replaces Required By / Grade on the form; old columns and data are kept)
+    await db.query(`
+        ALTER TABLE manpower_requests
+        ADD COLUMN IF NOT EXISTS application_start_date DATE,
+        ADD COLUMN IF NOT EXISTS application_end_date DATE
     `);
 }
 
@@ -256,6 +264,10 @@ export async function saveRecruitmentSettings(input, db = pool) {
         });
         next.departmentCodes = input.departmentCodes;
     }
+    if (input.timezone !== undefined) {
+        if (!isValidTimeZone(input.timezone)) throw new WorkflowError("Unknown timezone");
+        next.timezone = input.timezone;
+    }
     if (input.currency) next.currency = String(input.currency).slice(0, 8);
     if (input.currencySymbol !== undefined) next.currencySymbol = String(input.currencySymbol).slice(0, 8);
 
@@ -264,6 +276,24 @@ export async function saveRecruitmentSettings(input, db = pool) {
         [JSON.stringify(next)]
     );
     return next;
+}
+
+const isValidTimeZone = (timeZone) => {
+    try {
+        new Intl.DateTimeFormat("en-CA", { timeZone: String(timeZone) });
+        return Boolean(timeZone);
+    } catch {
+        return false;
+    }
+};
+
+// "Today" (YYYY-MM-DD) in the company timezone from HR Settings (synced from the
+// Settings page), falling back to COMPANY_TIMEZONE. Used for MPR application dates,
+// recruitment plan deadlines and Careers page visibility.
+export async function getRecruitmentToday(db = pool) {
+    const { timezone } = await getRecruitmentSettings(db);
+    if (!isValidTimeZone(timezone)) return getCompanyToday();
+    return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
 // Workflow for a request, with COO/CTO resolved by department
@@ -345,7 +375,7 @@ export async function computeBudget(db, { department, year, openings, salaryMax,
         WHERE LOWER(department) = LOWER($1)
           AND request_type = 'New Position'
           AND (status = 'Approved' OR status LIKE 'Pending %')
-          AND EXTRACT(YEAR FROM COALESCE(required_by, created_at::date)) = $2
+          AND EXTRACT(YEAR FROM COALESCE(application_start_date, required_by, created_at::date)) = $2
           AND ($3::bigint IS NULL OR id <> $3)
         `,
         [department, year, excludeMprId]
@@ -380,7 +410,22 @@ export const budgetStatusFor = (budget) => (!budget ? null : ["match", "under"].
 
 const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
-const budgetYear = (requiredBy) => Number(String(requiredBy || getCompanyToday()).slice(0, 4));
+// Budget year = year of the Application Start Date
+const budgetYear = (startDate, today) => Number(String(startDate || today).slice(0, 4));
+
+// DATE column → "YYYY-MM-DD" (pg returns DATE as a local-midnight Date)
+const formatDateKey = (value) => {
+    if (!value) return "—";
+    if (!(value instanceof Date)) return String(value).slice(0, 10);
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+};
+
+// Real calendar date only (2026-02-31 is rejected, not rolled over to March)
+const isDateKey = (value) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
 
 // =====================================================
 // INPUT
@@ -412,8 +457,8 @@ const normalizeInput = (body) => {
             medical_insurance_category: String(benefits.medical_insurance_category || "").trim(),
             accommodation: yesNo(benefits.accommodation),
         },
-        grade: body.grade?.trim() || null,
-        required_by: body.required_by || null,
+        application_start_date: String(body.application_start_date || "").slice(0, 10) || null,
+        application_end_date: String(body.application_end_date || "").slice(0, 10) || null,
         justification: body.justification?.trim() || null,
         assets,
         asset_other: assets.includes("Other") ? body.asset_other?.trim() || null : null,
@@ -424,7 +469,17 @@ const normalizeInput = (body) => {
     };
 };
 
-async function validateForSubmit(db, input) {
+// Format always (drafts too); start ≥ today and end ≥ start
+function validateApplicationPeriod(input, today) {
+    const { application_start_date: start, application_end_date: end } = input;
+    if (start && !isDateKey(start)) throw new WorkflowError("Application Start Date is not a valid date");
+    if (end && !isDateKey(end)) throw new WorkflowError("Application End Date is not a valid date");
+    if (start && start < today) throw new WorkflowError("Application Start Date must be today or later");
+    if (start && end && end < start) throw new WorkflowError("Application End Date must be on or after the Application Start Date");
+    if (!start && end && end < today) throw new WorkflowError("Application End Date must be today or later");
+}
+
+async function validateForSubmit(db, input, today) {
     const missing = [];
     if (!REQUEST_TYPES.includes(input.request_type)) missing.push("Request Type");
     if (!input.title) missing.push("Job Title");
@@ -436,7 +491,8 @@ async function validateForSubmit(db, input) {
     if (!input.skills) missing.push("Required Skills");
     if (!(input.salary_min > 0)) missing.push("Minimum Salary");
     if (!(input.salary_max > 0)) missing.push("Maximum Salary");
-    if (!input.required_by) missing.push("Required By");
+    if (!input.application_start_date) missing.push("Application Start Date");
+    if (!input.application_end_date) missing.push("Application End Date");
     if (input.request_type === "Replacement") {
         if (!input.replaced_employee_id) missing.push("Employee being replaced");
         if (!input.replacement_reason) missing.push("Replacement reason");
@@ -446,7 +502,7 @@ async function validateForSubmit(db, input) {
 
     if (input.salary_min > input.salary_max) throw new WorkflowError("Minimum salary cannot be more than maximum salary");
     if (!EMPLOYMENT_TYPES.includes(input.employment_type)) throw new WorkflowError("Invalid employment type");
-    if (input.required_by < getCompanyToday()) throw new WorkflowError("Required By date cannot be in the past");
+    validateApplicationPeriod(input, today);
 
     const location = await db.query(`SELECT 1 FROM recruitment_locations WHERE name = $1 AND active`, [input.location]);
     if (location.rows.length === 0) throw new WorkflowError("Choose a location from the Locations master");
@@ -526,13 +582,14 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
     let currentStep = null;
     let status = existing?.status || "Draft";
 
+    const today = await getRecruitmentToday(db);
     if (action === "submit") {
-        await validateForSubmit(db, input);
+        await validateForSubmit(db, input, today);
 
         if (input.request_type === "New Position") {
             budget = await computeBudget(db, {
                 department: input.department,
-                year: budgetYear(input.required_by),
+                year: budgetYear(input.application_start_date, today),
                 openings: input.openings,
                 salaryMax: input.salary_max,
                 excludeMprId: id,
@@ -553,13 +610,15 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
             currentStep = 0;
         }
         status = `Pending ${roleLabel(steps[currentStep])}`;
+    } else {
+        validateApplicationPeriod(input, today);
     }
 
     const values = [
         input.request_type, status, steps ? JSON.stringify(steps) : null, currentStep,
         input.title, input.department, input.openings, input.experience, input.location, input.employment_type,
         input.job_description, input.skills, input.salary_min, input.salary_max, input.currency || settings.currency,
-        JSON.stringify(input.benefits), input.grade, input.required_by, input.justification,
+        JSON.stringify(input.benefits), input.application_start_date, input.application_end_date, input.justification,
         JSON.stringify(input.assets), input.asset_other, input.replaced_employee_id, input.replacement_reason,
         budgetStatusFor(budget), budget ? JSON.stringify(budget) : null,
     ];
@@ -572,7 +631,7 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 request_type = $1, status = $2, workflow_steps = $3::jsonb, current_step = $4,
                 title = $5, department = $6, openings = $7, experience = $8, location = $9, employment_type = $10,
                 job_description = $11, skills = $12, salary_min = $13, salary_max = $14, currency = $15,
-                benefits = $16::jsonb, grade = $17, required_by = $18, justification = $19,
+                benefits = $16::jsonb, application_start_date = $17, application_end_date = $18, justification = $19,
                 assets = $20::jsonb, asset_other = $21, replaced_employee_id = $22, replacement_reason = $23,
                 budget_status = $24, budget_snapshot = $25::jsonb,
                 resume_step = CASE WHEN $2 LIKE 'Pending %' THEN NULL ELSE resume_step END,
@@ -592,7 +651,7 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 request_type, status, workflow_steps, current_step,
                 title, department, openings, experience, location, employment_type,
                 job_description, skills, salary_min, salary_max, currency,
-                benefits, grade, required_by, justification,
+                benefits, application_start_date, application_end_date, justification,
                 assets, asset_other, replaced_employee_id, replacement_reason,
                 budget_status, budget_snapshot, mpr_no, requested_by, submitted_at
             ) VALUES (
@@ -743,8 +802,13 @@ async function finalizeMpr(db, mpr, actor) {
         `
         INSERT INTO public.jobs (
             job_id, title, department, openings, experience, location, employment_type,
-            job_description, skills, compensation, status, mpr_id, request_type
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Open', $11, $12)
+            job_description, skills, compensation, status, mpr_id, request_type,
+            application_start_date, application_deadline
+        )
+        -- Application period copied in SQL (no JS Date / timezone round trip)
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Open', $11, $12,
+               m.application_start_date, m.application_end_date
+        FROM manpower_requests m WHERE m.id = $11
         `,
         [
             jobId, mpr.title, mpr.department, mpr.openings, mpr.experience, mpr.location, mpr.employment_type,
@@ -768,7 +832,7 @@ async function finalizeMpr(db, mpr, actor) {
         emails.push(...await createNotifications(db, [...procurement, ...itTeam], {
             type: "mpr-assets",
             title: `Assets required for ${jobId}`,
-            message: `${mpr.openings} × ${mpr.title} (${mpr.department}, ${mpr.location}) needs: ${assetList.join(", ")}. MPR ${mpr.mpr_no}; required by ${String(mpr.required_by || "").slice(0, 10)}.`,
+            message: `${mpr.openings} × ${mpr.title} (${mpr.department}, ${mpr.location}) needs: ${assetList.join(", ")}. MPR ${mpr.mpr_no}; applications ${formatDateKey(mpr.application_start_date)} – ${formatDateKey(mpr.application_end_date)}.`,
             link: `job:${jobId}`,
         }));
     }
@@ -809,6 +873,8 @@ async function finalizeMpr(db, mpr, actor) {
 
 const MPR_SELECT = `
     SELECT m.*, TO_CHAR(m.required_by, 'YYYY-MM-DD') AS required_by,
+           TO_CHAR(m.application_start_date, 'YYYY-MM-DD') AS application_start_date,
+           TO_CHAR(m.application_end_date, 'YYYY-MM-DD') AS application_end_date,
            m.salary_min::float AS salary_min, m.salary_max::float AS salary_max,
            r.name AS requested_by_name, x.name AS replaced_employee_name
     FROM manpower_requests m
@@ -927,7 +993,9 @@ export async function saveRecruitmentPlan(db, { jobDbId, body, actorId }) {
     if (!SOURCING_OPTIONS.includes(sourcing)) throw new WorkflowError("Choose a sourcing option");
     if (sourcing !== "Internal" && !agencyId) throw new WorkflowError("Choose a recruitment agency");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(deadline || ""))) throw new WorkflowError("Application deadline is required");
-    if (deadline < getCompanyToday()) throw new WorkflowError("Application deadline must be today or later");
+    if (deadline < await getRecruitmentToday(db)) throw new WorkflowError("Application deadline must be today or later");
+    const startDate = (await db.query(`SELECT TO_CHAR(application_start_date, 'YYYY-MM-DD') AS d FROM public.jobs WHERE id = $1`, [jobDbId])).rows[0]?.d;
+    if (startDate && deadline < startDate) throw new WorkflowError("Application deadline can't be before the application start date");
     if (agencyId) {
         const agency = await db.query(`SELECT 1 FROM recruitment_agencies WHERE id = $1 AND active`, [agencyId]);
         if (agency.rows.length === 0) throw new WorkflowError("Agency not found");

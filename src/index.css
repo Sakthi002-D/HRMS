@@ -76,9 +76,8 @@ button,
   .login-box,
   .forgot-password-page,
   .reset-password-page,
-  .verify-otp-page,
-  .candidate-jobs-page
-) :is(p, small, label, td, em, input, select, textarea) {
+  .verify-otp-page
+):is(p, small, label, td, em, input, select, textarea) {
   color: #000000;
 }
 

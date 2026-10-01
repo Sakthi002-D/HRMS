@@ -4,9 +4,18 @@ import { Eye, EyeOff, KeyRound, Upload } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
 import Modal from "../../components/layout/common/Modal";
+import { DocumentToast } from "../../components/documents/EmployeeDocumentOverlays";
+import { uploadEmployeeDocument as uploadSharedEmployeeDocument } from "../../components/documents/employeeDocumentApi";
 import "./EmployeeDetails.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const EMPLOYEE_DOCUMENTS = [
+    ["employment_contract", "Employment Contract"],
+    ["offer_letter", "Offer Letter"],
+    ["visa_copy", "Visa Copy"],
+    ["qid_copy", "QID Copy"],
+    ["passport_copy", "Passport Copy"],
+];
 
 async function readApiResponse(response) {
     const responseText = await response.text();
@@ -41,6 +50,8 @@ function EmployeeDetails() {
     const [showPassword, setShowPassword] = useState(false);
     const [activeWorkTab, setActiveWorkTab] = useState("projects");
     const [uploadingDocument, setUploadingDocument] = useState("");
+    const [employeeDocuments, setEmployeeDocuments] = useState({});
+    const [documentToast, setDocumentToast] = useState(null);
     const [openPanels, setOpenPanels] = useState({
         about: true,
         bank: false,
@@ -197,19 +208,15 @@ function EmployeeDetails() {
         }
     };
 
-    const uploadEmployeeDocument = async (documentType, file) => {
+    const uploadEmployeeDocument = async (documentType, documentName, file) => {
         if (!file) return;
         try {
             setUploadingDocument(documentType);
-            const formData = new FormData();
-            formData.append("document", file);
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/documents/${documentType}`, { method: "POST", body: formData });
-            const data = await readApiResponse(response);
-            if (!response.ok) throw new Error(data.message || "Failed to upload document");
-            setEmployee((current) => ({ ...current, [`${documentType}_url`]: data.url }));
-            setNotification("Document uploaded successfully");
+            const document = await uploadSharedEmployeeDocument(employee.employee_id, documentType, file, true);
+            setEmployeeDocuments((current) => ({ ...current, [documentType]: document }));
+            setDocumentToast({ type: "success", message: `${documentName} uploaded successfully` });
         } catch (uploadError) {
-            setNotification(uploadError.message);
+            setDocumentToast({ type: "error", message: uploadError.message });
         } finally {
             setUploadingDocument("");
         }
@@ -569,7 +576,29 @@ function EmployeeDetails() {
                         </section>
                         <section className="employee-documents-admin-panel">
                             <div className="employee-documents-admin-heading"><div><h2>Employee Documents</h2><p>Upload documents that will be visible in the employee portal.</p></div></div>
-                            <div className="employee-documents-admin-grid">{[["employment_contract", "Employment Contract"], ["offer_letter", "Offer Letter"], ["visa_copy", "Visa Copy"], ["qid_copy", "QID Copy"], ["passport_copy", "Passport Copy"]].map(([type, label]) => <label className="employee-document-upload-field" key={type}><span>{label}</span><input type="file" accept="application/pdf,image/*" onChange={(event) => uploadEmployeeDocument(type, event.target.files?.[0])} disabled={uploadingDocument === type} />{employee[`${type}_url`] ? <a href={employee[`${type}_url`]} target="_blank" rel="noreferrer">View uploaded document</a> : <small>{uploadingDocument === type ? "Uploading..." : "No document uploaded"}</small>}<Upload size={16} /></label>)}</div>
+                            <div className="employee-documents-admin-grid">
+                                {EMPLOYEE_DOCUMENTS.map(([type, label]) => {
+                                    const document = employeeDocuments[type];
+                                    const isUploading = uploadingDocument === type;
+                                    return <article className="employee-document-upload-field" key={type} aria-busy={isUploading}>
+                                        <h3>{label}</h3>
+                                        <Upload className="employee-document-upload-icon" size={16} aria-hidden="true" />
+                                        <input
+                                            type="file"
+                                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                            disabled={isUploading}
+                                            onChange={(event) => {
+                                                const file = event.target.files?.[0];
+                                                event.target.value = "";
+                                                uploadEmployeeDocument(type, label, file);
+                                            }}
+                                        />
+                                        <small role={isUploading ? "status" : undefined}>
+                                            {isUploading ? "Uploading..." : document?.original_file_name || "No document uploaded"}
+                                        </small>
+                                    </article>;
+                                })}
+                            </div>
                         </section>
                         <section className="password-management-panel">
                             <div>
@@ -819,6 +848,7 @@ function EmployeeDetails() {
                     </div>
                 </div>
             </Modal>
+            <DocumentToast toast={documentToast} onClose={() => setDocumentToast(null)} />
             {educationDeleteId && (
                 <div className="education-delete-overlay" onClick={() => setEducationDeleteId(null)}>
                     <div className="education-delete-card" role="dialog" aria-modal="true" aria-labelledby="education-delete-title" onClick={(event) => event.stopPropagation()}>

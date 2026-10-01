@@ -58,11 +58,11 @@ function Settings() {
         localStorage.setItem("hrmsSettings", JSON.stringify(settings));
         setSaved(true);
 
-        // Manpower Requests use the company currency, so share it with the server
+        // Manpower Requests use the company currency and timezone ("today" for application dates), so share them with the server
         api("/api/recruitment/settings", {
             method: "PUT",
-            body: { actor_id: getSessionEmployeeId(), settings: { currency: settings.currency, currencySymbol: settings.currencySymbol } },
-        }).catch((error) => console.error("Unable to sync currency for recruitment:", error));
+            body: { actor_id: getSessionEmployeeId(), settings: { currency: settings.currency, currencySymbol: settings.currencySymbol, timezone: settings.timezone } },
+        }).catch((error) => console.error("Unable to sync currency / timezone for recruitment:", error));
     };
 
     return (

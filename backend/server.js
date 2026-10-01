@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import pool from "./db.js";
-import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
@@ -9,11 +8,13 @@ import assistantRouter from "./routes/assistant.js";
 import recruitmentRouter from "./routes/recruitment.js";
 import ticketsRouter from "./routes/tickets.js";
 import resignationsRouter from "./routes/resignations.js";
+import careersRouter from "./routes/careers.js";
 import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
 import { ensureNotificationSchema, getInbox, sendQueuedEmails } from "./services/notificationService.js";
-import { FILLED_APPLICATION_STATUSES, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
+import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
 import { getCompanyToday } from "./services/leaveDateRules.js";
+import { ensureCareerSchema, requireHRActor } from "./services/careerApplications.js";
 import { validateLeaveDates } from "./services/leaveDateRules.js";
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
 import {
@@ -35,13 +36,8 @@ const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_K
     )
     : null;
 
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 5 * 1024 * 1024,
-    },
-});
-
+// Behind Render's proxy: req.ip is the visitor's IP (Careers apply rate limit)
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
@@ -53,6 +49,8 @@ app.use("/api", recruitmentRouter);
 app.use("/api", ticketsRouter);
 // Resignation requests, approvals, Pending End of Service
 app.use("/api", resignationsRouter);
+// Public Careers page + HR Recruitment → Job Applications
+app.use("/api", careersRouter);
 
 // Test API
 app.get("/", (req, res) => {
@@ -536,32 +534,6 @@ app.put("/api/employees/:employeeId/about", async (req, res) => {
     } catch (error) {
         console.error("Error updating employee about:", error);
         res.status(500).json({ message: "Failed to update about details", details: error.message });
-    }
-});
-
-app.post("/api/employees/:employeeId/documents/:documentType", upload.single("document"), async (req, res) => {
-    const documentColumns = {
-        employment_contract: "employment_contract_url",
-        offer_letter: "offer_letter_url",
-        visa_copy: "visa_copy_url",
-        qid_copy: "qid_copy_url",
-        passport_copy: "passport_copy_url",
-    };
-    try {
-        const column = documentColumns[req.params.documentType];
-        if (!column || !req.file) return res.status(400).json({ message: "A valid document file is required" });
-        if (!supabase) return res.status(503).json({ message: "Document storage is not configured on the backend" });
-        const fileExtension = req.file.originalname.split(".").pop()?.toLowerCase() || "bin";
-        const fileName = `employee-documents/${req.params.employeeId}/${req.params.documentType}-${Date.now()}.${fileExtension}`;
-        const { error: uploadError } = await supabase.storage.from("employee-documents").upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from("employee-documents").getPublicUrl(fileName);
-        const result = await pool.query(`UPDATE employees SET ${column} = $1 WHERE employee_id = $2 RETURNING ${column}`, [data.publicUrl, req.params.employeeId]);
-        if (!result.rows.length) return res.status(404).json({ message: "Employee not found" });
-        res.json({ documentType: req.params.documentType, url: result.rows[0][column] });
-    } catch (error) {
-        console.error("Employee document upload error:", error);
-        res.status(500).json({ message: "Failed to upload employee document", details: error.message });
     }
 });
 
@@ -2390,8 +2362,21 @@ app.get("/api/dashboard/departments", async (req, res) => {
 // JOB / RECRUITMENT APIs
 // =========================
 
-// GET all jobs
-app.get("/api/jobs", async (req, res) => {
+// HR-only guard for the job / application routes below (WorkflowError → its status)
+const withHR = (fn) => async (req, res) => {
+    try {
+        await requireHRActor(pool, req.get("x-employee-id") || req.query.employee_id || req.body?.actor_id);
+    } catch (error) {
+        if (error instanceof WorkflowError) return res.status(error.status).json({ message: error.message });
+        console.error("HR check failed:", error);
+        return res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+    return fn(req, res);
+};
+
+// GET all jobs (HR only: includes compensation, MPR and recruitment plan;
+// the public Careers page uses /api/careers/jobs instead)
+app.get("/api/jobs", withHR(async (req, res) => {
     try {
         // Filled = applications marked Hired/Joined. accepting_applications is
         // false once the job is closed or its application deadline has passed.
@@ -2422,6 +2407,8 @@ app.get("/api/jobs", async (req, res) => {
                 j.interview_panel,
                 (SELECT COUNT(*)::int FROM public.job_applications ja
                   WHERE ja.job_id = j.job_id AND LOWER(ja.status) = ANY($2::text[])) AS filled,
+                (SELECT COUNT(*)::int FROM public.job_applications ja WHERE ja.job_id = j.job_id) AS applications_count,
+                (SELECT COUNT(*)::int FROM public.job_applications ja WHERE ja.job_id = j.job_id AND ja.status = 'New') AS new_applications,
                 (j.application_deadline IS NOT NULL AND j.application_deadline < $1::date) AS deadline_passed,
                 (LOWER(COALESCE(j.status, '')) IN ('open', 'recruitment in progress', 'active')
                   AND (j.application_deadline IS NULL OR j.application_deadline >= $1::date)) AS accepting_applications
@@ -2442,7 +2429,7 @@ app.get("/api/jobs", async (req, res) => {
             message: "Failed to fetch jobs"
         });
     }
-});
+}));
 
 
 // Direct job creation is disabled (FRD SHELTER-HCM-RC-01-001): job openings are
@@ -2457,205 +2444,22 @@ app.post("/api/jobs", (req, res) => {
 
 // =========================
 // JOB APPLICATION APIs
+// Candidates apply through the public Careers page (routes/careers.js):
+//   POST /api/careers/jobs/:jobId/apply — validated, CV stored privately
+// HR lists / reviews them through /api/hr/job-applications.
 // =========================
 
-// Get all job applications
-app.get("/api/job-applications", async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT *
-            FROM public.job_applications
-            ORDER BY id DESC
-        `);
-
-        res.json(result.rows);
-
-    } catch (error) {
-        console.error("Error fetching job applications:", error);
-
-        res.status(500).json({
-            message: "Failed to fetch job applications"
-        });
-    }
+app.post("/api/job-applications", (req, res) => {
+    res.status(410).json({ message: "Apply through the Careers page: POST /api/careers/jobs/:jobId/apply" });
 });
 
-
-app.post("/api/job-applications", async (req, res) => {
-    try {
-        const {
-            job_id,
-            candidate_name,
-            email,
-            phone,
-            location,
-            address,
-            linkedin_url,
-            github_url,
-            portfolio_url,
-            highest_education,
-            college,
-            graduation_year,
-            cgpa_percentage,
-            candidate_type,
-            current_company,
-            current_designation,
-            total_experience,
-            current_ctc,
-            expected_ctc,
-            notice_period,
-            joining_date,
-            skills,
-            certifications,
-            project_name,
-            project_description,
-            technologies_used,
-            resume_url,
-            willing_to_relocate,
-            why_join,
-            why_suitable,
-            cover_letter,
-            source,
-            declaration
-        } = req.body;
-
-        if (!job_id || !candidate_name || !email) {
-            return res.status(400).json({
-                message: "Job ID, candidate name and email are required"
-            });
-        }
-
-        // Stop new applications once the job is closed or its deadline has passed
-        const jobCheck = await pool.query(
-            `SELECT status, application_deadline < $2::date AS deadline_passed
-             FROM public.jobs WHERE job_id = $1`,
-            [job_id, getCompanyToday()]
-        );
-        const targetJob = jobCheck.rows[0];
-
-        if (!targetJob) {
-            return res.status(404).json({ message: "Job opening not found" });
-        }
-        if (targetJob.deadline_passed) {
-            return res.status(400).json({ message: "The application deadline for this job has passed" });
-        }
-        if (!["open", "recruitment in progress", "active"].includes(String(targetJob.status || "").toLowerCase())) {
-            return res.status(400).json({ message: "This job is no longer accepting applications" });
-        }
-
-        const applicationIdResult = await pool.query(`
-            SELECT
-                'APP' ||
-                LPAD(
-                    (COALESCE(MAX(id), 0) + 1)::text,
-                    3,
-                    '0'
-                ) AS application_id
-            FROM public.job_applications
-        `);
-
-        const applicationId =
-            applicationIdResult.rows[0].application_id;
-
-        const result = await pool.query(
-            `
-            INSERT INTO public.job_applications
-            (
-                application_id,
-                job_id,
-                candidate_name,
-                email,
-                phone,
-                location,
-                address,
-                linkedin_url,
-                github_url,
-                portfolio_url,
-                highest_education,
-                college,
-                graduation_year,
-                cgpa_percentage,
-                candidate_type,
-                current_company,
-                current_designation,
-                total_experience,
-                current_ctc,
-                expected_ctc,
-                notice_period,
-                joining_date,
-                skills,
-                certifications,
-                project_name,
-                project_description,
-                technologies_used,
-                resume_url,
-                willing_to_relocate,
-                why_join,
-                why_suitable,
-                cover_letter,
-                source,
-                declaration,
-                status
-            )
-            VALUES
-            (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-                $31, $32, $33, $34, 'Applied'
-            )
-            RETURNING *
-            `,
-            [
-                applicationId,
-                job_id,
-                candidate_name,
-                email,
-                phone || null,
-                location || null,
-                address || null,
-                linkedin_url || null,
-                github_url || null,
-                portfolio_url || null,
-                highest_education || null,
-                college || null,
-                graduation_year || null,
-                cgpa_percentage || null,
-                candidate_type || null,
-                current_company || null,
-                current_designation || null,
-                total_experience || null,
-                current_ctc || null,
-                expected_ctc || null,
-                notice_period || null,
-                joining_date || null,
-                skills || null,
-                certifications || null,
-                project_name || null,
-                project_description || null,
-                technologies_used || null,
-                resume_url || null,
-                willing_to_relocate ?? false,
-                why_join || null,
-                why_suitable || null,
-                cover_letter || null,
-                source || null,
-                declaration ?? false
-            ]
-        );
-
-        res.status(201).json(result.rows[0]);
-
-    } catch (error) {
-        console.error("Error creating job application:", error);
-
-        res.status(500).json({
-            message: "Failed to create job application"
-        });
-    }
+app.post("/api/upload-resume", (req, res) => {
+    res.status(410).json({ message: "CVs are uploaded with the application on the Careers page" });
 });
 
-// Update application status
-app.put("/api/job-applications/:id/status", async (req, res) => {
+// Update application status (HR only). Used for Hired / Joined, which fill the job;
+// Shortlist / Hold / Reject go through POST /api/hr/job-applications/:id/:action.
+app.put("/api/job-applications/:id/status", withHR(async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -2669,9 +2473,9 @@ app.put("/api/job-applications/:id/status", async (req, res) => {
         const result = await pool.query(
             `
             UPDATE public.job_applications
-            SET status = $1
+            SET status = $1, updated_at = CURRENT_TIMESTAMP
             WHERE id = $2
-            RETURNING *
+            RETURNING id, application_id, job_id, status
             `,
             [status, id]
         );
@@ -2694,70 +2498,7 @@ app.put("/api/job-applications/:id/status", async (req, res) => {
             message: "Failed to update application status"
         });
     }
-});
-
-
-
-// ================================
-// RESUME UPLOAD
-// ================================
-
-app.post("/api/upload-resume", upload.single("resume"), async (req, res) => {
-    try {
-        if (!supabase) {
-            return res.status(503).json({
-                message: "Resume upload is not configured on the backend",
-            });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({
-                message: "Resume file is required",
-            });
-        }
-
-        if (!supabase) {
-            return res.status(503).json({
-                message: "Supabase storage is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to backend/.env.",
-            });
-        }
-
-        const fileExtension = req.file.originalname.split(".").pop();
-
-        const fileName = `resume-${Date.now()}.${fileExtension}`;
-        
-        const { error } = await supabase.storage
-            .from("resumes")
-            .upload(fileName, req.file.buffer, {
-                contentType: req.file.mimetype,
-                upsert: false,
-            });
-
-        if (error) {
-            console.error("Supabase upload error:", error);
-
-            return res.status(500).json({
-                message: "Failed to upload resume",
-            });
-        }
-
-        const { data } = supabase.storage
-            .from("resumes")
-            .getPublicUrl(fileName);
-
-        res.status(200).json({
-            message: "Resume uploaded successfully",
-            resume_url: data.publicUrl,
-        });
-
-    } catch (error) {
-        console.error("Resume upload error:", error);
-
-        res.status(500).json({
-            message: "Server error while uploading resume",
-        });
-    }
-});
+}));
 
 
 app.post("/api/login", async (req, res) => {
@@ -2805,7 +2546,7 @@ app.post("/api/login", async (req, res) => {
 
     return res.status(200).json({
       message: "Login successful",
-      employee: employee,
+            employee: employee,
     });
 
   } catch (error) {
@@ -2963,6 +2704,7 @@ ensureEmployeePersonalInfoColumns()
     .then(() => ensureManpowerSchema())
     .then(() => ensureTicketSchema())
     .then(() => ensureResignationSchema())
+    .then(() => ensureCareerSchema())
     .then(() => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);

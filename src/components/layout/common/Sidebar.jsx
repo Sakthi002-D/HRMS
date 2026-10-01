@@ -18,12 +18,12 @@ import {
 import "./Sidebar.css";
 import { scrollActiveIntoView } from "./sidebarScroll";
 import { purgeAllChatStorage } from "../../assistant/HRAssistant";
-import { MPRS_CHANGED_EVENT } from "../../recruitment/recruitmentApi";
+import { APPLICATIONS_CHANGED_EVENT, MPRS_CHANGED_EVENT } from "../../recruitment/recruitmentApi";
 import { RESIGNATIONS_CHANGED_EVENT, api, getSessionHRId, isPendingHR } from "../../resignation/resignationApi";
 
 // Count for a menu badge: fetches `path(hrId)`, counts rows matching `matches`,
-// and refetches whenever a page dispatches `changedEvent`
-function useMenuCount(path, changedEvent, matches = () => true) {
+// and refetches whenever a page dispatches `changedEvent` (and every `pollMs`, if set)
+function useMenuCount(path, changedEvent, matches = () => true, pollMs = 0) {
   const [count, setCount] = useState(0);
   const matchesRef = useRef(matches);
 
@@ -37,11 +37,13 @@ function useMenuCount(path, changedEvent, matches = () => true) {
 
     load();
     window.addEventListener(changedEvent, load);
+    const timer = pollMs ? window.setInterval(() => document.visibilityState === "visible" && load(), pollMs) : null;
     return () => {
       ignore = true;
       window.removeEventListener(changedEvent, load);
+      if (timer) window.clearInterval(timer);
     };
-  }, [path, changedEvent]);
+  }, [path, changedEvent, pollMs]);
 
   return count;
 }
@@ -49,11 +51,21 @@ function useMenuCount(path, changedEvent, matches = () => true) {
 const resignationsPath = (hrId) => `/api/hr/resignations?employee_id=${hrId}`;
 // MPRs waiting for the logged-in user's action (the "My Approvals" list)
 const mprApprovalsPath = (hrId) => `/api/mprs?employee_id=${hrId}&scope=approvals`;
+// Job applications from the Careers page that HR hasn't reviewed yet
+const newApplicationsPath = (hrId) => `/api/hr/job-applications/new?employee_id=${hrId}`;
+const NEW_APPLICATIONS_POLL_MS = 60000;
+
+const recruitmentBadgeLabel = (approvals, applications) =>
+  [
+    approvals ? `${approvals} waiting for your approval` : "",
+    applications ? `${applications} new job application${applications === 1 ? "" : "s"}` : "",
+  ].filter(Boolean).join(", ");
 
 function Sidebar({ collapsed, onToggle }) {
   const navigate = useNavigate();
   const pendingResignations = useMenuCount(resignationsPath, RESIGNATIONS_CHANGED_EVENT, isPendingHR);
   const pendingMprApprovals = useMenuCount(mprApprovalsPath, MPRS_CHANGED_EVENT);
+  const newApplications = useMenuCount(newApplicationsPath, APPLICATIONS_CHANGED_EVENT, undefined, NEW_APPLICATIONS_POLL_MS);
   const { pathname } = useLocation();
   const scrollRef = useRef(null);
 
@@ -64,10 +76,10 @@ function Sidebar({ collapsed, onToggle }) {
   const menuItems = [
     ["/hr-dashboard", "Dashboard", LayoutDashboard],
     ["/employees", "Employees", Users],
-    ["/recruitment", "Recruitment", BriefcaseBusiness, pendingMprApprovals, "waiting for your approval"],
+    ["/recruitment", "Recruitment", BriefcaseBusiness, pendingMprApprovals + newApplications, recruitmentBadgeLabel(pendingMprApprovals, newApplications)],
     ["/attendance", "Attendance", Clock3],
     ["/leave-management", "Leave Management", CalendarDays],
-    ["/resignations", "Resignation", DoorOpen, pendingResignations, "waiting for HR"],
+    ["/resignations", "Resignation", DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
     ["/payroll", "Payroll", IndianRupee],
     ["/tickets", "Ticketing", Ticket],
     ["/reports", "Reports", FileText],
@@ -95,7 +107,7 @@ function Sidebar({ collapsed, onToggle }) {
               <Icon size={19} strokeWidth={2} />
               <span>{label}</span>
               {badge > 0 && (
-                <em className="sidebar-badge" aria-label={`${badge} ${badgeLabel}`} title={`${badge} ${badgeLabel}`}>
+                <em className="sidebar-badge" aria-label={badgeLabel} title={badgeLabel}>
                   {badge > 99 ? "99+" : badge}
                 </em>
               )}

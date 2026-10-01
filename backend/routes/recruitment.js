@@ -9,7 +9,6 @@
 
 import express from "express";
 import pool from "../db.js";
-import { getCompanyToday } from "../services/leaveDateRules.js";
 import { getInbox, sendQueuedEmails } from "../services/notificationService.js";
 import {
     ASSET_OPTIONS,
@@ -28,6 +27,7 @@ import {
     getMprDetail,
     getRecruitmentSettings,
     getRecruitmentSummary,
+    getRecruitmentToday,
     getRolesFor,
     listMprs,
     rejectMpr,
@@ -102,7 +102,7 @@ router.get("/recruitment/meta", handle(async (req, res) => {
 
     res.set("Cache-Control", "no-store");
     res.json({
-        today: getCompanyToday(),
+        today: await getRecruitmentToday(),
         currency: settings.currency,
         currencySymbol: settings.currencySymbol,
         departments: departmentNames,
@@ -280,11 +280,12 @@ router.get("/mprs/summary", handle(async (req, res) => {
 
 // Budget check while filling the form (New Position only)
 router.get("/mprs/budget-preview", handle(async (req, res) => {
-    const { department, required_by: requiredBy, openings, salary_max: salaryMax, mpr_id: mprId } = req.query;
+    const { department, start_date: startDate, openings, salary_max: salaryMax, mpr_id: mprId } = req.query;
     if (!department) throw new WorkflowError("Department is required");
     res.json(await computeBudget(pool, {
         department,
-        year: Number(String(requiredBy || getCompanyToday()).slice(0, 4)),
+        // Budget year = year of the Application Start Date
+        year: Number(String(startDate || await getRecruitmentToday()).slice(0, 4)),
         openings,
         salaryMax,
         excludeMprId: mprId || null,

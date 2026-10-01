@@ -1215,8 +1215,8 @@
 .employee-documents-admin-heading p { margin: 0; color: #718096; font-size: 13px; }
 .employee-documents-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .employee-document-upload-field { position: relative; display: flex; flex-direction: column; gap: 7px; padding: 14px; border: 1px solid #dfe8ef; border-radius: 8px; background: #f9fbfd; color: #173456; font-size: 13px; font-weight: 700; }
+.employee-document-upload-field h3 { margin: 0; padding-right: 26px; color: #173456; font-size: 14px; }
 .employee-document-upload-field input { width: 100%; color: #63758a; font: inherit; font-size: 12px; font-weight: 400; }
-.employee-document-upload-field small { color: #a86200; font-size: 11px; font-weight: 600; }
-.employee-document-upload-field a { color: #087fb8; font-size: 11px; font-weight: 700; }
-.employee-document-upload-field > svg { position: absolute; top: 14px; right: 14px; color: #087fb8; }
+.employee-document-upload-field small { color: #64748b; font-size: 11px; font-weight: 600; }
+.employee-document-upload-icon { position: absolute; top: 14px; right: 14px; color: #087fb8; }
 @media (max-width: 700px) { .employee-documents-admin-grid { grid-template-columns: 1fr; } }

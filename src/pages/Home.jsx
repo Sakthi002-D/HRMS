@@ -21,7 +21,7 @@ function Home() {
             Login
         </Link>
 
-          <Link to="/candidate-jobs">
+          <Link to="/careers">
             <button className="career-btn">Careers</button>
           </Link>
         </div>

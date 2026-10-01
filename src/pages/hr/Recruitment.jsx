@@ -1,11 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
 import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
-import { api, formatDate, getSessionEmployeeId, statusTone } from "../../components/recruitment/recruitmentApi";
+import JobApplications from "../../components/recruitment/JobApplications";
+import { Building2, Briefcase, Clock3, UserPlus } from "lucide-react";
+import {
+    api,
+    formatDate,
+    getSessionEmployeeId,
+    notifyApplicationsChanged,
+    statusTone,
+} from "../../components/recruitment/recruitmentApi";
 import "./Recruitment.css";
 import "../../components/recruitment/recruitment.css";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const TABS = [
     { id: "manpower", label: "Manpower Requests" },
@@ -13,14 +20,17 @@ const TABS = [
     { id: "applications", label: "Job Applications" },
 ];
 
+// New applications from the Careers page show up without a manual refresh
+const APPLICATIONS_POLL_MS = 30000;
+
 function Recruitment() {
     const hrId = getSessionEmployeeId();
     const [activeTab, setActiveTab] = useState("manpower");
     const [mprFormOpen, setMprFormOpen] = useState(false);
 
-    const [applications, setApplications] = useState([]);
-    const [selectedApplication, setSelectedApplication] = useState(null);
-    const [showApplication, setShowApplication] = useState(false);
+    const [applications, setApplications] = useState({ rows: [], loading: true, error: "" });
+    const [applicationJobFilter, setApplicationJobFilter] = useState("");
+    const knownApplicationIds = useRef(null);
 
     const [jobs, setJobs] = useState([]);
     const [jobSearch, setJobSearch] = useState("");
@@ -28,21 +38,15 @@ function Recruitment() {
     const [meta, setMeta] = useState(null);
     const [planJob, setPlanJob] = useState(null);
 
-    const fetchJobs = async () => {
+    const hrQuery = `employee_id=${encodeURIComponent(hrId || "")}`;
+
+    const fetchJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/api/jobs`, { cache: "no-store" });
-
-            if (!response.ok) {
-            throw new Error("Failed to fetch jobs");
-            }
-
-            const data = await response.json();
-
-            setJobs(data);
+            setJobs(await api(`/api/jobs?${hrQuery}`));
         } catch (error) {
-         console.error("Error fetching jobs:", error);
+            console.error("Error fetching jobs:", error);
         }
-    };
+    }, [hrQuery]);
 
     // Card counts (pending MPR approvals, open jobs, unfilled positions, departments)
     const fetchSummary = async () => {
@@ -59,27 +63,18 @@ function Recruitment() {
         fetchSummary();
     };
 
-
-    const fetchApplications = async () => {
-    try {
-        const response = await fetch(`${API_URL}/api/job-applications`);
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch applications");
+    const fetchApplications = useCallback(async () => {
+        try {
+            const rows = await api(`/api/hr/job-applications?${hrQuery}`);
+            // A new application arrived since the last fetch: refresh the sidebar badge too
+            const known = knownApplicationIds.current;
+            if (known && rows.some((row) => !known.has(row.id))) notifyApplicationsChanged();
+            knownApplicationIds.current = new Set(rows.map((row) => row.id));
+            setApplications({ rows, loading: false, error: "" });
+        } catch (error) {
+            setApplications((current) => ({ ...current, loading: false, error: error.message }));
         }
-
-        const data = await response.json();
-        setApplications(data);
-
-    } catch (error) {
-        console.error("Error fetching applications:", error);
-    }
-};
-
-const handleViewApplication = (application) => {
-    setSelectedApplication(application);
-    setShowApplication(true);
-};
+    }, [hrQuery]);
 
     useEffect(() => {
         fetchJobs();
@@ -88,11 +83,25 @@ const handleViewApplication = (application) => {
         api(`/api/recruitment/meta?employee_id=${encodeURIComponent(hrId || "")}`)
             .then(setMeta)
             .catch((error) => console.error("Error fetching recruitment options:", error));
-    }, [hrId]);
+    }, [hrId, fetchJobs, fetchApplications]);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === "visible") fetchApplications();
+        }, APPLICATIONS_POLL_MS);
+        return () => window.clearInterval(timer);
+    }, [fetchApplications]);
+
+    const newApplications = applications.rows.filter((row) => row.status === "New").length;
 
     const openNewManpowerRequest = () => {
         setActiveTab("manpower");
         setMprFormOpen(true);
+    };
+
+    const openJobApplications = (jobId) => {
+        setApplicationJobFilter(jobId);
+        setActiveTab("applications");
     };
 
     const search = jobSearch.trim().toLowerCase();
@@ -108,6 +117,10 @@ const handleViewApplication = (application) => {
         <DashboardLayout>
             <div className="recruitment-page">
 
+                {/* Title, New MPR button and stat cards: not on Job Applications (it has its own cards).
+                    The summary stays in state, so the cards show instantly when switching back. */}
+                {activeTab !== "applications" && (
+                <>
                 <div className="recruitment-header">
                     <div>
                         <h1>Recruitment</h1>
@@ -125,26 +138,40 @@ const handleViewApplication = (application) => {
                 <div className="recruitment-cards four">
 
                     <div className="recruitment-card">
-                        <h3>Pending MPR Approvals</h3>
-                        <h2>{summary?.pending_mpr_approvals ?? "—"}</h2>
+                        <div className="recruitment-card-content">
+                            <span>Pending MPR Approvals</span>
+                            <strong>{summary?.pending_mpr_approvals ?? "—"}</strong>
+                        </div>
+                        <Clock3 className="recruitment-stat-icon pending" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
-                        <h3>Open Jobs</h3>
-                        <h2>{summary?.open_jobs ?? "—"}</h2>
+                        <div className="recruitment-card-content">
+                            <span>Open Jobs</span>
+                            <strong>{summary?.open_jobs ?? "—"}</strong>
+                        </div>
+                        <Briefcase className="recruitment-stat-icon jobs" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
-                        <h3>Open Positions</h3>
-                        <h2>{summary?.open_positions ?? "—"}</h2>
+                        <div className="recruitment-card-content">
+                            <span>Open Positions</span>
+                            <strong>{summary?.open_positions ?? "—"}</strong>
+                        </div>
+                        <UserPlus className="recruitment-stat-icon positions" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
-                        <h3>Departments</h3>
-                        <h2>{summary?.departments ?? "—"}</h2>
+                        <div className="recruitment-card-content">
+                            <span>Departments</span>
+                            <strong>{summary?.departments ?? "—"}</strong>
+                        </div>
+                        <Building2 className="recruitment-stat-icon departments" size={20} aria-hidden="true" />
                     </div>
 
                 </div>
+                </>
+                )}
 
                 <div className="recruitment-tabs" role="tablist">
                     {TABS.map((tab) => (
@@ -157,6 +184,11 @@ const handleViewApplication = (application) => {
                             onClick={() => setActiveTab(tab.id)}
                         >
                             {tab.label}
+                            {tab.id === "applications" && newApplications > 0 && (
+                                <em className="tab-badge" aria-label={`${newApplications} new`} title={`${newApplications} new (not reviewed)`}>
+                                    {newApplications > 99 ? "99+" : newApplications}
+                                </em>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -203,6 +235,7 @@ const handleViewApplication = (application) => {
                                     <th>Type</th>
                                     <th>Application Deadline</th>
                                     <th>Agency</th>
+                                    <th>Applications</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -211,7 +244,7 @@ const handleViewApplication = (application) => {
                             <tbody>
 
                                 {visibleJobs.length === 0 && (
-                                    <tr><td colSpan="13">No job openings found.</td></tr>
+                                    <tr><td colSpan="14">No job openings found.</td></tr>
                                 )}
 
                                 {visibleJobs.map((job) => (
@@ -253,6 +286,18 @@ const handleViewApplication = (application) => {
 
                                         <td>
                                             {job.sourcing === "Internal" ? "Internal" : job.agency_name || "—"}
+                                        </td>
+
+                                        <td>
+                                            <button
+                                                type="button"
+                                                className="job-apps-link"
+                                                onClick={() => openJobApplications(job.job_id)}
+                                                title={`View applications for ${job.job_id}`}
+                                            >
+                                                {job.applications_count ?? 0}
+                                                {job.new_applications > 0 && <span className="job-badge new">{job.new_applications} new</span>}
+                                            </button>
                                         </td>
 
                                         <td>
@@ -299,308 +344,23 @@ const handleViewApplication = (application) => {
                     />
                 )}
 
-                            {/* JOB APPLICATIONS */}
-
                 {activeTab === "applications" && (
-                <div className="jobs-section">
-
-                    <div className="jobs-section-header">
-                        <h2>Job Applications</h2>
-                    </div>
-
-                    <div className="jobs-table-container">
-
-                        <table className="jobs-table">
-
-                            <thead>
-                                <tr>
-                                    <th>Application ID</th>
-                                    <th>Job ID</th>
-                                    <th>Candidate Name</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Candidate Type</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                                {applications.map((application) => (
-                                    <tr key={application.application_id}>
-
-                                        <td>{application.application_id}</td>
-
-                                        <td>{application.job_id}</td>
-
-                                        <td>
-                                            <strong>
-                                                {application.candidate_name}
-                                            </strong>
-                                        </td>
-
-                                        <td>{application.email}</td>
-
-                                        <td>{application.phone}</td>
-
-                                        <td>{application.candidate_type}</td>
-
-                                        <td>
-                                            <span className="job-status">
-                                                {application.status}
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <button
-                                                className="create-job-btn"
-                                                onClick={() =>
-                                                    handleViewApplication(application)
-                                                }
-                                            >
-                                                View
-                                            </button>
-                                        </td>
-
-                                    </tr>
-                                ))}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
+                    <JobApplications
+                        actorId={hrId}
+                        applications={applications.rows}
+                        loading={applications.loading}
+                        error={applications.error}
+                        jobs={jobs}
+                        jobFilter={applicationJobFilter}
+                        onJobFilterChange={setApplicationJobFilter}
+                        onChanged={() => {
+                            fetchApplications();
+                            fetchJobs();
+                        }}
+                    />
                 )}
 
             </div>
-
-                                {/* APPLICATION DETAILS MODAL */}
-
-                {showApplication && selectedApplication && (
-    <div className="candidate-modal-overlay">
-
-        <div className="candidate-modal">
-
-            {/* Header */}
-            <div className="candidate-modal-header">
-                <div>
-                    <h2>Candidate Details</h2>
-                    <span>
-                        Application ID: {selectedApplication.application_id}
-                    </span>
-                </div>
-
-                <button
-                    className="candidate-modal-close"
-                    onClick={() => setShowApplication(false)}
-                >
-                    ×
-                </button>
-            </div>
-
-            {/* Personal Details */}
-            <section className="candidate-section">
-                <h3>Personal Details</h3>
-
-                <div className="candidate-grid">
-                    <div>
-                        <label>Candidate Name</label>
-                        <p>{selectedApplication.candidate_name}</p>
-                    </div>
-
-                    <div>
-                        <label>Email</label>
-                        <p>{selectedApplication.email}</p>
-                    </div>
-
-                    <div>
-                        <label>Phone</label>
-                        <p>{selectedApplication.phone || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>Location</label>
-                        <p>{selectedApplication.location || "-"}</p>
-                    </div>
-
-                    <div className="full-width">
-                        <label>Address</label>
-                        <p>{selectedApplication.address || "-"}</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Education */}
-            <section className="candidate-section">
-                <h3>Education Details</h3>
-
-                <div className="candidate-grid">
-                    <div>
-                        <label>Highest Education</label>
-                        <p>{selectedApplication.highest_education || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>College</label>
-                        <p>{selectedApplication.college || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>Graduation Year</label>
-                        <p>{selectedApplication.graduation_year || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>CGPA / Percentage</label>
-                        <p>{selectedApplication.cgpa_percentage || "-"}</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Candidate Type */}
-            <section className="candidate-section">
-                <h3>Candidate Type</h3>
-
-                <div className="candidate-type-badge">
-                    {selectedApplication.candidate_type || "-"}
-                </div>
-            </section>
-
-            {/* Experienced Details */}
-            {selectedApplication.candidate_type === "Experienced" && (
-                <section className="candidate-section">
-                    <h3>Experience Details</h3>
-
-                    <div className="candidate-grid">
-                        <div>
-                            <label>Current Company</label>
-                            <p>
-                                {selectedApplication.current_company || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Current Designation</label>
-                            <p>
-                                {selectedApplication.current_designation || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Total Experience</label>
-                            <p>
-                                {selectedApplication.total_experience || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Current CTC</label>
-                            <p>
-                                {selectedApplication.current_ctc || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Expected CTC</label>
-                            <p>
-                                {selectedApplication.expected_ctc || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Notice Period</label>
-                            <p>
-                                {selectedApplication.notice_period || "-"}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label>Joining Date</label>
-                            <p>
-                                {selectedApplication.joining_date || "-"}
-                            </p>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Skills & Projects */}
-            <section className="candidate-section">
-                <h3>Skills & Projects</h3>
-
-                <div className="candidate-grid">
-                    <div className="full-width">
-                        <label>Skills</label>
-                        <p>{selectedApplication.skills || "-"}</p>
-                    </div>
-
-                    <div className="full-width">
-                        <label>Certifications</label>
-                        <p>{selectedApplication.certifications || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>Project Name</label>
-                        <p>{selectedApplication.project_name || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>Technologies Used</label>
-                        <p>{selectedApplication.technologies_used || "-"}</p>
-                    </div>
-
-                    <div className="full-width">
-                        <label>Project Description</label>
-                        <p>
-                            {selectedApplication.project_description || "-"}
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Additional Information */}
-            <section className="candidate-section">
-                <h3>Additional Information</h3>
-
-                <div className="candidate-grid">
-                    <div>
-                        <label>Why Join</label>
-                        <p>{selectedApplication.why_join || "-"}</p>
-                    </div>
-
-                    <div>
-                        <label>Why Suitable</label>
-                        <p>{selectedApplication.why_suitable || "-"}</p>
-                    </div>
-
-                    <div className="full-width">
-                        <label>Cover Letter</label>
-                        <p>{selectedApplication.cover_letter || "-"}</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Resume */}
-            {selectedApplication.resume_url && (
-                <div className="candidate-resume">
-                    <span>Resume</span>
-
-                    <a
-                        href={selectedApplication.resume_url}
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        View Resume →
-                    </a>
-                </div>
-            )}
-
-        </div>
-    </div>
-)}
         </DashboardLayout>
     );
 }

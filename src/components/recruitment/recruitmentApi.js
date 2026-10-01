@@ -51,6 +51,9 @@ export const formatDate = (value) => {
         : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+// "01 Oct 2026 – 15 Oct 2026"; "—" when either date is missing (MPRs from before the application period)
+export const formatDateRange = (start, end) => (start && end ? `${formatDate(start)} – ${formatDate(end)}` : "—");
+
 export const formatDateTime = (value) => {
     const date = new Date(value);
     return Number.isNaN(date.getTime())
@@ -77,3 +80,24 @@ export const statusTone = (status = "") => {
 // The HR sidebar's Recruitment badge ("My Approvals" count) refetches on this event
 export const MPRS_CHANGED_EVENT = "hr-mprs-changed";
 export const notifyMprsChanged = () => window.dispatchEvent(new Event(MPRS_CHANGED_EVENT));
+
+// ...and its New job applications count refetches on this one
+export const APPLICATIONS_CHANGED_EVENT = "hr-applications-changed";
+export const notifyApplicationsChanged = () => window.dispatchEvent(new Event(APPLICATIONS_CHANGED_EVENT));
+
+// CSS modifier for a job application status pill (mpr-status classes)
+export const applicationTone = (status = "") =>
+    ({ New: "info", Shortlisted: "done", "On Hold": "warning", Rejected: "danger" })[status] || "muted";
+
+// Candidate's CV (HR only; there is no public URL) as an object URL
+export async function fetchApplicationCv(applicationId, actorId) {
+    const response = await fetch(
+        `${API_URL}/api/hr/job-applications/${encodeURIComponent(applicationId)}/cv?employee_id=${encodeURIComponent(actorId || "")}`,
+        { cache: "no-store" }
+    );
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Unable to load the CV");
+    }
+    return URL.createObjectURL(await response.blob());
+}

@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 backend/.env
 .env
+# Candidate CVs (local fallback storage) must never be committed
+backend/uploads/cvs/

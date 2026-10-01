@@ -1,6 +1,7 @@
 // Manpower Request form (replaces the old "Create Job" form; keeps its fields and styling).
 import { useEffect, useRef, useState } from "react";
 import { useConfirm } from "../common/dialog/dialogContext";
+import DatePicker from "../layout/common/DatePicker";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
@@ -19,8 +20,8 @@ const emptyForm = (department) => ({
     salary_min: "",
     salary_max: "",
     benefits: { air_ticket: "No", allowances: "", vehicle: "No", medical_insurance_category: "", accommodation: "No" },
-    grade: "",
-    required_by: "",
+    application_start_date: "",
+    application_end_date: "",
     justification: "",
     assets: [],
     asset_other: "",
@@ -34,7 +35,6 @@ const fromMpr = (mpr) => ({
     openings: mpr.openings ?? "",
     salary_min: mpr.salary_min ?? "",
     salary_max: mpr.salary_max ?? "",
-    required_by: mpr.required_by || "",
     benefits: {
         air_ticket: mpr.benefits?.air_ticket ? "Yes" : "No",
         allowances: mpr.benefits?.allowances || "",
@@ -57,6 +57,8 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const openingsRef = useRef(null);
     const justificationRef = useRef(null);
     const currency = getCompanyCurrency(meta.currency);
+    // "Today" in the company timezone from HR Settings (computed by the server)
+    const today = meta.today;
 
     const isNewPosition = form.request_type === "New Position";
     const isReplacement = form.request_type === "Replacement";
@@ -77,7 +79,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const budgetKeyFor = (values) => {
         const openings = Number(values.openings);
         if (values.request_type !== "New Position" || !values.department || !(openings > 0)) return null;
-        const year = String(values.required_by || meta.today || "").slice(0, 4);
+        const year = String(values.application_start_date || meta.today || "").slice(0, 4);
         return `${values.department}|${year}|${openings}|${Number(values.salary_max) || 0}`;
     };
 
@@ -105,7 +107,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                 department: values.department,
                 openings: values.openings,
                 salary_max: values.salary_max || 0,
-                required_by: values.required_by || "",
+                start_date: values.application_start_date || "",
                 ...(mpr?.id ? { mpr_id: mpr.id } : {}),
             });
             const result = known?.data || await api(`/api/mprs/budget-preview?${params}`);
@@ -167,6 +169,24 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
             assets: current.assets.includes(asset) ? current.assets.filter((item) => item !== asset) : [...current.assets, asset],
         }));
 
+    // Start Date moved past the End Date: clear the End Date
+    const handleStartDateChange = (value) =>
+        setForm((current) => ({
+            ...current,
+            application_start_date: value,
+            application_end_date: current.application_end_date && value && current.application_end_date < value ? "" : current.application_end_date,
+        }));
+
+    // Custom date pickers aren't covered by the browser's "required" check
+    const applicationPeriodError = (values) => {
+        const { application_start_date: start, application_end_date: end } = values;
+        if (!start) return "Choose the Application Start Date.";
+        if (start < today) return "Application Start Date must be today or later.";
+        if (!end) return "Choose the Application End Date.";
+        if (end < start) return "Application End Date must be on or after the Application Start Date.";
+        return "";
+    };
+
     const handleDepartmentChange = (event) => {
         const next = { ...form, department: event.target.value };
         setForm(next);
@@ -192,6 +212,11 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (saving) return;
+        const periodError = applicationPeriodError(form);
+        if (periodError) {
+            setError(periodError);
+            return;
+        }
         const { ok, values, result } = await runBudgetCheck(form, { fromSubmit: true });
         if (!ok) return;
 
@@ -292,18 +317,24 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                     </div>
 
                     <div className="form-group">
-                        <label>Grade</label>
-                        <input type="text" name="grade" value={form.grade} onChange={handleChange} placeholder="e.g. G5" />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Required By *</label>
-                        <input type="date" name="required_by" min={meta.today} value={form.required_by} onChange={handleChange} required />
-                    </div>
-
-                    <div className="form-group">
                         <label>Required Skills *</label>
                         <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder="e.g. React, Node.js, MongoDB" required />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Application Start Date *</label>
+                        <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Application End Date *</label>
+                        <DatePicker
+                            value={form.application_end_date}
+                            onChange={(value) => set("application_end_date", value)}
+                            minDate={form.application_start_date && form.application_start_date > today ? form.application_start_date : today}
+                            today={today}
+                            autoPosition
+                        />
                     </div>
 
                     <div className="form-group mpr-full">

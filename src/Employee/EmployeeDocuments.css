@@ -10,7 +10,6 @@
 .employee-document-card p { margin: 0; color: #718096; font-size: 12px; }
 .employee-document-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 9px; background: #e8f5fc; color: #087fb8; }
 .employee-document-status { grid-column: 2; color: #a86200; font-size: 11px; font-weight: 700; }
-.employee-document-view-link { grid-column: 2; width: fit-content; color: #087fb8; font-size: 11px; font-weight: 700; text-decoration: none; }
 .employee-document-card.request { background: #eef9f4; border-color: #cce9d9; }
 .employee-document-card.request .employee-document-icon { background: #d8f3e4; color: #07804b; }
 .employee-document-card.request button { grid-column: 2; width: fit-content; padding: 8px 13px; border: 0; border-radius: 6px; background: #07804b; color: #fff; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
