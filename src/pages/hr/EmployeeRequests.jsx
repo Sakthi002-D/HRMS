@@ -113,16 +113,16 @@ function EmployeeRequests() {
 
     return (
         <DashboardLayout>
-            <div className="employee-requests-page">
-                <header className="employee-requests-header">
+            <div className="hrreq-page">
+                <header className="hrreq-header">
                     <div>
                         <h1>Employee Requests</h1>
                         <p>Review and respond to employee document and certificate requests.</p>
                     </div>
                 </header>
 
-                <section className="employee-requests-section" aria-label="Employee requests">
-                    <div className="employee-requests-filters">
+                <section className="hrreq-section" aria-label="Employee requests">
+                    <div className="hrreq-filters">
                         <input
                             type="search"
                             value={search}
@@ -140,10 +140,10 @@ function EmployeeRequests() {
                         </select>
                     </div>
 
-                    {loaded.error && <p className="employee-requests-error" role="alert">{loaded.error}</p>}
+                    {loaded.error && <p className="hrreq-error" role="alert">{loaded.error}</p>}
 
-                    <div className="employee-requests-table-wrap">
-                        <table className="employee-requests-table">
+                    <div className="hrreq-table-wrap">
+                        <table className="hrreq-table">
                             <thead>
                                 <tr>
                                     <th>Employee ID</th>
@@ -157,9 +157,9 @@ function EmployeeRequests() {
                             </thead>
                             <tbody>
                                 {loaded.loading ? (
-                                    <tr><td colSpan="7" className="employee-requests-empty">Loading employee requests...</td></tr>
+                                    <tr><td colSpan="7" className="hrreq-empty">Loading employee requests...</td></tr>
                                 ) : visibleRequests.length === 0 ? (
-                                    <tr><td colSpan="7" className="employee-requests-empty">{loaded.rows.length === 0 ? "No employee requests yet." : "No requests match these filters."}</td></tr>
+                                    <tr><td colSpan="7" className="hrreq-empty">{loaded.rows.length === 0 ? "No employee requests yet." : "No requests match these filters."}</td></tr>
                                 ) : visibleRequests.map((request) => (
                                     <tr key={request.id}>
                                         <td>{request.employee_id}</td>
@@ -167,7 +167,7 @@ function EmployeeRequests() {
                                         <td>{request.department || "—"}</td>
                                         <td>{request.request_type}</td>
                                         <td>{formatRequestedDate(request.created_at)}</td>
-                                        <td><span className={`employee-requests-status ${statusTone(request.status)}`}>{request.status}</span></td>
+                                        <td><span className={`hrreq-status ${statusTone(request.status)}`}>{request.status}</span></td>
                                         <td>
                                             <button type="button" className="employee-view-button" onClick={() => setSelectedRequest(request)} aria-label={`View request from ${request.employee_name}`} title="View">
                                                 <Eye size={18} strokeWidth={2} aria-hidden="true" />
@@ -189,7 +189,7 @@ function EmployeeRequests() {
                                 <div><span>Department</span><strong>{selectedRequest.department || "—"}</strong></div>
                                 <div><span>Request Type</span><strong>{selectedRequest.request_type}</strong></div>
                                 <div><span>Requested On</span><strong>{formatRequestedDate(selectedRequest.created_at)}</strong></div>
-                                <div><span>Status</span><strong><span className={`employee-requests-status ${statusTone(selectedRequest.status)}`}>{selectedRequest.status}</span></strong></div>
+                                <div><span>Status</span><strong><span className={`hrreq-status ${statusTone(selectedRequest.status)}`}>{selectedRequest.status}</span></strong></div>
                             </div>
                             <h3>Request Details</h3>
                             {requestDetails(selectedRequest.details).length ? (

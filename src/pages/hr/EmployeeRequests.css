@@ -1,4 +1,4 @@
-.employee-requests-page {
+.hrreq-page {
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -6,19 +6,19 @@
     padding: 18px 20px 32px;
 }
 
-.employee-requests-header h1 {
+.hrreq-header h1 {
     margin: 0;
     color: #12304a;
     font-size: 24px;
 }
 
-.employee-requests-header p {
+.hrreq-header p {
     margin: 6px 0 0;
     color: #64748b;
     font-size: 14px;
 }
 
-.employee-requests-section {
+.hrreq-section {
     min-width: 0;
     padding: 18px;
     border: 1px solid #d3e2ee;
@@ -27,15 +27,15 @@
     box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
 }
 
-.employee-requests-filters {
+.hrreq-filters {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) minmax(180px, 240px) minmax(150px, 190px);
     gap: 10px;
     margin-bottom: 16px;
 }
 
-.employee-requests-filters input,
-.employee-requests-filters select {
+.hrreq-filters input,
+.hrreq-filters select {
     width: 100%;
     min-width: 0;
     height: 40px;
@@ -48,17 +48,17 @@
     font-size: 13px;
 }
 
-.employee-requests-table-wrap {
+.hrreq-table-wrap {
     overflow-x: auto;
 }
 
-.employee-requests-table {
+.hrreq-table {
     width: 100%;
     min-width: 850px;
     border-collapse: collapse;
 }
 
-.employee-requests-table th {
+.hrreq-table th {
     padding: 12px 14px;
     background: #12304a;
     color: #fff;
@@ -68,22 +68,22 @@
     white-space: nowrap;
 }
 
-.employee-requests-table td {
+.hrreq-table td {
     padding: 11px 14px;
     border-bottom: 1px solid #e2e8f0;
     color: #334155;
     font-size: 13px;
 }
 
-.employee-requests-table tbody tr:hover {
+.hrreq-table tbody tr:hover {
     background: #f8fbfd;
 }
 
-.employee-requests-table td:last-child {
+.hrreq-table td:last-child {
     width: 58px;
 }
 
-.employee-requests-table .employee-view-button {
+.hrreq-table .employee-view-button {
     display: inline-grid;
     width: 36px;
     height: 36px;
@@ -97,13 +97,13 @@
     transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 
-.employee-requests-table .employee-view-button:hover {
+.hrreq-table .employee-view-button:hover {
     border-color: #087df5;
     background: #d8efff;
     color: #0369a1;
 }
 
-.employee-requests-status {
+.hrreq-status {
     display: inline-flex;
     align-items: center;
     padding: 4px 9px;
@@ -113,18 +113,18 @@
     white-space: nowrap;
 }
 
-.employee-requests-status.pending { background: #fff3d8; color: #a86200; }
-.employee-requests-status.approved { background: #dcfce7; color: #07804b; }
-.employee-requests-status.rejected { background: #fee2e2; color: #b91c1c; }
-.employee-requests-status.other { background: #eef0f2; color: #475569; }
+.hrreq-status.pending { background: #fff3d8; color: #a86200; }
+.hrreq-status.approved { background: #dcfce7; color: #07804b; }
+.hrreq-status.rejected { background: #fee2e2; color: #b91c1c; }
+.hrreq-status.other { background: #eef0f2; color: #475569; }
 
-.employee-requests-empty {
+.hrreq-empty {
     height: 96px;
     color: #64748b !important;
     text-align: center;
 }
 
-.employee-requests-error {
+.hrreq-error {
     margin: 0 0 14px;
     color: #b91c1c;
     font-size: 13px;
@@ -217,8 +217,8 @@
 .employee-request-detail-actions .reject-request-button { background: #b91c1c; }
 
 @media (max-width: 760px) {
-    .employee-requests-page { padding: 14px; }
-    .employee-requests-filters { grid-template-columns: 1fr; }
+    .hrreq-page { padding: 14px; }
+    .hrreq-filters { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
