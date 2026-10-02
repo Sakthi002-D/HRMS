@@ -14,6 +14,7 @@ import EmployeeDocuments from "./EmployeeDocuments";
 import ManpowerRequests from "../components/recruitment/ManpowerRequests";
 import EmployeeRequestModal from "./EmployeeRequestModal";
 import EmployeeResignation from "./EmployeeResignation";
+import EmployeeNotifications from "./EmployeeNotifications";
 import AlertDialog from "../components/common/dialog/AlertDialog";
 import "../components/resignation/resignation.css";
 import { api as resignationApi, daysLabel, formatDate as formatResignationDate, isServingNotice } from "../components/resignation/resignationApi";
@@ -92,7 +93,6 @@ function EmployeeDashboard() {
     const [payrollRecords, setPayrollRecords] = useState([]);
     const [payrollLoading, setPayrollLoading] = useState(false);
     const [notifications, setNotifications] = useState([]);
-    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [monthlyAttendance, setMonthlyAttendance] = useState([]);
     const [holidays, setHolidays] = useState(DEFAULT_QATAR_HOLIDAYS);
     const [holidaysExpanded, setHolidaysExpanded] = useState(true);
@@ -244,6 +244,14 @@ function EmployeeDashboard() {
             console.error("Error fetching employee notifications:", error);
             setNotifications([]);
         }
+    };
+        const openEmployeeNotification = (notification) => {
+        const readKey = `hrms-employee-read-notifications-${employee?.employee_id || "guest"}`;
+        const readIds = getReadNotificationIds(employee?.employee_id);
+        readIds.add(notification.id);
+        localStorage.setItem(readKey, JSON.stringify([...readIds]));
+        setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+        setActiveSection(notification.section || "dashboard");
     };
 
     const fetchPayroll = async (employeeId) => {
@@ -928,6 +936,8 @@ function EmployeeDashboard() {
                                                     ? "Manpower Requests"
                                                 : activeSection === "resignation"
                                                     ? "Resignation"
+                                                : activeSection === "notifications"
+                                                    ? "Notifications"
                                                 : activeSection === "change-password"
                                                     ? "Change Password"
                                     : "Employee Dashboard"}
@@ -949,17 +959,18 @@ function EmployeeDashboard() {
                                         ? "Raise manpower requests and review the ones awaiting your approval"
                                     : activeSection === "resignation"
                                         ? "Submit and track your resignation"
+                                    : activeSection === "notifications"
+                                        ? "All your updates in one place"
                                     : activeSection === "change-password"
                                         ? "Update your employee account password"
                                     : `Welcome back, ${employee.name}`}
                         </p>
                     </div>
                     {activeSection === "dashboard" && <div className="employee-notification-wrapper">
-                        <button type="button" className="employee-notification-button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Open notifications" aria-expanded={notificationsOpen}>
+                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label="Open notifications">
                             <Bell size={19} />
                             {notifications.filter((notification) => !notification.read).length > 0 && <span className="employee-notification-count">{notifications.filter((notification) => !notification.read).length}</span>}
                         </button>
-                        {notificationsOpen && <div className="employee-notification-dropdown"><div className="employee-notification-dropdown-header"><strong>Notifications</strong><span>{notifications.filter((notification) => !notification.read).length ? `${notifications.filter((notification) => !notification.read).length} unread update(s)` : "You are all caught up"}</span></div>{notifications.length ? notifications.map((notification) => <button type="button" className={`employee-notification-item${notification.read ? " is-read" : ""}`} key={notification.id} onClick={() => { const readIds = getReadNotificationIds(employee?.employee_id); const employeeNotificationReadKey = `hrms-employee-read-notifications-${employee?.employee_id || "guest"}`; readIds.add(notification.id); localStorage.setItem(employeeNotificationReadKey, JSON.stringify([...readIds])); setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item)); setNotificationsOpen(false); setActiveSection(notification.section); }}><span className={`employee-notification-item-icon ${notification.type}`}><Bell size={15} /></span><span><strong>{notification.title}</strong><small>{notification.message}</small><em>{notification.time}</em>{notification.read && <em className="employee-notification-status">Read</em>}</span></button>) : <div className="employee-notification-empty">No notifications</div>}</div>}
                     </div>}
 
                 </header>
@@ -1083,6 +1094,9 @@ function EmployeeDashboard() {
                         onReload={() => { fetchResignation(employee.employee_id); fetchEmployeeNotifications(employee.employee_id); }}
                         onCancel={() => setActiveSection("dashboard")}
                     />
+                )}
+                {activeSection === "notifications" && (
+                    <EmployeeNotifications notifications={notifications} onOpen={openEmployeeNotification} />
                 )}
 
                 <section className="employee-leave-section">

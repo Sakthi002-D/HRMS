@@ -27,7 +27,6 @@ const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/
 
 function HRDashboard() {
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -204,7 +203,6 @@ function HRDashboard() {
     setNotifications((current) => current.map((item) => (
       item.id === notification.id ? { ...item, read: true } : item
     )));
-    setShowNotifications(false);
     navigate(notification.path);
   };
 
@@ -234,10 +232,7 @@ function HRDashboard() {
               <button
                 className="notification-btn"
                 aria-label="Open notifications"
-                aria-expanded={showNotifications}
-                onClick={() =>
-                  setShowNotifications(!showNotifications)
-                }
+                onClick={() => navigate("/hr/notifications")}
               >
                 <Bell size={19} />
 
@@ -247,53 +242,6 @@ function HRDashboard() {
                   </span>
                 )}
               </button>
-
-              {showNotifications && (
-                <div className="notification-dropdown">
-
-                  <div className="notification-header">
-                    <div>
-                      <strong>Notifications</strong>
-                      <span>{notificationsLoading ? "Checking for updates..." : `${unreadCount} updates need your attention`}</span>
-                    </div>
-
-                    <button
-                      onClick={() => setShowNotifications(false)}
-                      aria-label="Close notifications"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-
-                  {notificationsLoading ? (
-                    <div className="notification-empty">Loading updates...</div>
-                  ) : notifications.length === 0 ? (
-                    <div className="notification-empty">You are all caught up.</div>
-                  ) : (
-                    notifications.map((notification) => (
-                      <button
-                        className={`notification-item${notification.read ? " is-read" : ""}`}
-                        key={notification.id}
-                        type="button"
-                        onClick={() => openNotification(notification)}
-                      >
-                        <span className={`notification-icon ${notification.type}`}>
-                          {notification.type === "leave" ? <CalendarCheck size={17} /> : <AlertCircle size={17} />}
-                        </span>
-
-                        <span className="notification-copy">
-                          <strong>{notification.title}</strong>
-                          <small>{notification.time}</small>
-                          <span>{notification.message}</span>
-                          {notification.read && <em className="notification-status">Read</em>}
-                        </span>
-                        <ArrowRight className="notification-arrow" size={15} />
-                      </button>
-                    ))
-                  )}
-
-                </div>
-              )}
 
             </div>
 

@@ -11,6 +11,7 @@ import Employees from "./pages/hr/Employees";
 import LeaveManagement from "./pages/hr/LeaveManagement";
 import Resignations from "./pages/hr/Resignations";
 import EmployeeRequests from "./pages/hr/EmployeeRequests";
+import Notifications from "./pages/hr/Notifications";
 import Payroll from "./pages/hr/Payroll";
 import Tickets from "./pages/hr/Tickets";
 import Reports from "./pages/hr/Reports";
@@ -148,6 +149,10 @@ function App() {
           <Route
             path="/hr/employee-requests"
             element={<EmployeeRequests />}
+          />
+            <Route
+            path="/hr/notifications"
+            element={<Notifications />}
           />
 
           <Route

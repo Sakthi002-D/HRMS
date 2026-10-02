@@ -225,3 +225,7 @@
     .employee-request-detail-summary { grid-template-columns: 1fr; }
     .employee-request-detail dl > div { grid-template-columns: 1fr; gap: 4px; }
 }
+.hrreq-header {
+    border-left: 4px solid #f0622d;
+    padding-left: 16px;
+}
