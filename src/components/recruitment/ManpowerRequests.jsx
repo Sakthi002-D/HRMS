@@ -6,6 +6,7 @@ import "./recruitment.css";
 import MprDetail from "./MprDetail";
 import MprForm from "./MprForm";
 import { Eye } from "lucide-react";
+import { usePagination, RowsPerPage, Pagination } from "../common/TablePagination";
 import { api, formatDateRange, notifyMprsChanged, statusTone } from "./recruitmentApi";
 
 function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, showNewButton = true }) {
@@ -59,11 +60,16 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
         setNotice(action === "submit" ? `${mpr.mpr_no} submitted: ${mpr.status}` : `${mpr.mpr_no} saved as draft`);
         refresh();
     };
+    const rows = scope === "approvals" ? lists.approvals : lists.all;
+    const pager = usePagination(rows);
+    const { setPage } = pager;
+
+    // Switching between "Manpower Requests" and "My Approvals" goes back to page 1
+    useEffect(() => { setPage(1); }, [scope, setPage]);
 
     if (metaError) return <p className="mpr-form-error">{metaError}</p>;
     if (!meta) return <p className="mpr-muted">Loading manpower requests...</p>;
 
-    const rows = scope === "approvals" ? lists.approvals : lists.all;
     const loading = lists.key !== listKey && rows.length === 0;
     const formVisible = (isFormOpen && meta.canRaise) || editing;
 
@@ -98,12 +104,16 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                             My Approvals {lists.approvals.length > 0 && <span className="mpr-count">{lists.approvals.length}</span>}
                         </button>
                     </div>
-                    {showNewButton && meta.canRaise && !formVisible && (
-                        <button type="button" className="create-job-btn" onClick={() => setFormOpen(true)}>
-                            + New Manpower Request
-                        </button>
-                    )}
+                    <div className="tp-header-actions">
+                        <RowsPerPage value={pager.pageSize} onChange={pager.setPageSize} />
+                        {showNewButton && meta.canRaise && !formVisible && (
+                            <button type="button" className="create-job-btn" onClick={() => setFormOpen(true)}>
+                                + New Manpower Request
+                            </button>
+                        )}
+                    </div>
                 </div>
+                
 
                 <div className="jobs-table-container">
                     <table className="jobs-table">
@@ -130,7 +140,7 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                                         {scope === "approvals" ? "Nothing is waiting for your approval." : "No manpower requests yet."}
                                     </td>
                                 </tr>
-                            ) : rows.map((mpr) => (
+                            ) : pager.pageItems.map((mpr) => (
                                 <tr key={mpr.id} className={mpr.awaiting_me ? "mpr-row-awaiting" : ""}>
                                     <td>{mpr.mpr_no}</td>
                                     <td>{mpr.request_type}</td>
@@ -157,6 +167,8 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination page={pager.page} pageCount={pager.pageCount} onChange={pager.setPage} />
             </div>
 
             {selectedId && (

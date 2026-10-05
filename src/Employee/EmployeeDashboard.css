@@ -3803,4 +3803,63 @@
     background: #0288d1;
     color: #fff;
 }
+/* Previous resignation (Rejected / Withdrawn) alert */
+.employee-resignation-view .resignation-previous-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 14px 0 18px;
+    padding: 14px 18px;
+    border: 1px solid;
+    border-left-width: 5px;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.employee-resignation-view .resignation-previous-alert strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.employee-resignation-view .resignation-previous-alert p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.employee-resignation-view .resignation-previous-alert-icon {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+/* Rejected: red */
+.employee-resignation-view .resignation-previous-alert.rejected {
+    border-color: #fecaca;
+    border-left-color: #dc2626;
+    background: #fef2f2;
+    color: #991b1b;
+}
+.employee-resignation-view .resignation-previous-alert.rejected .resignation-previous-alert-icon {
+    background: #dc2626;
+}
+
+/* Withdrawn: amber */
+.employee-resignation-view .resignation-previous-alert.withdrawn {
+    border-color: #fde68a;
+    border-left-color: #d97706;
+    background: #fffbeb;
+    color: #92400e;
+}
+.employee-resignation-view .resignation-previous-alert.withdrawn .resignation-previous-alert-icon {
+    background: #d97706;
+}
 

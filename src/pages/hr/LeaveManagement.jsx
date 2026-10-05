@@ -10,6 +10,7 @@ import {
 } from "../../components/hr/leaveTrackerState";
 import "./LeaveManagement.css";
 import { useAlert } from "../../components/common/dialog/dialogContext";
+import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const API_URL = `${API_BASE_URL}/api/leaves`;
@@ -501,6 +502,17 @@ function LeaveManagement() {
         selectedLeaveType,
         selectedMonth,
     ]);
+        // =========================================================
+    // PAGINATION
+    // =========================================================
+
+    const leavePager = usePagination(filteredLeaves);
+    const setLeavePage = leavePager.setPage;
+
+    // Any search or filter change goes back to page 1
+    useEffect(() => {
+        setLeavePage(1);
+    }, [search, selectedStatus, selectedLeaveType, selectedMonth, setLeavePage]);
 
     // =========================================================
     // MONTHLY SUMMARY
@@ -1377,6 +1389,8 @@ function LeaveManagement() {
                                 <option key={month.value} value={month.value}>{month.label}</option>
                             ))}
                         </select>
+
+                        <RowsPerPage inline value={leavePager.pageSize} onChange={leavePager.setPageSize} />
                     </div>
 
                     {/* LOADING */}
@@ -1460,7 +1474,7 @@ function LeaveManagement() {
 
                                             </tr>
                                         ) : (
-                                            filteredLeaves.map(
+                                            leavePager.pageItems.map(
                                                 (
                                                     leave
                                                 ) => (
@@ -1581,6 +1595,10 @@ function LeaveManagement() {
 
                             </div>
                         )}
+
+                    {!loading && !error && (
+                        <Pagination page={leavePager.page} pageCount={leavePager.pageCount} onChange={leavePager.setPage} />
+                    )}
 
                 </div>
 

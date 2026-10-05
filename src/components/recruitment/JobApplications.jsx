@@ -1,8 +1,9 @@
 // HR → Recruitment → Job Applications: cards, filters, table and the application detail.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DatePicker from "../layout/common/DatePicker";
 import ApplicationDetail from "./ApplicationDetail";
 import { Eye } from "lucide-react";
+import { usePagination, RowsPerPage, Pagination } from "../common/TablePagination";
 import { APPLICATION_STATUSES, CANDIDATE_TYPES, SOURCE_OPTIONS, experienceText, salaryText, sourceText } from "./applicationFormat";
 import { applicationTone, formatDate } from "./recruitmentApi";
 
@@ -52,7 +53,12 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
         if (f.to && (!row.applied_on || row.applied_on > f.to)) return false;
         return !query || [row.candidate_name, row.email, row.application_id].some((value) => String(value || "").toLowerCase().includes(query));
     });
+    const pager = usePagination(visible);
+    const { setPage } = pager;
 
+    // Any filter or search change goes back to page 1
+    const filterKey = JSON.stringify(activeFilters) + query;
+    useEffect(() => { setPage(1); }, [filterKey, setPage]);
     const anyFilter = query || Object.values(activeFilters).some(Boolean);
     const clearFilters = () => {
         setFilters(EMPTY_FILTERS);
@@ -84,13 +90,16 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
 
             <div className="jobs-section-header">
                 <h2>Job Applications</h2>
-                <input
-                    type="search"
-                    placeholder="Search name, email or application no..."
-                    className="job-search app-search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                />
+                <div className="tp-header-actions">
+                    <input
+                        type="search"
+                        placeholder="Search name, email or application no..."
+                        className="job-search app-search"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                    />
+                    <RowsPerPage value={pager.pageSize} onChange={pager.setPageSize} />
+                </div>
             </div>
 
             <div className="app-filters">
@@ -126,6 +135,8 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
             </div>
 
             {error && <p className="mpr-form-error">{error}</p>}
+            
+            
 
             <div className="jobs-table-container">
                 <table className="jobs-table app-table">
@@ -151,7 +162,7 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                         {!loading && visible.length === 0 && (
                             <tr><td colSpan="11">{applications.length ? "No applications match these filters." : "No applications yet."}</td></tr>
                         )}
-                        {visible.map((row) => (
+                        {pager.pageItems.map((row) => (
                             <tr key={row.id} className={row.status === "New" ? "app-row-new" : ""}>
                                 <td><strong>{row.application_id}</strong></td>
                                 <td>
@@ -183,6 +194,8 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                     </tbody>
                 </table>
             </div>
+
+            <Pagination page={pager.page} pageCount={pager.pageCount} onChange={pager.setPage} />
 
             {viewId && (
                 <ApplicationDetail

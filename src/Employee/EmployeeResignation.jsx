@@ -310,10 +310,22 @@ function EmployeeResignation({ employee, info, error, onReload, onCancel }) {
             ) : (
                 <>
                     {lastClosed && !notice && (
-                        <p className="mpr-muted resignation-previous">
-                            Your previous resignation {lastClosed.resignation_no} was {lastClosed.status.toLowerCase()}
-                            {lastClosed.rejection_reason ? `: ${lastClosed.rejection_reason}` : "."}
-                        </p>
+                        <div
+                            className={`resignation-previous-alert ${lastClosed.status === "Rejected" ? "rejected" : "withdrawn"}`}
+                            role="alert"
+                        >
+                            <span className="resignation-previous-alert-icon" aria-hidden="true">
+                                {lastClosed.status === "Rejected" ? "!" : "i"}
+                            </span>
+                            <div>
+                                <strong>
+                                    Your previous resignation {lastClosed.resignation_no} was {lastClosed.status.toLowerCase()}
+                                </strong>
+                                {lastClosed.rejection_reason && (
+                                    <p>Reason: {lastClosed.rejection_reason}</p>
+                                )}
+                            </div>
+                        </div>
                     )}
                     <ResignationForm
                         key={info.calculatedLastWorkingDay}

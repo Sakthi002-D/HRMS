@@ -4,6 +4,7 @@ import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
 import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
 import JobApplications from "../../components/recruitment/JobApplications";
 import { Building2, Briefcase, Clock3, UserPlus } from "lucide-react";
+import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
 import {
     api,
     formatDate,
@@ -112,6 +113,12 @@ function Recruitment() {
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search))
     );
+    
+    const jobsPager = usePagination(visibleJobs);
+    const setJobsPage = jobsPager.setPage;
+
+    // Typing in "Search jobs..." goes back to page 1
+    useEffect(() => { setJobsPage(1); }, [search, setJobsPage]);
 
     return (
         <DashboardLayout>
@@ -209,14 +216,18 @@ function Recruitment() {
                     <div className="jobs-section-header">
                         <h2>Job Openings</h2>
 
-                        <input
-                            type="text"
-                            placeholder="Search jobs..."
-                            className="job-search"
-                            value={jobSearch}
-                            onChange={(event) => setJobSearch(event.target.value)}
-                        />
+                        <div className="tp-header-actions">
+                            <input
+                                type="text"
+                                placeholder="Search jobs..."
+                                className="job-search"
+                                value={jobSearch}
+                                onChange={(event) => setJobSearch(event.target.value)}
+                            />
+                            <RowsPerPage value={jobsPager.pageSize} onChange={jobsPager.setPageSize} />
+                        </div>
                     </div>
+                    
 
                     <div className="jobs-table-container">
 
@@ -247,7 +258,7 @@ function Recruitment() {
                                     <tr><td colSpan="14">No job openings found.</td></tr>
                                 )}
 
-                                {visibleJobs.map((job) => (
+                                {jobsPager.pageItems.map((job) => (
                                     <tr key={job.id}>
 
                                         <td>{job.job_id}</td>
@@ -327,6 +338,8 @@ function Recruitment() {
                         </table>
 
                     </div>
+
+                    <Pagination page={jobsPager.page} pageCount={jobsPager.pageCount} onChange={jobsPager.setPage} />
 
                 </div>
                 )}

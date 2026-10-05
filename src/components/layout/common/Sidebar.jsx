@@ -72,6 +72,9 @@ function Sidebar({ collapsed, onToggle }) {
   useEffect(() => {
     scrollActiveIntoView(scrollRef.current, ".sidebar-link.active");
   }, [pathname]);
+    // Extra URLs that should also highlight a menu item (e.g. every report page → Reports)
+  const matchesExtra = (patterns = []) =>
+    patterns.some((pattern) => (pattern instanceof RegExp ? pattern.test(pathname) : pathname.startsWith(pattern)));
 
   const menuItems = [
     ["/hr-dashboard", "Dashboard", LayoutDashboard],
@@ -82,7 +85,8 @@ function Sidebar({ collapsed, onToggle }) {
     ["/resignations", "Resignation", DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
     ["/payroll", "Payroll", IndianRupee],
     ["/tickets", "Ticketing", Ticket],
-    ["/reports", "Reports", FileText],
+    // Any URL containing "report" or "accrual" (each report page) keeps Reports highlighted
+    ["/reports", "Reports", FileText, 0, "", [/report/i, /accrual/i]],
   ];
 
   return (
@@ -102,8 +106,12 @@ function Sidebar({ collapsed, onToggle }) {
       <div className="sidebar-scroll" ref={scrollRef}>
         <div className="sidebar-section-title">MAIN MENU</div>
         <nav className="sidebar-menu">
-          {menuItems.map(([path, label, Icon, badge, badgeLabel]) => (
-            <NavLink key={path} to={path} className="sidebar-link">
+          {menuItems.map(([path, label, Icon, badge, badgeLabel, extraMatches]) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) => `sidebar-link${isActive || matchesExtra(extraMatches) ? " active" : ""}`}
+            >
               <Icon size={19} strokeWidth={2} />
               <span>{label}</span>
               {badge > 0 && (
