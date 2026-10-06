@@ -49,6 +49,9 @@ const handle = (fn) => async (req, res) => {
         if (error.code === "23505") {
             return res.status(409).json({ message: "That record already exists" });
         }
+        if (error.code === "23503") {
+            return res.status(409).json({ message: "This record is in use and can't be deleted. Make it inactive instead." });
+        }
         console.error("Recruitment API error:", error);
         res.status(500).json({ message: "Something went wrong. Please try again." });
     }
@@ -199,6 +202,45 @@ router.put("/recruitment/locations/:id", handle(async (req, res) => {
     res.json(result.rows[0]);
 }));
 
+// Delete a location, only if nothing uses it (Manpower Requests, Job Openings, etc.).
+// If it's in use, HR is asked to make it inactive instead so old records keep their location.
+router.delete("/recruitment/locations/:id", handle(async (req, res) => {
+    await requireHR(actorFrom(req));
+
+    const found = await pool.query(`SELECT id, name FROM recruitment_locations WHERE id = $1`, [req.params.id]);
+    const location = found.rows[0];
+    if (!location) throw new WorkflowError("Location not found", 404);
+
+    // Every table that has a "location" (name) or "location_id" column
+    const columns = await pool.query(`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND column_name IN ('location', 'location_id')
+          AND table_name <> 'recruitment_locations'
+    `);
+
+    let usedBy = 0;
+    for (const { table_name: table, column_name: column } of columns.rows) {
+        if (!/^[a-z_][a-z0-9_]*$/.test(table)) continue;
+        const sql = column === "location_id"
+            ? `SELECT COUNT(*)::int AS n FROM "${table}" WHERE location_id::text = $1::text`
+            : `SELECT COUNT(*)::int AS n FROM "${table}" WHERE LOWER(TRIM(location::text)) = LOWER(TRIM($1))`;
+        const { rows } = await pool.query(sql, [column === "location_id" ? String(location.id) : location.name]);
+        usedBy += rows[0].n;
+    }
+
+    if (usedBy > 0) {
+        throw new WorkflowError(
+            `"${location.name}" is used by ${usedBy} record${usedBy === 1 ? "" : "s"} (requests or job openings), so it can't be deleted. Click the chip to make it inactive instead.`,
+            409
+        );
+    }
+
+    await pool.query(`DELETE FROM recruitment_locations WHERE id = $1`, [location.id]);
+    res.json({ ok: true });
+}));
+
 router.get("/recruitment/agencies", handle(async (req, res) => {
     res.json((await pool.query(`SELECT * FROM recruitment_agencies ORDER BY active DESC, name`)).rows);
 }));
@@ -230,6 +272,45 @@ router.put("/recruitment/agencies/:id", handle(async (req, res) => {
         [req.params.id, name ?? null, contact ?? null, email ?? null, phone ?? null, typeof active === "boolean" ? active : null]
     );
     res.json(result.rows[0]);
+}));
+
+// Delete an agency, only if no job opening / application uses it.
+router.delete("/recruitment/agencies/:id", handle(async (req, res) => {
+    await requireHR(actorFrom(req));
+
+    const found = await pool.query(`SELECT id, name FROM recruitment_agencies WHERE id = $1`, [req.params.id]);
+    const agency = found.rows[0];
+    if (!agency) throw new WorkflowError("Agency not found", 404);
+
+    // Every table that links to an agency by id or by name
+    const columns = await pool.query(`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND column_name IN ('agency_id', 'recruitment_agency_id', 'agency_name', 'agency')
+          AND table_name <> 'recruitment_agencies'
+    `);
+
+    let usedBy = 0;
+    for (const { table_name: table, column_name: column } of columns.rows) {
+        if (!/^[a-z_][a-z0-9_]*$/.test(table)) continue;
+        const byId = column.endsWith("_id");
+        const sql = byId
+            ? `SELECT COUNT(*)::int AS n FROM "${table}" WHERE "${column}"::text = $1::text`
+            : `SELECT COUNT(*)::int AS n FROM "${table}" WHERE LOWER(TRIM("${column}"::text)) = LOWER(TRIM($1))`;
+        const { rows } = await pool.query(sql, [byId ? String(agency.id) : agency.name]);
+        usedBy += rows[0].n;
+    }
+
+    if (usedBy > 0) {
+        throw new WorkflowError(
+            `"${agency.name}" is used by ${usedBy} record${usedBy === 1 ? "" : "s"} (job openings or applications), so it can't be deleted. Set it to Inactive instead.`,
+            409
+        );
+    }
+
+    await pool.query(`DELETE FROM recruitment_agencies WHERE id = $1`, [agency.id]);
+    res.json({ ok: true });
 }));
 
 router.get("/recruitment/budgets", handle(async (req, res) => {

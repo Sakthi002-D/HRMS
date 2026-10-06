@@ -18,7 +18,8 @@
   width: calc(100% - 78px);
 }
 
-.hr-dashboard-layout .sidebar {
+/* HR Dashboard: full width only when the sidebar is expanded */
+.hr-dashboard-layout:not(.sidebar-collapsed) .sidebar {
   width: 250px;
 }
 

@@ -4,17 +4,22 @@ import { Eye, EyeOff, KeyRound, Upload } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
 import Modal from "../../components/layout/common/Modal";
-import { DocumentToast } from "../../components/documents/EmployeeDocumentOverlays";
-import { uploadEmployeeDocument as uploadSharedEmployeeDocument } from "../../components/documents/employeeDocumentApi";
+import { DocumentToast, EmployeeDocumentPreviewModal } from "../../components/documents/EmployeeDocumentOverlays";
+import {
+    formatDocumentDate,
+    listEmployeeDocuments,
+    uploadEmployeeDocument as uploadSharedEmployeeDocument,
+} from "../../components/documents/employeeDocumentApi";
 import "./EmployeeDetails.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
-    ["employment_contract", "Employment Contract"],
-    ["offer_letter", "Offer Letter"],
-    ["visa_copy", "Visa Copy"],
-    ["qid_copy", "QID Copy"],
-    ["passport_copy", "Passport Copy"],
+    ["employment_contract", "Employment Contract", "HR"],
+    ["offer_letter", "Offer Letter", "HR"],
+    ["visa_copy", "Visa Copy", "EMPLOYEE"],
+    ["qid_copy", "QID Copy", "HR"],
+    ["passport_copy", "Passport Copy", "EMPLOYEE"],
 ];
 
 async function readApiResponse(response) {
@@ -52,6 +57,7 @@ function EmployeeDetails() {
     const [uploadingDocument, setUploadingDocument] = useState("");
     const [employeeDocuments, setEmployeeDocuments] = useState({});
     const [documentToast, setDocumentToast] = useState(null);
+    const [previewDocument, setPreviewDocument] = useState(null);
     const [openPanels, setOpenPanels] = useState({
         about: true,
         bank: false,
@@ -65,6 +71,21 @@ function EmployeeDetails() {
     useEffect(() => {
         fetchEmployee();
     }, [employeeSlug]);
+    
+    // Load this employee's uploaded documents once the employee is known
+    const loadedEmployeeId = employee?.employee_id;
+    useEffect(() => {
+        if (!loadedEmployeeId) return undefined;
+        let ignore = false;
+        listEmployeeDocuments(loadedEmployeeId, true)
+            .then((rows) => {
+                if (!ignore) setEmployeeDocuments(Object.fromEntries(rows.map((row) => [row.doc_type, row])));
+            })
+            .catch((loadError) => {
+                if (!ignore) setDocumentToast({ type: "error", message: loadError.message });
+            });
+        return () => { ignore = true; };
+    }, [loadedEmployeeId]);
 
     const createSlug = (name) => {
         return String(name || "")
@@ -575,27 +596,48 @@ function EmployeeDetails() {
                             )}
                         </section>
                         <section className="employee-documents-admin-panel">
-                            <div className="employee-documents-admin-heading"><div><h2>Employee Documents</h2><p>Upload documents that will be visible in the employee portal.</p></div></div>
+                            <div className="employee-documents-admin-heading">
+                                <div>
+                                    <h2>Employee Documents</h2>
+                                    <p>HR uploads the Employment Contract, Offer Letter and QID Copy. Visa and Passport copies are uploaded by the employee from the Employee portal.</p>
+                                </div>
+                            </div>
                             <div className="employee-documents-admin-grid">
-                                {EMPLOYEE_DOCUMENTS.map(([type, label]) => {
+                                {EMPLOYEE_DOCUMENTS.map(([type, label, uploadedBy]) => {
                                     const document = employeeDocuments[type];
                                     const isUploading = uploadingDocument === type;
+                                    const hrUploads = uploadedBy === "HR";
                                     return <article className="employee-document-upload-field" key={type} aria-busy={isUploading}>
                                         <h3>{label}</h3>
-                                        <Upload className="employee-document-upload-icon" size={16} aria-hidden="true" />
-                                        <input
-                                            type="file"
-                                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                            disabled={isUploading}
-                                            onChange={(event) => {
-                                                const file = event.target.files?.[0];
-                                                event.target.value = "";
-                                                uploadEmployeeDocument(type, label, file);
-                                            }}
-                                        />
+                                        {hrUploads && <Upload className="employee-document-upload-icon" size={16} aria-hidden="true" />}
+                                        {hrUploads && (
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                disabled={isUploading}
+                                                onChange={(event) => {
+                                                    const file = event.target.files?.[0];
+                                                    event.target.value = "";
+                                                    uploadEmployeeDocument(type, label, file);
+                                                }}
+                                            />
+                                        )}
                                         <small role={isUploading ? "status" : undefined}>
-                                            {isUploading ? "Uploading..." : document?.original_file_name || "No document uploaded"}
+                                            {isUploading
+                                                ? "Uploading..."
+                                                : document
+                                                    ? `${document.original_file_name} · ${document.uploaded_by_role === "EMPLOYEE" ? "Uploaded by employee" : "Uploaded by HR"} on ${formatDocumentDate(document.uploaded_at)}`
+                                                    : hrUploads ? "No document uploaded" : "Waiting for employee upload"}
                                         </small>
+                                        {document && !isUploading && (
+                                            <button
+                                                type="button"
+                                                className="employee-document-view-link"
+                                                onClick={() => setPreviewDocument({ ...document, displayName: label })}
+                                            >
+                                                View
+                                            </button>
+                                        )}
                                     </article>;
                                 })}
                             </div>
@@ -849,6 +891,13 @@ function EmployeeDetails() {
                 </div>
             </Modal>
             <DocumentToast toast={documentToast} onClose={() => setDocumentToast(null)} />
+            <EmployeeDocumentPreviewModal
+                employeeId={employee.employee_id}
+                document={previewDocument}
+                isHR
+                onClose={() => setPreviewDocument(null)}
+                onError={(message) => setDocumentToast({ type: "error", message })}
+            />
             {educationDeleteId && (
                 <div className="education-delete-overlay" onClick={() => setEducationDeleteId(null)}>
                     <div className="education-delete-card" role="dialog" aria-modal="true" aria-labelledby="education-delete-title" onClick={(event) => event.stopPropagation()}>

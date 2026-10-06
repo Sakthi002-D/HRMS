@@ -1,26 +1,22 @@
 import API_URL from "../../config/api";
 
-const documentApiRoot = (employeeId, isHR) => isHR
-    ? `/api/employees/${encodeURIComponent(employeeId)}/documents`
-    : "/api/employee/documents";
-
-function getDocumentToken(isHR) {
+// The logged-in user's ID (HR or employee). The backend uses it to decide what they may do.
+function getActorId(isHR) {
     try {
         const session = JSON.parse(sessionStorage.getItem(isHR ? "loggedInHR" : "loggedInEmployee") || "{}");
-        return session.document_auth_token || "";
+        return session.employee_id || "";
     } catch {
         return "";
     }
 }
 
-async function requestDocument(path, isHR, options = {}) {
-    const response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-            ...options.headers,
-            Authorization: `Bearer ${getDocumentToken(isHR)}`,
-        },
-    });
+const documentsRoot = (employeeId) => `/api/employees/${encodeURIComponent(employeeId)}/documents`;
+
+// Adds ?actor_id=... to every request, then turns errors into readable messages
+async function requestDocument(path, isHR, options = {}, extraQuery = "") {
+    const separator = path.includes("?") ? "&" : "?";
+    const url = `${API_URL}${path}${separator}actor_id=${encodeURIComponent(getActorId(isHR))}${extraQuery}`;
+    const response = await fetch(url, options);
     if (!response.ok) {
         let message = "Document request failed";
         try {
@@ -33,10 +29,16 @@ async function requestDocument(path, isHR, options = {}) {
     return response;
 }
 
+// All uploaded documents of one employee → [{ doc_type, original_file_name, uploaded_at, ... }]
+export async function listEmployeeDocuments(employeeId, isHR = false) {
+    const response = await requestDocument(documentsRoot(employeeId), isHR, { cache: "no-store" });
+    return response.json();
+}
+
 export async function uploadEmployeeDocument(employeeId, docType, file, isHR = false) {
     const formData = new FormData();
     formData.append("document", file);
-    const response = await requestDocument(`${documentApiRoot(employeeId, isHR)}/${encodeURIComponent(docType)}`, isHR, {
+    const response = await requestDocument(`${documentsRoot(employeeId)}/${encodeURIComponent(docType)}`, isHR, {
         method: "POST",
         body: formData,
     });
@@ -44,9 +46,8 @@ export async function uploadEmployeeDocument(employeeId, docType, file, isHR = f
 }
 
 export async function fetchEmployeeDocumentFile(employeeId, document, isHR = false, download = false) {
-    const suffix = download ? "?download=1" : "";
-    const filePath = `${documentApiRoot(employeeId, isHR)}/${encodeURIComponent(document.doc_type)}/file${suffix}`;
-    const response = await requestDocument(filePath, isHR);
+    const filePath = `${documentsRoot(employeeId)}/${encodeURIComponent(document.doc_type)}/file`;
+    const response = await requestDocument(filePath, isHR, { cache: "no-store" }, download ? "&download=1" : "");
     return response.blob();
 }
 

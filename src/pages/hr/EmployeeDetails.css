@@ -1220,3 +1220,22 @@
 .employee-document-upload-field small { color: #64748b; font-size: 11px; font-weight: 600; }
 .employee-document-upload-icon { position: absolute; top: 14px; right: 14px; color: #087fb8; }
 @media (max-width: 700px) { .employee-documents-admin-grid { grid-template-columns: 1fr; } }
+/* "View" link on Employee Documents cards */
+.employee-document-view-link {
+    align-self: flex-start;
+    margin-top: 6px;
+    padding: 4px 12px;
+    border: 1px solid #cfe3f2;
+    border-radius: 6px;
+    background: #eaf6ff;
+    color: #087df5;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-document-view-link:hover {
+    border-color: #087df5;
+    background: #d8efff;
+}

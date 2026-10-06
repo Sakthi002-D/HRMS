@@ -1,7 +1,8 @@
 // Settings → Recruitment Masters: Locations, Recruitment Agencies, Department Headcount Budgets
 // (Budgeted Positions = NEW people HR approves per department and year, plus the annual salary budget).
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
+import { useConfirm } from "../../../components/common/dialog/dialogContext";
 import { api, formatMoney, getCompanyCurrency, getSessionEmployeeId } from "../../../components/recruitment/recruitmentApi";
 import "./RecruitmentSettings.css";
 
@@ -17,6 +18,7 @@ const fetchMasters = (actorId) =>
 
 function RecruitmentMastersSettings() {
     const actorId = getSessionEmployeeId();
+    const confirm = useConfirm();
     const [locations, setLocations] = useState([]);
     const [agencies, setAgencies] = useState([]);
     const [budgets, setBudgets] = useState([]);
@@ -70,10 +72,47 @@ function RecruitmentMastersSettings() {
             setNewLocation("");
         }
     };
+        const removeLocation = async (location) => {
+        setMessage({ text: "", error: false });
+        const removed = await confirm({
+            variant: "danger",
+            title: `Remove location "${location.name}"?`,
+            message: "This location will be removed from the list. This can't be undone.",
+            cancelText: "Cancel",
+            confirmText: "Remove",
+            loadingText: "Removing…",
+            onConfirm: () => api(
+                `/api/recruitment/locations/${location.id}?actor_id=${encodeURIComponent(actorId || "")}`,
+                { method: "DELETE" }
+            ),
+        });
+        if (removed) {
+            await loadAll();
+            setMessage({ text: `Location "${location.name}" removed`, error: false });
+        }
+    };
 
     const addAgency = async () => {
         if (await run(() => api("/api/recruitment/agencies", { method: "POST", body: { ...newAgency, actor_id: actorId } }), "Agency added")) {
             setNewAgency(emptyAgency);
+        }
+    };    const removeAgency = async (agency) => {
+        setMessage({ text: "", error: false });
+        const removed = await confirm({
+            variant: "danger",
+            title: `Delete agency "${agency.name}"?`,
+            message: "This agency will be removed from the list. This can't be undone.",
+            cancelText: "Cancel",
+            confirmText: "Delete",
+            loadingText: "Deleting…",
+            onConfirm: () => api(
+                `/api/recruitment/agencies/${agency.id}?actor_id=${encodeURIComponent(actorId || "")}`,
+                { method: "DELETE" }
+            ),
+        });
+        if (removed) {
+            await loadAll();
+            setMessage({ text: `Agency "${agency.name}" deleted`, error: false });
         }
     };
 
@@ -96,15 +135,25 @@ function RecruitmentMastersSettings() {
                 </div>
                 <div className="rs-chips">
                     {locations.map((location) => (
-                        <button
-                            type="button"
-                            key={location.id}
-                            className={location.active ? "active" : ""}
-                            title={location.active ? "Click to deactivate" : "Click to activate"}
-                            onClick={() => run(() => api(`/api/recruitment/locations/${location.id}`, { method: "PUT", body: { active: !location.active, actor_id: actorId } }))}
-                        >
-                            {location.name}{location.active ? "" : " (inactive)"}
-                        </button>
+                        <span className="rs-chip" key={location.id}>
+                            <button
+                                type="button"
+                                className={location.active ? "active" : ""}
+                                title={location.active ? "Click to deactivate" : "Click to activate"}
+                                onClick={() => run(() => api(`/api/recruitment/locations/${location.id}`, { method: "PUT", body: { active: !location.active, actor_id: actorId } }))}
+                            >
+                                {location.name}{location.active ? "" : " (inactive)"}
+                            </button>
+                            <button
+                                type="button"
+                                className="rs-chip-remove"
+                                aria-label={`Remove ${location.name}`}
+                                title="Remove"
+                                onClick={() => removeLocation(location)}
+                            >
+                                <X size={11} strokeWidth={3} />
+                            </button>
+                        </span>
                     ))}
                 </div>
             </section>
@@ -119,9 +168,9 @@ function RecruitmentMastersSettings() {
                     <button type="button" className="settings-save-button" onClick={addAgency} disabled={!newAgency.name.trim()}><Plus size={14} /> Add</button>
                 </div>
                 <table className="rs-table">
-                    <thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Status</th><th /></tr></thead>
                     <tbody>
-                        {agencies.length === 0 && <tr><td colSpan="5">No agencies yet.</td></tr>}
+                        {agencies.length === 0 && <tr><td colSpan="6">No agencies yet.</td></tr>}
                         {agencies.map((agency) => (
                             <tr key={agency.id}>
                                 <td>{agency.name}</td>
@@ -135,6 +184,17 @@ function RecruitmentMastersSettings() {
                                         onClick={() => run(() => api(`/api/recruitment/agencies/${agency.id}`, { method: "PUT", body: { active: !agency.active, actor_id: actorId } }))}
                                     >
                                         {agency.active ? "Active" : "Inactive"}
+                                    </button>
+                                </td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        className="rs-icon-button"
+                                        aria-label={`Delete agency ${agency.name}`}
+                                        title="Delete"
+                                        onClick={() => removeAgency(agency)}
+                                    >
+                                        <Trash2 size={14} />
                                     </button>
                                 </td>
                             </tr>

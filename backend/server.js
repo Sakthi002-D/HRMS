@@ -9,6 +9,7 @@ import recruitmentRouter from "./routes/recruitment.js";
 import ticketsRouter from "./routes/tickets.js";
 import resignationsRouter from "./routes/resignations.js";
 import careersRouter from "./routes/careers.js";
+import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/employeeDocuments.js";
 import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
 import { ensureNotificationSchema, getInbox, sendQueuedEmails } from "./services/notificationService.js";
@@ -51,6 +52,8 @@ app.use("/api", ticketsRouter);
 app.use("/api", resignationsRouter);
 // Public Careers page + HR Recruitment → Job Applications
 app.use("/api", careersRouter);
+// Employee documents: HR uploads Contract / Offer Letter / QID, employee uploads Visa / Passport
+app.use("/api", employeeDocumentsRouter);
 
 // Test API
 app.get("/", (req, res) => {
@@ -2705,6 +2708,7 @@ ensureEmployeePersonalInfoColumns()
     .then(() => ensureTicketSchema())
     .then(() => ensureResignationSchema())
     .then(() => ensureCareerSchema())
+    .then(() => ensureEmployeeDocumentSchema())
     .then(() => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);

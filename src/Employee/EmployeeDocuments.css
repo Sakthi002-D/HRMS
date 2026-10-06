@@ -15,3 +15,52 @@
 .employee-document-card.request button { grid-column: 2; width: fit-content; padding: 8px 13px; border: 0; border-radius: 6px; background: #07804b; color: #fff; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
 .employee-documents-view :is(.employee-documents-heading p, .employee-document-card p) { color: #000000 !important; }
 @media (max-width: 700px) { .employee-document-grid { grid-template-columns: 1fr; } }
+/* Status + action buttons at the bottom of each document card */
+.employee-document-card .employee-document-footer {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.employee-document-status.uploaded { color: #15803d; }
+.employee-document-status.muted { color: #64748b; }
+
+.employee-document-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.employee-document-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.employee-document-btn.primary {
+    border: 1px solid #087df5;
+    background: #087df5;
+    color: #ffffff;
+}
+.employee-document-btn.primary:hover { background: #0369d9; }
+
+.employee-document-btn.secondary {
+    border: 1px solid #cfe3f2;
+    background: #eaf6ff;
+    color: #087df5;
+}
+.employee-document-btn.secondary:hover { border-color: #087df5; background: #d8efff; }
+
+.employee-document-btn.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
