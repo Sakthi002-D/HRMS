@@ -74,3 +74,35 @@ export function formatDocumentDate(value) {
         timeZone: "Asia/Qatar",
     }).format(date);
 }
+
+// ---------- Files attached to employee requests (Salary Certificate, NOC, Letter, Expense) ----------
+
+// HR uploads the issued document for one request
+export async function uploadEmployeeRequestFile(requestId, file) {
+    const formData = new FormData();
+    formData.append("document", file);
+    const response = await requestDocument(`/api/employee-requests/${encodeURIComponent(requestId)}/file`, true, {
+        method: "POST",
+        body: formData,
+    });
+    return response.json();
+}
+
+// Loads the file attached to a request (HR, or the employee who raised it)
+export async function fetchEmployeeRequestFile(requestId, isHR = false) {
+    const response = await requestDocument(`/api/employee-requests/${encodeURIComponent(requestId)}/file`, isHR, { cache: "no-store" });
+    return response.blob();
+}
+
+// Saves the request's file to the computer (used by the preview pop-up's Download button)
+export async function downloadEmployeeRequestFile(requestId, fileName, isHR = false) {
+    const blob = await fetchEmployeeRequestFile(requestId, isHR);
+    const objectUrl = URL.createObjectURL(blob);
+    const link = window.document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName || "document";
+    window.document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+}

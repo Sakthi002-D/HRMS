@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, X } from "lucide-react";
 import useScrollLock from "../common/dialog/useScrollLock";
-import { downloadEmployeeDocument, fetchEmployeeDocumentFile } from "./employeeDocumentApi";
+import {
+    downloadEmployeeDocument,
+    downloadEmployeeRequestFile,
+    fetchEmployeeDocumentFile,
+    fetchEmployeeRequestFile,
+} from "./employeeDocumentApi";
 import "./employeeDocumentOverlays.css";
 
 export function DocumentToast({ toast, onClose }) {
@@ -22,37 +27,47 @@ export function DocumentToast({ toast, onClose }) {
     );
 }
 
+// Preview pop-up for an employee document (document.doc_type)
+// or for a file attached to an employee request (document.requestId).
 export function EmployeeDocumentPreviewModal({ employeeId, document, isHR = false, onClose, onError }) {
-    const [preview, setPreview] = useState({ docType: "", url: "", loading: true, error: "" });
+    const [preview, setPreview] = useState({ key: "", url: "", mime: "", loading: true, error: "" });
     useScrollLock(Boolean(document));
+
+    const requestId = document?.requestId;
     const documentType = document?.doc_type;
+    // A unique name for "which file is open", so a new file always reloads
+    const fileKey = requestId ? `request-${requestId}` : documentType ? `document-${documentType}` : "";
 
     useEffect(() => {
-        if (!documentType) return undefined;
+        if (!fileKey) return undefined;
         let objectUrl = "";
         let ignore = false;
-        fetchEmployeeDocumentFile(employeeId, { doc_type: documentType }, isHR)
+        const loadFile = requestId
+            ? fetchEmployeeRequestFile(requestId, isHR)
+            : fetchEmployeeDocumentFile(employeeId, { doc_type: documentType }, isHR);
+        loadFile
             .then((blob) => {
                 objectUrl = URL.createObjectURL(blob);
-                if (!ignore) setPreview({ docType: documentType, url: objectUrl, loading: false, error: "" });
+                if (!ignore) setPreview({ key: fileKey, url: objectUrl, mime: blob.type, loading: false, error: "" });
             })
             .catch((error) => {
-                if (!ignore) setPreview({ docType: documentType, url: "", loading: false, error: error.message });
+                if (!ignore) setPreview({ key: fileKey, url: "", mime: "", loading: false, error: error.message });
             });
         return () => {
             ignore = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [employeeId, documentType, isHR]);
+    }, [employeeId, fileKey, requestId, documentType, isHR]);
 
     if (!document) return null;
-    const currentPreview = preview.docType === documentType
-        ? preview
-        : { url: "", loading: true, error: "" };
+    const currentPreview = preview.key === fileKey ? preview : { url: "", mime: "", loading: true, error: "" };
+    // The file's own type (sent by the server), or the type from the list as a fallback
+    const mimeType = currentPreview.mime || document.mime_type || "";
 
     const handleDownload = async () => {
         try {
-            await downloadEmployeeDocument(employeeId, document, isHR);
+            if (requestId) await downloadEmployeeRequestFile(requestId, document.original_file_name, isHR);
+            else await downloadEmployeeDocument(employeeId, document, isHR);
         } catch (error) {
             onError?.(error.message);
         }
@@ -74,10 +89,10 @@ export function EmployeeDocumentPreviewModal({ employeeId, document, isHR = fals
                 <div className="employee-document-preview-content">
                     {currentPreview.loading && <p role="status">Loading preview...</p>}
                     {currentPreview.error && <p className="error" role="alert">{currentPreview.error}</p>}
-                    {currentPreview.url && document.mime_type === "application/pdf" && (
+                    {currentPreview.url && mimeType === "application/pdf" && (
                         <iframe src={currentPreview.url} title={`${document.displayName} preview`} />
                     )}
-                    {currentPreview.url && document.mime_type.startsWith("image/") && (
+                    {currentPreview.url && mimeType.startsWith("image/") && (
                         <img src={currentPreview.url} alt={`${document.displayName}: ${document.original_file_name}`} />
                     )}
                 </div>

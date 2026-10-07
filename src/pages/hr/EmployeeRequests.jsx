@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Upload } from "lucide-react";
+import { uploadEmployeeRequestFile } from "../../components/documents/employeeDocumentApi";
+import { EmployeeDocumentPreviewModal } from "../../components/documents/EmployeeDocumentOverlays";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Modal from "../../components/layout/common/Modal";
 import { useConfirm } from "../../components/common/dialog/dialogContext";
@@ -45,6 +47,9 @@ function EmployeeRequests() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [uploadingId, setUploadingId] = useState(null);
+    const [fileNotice, setFileNotice] = useState({ text: "", error: false });
+    const [filePreview, setFilePreview] = useState(null);
 
     useEffect(() => {
         let ignore = false;
@@ -74,6 +79,34 @@ function EmployeeRequests() {
             return matchesSearch && matchesType && matchesStatus;
         });
     }, [loaded.rows, search, typeFilter, statusFilter]);
+        // HR attaches the issued document (certificate / letter / receipt) to a request
+    const attachFile = async (request, file) => {
+        if (!file) return;
+        setUploadingId(request.id);
+        setFileNotice({ text: "", error: false });
+        try {
+            const saved = await uploadEmployeeRequestFile(request.id, file);
+            const fileInfo = { file_name: saved.original_file_name, file_uploaded_at: saved.uploaded_at };
+            setLoaded((current) => ({
+                ...current,
+                rows: current.rows.map((row) => (row.id === request.id ? { ...row, ...fileInfo } : row)),
+            }));
+            setSelectedRequest((current) => (current?.id === request.id ? { ...current, ...fileInfo } : current));
+            setFileNotice({ text: `${request.request_type} document uploaded for ${request.employee_name}`, error: false });
+        } catch (error) {
+            setFileNotice({ text: error.message, error: true });
+        } finally {
+            setUploadingId(null);
+        }
+    };
+
+    const viewFile = (request) => {
+        setFilePreview({
+            requestId: request.id,
+            original_file_name: request.file_name,
+            displayName: `${request.request_type} – ${request.employee_name}`,
+        });
+    };
 
     const decideRequest = async (request, status) => {
         const approved = await confirm({
@@ -141,6 +174,9 @@ function EmployeeRequests() {
                     </div>
 
                     {loaded.error && <p className="hrreq-error" role="alert">{loaded.error}</p>}
+                    {fileNotice.text && (
+                        <p className={fileNotice.error ? "hrreq-error" : "hrreq-success"} role="status">{fileNotice.text}</p>
+                    )}
 
                     <div className="hrreq-table-wrap">
                         <table className="hrreq-table">
@@ -169,9 +205,31 @@ function EmployeeRequests() {
                                         <td>{formatRequestedDate(request.created_at)}</td>
                                         <td><span className={`hrreq-status ${statusTone(request.status)}`}>{request.status}</span></td>
                                         <td>
-                                            <button type="button" className="employee-view-button" onClick={() => setSelectedRequest(request)} aria-label={`View request from ${request.employee_name}`} title="View">
-                                                <Eye size={18} strokeWidth={2} aria-hidden="true" />
-                                            </button>
+                                            <div className="hrreq-actions">
+                                                <button type="button" className="employee-view-button" onClick={() => setSelectedRequest(request)} aria-label={`View request from ${request.employee_name}`} title="View">
+                                                    <Eye size={18} strokeWidth={2} aria-hidden="true" />
+                                                </button>
+                                                {String(request.status).toLowerCase() !== "rejected" && (
+                                                    <label
+                                                        className={`employee-view-button hrreq-upload-button${uploadingId === request.id ? " is-busy" : ""}${request.file_name ? " has-file" : ""}`}
+                                                        title={request.file_name ? `Replace document (${request.file_name})` : "Upload document for the employee"}
+                                                        aria-label={request.file_name ? "Replace document" : "Upload document"}
+                                                    >
+                                                        <Upload size={17} strokeWidth={2} aria-hidden="true" />
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                            hidden
+                                                            disabled={uploadingId === request.id}
+                                                            onChange={(event) => {
+                                                                const file = event.target.files?.[0];
+                                                                event.target.value = "";
+                                                                attachFile(request, file);
+                                                            }}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -203,6 +261,19 @@ function EmployeeRequests() {
                                 </dl>
                             ) : <p className="employee-request-no-details">No additional details provided.</p>}
                             {selectedRequest.hr_response && <p className="employee-request-hr-response"><strong>HR response:</strong> {selectedRequest.hr_response}</p>}
+                                                        <div className="hrreq-file-row">
+                                <span>Issued document</span>
+                                {selectedRequest.file_name ? (
+                                    <>
+                                        <strong>{selectedRequest.file_name}</strong>
+                                        <button type="button" className="hrreq-file-view" onClick={() => viewFile(selectedRequest)}>
+                                            <Eye size={14} aria-hidden="true" /> View
+                                        </button>
+                                    </>
+                                ) : (
+                                    <em>Not uploaded yet</em>
+                                )}
+                            </div>
                             {String(selectedRequest.status).toLowerCase() === "pending" && (
                                 <div className="employee-request-detail-actions">
                                     <button type="button" className="reject-request-button" onClick={() => decideRequest(selectedRequest, "Rejected")} disabled={actionLoading}>Reject</button>
@@ -212,6 +283,13 @@ function EmployeeRequests() {
                         </div>
                     )}
                 </Modal>
+                
+                <EmployeeDocumentPreviewModal
+                    document={filePreview}
+                    isHR
+                    onClose={() => setFilePreview(null)}
+                    onError={(message) => setFileNotice({ text: message, error: true })}
+                />
             </div>
         </DashboardLayout>
     );

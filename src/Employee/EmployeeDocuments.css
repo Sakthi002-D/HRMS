@@ -64,3 +64,49 @@
     opacity: 0.6;
     pointer-events: none;
 }
+/* "Requests to HR" heading between the documents and the request cards */
+.employee-documents-subheading {
+    margin: 28px 0 14px;
+    padding-top: 22px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.employee-documents-subheading h3 {
+    margin: 0;
+    color: #12304a;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.employee-documents-subheading p {
+    margin: 4px 0 0;
+    color: #475569;
+    font-size: 14px;
+}
+/* Latest request status on the "Requests to HR" cards */
+.employee-request-latest {
+    display: block;
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.employee-request-latest.pending { color: #b45309; }
+.employee-request-latest.approved { color: #15803d; }
+.employee-request-latest.rejected { color: #b91c1c; }
+
+.employee-document-card.request .employee-request-card-actions {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Keep the View button blue (the card's green button style would otherwise apply to it) */
+.employee-document-card.request .employee-request-card-actions .employee-document-btn.secondary {
+    border: 1px solid #cfe3f2;
+    background: #eaf6ff;
+    color: #087df5;
+}

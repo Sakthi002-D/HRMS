@@ -60,6 +60,19 @@ export async function ensureEmployeeDocumentSchema() {
             UNIQUE (employee_id, doc_type)
         )
     `);
+
+    // Files HR attaches to an employee request (Salary Certificate, NOC, Letter, Expense)
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS employee_request_files (
+            request_id BIGINT PRIMARY KEY REFERENCES employee_requests(id) ON DELETE CASCADE,
+            original_file_name TEXT NOT NULL,
+            mime_type TEXT NOT NULL,
+            file_size INTEGER NOT NULL,
+            file_data BYTEA NOT NULL,
+            uploaded_by_id TEXT,
+            uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
 }
 
 class DocumentError extends Error {
@@ -102,6 +115,35 @@ async function getAccess(req) {
     const isSelf = actorId === employeeId;
     if (!isHR && !isSelf) throw new DocumentError("You can only access your own documents", 403);
     return { actorId, isHR, isSelf };
+}
+
+// Who is asking about an employee REQUEST, and are they allowed?
+// hrOnly = true → only HR (uploading). Otherwise HR or the employee who raised it (viewing).
+async function getRequestAccess(req, { hrOnly = false } = {}) {
+    const actorId = String(req.query.actor_id || "").trim();
+    if (!actorId) throw new DocumentError("Please log in again", 401);
+    if (!/^\d+$/.test(String(req.params.requestId))) throw new DocumentError("Request not found", 404);
+
+    const { rows } = await pool.query(
+        `SELECT id, employee_id, request_type, status FROM employee_requests WHERE id = $1`,
+        [req.params.requestId]
+    );
+    const request = rows[0];
+    if (!request) throw new DocumentError("Request not found", 404);
+
+    let isHR = false;
+    try {
+        await requireHRActor(pool, actorId);
+        isHR = true;
+    } catch (error) {
+        if (!(error instanceof WorkflowError)) throw error;
+    }
+
+    const isOwner = actorId === String(request.employee_id);
+    if (hrOnly ? !isHR : !(isHR || isOwner)) {
+        throw new DocumentError(hrOnly ? "Only HR can upload request documents" : "You can only view your own requests", 403);
+    }
+    return { actorId, request };
 }
 
 // LIST: all uploaded documents of one employee (details only)
@@ -187,6 +229,58 @@ router.get("/employees/:employeeId/documents/:docType/file", handle(async (req, 
     const disposition = req.query.download ? "attachment" : "inline";
     res.set("Content-Type", file.mime_type);
     res.set("Content-Disposition", `${disposition}; filename*=UTF-8''${encodeURIComponent(file.original_file_name)}`);
+    res.set("Cache-Control", "no-store");
+    res.send(file.file_data);
+}));
+// HR attaches the issued document to an employee request (or replaces it)
+router.post(
+    "/employee-requests/:requestId/file",
+    handle(async (req, res, next) => {
+        const access = await getRequestAccess(req, { hrOnly: true });
+        if (String(access.request.status).toLowerCase() === "rejected") {
+            throw new DocumentError("This request was rejected, so no document can be attached");
+        }
+        req.requestAccess = access;
+        next();
+    }),
+    (req, res, next) => upload.single("document")(req, res, (error) => {
+        if (!error) return next();
+        res.status(400).json({
+            message: error.code === "LIMIT_FILE_SIZE" ? "The file must be 5 MB or smaller" : error.message || "Upload failed",
+        });
+    }),
+    handle(async (req, res) => {
+        if (!req.file) throw new DocumentError("Choose a file to upload");
+        const { rows } = await pool.query(
+            `INSERT INTO employee_request_files
+                (request_id, original_file_name, mime_type, file_size, file_data, uploaded_by_id)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (request_id) DO UPDATE SET
+                original_file_name = EXCLUDED.original_file_name,
+                mime_type = EXCLUDED.mime_type,
+                file_size = EXCLUDED.file_size,
+                file_data = EXCLUDED.file_data,
+                uploaded_by_id = EXCLUDED.uploaded_by_id,
+                uploaded_at = CURRENT_TIMESTAMP
+             RETURNING request_id, original_file_name, mime_type, file_size, uploaded_at`,
+            [req.params.requestId, req.file.originalname, req.file.mimetype, req.file.size, req.file.buffer, req.requestAccess.actorId]
+        );
+        res.status(201).json(rows[0]);
+    })
+);
+
+// View the file attached to a request (HR, or the employee who raised it)
+router.get("/employee-requests/:requestId/file", handle(async (req, res) => {
+    await getRequestAccess(req);
+    const { rows } = await pool.query(
+        `SELECT original_file_name, mime_type, file_data FROM employee_request_files WHERE request_id = $1`,
+        [req.params.requestId]
+    );
+    if (!rows.length) throw new DocumentError("No document has been uploaded for this request yet", 404);
+
+    const file = rows[0];
+    res.set("Content-Type", file.mime_type);
+    res.set("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.original_file_name)}`);
     res.set("Cache-Control", "no-store");
     res.send(file.file_data);
 }));

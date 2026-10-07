@@ -67,3 +67,7 @@
     .employee-document-preview-actions { width: 100%; }
     .employee-document-preview-actions button { flex: 1; }
 }
+/* Always above other pop-ups (e.g. HR's request details), so View opens on top */
+.employee-document-preview-backdrop {
+    z-index: 10050;
+}

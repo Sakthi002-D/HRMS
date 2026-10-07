@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Eye, FileCheck2, FileText, Mail, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import { ClipboardList, Eye, FileCheck2, FileText, ReceiptText, RefreshCw, ShieldCheck, Upload } from "lucide-react";
 import { useConfirm } from "../components/common/dialog/dialogContext";
 import { DocumentToast, EmployeeDocumentPreviewModal } from "../components/documents/EmployeeDocumentOverlays";
 import { formatDocumentDate, listEmployeeDocuments, uploadEmployeeDocument } from "../components/documents/employeeDocumentApi";
+import API_URL from "../config/api";
 import "./EmployeeDocuments.css";
 
 // uploadedBy must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
@@ -16,7 +17,16 @@ const documentItems = [
 
 const FILE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 
-function EmployeeDocuments({ employee }) {
+// Requests to HR: each opens the request form (EmployeeRequestModal) and is saved
+// for HR → Employee Requests. Titles must match the request types the form knows.
+const REQUEST_ITEMS = [
+    { title: "Salary Certificate", description: "Request an official salary certificate from HR", icon: ReceiptText },
+    { title: "NOC Request", description: "Request a No Objection Certificate (travel, driving license, etc.)", icon: ShieldCheck },
+    { title: "Letter Request", description: "Request an official letter from HR", icon: FileText },
+    { title: "Expense Reimbursement", description: "Claim back expenses you paid for work", icon: ClipboardList },
+];
+
+function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
     const confirm = useConfirm();
     const employeeId = employee?.employee_id;
     const [documents, setDocuments] = useState({});
@@ -24,6 +34,25 @@ function EmployeeDocuments({ employee }) {
     const [uploadingType, setUploadingType] = useState("");
     const [toast, setToast] = useState(null);
     const [preview, setPreview] = useState(null);
+        const [latestRequests, setLatestRequests] = useState({});
+
+    // Latest request of each type (Salary Certificate, NOC, ...) with its status and attached file
+    useEffect(() => {
+        if (!employeeId) return undefined;
+        let ignore = false;
+        fetch(`${API_URL}/api/employee-requests/${encodeURIComponent(employeeId)}`, { cache: "no-store" })
+            .then((response) => (response.ok ? response.json() : []))
+            .then((rows) => {
+                if (ignore) return;
+                const latest = {};
+                rows.forEach((row) => {
+                    if (!latest[row.request_type]) latest[row.request_type] = row;
+                });
+                setLatestRequests(latest);
+            })
+            .catch(() => {});
+        return () => { ignore = true; };
+    }, [employeeId, requestsVersion]);
 
     // Load the employee's saved documents
     useEffect(() => {
@@ -68,11 +97,7 @@ function EmployeeDocuments({ employee }) {
         }
     };
 
-    const requestSalaryCertificate = () => {
-        const subject = encodeURIComponent(`Salary Certificate Request - ${employee.employee_id}`);
-        const body = encodeURIComponent(`Hello HR,\n\nI would like to request a salary certificate.\n\nEmployee ID: ${employee.employee_id}\nEmployee Name: ${employee.name}\n\nThank you.`);
-        window.location.href = `mailto:${employee.hr_email || "hr@company.com"}?subject=${subject}&body=${body}`;
-    };
+
 
     return <>
         <section className="employee-documents-view">
@@ -129,7 +154,44 @@ function EmployeeDocuments({ employee }) {
                         </div>
                     </article>;
                 })}
-                <article className="employee-document-card request"><div className="employee-document-icon"><Mail size={22} /></div><div><h3>Salary Certificate Request</h3><p>Request an official salary certificate from HR</p></div><button type="button" onClick={requestSalaryCertificate}>Request</button></article>
+            </div>
+
+            <div className="employee-documents-subheading">
+                <h3>Requests to HR</h3>
+                <p>Raise a request and track it in your notifications. HR reviews it in Employee Requests.</p>
+            </div>
+            <div className="employee-document-grid">
+                {REQUEST_ITEMS.map(({ title, description, icon: Icon }) => {
+                    const latest = latestRequests[title];
+                    const tone = String(latest?.status || "").toLowerCase();
+                    return (
+                        <article className="employee-document-card request" key={title}>
+                            <div className="employee-document-icon"><Icon size={22} /></div>
+                            <div>
+                                <h3>{title}</h3>
+                                <p>{description}</p>
+                                {latest && (
+                                    <span className={`employee-request-latest ${tone}`}>
+                                        Last request: {latest.status} · {formatDocumentDate(latest.created_at)}
+                                        {latest.file_name ? " · Document ready" : ""}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="employee-request-card-actions">
+                                {latest?.file_name && (
+                                    <button
+                                        type="button"
+                                        className="employee-document-btn secondary"
+                                        onClick={() => setPreview({ requestId: latest.id, original_file_name: latest.file_name, displayName: title })}
+                                    >
+                                        <Eye size={14} /> View
+                                    </button>
+                                )}
+                                <button type="button" onClick={() => onRequest?.(title)}>Request</button>
+                            </div>
+                        </article>
+                    );
+                })}
             </div>
         </section>
 

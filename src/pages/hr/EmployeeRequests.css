@@ -229,3 +229,78 @@
     border-left: 4px solid #f0622d;
     padding-left: 16px;
 }
+/* Eye + Upload icons side by side in the Action column */
+.hrreq-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hrreq-upload-button {
+    cursor: pointer;
+}
+
+.hrreq-upload-button.has-file {
+    border-color: #bbe5cb;
+    background: #e7f8ee;
+    color: #15803d;
+}
+
+.hrreq-upload-button.is-busy {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.hrreq-success {
+    margin: 0 0 14px;
+    color: #15803d;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* "Issued document" line in the details pop-up */
+.hrreq-file-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.hrreq-file-row > span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.hrreq-file-row strong {
+    color: #12304a;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.hrreq-file-row em {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.hrreq-file-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 5px 12px;
+    border: 1px solid #cfe3f2;
+    border-radius: 6px;
+    background: #eaf6ff;
+    color: #087df5;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}

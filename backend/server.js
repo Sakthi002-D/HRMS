@@ -1361,8 +1361,12 @@ app.post("/api/employee-requests", async (req, res) => {
 app.get("/api/employee-requests/:employeeId", async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, employee_id, request_type, details, status, hr_response, created_at, updated_at
-             FROM employee_requests WHERE employee_id = $1 ORDER BY created_at DESC, id DESC`,
+            `SELECT r.id, r.employee_id, r.request_type, r.details, r.status, r.hr_response, r.created_at, r.updated_at,
+                    f.original_file_name AS file_name, f.uploaded_at AS file_uploaded_at
+             FROM employee_requests r
+             LEFT JOIN employee_request_files f ON f.request_id = r.id
+             WHERE r.employee_id = $1
+             ORDER BY r.created_at DESC, r.id DESC`,
             [req.params.employeeId]
         );
         res.json(result.rows);
@@ -1375,10 +1379,12 @@ app.get("/api/employee-requests/:employeeId", async (req, res) => {
 app.get("/api/hr/employee-requests", async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT r.id, r.employee_id, e.name AS employee_name, r.request_type,
-                    r.details, r.status, r.hr_response, r.created_at, r.updated_at
+            `SELECT r.id, r.employee_id, e.name AS employee_name, e.department, r.request_type,
+                    r.details, r.status, r.hr_response, r.created_at, r.updated_at,
+                    f.original_file_name AS file_name, f.uploaded_at AS file_uploaded_at
              FROM employee_requests r
              JOIN employees e ON e.employee_id = r.employee_id
+             LEFT JOIN employee_request_files f ON f.request_id = r.id
              ORDER BY r.created_at DESC, r.id DESC`
         );
         res.json(result.rows);

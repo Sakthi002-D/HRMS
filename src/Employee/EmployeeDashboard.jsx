@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, DoorOpen, FileText, Hourglass, KeyRound, Moon, ReceiptText, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
 import "./EmployeeDashboard.css";
@@ -32,14 +32,7 @@ const DEFAULT_QATAR_HOLIDAYS = [
     { name: "Prophet's Birthday", date: "Islamic calendar", days: 1 },
 ];
 const EMPLOYEE_LEAVE_TYPES = ["Annual Leave", "Sick Leave", "Maternity Leave", "Paternity Leave", "Hajj Leave", "Emergency Leave", "Unpaid Leave (LOP)", "Compensatory Off", "Bereavement Leave"];
-const EMPLOYEE_REQUESTS = [
-    { label: "Salary Certificate", icon: ReceiptText, tone: "blue" },
-    { label: "NOC Request", icon: ShieldCheck, tone: "green" },
-    { label: "Letter Request", icon: FileText, tone: "orange" },
-    { label: "Expense Reimbursement", icon: ClipboardList, tone: "purple" },
-    // Opens the Resignation page instead of the request modal
-    { label: "Resignation", icon: DoorOpen, tone: "red", section: "resignation" },
-];
+
 const LEAVE_RULES = {
     sick: { eligibleMonths: 3, totalDays: 84 }, maternity: { days: 50 }, bereavement: { days: 3 }, compensatory: { validityDays: 90 },
 };
@@ -132,6 +125,7 @@ function EmployeeDashboard() {
     });
     const [profileWorkTab, setProfileWorkTab] = useState("projects");
     const [activeSection, setActiveSection] = useState("dashboard");
+    const [requestsVersion, setRequestsVersion] = useState(0);
 
     const submitEmployeeRequest = (request) => {
         const { requestType, ...details } = request;
@@ -143,6 +137,7 @@ function EmployeeDashboard() {
             if (!response.ok) throw new Error("Unable to submit request");
             await response.json();
             fetchEmployeeNotifications(employee.employee_id);
+            setRequestsVersion((version) => version + 1);
         });
     };
 
@@ -1045,23 +1040,7 @@ function EmployeeDashboard() {
                     <div className="work-metric-card"><div className="metric-icon pink"><FileText size={15} /></div><strong>{approvedLeaveDaysThisYear}</strong><small>Approved Days This Year</small><b className="metric-up">From approved requests</b></div>
                 </section>
 
-                <section className="employee-requests-section">
-                    <div className="employee-section-header">
-                        <div>
-                            <h2>Employee Requests</h2>
-                            <p>Request documents and reimbursements from HR</p>
-                        </div>
-                    </div>
-                    <div className="employee-requests-grid">
-                        {EMPLOYEE_REQUESTS.map(({ label, icon: Icon, tone, section }) => (
-                            <button type="button" className="employee-request-card" key={label} onClick={() => (section ? setActiveSection(section) : setRequestType(label))}>
-                                <span className={`employee-request-icon ${tone}`}><Icon size={19} /></span>
-                                <span>{label}</span>
-                                <ChevronDown className="employee-request-arrow" size={16} />
-                            </button>
-                        ))}
-                    </div>
-                </section>
+
 
                 <EmployeeAttendance
                     employee={employee} greeting={greeting} liveTime={liveTime} liveDate={liveDate}
@@ -1078,7 +1057,7 @@ function EmployeeDashboard() {
 
                 <EmployeePayroll records={payrollRecords} loading={payrollLoading} />
 
-                <EmployeeDocuments employee={employee} />
+                <EmployeeDocuments employee={employee} onRequest={setRequestType} requestsVersion={requestsVersion} />
 
                 {activeSection === "manpower" && showManpower && (
                     <section className="employee-manpower-view">
