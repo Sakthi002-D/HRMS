@@ -209,7 +209,7 @@ function EmployeeRequests() {
                                                 <button type="button" className="employee-view-button" onClick={() => setSelectedRequest(request)} aria-label={`View request from ${request.employee_name}`} title="View">
                                                     <Eye size={18} strokeWidth={2} aria-hidden="true" />
                                                 </button>
-                                                {String(request.status).toLowerCase() !== "rejected" && (
+                                                {String(request.status).toLowerCase() === "approved" && (
                                                     <label
                                                         className={`employee-view-button hrreq-upload-button${uploadingId === request.id ? " is-busy" : ""}${request.file_name ? " has-file" : ""}`}
                                                         title={request.file_name ? `Replace document (${request.file_name})` : "Upload document for the employee"}
@@ -228,6 +228,15 @@ function EmployeeRequests() {
                                                             }}
                                                         />
                                                     </label>
+                                                )}
+                                                {String(request.status).toLowerCase() === "pending" && (
+                                                    <span
+                                                        className="employee-view-button hrreq-upload-button is-locked"
+                                                        title="Approve the request first, then upload the document"
+                                                        aria-label="Upload locked until the request is approved"
+                                                    >
+                                                        <Upload size={17} strokeWidth={2} aria-hidden="true" />
+                                                    </span>
                                                 )}
                                             </div>
                                         </td>
@@ -271,7 +280,13 @@ function EmployeeRequests() {
                                         </button>
                                     </>
                                 ) : (
-                                    <em>Not uploaded yet</em>
+                                    <em>
+                                        {String(selectedRequest.status).toLowerCase() === "approved"
+                                            ? "Not uploaded yet. Use the upload icon in the table."
+                                            : String(selectedRequest.status).toLowerCase() === "rejected"
+                                                ? "Request rejected – no document will be issued"
+                                                : "Approve the request first, then upload the document"}
+                                    </em>
                                 )}
                             </div>
                             {String(selectedRequest.status).toLowerCase() === "pending" && (

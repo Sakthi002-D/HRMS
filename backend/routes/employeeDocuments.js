@@ -237,8 +237,12 @@ router.post(
     "/employee-requests/:requestId/file",
     handle(async (req, res, next) => {
         const access = await getRequestAccess(req, { hrOnly: true });
-        if (String(access.request.status).toLowerCase() === "rejected") {
+        const status = String(access.request.status).toLowerCase();
+        if (status === "rejected") {
             throw new DocumentError("This request was rejected, so no document can be attached");
+        }
+        if (status !== "approved") {
+            throw new DocumentError("Approve the request first, then upload the document");
         }
         req.requestAccess = access;
         next();

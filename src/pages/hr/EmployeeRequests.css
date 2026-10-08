@@ -304,3 +304,17 @@
     font-weight: 600;
     cursor: pointer;
 }
+/* Upload icon locked until the request is approved */
+.hrreq-upload-button.is-locked {
+    border-color: #e2e8f0;
+    background: #f1f5f9;
+    color: #94a3b8;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.hrreq-upload-button.is-locked:hover {
+    border-color: #e2e8f0;
+    background: #f1f5f9;
+    color: #94a3b8;
+}
