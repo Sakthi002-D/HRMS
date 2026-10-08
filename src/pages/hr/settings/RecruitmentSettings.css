@@ -82,3 +82,31 @@
     background: #dc2626;
     transform: scale(1.1);
 }
+/* Location chips: no blue shadow (the shared theme adds one to every button) */
+.rs-chips .rs-chip > button:not(.rs-chip-remove),
+.rs-chips .rs-chip > button:not(.rs-chip-remove):hover,
+.rs-chips .rs-chip > button:not(.rs-chip-remove):focus,
+.rs-chips .rs-chip > button:not(.rs-chip-remove):active {
+    box-shadow: none !important;
+}
+/* Recruitment Agencies: no blue shadow on the Active / Inactive status buttons */
+.rs-table .rs-toggle,
+.rs-table .rs-toggle:hover,
+.rs-table .rs-toggle:focus,
+.rs-table .rs-toggle:active {
+    box-shadow: none !important;
+}
+/* Delete (trash) buttons in the Agencies and Budget tables: no blue shadow */
+.rs-table .rs-icon-button,
+.rs-table .rs-icon-button:hover,
+.rs-table .rs-icon-button:focus,
+.rs-table .rs-icon-button:active {
+    box-shadow: none !important;
+}
+/* Recruitment Masters: no theme shadow on any button (the small × keeps its own) */
+.rs-panel button:not(.rs-chip-remove),
+.rs-panel button:not(.rs-chip-remove):hover,
+.rs-panel button:not(.rs-chip-remove):focus,
+.rs-panel button:not(.rs-chip-remove):active {
+    box-shadow: none !important;
+}

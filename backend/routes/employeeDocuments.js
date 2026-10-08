@@ -288,5 +288,28 @@ router.get("/employee-requests/:requestId/file", handle(async (req, res) => {
     res.set("Cache-Control", "no-store");
     res.send(file.file_data);
 }));
+// HR: recent Visa / Passport uploads made by employees (for HR notifications)
+router.get("/hr/document-uploads", handle(async (req, res) => {
+    const actorId = String(req.query.actor_id || "").trim();
+    if (!actorId) throw new DocumentError("Please log in again", 401);
+    try {
+        await requireHRActor(pool, actorId);
+    } catch (error) {
+        if (error instanceof WorkflowError) throw new DocumentError("Only HR can see document uploads", 403);
+        throw error;
+    }
+
+    const { rows } = await pool.query(`
+        SELECT d.employee_id, e.name AS employee_name, d.doc_type, d.original_file_name, d.uploaded_at
+        FROM employee_document_files d
+        JOIN employees e ON e.employee_id = d.employee_id
+        WHERE d.uploaded_by_role = 'EMPLOYEE'
+          AND d.uploaded_at >= NOW() - INTERVAL '60 days'
+        ORDER BY d.uploaded_at DESC
+        LIMIT 100
+    `);
+    res.set("Cache-Control", "no-store");
+    res.json(rows);
+}));
 
 export default router;

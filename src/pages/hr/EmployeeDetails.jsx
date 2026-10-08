@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Eye, EyeOff, KeyRound, Upload } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
@@ -86,6 +86,16 @@ function EmployeeDetails() {
             });
         return () => { ignore = true; };
     }, [loadedEmployeeId]);
+    
+    // Coming from a "Visa / Passport updated" notification: scroll to Employee Documents
+    const { hash } = useLocation();
+    useEffect(() => {
+        if (loading || hash !== "#employee-documents") return undefined;
+        const timer = window.setTimeout(() => {
+            window.document.getElementById("employee-documents")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+        return () => window.clearTimeout(timer);
+    }, [loading, hash]);
 
     const createSlug = (name) => {
         return String(name || "")
@@ -595,7 +605,7 @@ function EmployeeDetails() {
                                 <button className="section-edit-button" type="button" onClick={() => openSectionEditor("project")} aria-label="Edit projects">✎</button>
                             )}
                         </section>
-                        <section className="employee-documents-admin-panel">
+                        <section className="employee-documents-admin-panel" id="employee-documents">
                             <div className="employee-documents-admin-heading">
                                 <div>
                                     <h2>Employee Documents</h2>

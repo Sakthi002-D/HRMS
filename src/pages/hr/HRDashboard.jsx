@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { purgeAllChatStorage } from "../../components/assistant/HRAssistant";
 import { api, formatDate, isPendingHR } from "../../components/resignation/resignationApi";
+import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import "../../components/recruitment/recruitment.css";
 import "./HRDashboard.css";
 
@@ -132,8 +133,11 @@ function HRDashboard() {
         }
       }
 
+      // Employee requests + Visa / Passport uploads (shared with the Notifications page)
+      const activityNotifications = await loadEmployeeActivityNotifications(hrProfile.employee_id);
+
       const readIds = getReadNotificationIds();
-      setNotifications([...recruitmentNotifications, ...leaveNotifications].map((notification) => ({
+      setNotifications([...activityNotifications, ...recruitmentNotifications, ...leaveNotifications].map((notification) => ({
         ...notification,
         read: readIds.has(notification.id),
       })));

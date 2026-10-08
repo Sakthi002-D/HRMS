@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Eye, Upload } from "lucide-react";
 import { uploadEmployeeRequestFile } from "../../components/documents/employeeDocumentApi";
 import { EmployeeDocumentPreviewModal } from "../../components/documents/EmployeeDocumentOverlays";
@@ -50,6 +51,9 @@ function EmployeeRequests() {
     const [uploadingId, setUploadingId] = useState(null);
     const [fileNotice, setFileNotice] = useState({ text: "", error: false });
     const [filePreview, setFilePreview] = useState(null);
+    const [searchParams] = useSearchParams();
+    const requestToOpen = searchParams.get("request");
+    const openedFromLink = useRef(false);
 
     useEffect(() => {
         let ignore = false;
@@ -63,6 +67,15 @@ function EmployeeRequests() {
             .catch((error) => !ignore && setLoaded({ rows: [], loading: false, error: error.message }));
         return () => { ignore = true; };
     }, []);
+        // Coming from a notification (?request=12): open that request's details once
+    useEffect(() => {
+        if (!requestToOpen || openedFromLink.current || loaded.loading) return;
+        const match = loaded.rows.find((row) => String(row.id) === String(requestToOpen));
+        if (match) {
+            setSelectedRequest(match);
+            openedFromLink.current = true;
+        }
+    }, [requestToOpen, loaded.loading, loaded.rows]);
 
     const requestTypes = useMemo(
         () => [...new Set(loaded.rows.map((request) => request.request_type).filter(Boolean))].sort((first, second) => first.localeCompare(second)),

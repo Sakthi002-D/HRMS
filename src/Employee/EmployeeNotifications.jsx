@@ -51,9 +51,10 @@ function EmployeeNotifications({ notifications = [], onOpen }) {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
 
+    // Newest first, by the exact date AND time of each notification
     const items = useMemo(() => notifications
-        .map((n) => ({ ...n, _module: moduleOf(n), _key: dateKey(n) }))
-        .sort((a, b) => (b._key || "").localeCompare(a._key || "")), [notifications]);
+        .map((n) => ({ ...n, _module: moduleOf(n), _key: dateKey(n), _time: parse(rawDate(n))?.getTime() || 0 }))
+        .sort((a, b) => b._time - a._time), [notifications]);
 
     const modules = useMemo(() => [...new Set(items.map((n) => n._module))].sort(), [items]);
     const unreadCount = items.filter((n) => !n.read).length;

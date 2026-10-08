@@ -1416,11 +1416,32 @@ app.put("/api/hr/employee-requests/:id", async (req, res) => {
 
 app.get("/api/notifications/employee/:employeeId", async (req, res) => {
     try {
-        const [leaveResult, payrollResult, documentResult, requestResult] = await Promise.all([
-            pool.query(`SELECT id, leave_type, status, days, created_at FROM leaves WHERE employee_id = $1 AND LOWER(status) IN ('approved', 'rejected') ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 20`, [req.params.employeeId]),
+        const [leaveResult, payrollResult, documentResult, requestResult, hrDocumentResult] = await Promise.all([
+            pool.query(`SELECT id, leave_type, status, days, created_at, reviewed_at FROM leaves WHERE employee_id = $1 AND LOWER(status) IN ('approved', 'rejected') ORDER BY COALESCE(reviewed_at, created_at) DESC NULLS LAST, id DESC LIMIT 20`, [req.params.employeeId]),
             pool.query(`SELECT payroll_id AS id, salary_month, status, updated_at FROM employee_payroll WHERE employee_id = $1 AND LOWER(COALESCE(status, '')) IN ('processed', 'released') ORDER BY updated_at DESC NULLS LAST, payroll_id DESC LIMIT 20`, [req.params.employeeId]),
             pool.query(`SELECT passport_exp_date FROM employees WHERE employee_id = $1 AND passport_exp_date IS NOT NULL AND passport_exp_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'`, [req.params.employeeId]),
-            pool.query(`SELECT id, request_type, status, hr_response, updated_at FROM employee_requests WHERE employee_id = $1 AND status <> 'Pending' ORDER BY updated_at DESC LIMIT 20`, [req.params.employeeId]),
+            // Requests HR rejected, or approved AND attached the document to
+            pool.query(
+                `SELECT r.id, r.request_type, r.status, r.hr_response, r.updated_at,
+                        f.original_file_name AS file_name, f.uploaded_at AS file_uploaded_at
+                 FROM employee_requests r
+                 LEFT JOIN employee_request_files f ON f.request_id = r.id
+                 WHERE r.employee_id = $1
+                   AND (r.status = 'Rejected' OR (r.status = 'Approved' AND f.request_id IS NOT NULL))
+                 ORDER BY COALESCE(f.uploaded_at, r.updated_at) DESC
+                 LIMIT 20`,
+                [req.params.employeeId]
+            ),
+            // Documents HR uploaded for this employee (Contract, Offer Letter, QID) in the last 60 days
+            pool.query(
+                `SELECT doc_type, original_file_name, uploaded_at
+                 FROM employee_document_files
+                 WHERE employee_id = $1
+                   AND uploaded_by_role = 'HR'
+                   AND uploaded_at >= NOW() - INTERVAL '60 days'
+                 ORDER BY uploaded_at DESC`,
+                [req.params.employeeId]
+            ),
         ]);
         res.json([
             ...leaveResult.rows.map((leave) => ({
@@ -1430,6 +1451,7 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 message: `${leave.leave_type} request (${leave.days || 1} day${Number(leave.days) === 1 ? "" : "s"})`,
                 time: "Leave request updated",
                 section: "leave",
+                created_at: leave.reviewed_at || leave.created_at,
             })),
             ...payrollResult.rows.map((payroll) => ({
                 id: `payroll-${payroll.id}`,
@@ -1438,6 +1460,7 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 message: "Your salary details and payslip are available.",
                 time: payroll.salary_month ? new Date(payroll.salary_month).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "Payroll updated",
                 section: "payroll",
+                created_at: payroll.updated_at,
             })),
             ...documentResult.rows.map((document) => ({
                 id: `document-${req.params.employeeId}-${document.passport_exp_date}`,
@@ -1447,14 +1470,35 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 time: `Expires ${new Date(document.passport_exp_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
                 section: "documents",
             })),
-            ...requestResult.rows.map((request) => ({
-                id: `employee-request-${request.id}-${request.status}`,
-                type: "request",
-                title: `${request.request_type} ${request.status}`,
-                message: request.hr_response || `Your request was ${request.status.toLowerCase()}.`,
-                time: "HR request update",
-                section: "dashboard",
-            })),
+            ...requestResult.rows.map((request) => {
+                const approved = request.status === "Approved";
+                const when = approved ? request.file_uploaded_at : request.updated_at;
+                return {
+                    // Includes the time, so a replaced document shows as a new notification
+                    id: `employee-request-${request.id}-${request.status}-${new Date(when).getTime()}`,
+                    type: "request",
+                    title: approved ? `${request.request_type} approved – document ready` : `${request.request_type} Rejected`,
+                    message: approved
+                        ? `HR approved your ${request.request_type} and uploaded "${request.file_name}". Open Documents → Requests to HR to view it.`
+                        : request.hr_response || `Your ${request.request_type} was rejected. Please contact HR for details.`,
+                    time: new Date(when).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+                    created_at: when,
+                    section: "documents",
+                };
+            }),
+            ...hrDocumentResult.rows.map((document) => {
+                const labels = { employment_contract: "Employment Contract", offer_letter: "Offer Letter", qid_copy: "QID Copy" };
+                const label = labels[document.doc_type] || document.doc_type;
+                return {
+                    id: `hr-document-${document.doc_type}-${new Date(document.uploaded_at).getTime()}`,
+                    type: "document",
+                    title: `HR added your ${label}`,
+                    message: `"${document.original_file_name}" is now available in Documents.`,
+                    time: new Date(document.uploaded_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+                    created_at: document.uploaded_at,
+                    section: "documents",
+                };
+            }),
             // Manpower Request / resignation notifications (hr_notifications inbox)
             ...(await getInbox(req.params.employeeId)).map((item) => ({
                 id: `inbox-${item.id}`,
@@ -1463,6 +1507,7 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 message: item.message,
                 time: new Date(item.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
                 section: String(item.link || "").startsWith("resignation:") ? "resignation" : "manpower",
+                created_at: item.created_at,        
             })),
         ]);
     } catch (error) {

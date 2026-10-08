@@ -3862,4 +3862,31 @@
 .employee-resignation-view .resignation-previous-alert.withdrawn .resignation-previous-alert-icon {
     background: #d97706;
 }
+/* Employee Settings: no blue shadow on "Change Password" / "Edit Profile" */
+.employee-dashboard .settings-row button:not(.settings-toggle),
+.employee-dashboard .settings-row button:not(.settings-toggle):hover,
+.employee-dashboard .settings-row button:not(.settings-toggle):focus,
+.employee-dashboard .settings-row button:not(.settings-toggle):active {
+    box-shadow: none !important;
+}
+/* Employee Settings: no blue shadow on the on/off switches */
+.employee-dashboard .settings-toggle,
+.employee-dashboard .settings-toggle:hover,
+.employee-dashboard .settings-toggle:focus,
+.employee-dashboard .settings-toggle:active {
+    box-shadow: none !important;
+}
+
+/* Keep a small neutral (grey) shadow on the round knob so it still looks like a switch */
+.employee-dashboard .settings-toggle span {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2) !important;
+}
+
+/* "Signed in as … / Log out" bar at the bottom: no shadow */
+.employee-dashboard .settings-session,
+.employee-dashboard .settings-session button,
+.employee-dashboard .settings-session button:hover,
+.employee-dashboard .settings-session button:focus {
+    box-shadow: none !important;
+}
 

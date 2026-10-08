@@ -38,6 +38,20 @@ const initialSettings = {
     supportEmail: "support@sheltergroup.com",
 };
 
+// Currencies offered in Financial Settings, with the symbol filled in automatically
+const CURRENCIES = [
+    { code: "QAR", name: "Qatari Riyal", symbol: "QR" },
+    { code: "INR", name: "Indian Rupee", symbol: "₹" },
+    { code: "AED", name: "UAE Dirham", symbol: "AED" },
+    { code: "SAR", name: "Saudi Riyal", symbol: "SAR" },
+    { code: "KWD", name: "Kuwaiti Dinar", symbol: "KD" },
+    { code: "BHD", name: "Bahraini Dinar", symbol: "BD" },
+    { code: "OMR", name: "Omani Rial", symbol: "OMR" },
+    { code: "USD", name: "US Dollar", symbol: "$" },
+    { code: "EUR", name: "Euro", symbol: "€" },
+    { code: "GBP", name: "British Pound", symbol: "£" },
+];
+
 function Settings() {
     const [activeGroup, setActiveGroup] = useState("general");
     const [settings, setSettings] = useState(() => {
@@ -150,7 +164,25 @@ function SystemSettings({ settings, updateSetting }) {
 }
 
 function FinancialSettings({ settings, updateSetting }) {
-    return <div className="settings-form-grid"><Field label="Currency"><select value={settings.currency} onChange={(event) => updateSetting("currency", event.target.value)}><option>INR</option><option>USD</option><option>QAR</option><option>EUR</option></select></Field><Field label="Currency Symbol"><input value={settings.currencySymbol} onChange={(event) => updateSetting("currencySymbol", event.target.value)} /></Field></div>;
+    // Choosing a currency also fills in its symbol (HR can still edit the symbol afterwards)
+    const changeCurrency = (code) => {
+        updateSetting("currency", code);
+        const match = CURRENCIES.find((currency) => currency.code === code);
+        if (match) updateSetting("currencySymbol", match.symbol);
+    };
+
+    return <div className="settings-form-grid">
+        <Field label="Currency">
+            <select value={settings.currency} onChange={(event) => changeCurrency(event.target.value)}>
+                {CURRENCIES.map((currency) => (
+                    <option key={currency.code} value={currency.code}>{currency.code} – {currency.name}</option>
+                ))}
+            </select>
+        </Field>
+        <Field label="Currency Symbol" hint="Filled in automatically from the currency. You can change it if needed.">
+            <input value={settings.currencySymbol} onChange={(event) => updateSetting("currencySymbol", event.target.value)} />
+        </Field>
+    </div>;
 }
 
 function OtherSettings({ settings, updateSetting }) {

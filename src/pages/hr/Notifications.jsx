@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck, AlertCircle, ArrowRight } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import "./Notifications.css";
 
 const API_BASE = "http://localhost:5000";
@@ -116,8 +117,11 @@ function Notifications() {
           }
         }
 
+        // Employee requests + Visa / Passport uploads (shared with the Dashboard bell)
+        const activityItems = await loadEmployeeActivityNotifications(hrProfile.employee_id);
+
         const readIds = getReadIds();
-        const all = [...inboxItems, ...leaveItems]
+        const all = [...activityItems, ...inboxItems, ...leaveItems]
           .map((item) => ({ ...item, read: readIds.has(item.id) }))
           .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
