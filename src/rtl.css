@@ -1,0 +1,226 @@
+/* =====================================================
+   RIGHT-TO-LEFT (Arabic) layout
+   Every rule starts with html[dir="rtl"], so it ONLY applies when Arabic is on.
+   English (dir="ltr") is never affected.
+   ===================================================== */
+
+/* ---------- HR sidebar: pinned to the RIGHT ---------- */
+html[dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, .12);
+}
+
+/* Collapse button sits on the sidebar's inner edge (now the left) */
+html[dir="rtl"] .sidebar-collapse-button {
+    right: auto;
+    left: -12px;
+}
+
+html[dir="rtl"] .sidebar.collapsed .sidebar-collapse-button {
+    right: auto;
+    left: 13px;
+}
+
+/* Scroll area: swap the left/right margins and padding */
+html[dir="rtl"] .sidebar-scroll {
+    margin: 0 -8px 0 -12px;
+    padding: 0 8px 0 6px;
+}
+
+/* Hover / active items nudge toward the content (now to the left) */
+html[dir="rtl"] .sidebar-link:hover,
+html[dir="rtl"] .sidebar-link.active {
+    transform: translateX(-4px);
+}
+
+/* Settings / Logout buttons: text aligned to the right */
+html[dir="rtl"] .sidebar-button {
+    text-align: right;
+}
+
+/* Count badges move to the far (left) end of the item */
+html[dir="rtl"] .sidebar-badge {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+html[dir="rtl"] .sidebar.collapsed .sidebar-badge {
+    right: auto;
+    left: 8px;
+}
+
+/* ---------- HR page content: room on the RIGHT for the sidebar ---------- */
+html[dir="rtl"] .dashboard-content,
+html[dir="rtl"] .hr-dashboard-layout .dashboard-content {
+    margin-left: 0;
+    margin-right: 250px;
+}
+
+html[dir="rtl"] .sidebar-collapsed .dashboard-content,
+html[dir="rtl"] .hr-dashboard-layout.sidebar-collapsed .dashboard-content {
+    margin-left: 0;
+    margin-right: 78px;
+}
+
+/* Phones: the sidebar is hidden, so no side room is needed */
+@media (max-width: 650px) {
+    html[dir="rtl"] .dashboard-content,
+    html[dir="rtl"] .hr-dashboard-layout .dashboard-content,
+    html[dir="rtl"] .sidebar-collapsed .dashboard-content {
+        margin-right: 0;
+    }
+}
+/* ---------- Shelter Assistant: bottom-LEFT in Arabic (sidebar is on the right) ---------- */
+html[dir="rtl"] .shelter-assistant-container,
+html[dir="rtl"] .shelter-assistant-window {
+    right: auto;
+    left: 24px;
+}
+
+/* Older HR assistant launcher + panel (if used on any page) */
+html[dir="rtl"] .hr-assistant-launcher,
+html[dir="rtl"] .hr-assistant-panel {
+    right: auto;
+    left: 26px;
+}
+
+/* Phones: same mirror, with the smaller phone spacing */
+@media (max-width: 480px) {
+    html[dir="rtl"] .shelter-assistant-container,
+    html[dir="rtl"] .shelter-assistant-window {
+        right: auto;
+        left: 16px;
+    }
+}
+
+@media (max-width: 650px) {
+    html[dir="rtl"] .hr-assistant-launcher,
+    html[dir="rtl"] .hr-assistant-panel {
+        right: auto;
+        left: 16px;
+    }
+}
+/* =====================================================
+   EMPLOYEE PORTAL (Arabic)
+   ===================================================== */
+
+/* ---------- Employee sidebar: pinned to the RIGHT ---------- */
+html[dir="rtl"] .employee-sidebar {
+    left: auto;
+    right: 0;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, .12);
+}
+
+/* Collapse button on the sidebar's inner edge (now the left) */
+html[dir="rtl"] .employee-collapse-button {
+    right: auto;
+    left: 0;
+}
+
+/* Scroll area: swap the left/right margins and padding */
+html[dir="rtl"] .employee-sidebar-scroll {
+    margin: 0 -8px 0 -12px;
+    padding: 0 8px 0 6px;
+}
+
+/* Menu items and Logout: text from the right, nudge toward the content */
+html[dir="rtl"] .employee-menu-item,
+html[dir="rtl"] .employee-logout {
+    text-align: right;
+}
+
+html[dir="rtl"] .employee-menu-item:hover,
+html[dir="rtl"] .employee-menu-item.active,
+html[dir="rtl"] .employee-logout:hover {
+    transform: translateX(-4px);
+}
+
+/* ---------- Employee page content: room on the RIGHT ---------- */
+html[dir="rtl"] .employee-main {
+    margin-left: 0;
+    margin-right: 250px;
+}
+
+html[dir="rtl"] .employee-dashboard.sidebar-collapsed .employee-main {
+    margin-left: 0;
+    margin-right: 78px;
+}
+
+/* Pop-up backgrounds start after the sidebar (now from the right) */
+html[dir="rtl"] .employee-modal {
+    left: 0;
+    right: 250px;
+}
+
+html[dir="rtl"] .employee-dashboard.sidebar-collapsed .employee-modal {
+    left: 0;
+    right: 78px;
+}
+
+/* Medium screens: the sidebar is 190px wide */
+@media (max-width: 700px) {
+    html[dir="rtl"] .employee-main {
+        margin-left: 0;
+        margin-right: 190px;
+    }
+
+    html[dir="rtl"] .employee-modal {
+        left: 0;
+        right: 190px;
+    }
+}
+
+/* Phones: the sidebar is hidden, so no side room is needed */
+@media (max-width: 650px) {
+    html[dir="rtl"] .employee-main,
+    html[dir="rtl"] .employee-dashboard.sidebar-collapsed .employee-main {
+        margin-right: 0;
+    }
+
+    html[dir="rtl"] .employee-modal,
+    html[dir="rtl"] .employee-dashboard.sidebar-collapsed .employee-modal {
+        right: 0;
+    }
+}
+
+/* ---------- Page titles: orange accent bar on the RIGHT ---------- */
+/* Employee portal title */
+html[dir="rtl"] .employee-header > div:first-child {
+    padding-left: 0;
+    padding-right: 14px;
+}
+
+html[dir="rtl"] .employee-header > div:first-child::before {
+    left: auto;
+    right: 0;
+}
+
+/* HR Dashboard title */
+html[dir="rtl"] .dashboard-header {
+    padding-left: 0;
+    padding-right: 14px;
+}
+
+html[dir="rtl"] .dashboard-header::before {
+    left: auto;
+    right: 0;
+}
+
+/* ---------- Small details ---------- */
+/* Red unread count on the bell: top-LEFT */
+html[dir="rtl"] .employee-notification-count {
+    right: auto;
+    left: -6px;
+}
+
+/* Close (×) buttons on employee pop-ups: top-LEFT */
+html[dir="rtl"] .modal-close {
+    right: auto;
+    left: 20px;
+}
+
+html[dir="rtl"] .leave-tracking-close {
+    right: auto;
+    left: 17px;
+}

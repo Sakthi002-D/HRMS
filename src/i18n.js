@@ -39,5 +39,13 @@ export function changeAppLanguage(code) {
         // Storage blocked (private mode): the language still changes for this visit
     }
 }
+// Arabic is written right-to-left: flip the page direction with the language
+function applyDirection(language) {
+    const html = document.documentElement;
+    html.dir = language === "ar" ? "rtl" : "ltr";
+    html.lang = language === "ar" ? "ar" : "en";
+}
+applyDirection(i18n.language);
+i18n.on("languageChanged", applyDirection);
 
 export default i18n;
