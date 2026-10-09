@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
@@ -72,6 +73,7 @@ const formatAttendanceTime = (time) => {
 
 function EmployeeDashboard() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [employee, setEmployee] = useState(null);
@@ -375,34 +377,34 @@ function EmployeeDashboard() {
         e.preventDefault();
 
         if (!formData.from_date || !formData.to_date) {
-            showAlert("Please select From Date and To Date");
+            showAlert(t("leaveDetails.selectDates"));
             return;
         }
 
         if (formData.to_date < formData.from_date) {
-            showAlert("To Date must be after From Date");
+            showAlert(t("leaveDetails.toAfterFrom"));
             return;
         }
 
         // Accepted resignation: no leave after the last working day
         if (servingNotice && formData.to_date > activeResignation.last_working_day) {
-            showAlert(`Leave can't include dates after your last working day (${formatResignationDate(activeResignation.last_working_day)}).`);
+            showAlert(t("leaveDetails.afterLastWorkingDay", { date: formatResignationDate(activeResignation.last_working_day) }));
             return;
         }
 
         if (!selectedLeaveInfo.eligible) {
-            showAlert(`${formData.leave_type} is not eligible yet. Please complete the required service period.`);
+            showAlert(t("leaveDetails.notEligible", { type: t(`leaveTypes.${formData.leave_type}`, { defaultValue: formData.leave_type }) }));
             return;
         }
 
         // Annual Leave: requested ≤ balance − pending (same number the card shows)
         if (formData.leave_type === "Annual Leave") {
             if (selectedLeaveInfo.available !== null && requestedDays > selectedLeaveInfo.available) {
-                showAlert(`Available to apply: ${selectedLeaveInfo.available} day(s)`);
+                showAlert(t("leaveDetails.availableToApply", { count: selectedLeaveInfo.available }));
                 return;
             }
         } else if (selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
-            showAlert(`Only ${selectedLeaveInfo.remaining} day(s) remaining for ${formData.leave_type}.`);
+            showAlert(t("leaveDetails.onlyRemaining", { count: selectedLeaveInfo.remaining, type: t(`leaveTypes.${formData.leave_type}`, { defaultValue: formData.leave_type }) }));
             return;
         }
 
@@ -429,11 +431,11 @@ function EmployeeDashboard() {
             const data = await response.json();
 
             if (!response.ok) {
-                showAlert(data.message || "Failed to apply leave");
+                showAlert(data.message || t("leaveDetails.applyFailed"));
                 return;
             }
 
-            showAlert("Leave applied successfully!", "success");
+            showAlert(t("leaveDetails.applied"), "success");
 
             setFormData({
                 leave_type: "Annual Leave",
@@ -449,7 +451,7 @@ function EmployeeDashboard() {
 
         } catch (error) {
             console.error("Apply leave error:", error);
-            showAlert("Unable to connect to backend");
+            showAlert(t("leaveDetails.noBackend"));
         } finally {
             setLoading(false);
         }
@@ -464,13 +466,13 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) {
-                showAlert(data.message || "Unable to cancel leave request");
+                showAlert(data.message || t("leaveDetails.cancelFailed"));
                 return;
             }
             setOpenTrackingId(null);
             fetchLeaves(employee.employee_id);
         } catch (error) {
-            showAlert("Unable to cancel leave request");
+            showAlert(t("leaveDetails.cancelFailed"));
             console.error("Cancel leave error:", error);
         }
     };
@@ -749,51 +751,98 @@ function EmployeeDashboard() {
         ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 3, joiningDate.getDate())
         : null;
     const formatRuleDate = (date) => date?.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        // Leave policy texts shown in the Apply Leave box (translated; numbers filled in from the rules)
     const leaveTypeDetails = {
         "Paternity Leave": {
-            detail: "Entitlement is based on the company HR policy.",
-            entitlement: "HR policy",
-            approval: "HR approval",
-            document: "As required by HR",
-            pay: "As per policy",
+            detail: t("leavePolicy.paternityDetail"),
+            entitlement: t("leavePolicy.hrPolicy"),
+            approval: t("leavePolicy.hrApproval"),
+            document: t("leavePolicy.asRequiredByHr"),
+            pay: t("leavePolicy.asPerPolicy"),
         },
         "Hajj Leave": {
-            detail: "One-time religious leave, subject to company policy and approval.",
-            entitlement: "HR policy",
-            approval: "HR approval",
-            document: "Supporting document may be required",
-            pay: "As per policy",
+            detail: t("leavePolicy.hajjDetail"),
+            entitlement: t("leavePolicy.hrPolicy"),
+            approval: t("leavePolicy.hrApproval"),
+            document: t("leavePolicy.supportingDocMayBeRequired"),
+            pay: t("leavePolicy.asPerPolicy"),
         },
         "Emergency Leave": {
-            detail: "For urgent personal or family emergencies.",
-            entitlement: "HR policy",
-            approval: "Manager / HR approval",
-            document: "Supporting document may be required",
-            pay: "As per policy",
+            detail: t("leavePolicy.emergencyDetail"),
+            entitlement: t("leavePolicy.hrPolicy"),
+            approval: t("leavePolicy.managerOrHrApproval"),
+            document: t("leavePolicy.supportingDocMayBeRequired"),
+            pay: t("leavePolicy.asPerPolicy"),
         },
         "Unpaid Leave (LOP)": {
-            detail: "No paid leave balance is consumed.",
-            entitlement: "No fixed balance",
-            approval: "Manager / HR approval",
-            document: "As required by HR",
-            pay: "Unpaid",
+            detail: t("leavePolicy.unpaidDetail"),
+            entitlement: t("leavePolicy.noFixedBalance"),
+            approval: t("leavePolicy.managerOrHrApproval"),
+            document: t("leavePolicy.asRequiredByHr"),
+            pay: t("leavePolicy.unpaid"),
         },
         "Compensatory Off": {
-            detail: "Available for approved work on a public holiday or weekend.",
-            entitlement: "Valid for 90 days",
-            approval: "Manager approval",
-            document: "Work proof required",
-            pay: "Paid time off",
+            detail: t("leavePolicy.compensatoryDetail"),
+            entitlement: t("leavePolicy.validForDays", { count: LEAVE_RULES.compensatory.validityDays }),
+            approval: t("leavePolicy.managerApproval"),
+            document: t("leavePolicy.workProofRequired"),
+            pay: t("leavePolicy.paidTimeOff"),
         },
     };
     const selectedLeaveInfo = selectedLeaveType === "Annual Leave"
-        ? { eligible: true, remaining: annualBalance ? annualBalance.remaining : null, balanceLabel: "Used / Balance", used: annualBalance?.used ?? 0, pending: annualBalance?.pending ?? 0, available: annualBalance?.available ?? null, entitlement: annualBalance ? `${annualBalance.yearlyEntitlementDays} days/year (${annualBalance.monthlyAccrual.toFixed(2)} days/month)` : "-", approval: "HR approval", document: "Not required", pay: "Paid leave", detail: annualBalance ? `${annualBalance.monthlyAccrual.toFixed(2)} days accrue every completed month, with carry-forward` : "Loading Annual Leave balance..." }
+        ? {
+            eligible: true,
+            remaining: annualBalance ? annualBalance.remaining : null,
+            // Not shown directly: ApplyLeaveModal checks this exact English value to pick its heading
+            balanceLabel: "Used / Balance",
+            used: annualBalance?.used ?? 0,
+            pending: annualBalance?.pending ?? 0,
+            available: annualBalance?.available ?? null,
+            entitlement: annualBalance
+                ? t("leavePolicy.annualEntitlement", { yearly: annualBalance.yearlyEntitlementDays, monthly: annualBalance.monthlyAccrual.toFixed(2) })
+                : "-",
+            approval: t("leavePolicy.hrApproval"),
+            document: t("leavePolicy.notRequired"),
+            pay: t("leavePolicy.paidLeave"),
+            detail: annualBalance
+                ? t("leavePolicy.annualDetail", { monthly: annualBalance.monthlyAccrual.toFixed(2) })
+                : t("leavePolicy.annualLoading"),
+        }
         : selectedLeaveType === "Sick Leave"
-            ? { eligible: sickEligible, remaining: sickEligible ? Math.max(0, LEAVE_RULES.sick.totalDays - sickTaken) : null, used: sickTaken, entitlement: "84 days maximum", approval: "HR approval", document: "Medical certificate mandatory", pay: "14 full + 28 half + 42 unpaid", detail: sickEligible ? "14 days full pay • 28 days half pay • 42 days unpaid" : `Eligible after: ${formatRuleDate(sickEligibleDate)}` }
+            ? {
+                eligible: sickEligible,
+                remaining: sickEligible ? Math.max(0, LEAVE_RULES.sick.totalDays - sickTaken) : null,
+                used: sickTaken,
+                entitlement: t("leavePolicy.daysMaximum", { count: LEAVE_RULES.sick.totalDays }),
+                approval: t("leavePolicy.hrApproval"),
+                document: t("leavePolicy.medicalCertificate"),
+                pay: t("leavePolicy.sickPay"),
+                detail: sickEligible
+                    ? t("leavePolicy.sickDetail")
+                    : t("leavePolicy.eligibleAfter", { date: formatRuleDate(sickEligibleDate) }),
+            }
             : selectedLeaveType === "Maternity Leave"
-                ? { eligible: true, remaining: Math.max(0, LEAVE_RULES.maternity.days - maternityTaken), used: maternityTaken, entitlement: "50 days", approval: "HR approval", document: "Medical certificate mandatory", pay: "Full pay", detail: "Maternity leave entitlement" }
+                ? {
+                    eligible: true,
+                    remaining: Math.max(0, LEAVE_RULES.maternity.days - maternityTaken),
+                    used: maternityTaken,
+                    entitlement: t("leavePolicy.daysTotal", { count: LEAVE_RULES.maternity.days }),
+                    approval: t("leavePolicy.hrApproval"),
+                    document: t("leavePolicy.medicalCertificate"),
+                    pay: t("leavePolicy.fullPay"),
+                    detail: t("leavePolicy.maternityDetail"),
+                }
                 : selectedLeaveType === "Bereavement Leave"
-                    ? { eligible: true, remaining: Math.max(0, LEAVE_RULES.bereavement.days - bereavementTaken), used: bereavementTaken, entitlement: "3 days", approval: "Manager approval", document: "Proof may be required", pay: "As per policy", detail: "Immediate family" }
+                    ? {
+                        eligible: true,
+                        remaining: Math.max(0, LEAVE_RULES.bereavement.days - bereavementTaken),
+                        used: bereavementTaken,
+                        entitlement: t("leavePolicy.daysTotal", { count: LEAVE_RULES.bereavement.days }),
+                        approval: t("leavePolicy.managerApproval"),
+                        document: t("leavePolicy.proofMayBeRequired"),
+                        pay: t("leavePolicy.asPerPolicy"),
+                        detail: t("leavePolicy.bereavementDetail"),
+                    }
                     : selectedLeaveType === "Compensatory Off"
                         ? { eligible: true, remaining: null, ...leaveTypeDetails["Compensatory Off"] }
                         : { eligible: true, remaining: null, ...leaveTypeDetails[selectedLeaveType] };
@@ -877,9 +926,9 @@ function EmployeeDashboard() {
         year: "numeric",
     });
     const leaveBreakdown = [
-        { label: "Approved", value: approvedLeaves, color: "#00be63" },
-        { label: "Pending", value: pendingLeaves, color: "#f7b500" },
-        { label: "Rejected", value: rejectedLeaves, color: "#e11d2e" },
+        { label: t("dashboard.approved"), value: approvedLeaves, color: "#00be63" },
+        { label: t("dashboard.pending"), value: pendingLeaves, color: "#f7b500" },
+        { label: t("dashboard.rejected"), value: rejectedLeaves, color: "#e11d2e" },
     ];
     const chartTotal = leaves.length;
     const chartGradient = leaveBreakdown.reduce((gradient, item) => {
@@ -914,52 +963,8 @@ function EmployeeDashboard() {
                 <header className="employee-header">
 
                     <div>
-                        <h1>
-                            {activeSection === "profile"
-                                ? "My Profile"
-                                : activeSection === "leave"
-                                    ? "Leave Details"
-                                    : activeSection === "settings"
-                                        ? "Settings"
-                                        : activeSection === "attendance"
-                                            ? "Employee Attendance"
-                                            : activeSection === "payroll"
-                                                ? "Payroll"
-                                                : activeSection === "documents"
-                                                    ? "Documents"
-                                                : activeSection === "manpower"
-                                                    ? "Manpower Requests"
-                                                : activeSection === "resignation"
-                                                    ? "Resignation"
-                                                : activeSection === "notifications"
-                                                    ? "Notifications"
-                                                : activeSection === "change-password"
-                                                    ? "Change Password"
-                                    : "Employee Dashboard"}
-                        </h1>
-                        <p>
-                            {activeSection === "profile"
-                                ? "Complete employee information from HR records"
-                                : activeSection === "leave"
-                                    ? "View and manage your leave requests"
-                                    : activeSection === "settings"
-                                        ? "Manage your account and dashboard preferences"
-                                    : activeSection === "attendance"
-                                        ? "Review your recent attendance records"
-                                    : activeSection === "payroll"
-                                        ? "View your salary, benefits and payslips"
-                                    : activeSection === "documents"
-                                        ? "Access your important employment documents"
-                                    : activeSection === "manpower"
-                                        ? "Raise manpower requests and review the ones awaiting your approval"
-                                    : activeSection === "resignation"
-                                        ? "Submit and track your resignation"
-                                    : activeSection === "notifications"
-                                        ? "All your updates in one place"
-                                    : activeSection === "change-password"
-                                        ? "Update your employee account password"
-                                    : `Welcome back, ${employee.name}`}
-                        </p>
+                        <h1>{t(`employeeHeader.${activeSection}.title`)}</h1>
+                        <p>{t(`employeeHeader.${activeSection}.subtitle`, { name: employee.name })}</p>
                     </div>
                     {activeSection === "dashboard" && <div className="employee-notification-wrapper">
                         <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label="Open notifications">
@@ -987,25 +992,25 @@ function EmployeeDashboard() {
                                     employee.name?.charAt(0)?.toUpperCase()
                                 )}
                             </div>
-                            <div><h2>{employee.name}</h2><p>{employee.designation || "Employee"}</p></div>
+                            <div><h2>{employee.name}</h2><p>{employee.designation || t("dashboard.employee")}</p></div>
                         </div>
                         <div className="identity-details">
-                            <div><label>Phone Number</label><strong>{profileValue(employee.phone)}</strong></div>
-                            <div><label>Email Address</label><strong>{profileValue(employee.email)}</strong></div>
-                            <div><label>Department</label><strong>{profileValue(employee.department)}</strong></div>
-                            <div><label>Joined on</label><strong>{formatProfileDate(employee.joining_date)}</strong></div>
+                            <div><label>{t("dashboard.phoneNumber")}</label><strong>{profileValue(employee.phone)}</strong></div>
+                            <div><label>{t("dashboard.emailAddress")}</label><strong>{profileValue(employee.email)}</strong></div>
+                            <div><label>{t("dashboard.department")}</label><strong>{profileValue(employee.department)}</strong></div>
+                            <div><label>{t("dashboard.joinedOn")}</label><strong>{formatProfileDate(employee.joining_date)}</strong></div>
                         </div>
                     </article>
 
                     <article className="employee-leave-chart-card">
-                        <div className="overview-card-heading"><h2>Leave Details</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
+                        <div className="overview-card-heading"><h2>{t("dashboard.leaveDetails")}</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
                         <div className="leave-chart-content">
                             <div className="leave-legend">
                                 {leaveBreakdown.map((item) => {
                                     const percentage = chartTotal ? Math.round((item.value / chartTotal) * 100) : 0;
                                     return <div key={item.label}><i style={{ backgroundColor: item.color }} /><strong>{item.value}</strong> {item.label} <em>({percentage}%)</em></div>;
                                 })}
-                                <div className="leave-legend-total"><i /><strong>{leaves.length}</strong> Requests</div>
+                                <div className="leave-legend-total"><i /><strong>{leaves.length}</strong> {t("dashboard.requests")}</div>
                             </div>
                             <div className="leave-bar-chart" aria-label={`${leaves.length} leave requests: ${approvedLeaves} approved, ${pendingLeaves} pending, ${rejectedLeaves} rejected`}>
                                 {leaveBreakdown.map((item) => {
@@ -1024,20 +1029,20 @@ function EmployeeDashboard() {
                     </article>
 
                     <article className="employee-leave-summary-card">
-                        <div className="overview-card-heading"><h2>Leave Summary</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
+                        <div className="overview-card-heading"><h2>{t("dashboard.leaveSummary")}</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
                         <div className="leave-summary-grid">
-                            <div><label>Total Requests</label><strong>{leaves.length}</strong></div><div><label>Taken Days</label><strong>{approvedLeaveDays}</strong></div>
-                            <div><label>Pending</label><strong>{pendingLeaves}</strong></div><div><label>Rejected</label><strong>{rejectedLeaves}</strong></div>
-                            <div><label>Approved Days</label><strong>{approvedLeaveDays}</strong></div><div><label>Requests</label><strong>{leaves.length}</strong></div>
+                            <div><label>{t("dashboard.totalRequests")}</label><strong>{leaves.length}</strong></div><div><label>{t("dashboard.takenDays")}</label><strong>{approvedLeaveDays}</strong></div>
+                            <div><label>{t("dashboard.pending")}</label><strong>{pendingLeaves}</strong></div><div><label>{t("dashboard.rejected")}</label><strong>{rejectedLeaves}</strong></div>
+                            <div><label>{t("dashboard.approvedDays")}</label><strong>{approvedLeaveDays}</strong></div><div><label>{t("dashboard.requests")}</label><strong>{leaves.length}</strong></div>
                         </div>
                     </article>
                 </section>
 
                 <section className="employee-work-metrics">
-                    <div className="work-metric-card attendance-metric"><div className="metric-icon"><Clock3 size={15} /></div><strong>{displayDate}</strong><small>Attendance</small><div className="metric-progress"><span style={{ width: `${attendanceProgress}%` }} /></div><b>{todayAttendance ? "Attendance recorded" : shiftEnded ? "Absent" : "No attendance yet"}</b></div>
-                    <div className="work-metric-card"><div className="metric-icon dark"><Clock3 size={15} /></div><strong>{formatHours(todayHours)} <em>/ 9</em></strong><small>Total Hours Today</small><b className="metric-up">Actual attendance hours</b></div>
-                    <div className="work-metric-card"><div className="metric-icon blue"><CalendarDays size={15} /></div><strong>{formatHours(weekHours)} <em>/ 40</em></strong><small>Total Hours Week</small><b className="metric-up">Last 7 days</b></div>
-                    <div className="work-metric-card"><div className="metric-icon pink"><FileText size={15} /></div><strong>{approvedLeaveDaysThisYear}</strong><small>Approved Days This Year</small><b className="metric-up">From approved requests</b></div>
+                    <div className="work-metric-card attendance-metric"><div className="metric-icon"><Clock3 size={15} /></div><strong>{displayDate}</strong><small>{t("dashboard.attendance")}</small><div className="metric-progress"><span style={{ width: `${attendanceProgress}%` }} /></div><b>{todayAttendance ? t("dashboard.attendanceRecorded") : shiftEnded ? t("dashboard.absent") : t("dashboard.noAttendanceYet")}</b></div>
+                    <div className="work-metric-card"><div className="metric-icon dark"><Clock3 size={15} /></div><strong>{formatHours(todayHours)} <em>/ 9</em></strong><small>{t("dashboard.totalHoursToday")}</small><b className="metric-up">{t("dashboard.actualAttendanceHours")}</b></div>
+                    <div className="work-metric-card"><div className="metric-icon blue"><CalendarDays size={15} /></div><strong>{formatHours(weekHours)} <em>/ 40</em></strong><small>{t("dashboard.totalHoursWeek")}</small><b className="metric-up">{t("dashboard.last7Days")}</b></div>
+                    <div className="work-metric-card"><div className="metric-icon pink"><FileText size={15} /></div><strong>{approvedLeaveDaysThisYear}</strong><small>{t("dashboard.approvedDaysThisYear")}</small><b className="metric-up">{t("dashboard.fromApprovedRequests")}</b></div>
                 </section>
 
 
@@ -1082,36 +1087,36 @@ function EmployeeDashboard() {
                     <div className="employee-section-header">
                         <span />
                         <button className="apply-leave-btn" onClick={openApplyLeave}>
-                            <CalendarDays size={15} /> Apply Leave
+                            <CalendarDays size={15} /> {t("leaveDetails.applyLeave")}
                         </button>
                     </div>
                     <section className="employee-summary">
                         <div className="employee-stat-card">
                             <span><ClipboardList size={18} /></span>
-                            <div><small>Total Requests</small><strong>{leaves.length}</strong></div>
+                            <div><small>{t("dashboard.totalRequests")}</small><strong>{leaves.length}</strong></div>
                         </div>
                         <div className="employee-stat-card">
                             <span><Hourglass size={18} /></span>
-                            <div><small>Pending</small><strong>{pendingLeaves}</strong></div>
+                            <div><small>{t("dashboard.pending")}</small><strong>{pendingLeaves}</strong></div>
                         </div>
                         <div className="employee-stat-card">
                             <span><Check size={18} /></span>
-                            <div><small>Approved</small><strong>{approvedLeaves}</strong></div>
+                            <div><small>{t("dashboard.pending")}</small><strong>{pendingLeaves}</strong></div>
                         </div>
                         <div className="employee-stat-card">
                             <span><X size={18} /></span>
-                            <div><small>Rejected</small><strong>{rejectedLeaves}</strong></div>
+                            <div><small>{t("dashboard.rejected")}</small><strong>{rejectedLeaves}</strong></div>
                         </div>
                     </section>
                     <section className="employee-holiday-section">
                         <div className="overview-card-heading">
-                            <h2>Qatar Holiday Calendar</h2>
+                            <h2>{t("leaveDetails.holidayCalendar")}</h2>
                             <div className="holiday-heading-actions">
                                 <span><CalendarDays size={14} /> {currentYear}</span>
                                 <button
                                     type="button"
                                     className="holiday-toggle"
-                                    aria-label={holidaysExpanded ? "Collapse holiday calendar" : "Expand holiday calendar"}
+                                    aria-label={holidaysExpanded ? t("leaveDetails.collapseHolidays") : t("leaveDetails.expandHolidays")}
                                     aria-expanded={holidaysExpanded}
                                     onClick={() => setHolidaysExpanded((expanded) => !expanded)}
                                 >
@@ -1125,7 +1130,7 @@ function EmployeeDashboard() {
                                     <div className="employee-holiday-row" key={`${holiday.name}-${holiday.date}`}>
                                         <strong>{holiday.name}</strong>
                                         <span>{holiday.date}</span>
-                                        <b>{holiday.days} {Number(holiday.days) === 1 ? "day" : "days"}</b>
+                                        <b>{t("leaveDetails.daysCount", { count: Number(holiday.days) })}</b>
                                     </div>
                                 ))}
                             </div>
@@ -1135,13 +1140,13 @@ function EmployeeDashboard() {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Leave Type</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Days</th>
-                                    <th>Reason</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th>{t("leaveDetails.leaveType")}</th>
+                                    <th>{t("leaveDetails.from")}</th>
+                                    <th>{t("leaveDetails.to")}</th>
+                                    <th>{t("leaveDetails.days")}</th>
+                                    <th>{t("leaveDetails.reason")}</th>
+                                    <th>{t("leaveDetails.statusHeader")}</th>
+                                    <th>{t("leaveDetails.action")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1158,14 +1163,14 @@ function EmployeeDashboard() {
                                                 if (event.key === "Enter" || event.key === " ") setOpenTrackingId(leave.id);
                                             }}
                                         >
-                                            <td>{leave.leave_type}</td>
+                                            <td>{t(`leaveTypes.${leave.leave_type}`, { defaultValue: leave.leave_type })}</td>
                                             <td>{formatProfileDate(leave.from_date)}</td>
                                             <td>{formatProfileDate(leave.to_date)}</td>
                                             <td>{leave.days}</td>
                                             <td>{leave.reason || "-"}</td>
                                             <td>
                                                 <div className="leave-status-cell">
-                                                    <span className={`employee-status ${status}`}>{leave.status}</span>
+                                                    <span className={`employee-status ${status}`}>{t(`leaveDetails.status.${status}`, { defaultValue: leave.status })}</span>
                                                 </div>
                                             </td>
                                             <td>
@@ -1178,14 +1183,14 @@ function EmployeeDashboard() {
                                                             setCancelLeaveId(leave.id);
                                                         }}
                                                     >
-                                                        Cancel
+                                                        {t("leaveDetails.cancel")}
                                                     </button>
                                                 )}
                                             </td>
                                         </tr>
                                     );
                                 }) : (
-                                    <tr><td className="no-leaves" colSpan="7">No leave requests found.</td></tr>
+                                    <tr><td className="no-leaves" colSpan="7">{t("leaveDetails.noLeaves")}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -1193,22 +1198,22 @@ function EmployeeDashboard() {
                     {selectedTrackingLeave && (
                         <div className="leave-tracking-modal">
                             <div className="leave-tracking-panel" onClick={(event) => event.stopPropagation()}>
-                                <button type="button" className="leave-tracking-close" onClick={() => setOpenTrackingId(null)} aria-label="Close leave tracking">×</button>
-                                <p className="leave-tracking-kicker">Leave request tracking</p>
-                                <h2>{selectedTrackingLeave.leave_type}</h2>
+                                <button type="button" className="leave-tracking-close" onClick={() => setOpenTrackingId(null)} aria-label={t("leaveDetails.closeTracking")}>×</button>
+                                <p className="leave-tracking-kicker">{t("leaveDetails.trackingKicker")}</p>
+                                <h2>{t(`leaveTypes.${selectedTrackingLeave.leave_type}`, { defaultValue: selectedTrackingLeave.leave_type })}</h2>
                                 <div className="leave-tracking-meta">
                                     <span>{formatProfileDate(selectedTrackingLeave.from_date)} - {formatProfileDate(selectedTrackingLeave.to_date)}</span>
-                                    <span>{selectedTrackingLeave.days} day(s)</span>
-                                    <span>{selectedTrackingLeave.reason || "No reason provided"}</span>
+                                    <span>{t("leaveDetails.daysCount", { count: Number(selectedTrackingLeave.days) })}</span>
+                                    <span>{selectedTrackingLeave.reason || t("leaveDetails.noReason")}</span>
                                 </div>
                                 <div className={`leave-tracker ${selectedTrackingLeave.status?.trim().toLowerCase()}`}>
-                                    <div className="leave-tracker-step complete"><span><ClipboardList size={16} /></span><small>Submitted</small></div>
+                                    <div className="leave-tracker-step complete"><span><ClipboardList size={16} /></span><small>{t("leaveDetails.submitted")}</small></div>
                                     <i />
-                                    <div className={`leave-tracker-step ${selectedTrackingLeave.status?.trim().toLowerCase() === "pending" ? "current" : "complete"}`}><span><Hourglass size={16} /></span><small>Under review</small></div>
+                                    <div className={`leave-tracker-step ${selectedTrackingLeave.status?.trim().toLowerCase() === "pending" ? "current" : "complete"}`}><span><Hourglass size={16} /></span><small>{t("leaveDetails.underReview")}</small></div>
                                     <i />
-                                    <div className={`leave-tracker-step ${selectedTrackingLeave.status?.trim().toLowerCase() === "pending" ? "" : "current"}`}><span>{selectedTrackingLeave.status?.trim().toLowerCase() === "rejected" ? <X size={17} /> : <Check size={17} />}</span><small>{selectedTrackingLeave.status?.trim().toLowerCase() === "rejected" ? "Rejected" : selectedTrackingLeave.status?.trim().toLowerCase() === "approved" ? "Approved" : "Pending"}</small></div>
+                                    <div className={`leave-tracker-step ${selectedTrackingLeave.status?.trim().toLowerCase() === "pending" ? "" : "current"}`}><span>{selectedTrackingLeave.status?.trim().toLowerCase() === "rejected" ? <X size={17} /> : <Check size={17} />}</span><small>{selectedTrackingLeave.status?.trim().toLowerCase() === "rejected" ? t("leaveDetails.status.rejected") : selectedTrackingLeave.status?.trim().toLowerCase() === "approved" ? t("leaveDetails.status.approved") : t("leaveDetails.status.pending")}</small></div>
                                 </div>
-                                <strong className={`leave-tracking-result ${selectedTrackingLeave.status?.trim().toLowerCase()}`}>{selectedTrackingLeave.status}</strong>
+                                <strong className={`leave-tracking-result ${selectedTrackingLeave.status?.trim().toLowerCase()}`}>{t(`leaveDetails.status.${selectedTrackingLeave.status?.trim().toLowerCase()}`, { defaultValue: selectedTrackingLeave.status })}</strong>
                             </div>
                         </div>
                     )}
@@ -1298,11 +1303,11 @@ function EmployeeDashboard() {
                 <div className="cancel-confirm-overlay">
                     <div className="cancel-confirm-card" role="dialog" aria-modal="true" aria-labelledby="cancel-confirm-title">
                         <div className="cancel-confirm-icon">!</div>
-                        <h2 id="cancel-confirm-title">Cancel leave request?</h2>
-                        <p>This pending leave request will be cancelled and sent to HR as <strong>Cancelled by Employee</strong>.</p>
+                        <h2 id="cancel-confirm-title">{t("leaveDetails.cancelTitle")}</h2>
+                        <p>{t("leaveDetails.cancelMessage")} <strong>{t("leaveDetails.cancelledByEmployee")}</strong>.</p>
                         <div className="cancel-confirm-actions">
-                            <button type="button" className="cancel-keep-btn" onClick={() => setCancelLeaveId(null)}>Keep Request</button>
-                            <button type="button" className="cancel-confirm-btn" onClick={async () => { const leaveId = cancelLeaveId; setCancelLeaveId(null); await cancelLeave(leaveId); }}>Yes, Cancel Leave</button>
+                            <button type="button" className="cancel-keep-btn" onClick={() => setCancelLeaveId(null)}>{t("leaveDetails.keepRequest")}</button>
+                            <button type="button" className="cancel-confirm-btn" onClick={async () => { const leaveId = cancelLeaveId; setCancelLeaveId(null); await cancelLeave(leaveId); }}>{t("leaveDetails.yesCancel")}</button>
                         </div>
                     </div>
                 </div>

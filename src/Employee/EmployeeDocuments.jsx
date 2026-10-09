@@ -1,32 +1,34 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, Eye, FileCheck2, FileText, ReceiptText, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useConfirm } from "../components/common/dialog/dialogContext";
 import { DocumentToast, EmployeeDocumentPreviewModal } from "../components/documents/EmployeeDocumentOverlays";
 import { formatDocumentDate, listEmployeeDocuments, uploadEmployeeDocument } from "../components/documents/employeeDocumentApi";
 import API_URL from "../config/api";
 import "./EmployeeDocuments.css";
 
-// uploadedBy must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
+// key = document type used by the backend; uploadedBy must match backend/routes/employeeDocuments.js
 const documentItems = [
-    { key: "employment_contract", title: "Employment Contract", description: "Your signed employment agreement", icon: FileCheck2, uploadedBy: "HR" },
-    { key: "offer_letter", title: "Offer Letter", description: "Your official offer letter", icon: FileText, uploadedBy: "HR" },
-    { key: "visa_copy", title: "Visa Copy", description: "Your employee visa document", icon: ShieldCheck, uploadedBy: "EMPLOYEE" },
-    { key: "qid_copy", title: "QID Copy", description: "Your Qatar ID document", icon: ShieldCheck, uploadedBy: "HR" },
-    { key: "passport_copy", title: "Passport Copy", description: "Your passport document", icon: FileText, uploadedBy: "EMPLOYEE" },
+    { key: "employment_contract", icon: FileCheck2, uploadedBy: "HR" },
+    { key: "offer_letter", icon: FileText, uploadedBy: "HR" },
+    { key: "visa_copy", icon: ShieldCheck, uploadedBy: "EMPLOYEE" },
+    { key: "qid_copy", icon: ShieldCheck, uploadedBy: "HR" },
+    { key: "passport_copy", icon: FileText, uploadedBy: "EMPLOYEE" },
 ];
 
 const FILE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 
-// Requests to HR: each opens the request form (EmployeeRequestModal) and is saved
-// for HR → Employee Requests. Titles must match the request types the form knows.
+// requestType = what is SAVED for HR (must stay in English).
+// labelKey   = translated label shown on the card.
 const REQUEST_ITEMS = [
-    { title: "Salary Certificate", description: "Request an official salary certificate from HR", icon: ReceiptText },
-    { title: "NOC Request", description: "Request a No Objection Certificate (travel, driving license, etc.)", icon: ShieldCheck },
-    { title: "Letter Request", description: "Request an official letter from HR", icon: FileText },
-    { title: "Expense Reimbursement", description: "Claim back expenses you paid for work", icon: ClipboardList },
+    { requestType: "Salary Certificate", labelKey: "salaryCertificate", icon: ReceiptText },
+    { requestType: "NOC Request", labelKey: "nocRequest", icon: ShieldCheck },
+    { requestType: "Letter Request", labelKey: "letterRequest", icon: FileText },
+    { requestType: "Expense Reimbursement", labelKey: "expenseReimbursement", icon: ClipboardList },
 ];
 
 function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
+    const { t } = useTranslation();
     const confirm = useConfirm();
     const employeeId = employee?.employee_id;
     const [documents, setDocuments] = useState({});
@@ -34,7 +36,9 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
     const [uploadingType, setUploadingType] = useState("");
     const [toast, setToast] = useState(null);
     const [preview, setPreview] = useState(null);
-        const [latestRequests, setLatestRequests] = useState({});
+    const [latestRequests, setLatestRequests] = useState({});
+
+    const documentTitle = (key) => t(`employeeDocuments.items.${key}.title`);
 
     // Latest request of each type (Salary Certificate, NOC, ...) with its status and attached file
     useEffect(() => {
@@ -74,14 +78,15 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
     // Upload (or replace after confirming) a Visa / Passport copy
     const handleFile = async (item, file) => {
         if (!file) return;
+        const title = documentTitle(item.key);
         const existing = documents[item.key];
         if (existing) {
             const replace = await confirm({
                 variant: "warning",
-                title: `Replace ${item.title}?`,
-                message: `Your current file "${existing.original_file_name}" will be replaced with "${file.name}".`,
-                cancelText: "Keep current",
-                confirmText: "Replace",
+                title: t("employeeDocuments.replaceTitle", { title }),
+                message: t("employeeDocuments.replaceMessage", { current: existing.original_file_name, next: file.name }),
+                cancelText: t("employeeDocuments.keepCurrent"),
+                confirmText: t("employeeDocuments.replace"),
             });
             if (!replace) return;
         }
@@ -89,7 +94,7 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
             setUploadingType(item.key);
             const saved = await uploadEmployeeDocument(employeeId, item.key, file);
             setDocuments((current) => ({ ...current, [item.key]: saved }));
-            setToast({ type: "success", message: `${item.title} uploaded successfully` });
+            setToast({ type: "success", message: t("employeeDocuments.uploadedSuccess", { title }) });
         } catch (error) {
             setToast({ type: "error", message: error.message });
         } finally {
@@ -97,46 +102,59 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
         }
     };
 
-
-
     return <>
         <section className="employee-documents-view">
-            <div className="employee-documents-heading"><div><span className="employee-documents-kicker">Employee records</span><h2>Documents</h2><p>Access your important employment documents</p></div><FileText size={34} /></div>
+            <div className="employee-documents-heading">
+                <div>
+                    <span className="employee-documents-kicker">{t("employeeDocuments.kicker")}</span>
+                    <h2>{t("employeeDocuments.title")}</h2>
+                    <p>{t("employeeDocuments.subtitle")}</p>
+                </div>
+                <FileText size={34} />
+            </div>
+
+            {/* Documents */}
             <div className="employee-document-grid">
                 {documentItems.map((item) => {
-                    const { key, title, description, icon: Icon, uploadedBy } = item;
+                    const { key, icon: Icon, uploadedBy } = item;
+                    const title = documentTitle(key);
                     const document = documents[key];
                     const isUploading = uploadingType === key;
                     const employeeUploads = uploadedBy === "EMPLOYEE";
 
-                    let statusText = "Pending HR upload";
+                    let statusText = t("employeeDocuments.pendingHrUpload");
                     let statusTone = "";
                     if (loading) {
-                        statusText = "Loading...";
+                        statusText = t("employeeDocuments.loading");
                         statusTone = "muted";
                     } else if (document) {
-                        statusText = `${employeeUploads ? "Uploaded" : "Added by HR"} on ${formatDocumentDate(document.uploaded_at)}`;
+                        const date = formatDocumentDate(document.uploaded_at);
+                        statusText = employeeUploads
+                            ? t("employeeDocuments.uploadedOn", { date })
+                            : t("employeeDocuments.addedByHrOn", { date });
                         statusTone = "uploaded";
                     } else if (employeeUploads) {
-                        statusText = "Not uploaded yet";
+                        statusText = t("employeeDocuments.notUploaded");
                         statusTone = "muted";
                     }
 
                     return <article className="employee-document-card" key={key}>
                         <div className="employee-document-icon"><Icon size={22} /></div>
-                        <div><h3>{title}</h3><p>{description}</p></div>
+                        <div><h3>{title}</h3><p>{t(`employeeDocuments.items.${key}.description`)}</p></div>
                         <div className="employee-document-footer">
                             <span className={`employee-document-status ${statusTone}`}>{statusText}</span>
                             <div className="employee-document-actions">
                                 {document && (
                                     <button type="button" className="employee-document-btn secondary" onClick={() => setPreview({ ...document, displayName: title })}>
-                                        <Eye size={14} /> View
+                                        <Eye size={14} /> {t("employeeDocuments.view")}
                                     </button>
                                 )}
                                 {employeeUploads && !loading && (
                                     <label className={`employee-document-btn primary${isUploading ? " disabled" : ""}`}>
                                         {document ? <RefreshCw size={14} /> : <Upload size={14} />}
-                                        {isUploading ? "Uploading..." : document ? "Replace" : "Upload"}
+                                        {isUploading
+                                            ? t("employeeDocuments.uploading")
+                                            : document ? t("employeeDocuments.replace") : t("employeeDocuments.upload")}
                                         <input
                                             type="file"
                                             accept={FILE_ACCEPT}
@@ -156,24 +174,29 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
                 })}
             </div>
 
+            {/* Requests to HR */}
             <div className="employee-documents-subheading">
-                <h3>Requests to HR</h3>
-                <p>Raise a request and track it in your notifications. HR reviews it in Employee Requests.</p>
+                <h3>{t("employeeDocuments.requestsTitle")}</h3>
+                <p>{t("employeeDocuments.requestsSubtitle")}</p>
             </div>
             <div className="employee-document-grid">
-                {REQUEST_ITEMS.map(({ title, description, icon: Icon }) => {
-                    const latest = latestRequests[title];
+                {REQUEST_ITEMS.map(({ requestType, labelKey, icon: Icon }) => {
+                    const label = t(`employeeDocuments.requests.${labelKey}.title`);
+                    const latest = latestRequests[requestType];
                     const tone = String(latest?.status || "").toLowerCase();
                     return (
-                        <article className="employee-document-card request" key={title}>
+                        <article className="employee-document-card request" key={requestType}>
                             <div className="employee-document-icon"><Icon size={22} /></div>
                             <div>
-                                <h3>{title}</h3>
-                                <p>{description}</p>
+                                <h3>{label}</h3>
+                                <p>{t(`employeeDocuments.requests.${labelKey}.description`)}</p>
                                 {latest && (
                                     <span className={`employee-request-latest ${tone}`}>
-                                        Last request: {latest.status} · {formatDocumentDate(latest.created_at)}
-                                        {latest.file_name ? " · Document ready" : ""}
+                                        {t("employeeDocuments.lastRequest", {
+                                            status: t(`employeeDocuments.requestStatus.${tone}`, { defaultValue: latest.status }),
+                                            date: formatDocumentDate(latest.created_at),
+                                        })}
+                                        {latest.file_name ? t("employeeDocuments.documentReady") : ""}
                                     </span>
                                 )}
                             </div>
@@ -182,12 +205,12 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
                                     <button
                                         type="button"
                                         className="employee-document-btn secondary"
-                                        onClick={() => setPreview({ requestId: latest.id, original_file_name: latest.file_name, displayName: title })}
+                                        onClick={() => setPreview({ requestId: latest.id, original_file_name: latest.file_name, displayName: label })}
                                     >
-                                        <Eye size={14} /> View
+                                        <Eye size={14} /> {t("employeeDocuments.view")}
                                     </button>
                                 )}
-                                <button type="button" onClick={() => onRequest?.(title)}>Request</button>
+                                <button type="button" onClick={() => onRequest?.(requestType)}>{t("employeeDocuments.request")}</button>
                             </div>
                         </article>
                     );

@@ -3,20 +3,112 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES, changeAppLanguage } from "../i18n";
 
 function EmployeeSettings({ employee, notificationsEnabled, setNotificationsEnabled, compactMode, setCompactMode, timeZone, setTimeZone, onEditProfile, onChangePassword, onLogout }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language === "ar" ? "ar" : "en";
 
     return (
         <section className="employee-settings-view">
             <div className="settings-grid">
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon blue"><KeyRound size={18} /></span><div><h3>Account &amp; Security</h3><p>Protect your account access</p></div></div><div className="settings-row"><div><strong>Password</strong><small>Change your account password anytime</small></div><button type="button" onClick={onChangePassword}>Change Password</button></div><div className="settings-row"><div><strong>Account status</strong><small>Your employee account is active</small></div><span className="settings-status">Active</span></div></article>
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon purple"><UserRound size={18} /></span><div><h3>Profile preferences</h3><p>Manage your personal information</p></div></div><div className="settings-row"><div><strong>Personal details</strong><small>Update your contact and profile details</small></div><button type="button" onClick={onEditProfile}>Edit Profile</button></div><div className="settings-row"><div><strong>Employee ID</strong><small>Used for signing in to HRMS</small></div><span className="settings-value">{employee.employee_id}</span></div></article>
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon green"><Bell size={18} /></span><div><h3>Notifications</h3><p>Control dashboard alerts</p></div></div><div className="settings-row"><div><strong>Leave updates</strong><small>Show updates about your leave requests</small></div><button type="button" className={`settings-toggle ${notificationsEnabled ? "on" : ""}`} onClick={() => setNotificationsEnabled((enabled) => !enabled)} aria-pressed={notificationsEnabled}><span /></button></div></article>
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon orange"><Moon size={18} /></span><div><h3>Appearance</h3><p>Choose your dashboard layout</p></div></div><div className="settings-row"><div><strong>Compact cards</strong><small>Use a tighter dashboard layout</small></div><button type="button" className={`settings-toggle ${compactMode ? "on" : ""}`} onClick={() => setCompactMode((enabled) => !enabled)} aria-pressed={compactMode}><span /></button></div></article>
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon teal"><Globe2 size={18} /></span><div><h3>Work preferences</h3><p>Set your preferred regional options</p></div></div><div className="settings-row"><div><strong>Language</strong><small>Choose the language for your portal</small></div><select className="settings-select" value={currentLanguage} onChange={(event) => changeAppLanguage(event.target.value)}>{LANGUAGES.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}</select></div><div className="settings-row"><div><strong>Time zone</strong><small>Used for attendance and leave dates</small></div><select className="settings-select" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}><option value="Asia/Qatar">Qatar (GMT+3)</option><option value="Asia/Kolkata">India (GMT+5:30)</option><option value="Asia/Dubai">Dubai (GMT+4)</option></select></div></article>
-                <article className="settings-card"><div className="settings-card-heading"><span className="settings-icon slate"><Clock3 size={18} /></span><div><h3>Work account</h3><p>Review your employee access</p></div></div><div className="settings-row"><div><strong>Employee portal access</strong><small>Access is managed by your HR team</small></div><span className="settings-status">Enabled</span></div><div className="settings-row"><div><strong>Employee ID</strong><small>Use this ID when contacting HR</small></div><span className="settings-value">{employee.employee_id}</span></div></article>
+
+                {/* Account & Security */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon blue"><KeyRound size={18} /></span>
+                        <div><h3>{t("employeeSettings.accountSecurity")}</h3><p>{t("employeeSettings.accountSecurityHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.password")}</strong><small>{t("employeeSettings.passwordHint")}</small></div>
+                        <button type="button" onClick={onChangePassword}>{t("employeeSettings.changePassword")}</button>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.accountStatus")}</strong><small>{t("employeeSettings.accountStatusHint")}</small></div>
+                        <span className="settings-status">{t("employeeSettings.active")}</span>
+                    </div>
+                </article>
+
+                {/* Profile preferences */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon purple"><UserRound size={18} /></span>
+                        <div><h3>{t("employeeSettings.profilePreferences")}</h3><p>{t("employeeSettings.profilePreferencesHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.personalDetails")}</strong><small>{t("employeeSettings.personalDetailsHint")}</small></div>
+                        <button type="button" onClick={onEditProfile}>{t("employeeSettings.editProfile")}</button>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.employeeId")}</strong><small>{t("employeeSettings.employeeIdLoginHint")}</small></div>
+                        <span className="settings-value">{employee.employee_id}</span>
+                    </div>
+                </article>
+
+                {/* Notifications */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon green"><Bell size={18} /></span>
+                        <div><h3>{t("employeeSettings.notifications")}</h3><p>{t("employeeSettings.notificationsHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.leaveUpdates")}</strong><small>{t("employeeSettings.leaveUpdatesHint")}</small></div>
+                        <button type="button" className={`settings-toggle ${notificationsEnabled ? "on" : ""}`} onClick={() => setNotificationsEnabled((enabled) => !enabled)} aria-pressed={notificationsEnabled}><span /></button>
+                    </div>
+                </article>
+
+                {/* Appearance */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon orange"><Moon size={18} /></span>
+                        <div><h3>{t("employeeSettings.appearance")}</h3><p>{t("employeeSettings.appearanceHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.compactCards")}</strong><small>{t("employeeSettings.compactCardsHint")}</small></div>
+                        <button type="button" className={`settings-toggle ${compactMode ? "on" : ""}`} onClick={() => setCompactMode((enabled) => !enabled)} aria-pressed={compactMode}><span /></button>
+                    </div>
+                </article>
+
+                {/* Work preferences: language + time zone */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon teal"><Globe2 size={18} /></span>
+                        <div><h3>{t("employeeSettings.workPreferences")}</h3><p>{t("employeeSettings.workPreferencesHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.language")}</strong><small>{t("employeeSettings.languageHint")}</small></div>
+                        <select className="settings-select" value={currentLanguage} onChange={(event) => changeAppLanguage(event.target.value)}>
+                            {LANGUAGES.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+                        </select>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.timeZone")}</strong><small>{t("employeeSettings.timeZoneHint")}</small></div>
+                        <select className="settings-select" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>
+                            <option value="Asia/Qatar">{t("employeeSettings.tzQatar")}</option>
+                            <option value="Asia/Kolkata">{t("employeeSettings.tzIndia")}</option>
+                            <option value="Asia/Dubai">{t("employeeSettings.tzDubai")}</option>
+                        </select>
+                    </div>
+                </article>
+
+                {/* Work account */}
+                <article className="settings-card">
+                    <div className="settings-card-heading">
+                        <span className="settings-icon slate"><Clock3 size={18} /></span>
+                        <div><h3>{t("employeeSettings.workAccount")}</h3><p>{t("employeeSettings.workAccountHint")}</p></div>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.portalAccess")}</strong><small>{t("employeeSettings.portalAccessHint")}</small></div>
+                        <span className="settings-status">{t("employeeSettings.enabled")}</span>
+                    </div>
+                    <div className="settings-row">
+                        <div><strong>{t("employeeSettings.employeeId")}</strong><small>{t("employeeSettings.employeeIdContactHint")}</small></div>
+                        <span className="settings-value">{employee.employee_id}</span>
+                    </div>
+                </article>
             </div>
-            <div className="settings-session"><span><SettingsIcon size={17} /> Signed in as {employee.employee_id}</span><button type="button" onClick={onLogout}>Log out</button></div>
+
+            <div className="settings-session">
+                <span><SettingsIcon size={17} /> {t("employeeSettings.signedInAs", { id: employee.employee_id })}</span>
+                <button type="button" onClick={onLogout}>{t("employeeSettings.logOut")}</button>
+            </div>
         </section>
     );
 }
