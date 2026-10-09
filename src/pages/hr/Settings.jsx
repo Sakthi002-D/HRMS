@@ -6,6 +6,8 @@ import ApprovalWorkflowSettings from "./settings/ApprovalWorkflowSettings";
 import RecruitmentMastersSettings from "./settings/RecruitmentMastersSettings";
 import { ResignationNoticeSettings } from "./settings/ResignationSettings";
 import "./Settings.css";
+import { useTranslation } from "react-i18next";
+import { LANGUAGES, changeAppLanguage } from "../../i18n";
 
 const settingGroups = [
     { id: "general", label: "General Settings", icon: Globe2 },
@@ -136,11 +138,24 @@ function Field({ label, children, hint }) {
 }
 
 function GeneralSettings({ settings, updateSetting }) {
+    const { t, i18n } = useTranslation();
+    const currentLanguage = i18n.language === "ar" ? "ar" : "en";
+
     return <div className="settings-form-grid">
         <Field label="Company Name"><input value={settings.companyName} onChange={(event) => updateSetting("companyName", event.target.value)} /></Field>
         <Field label="Company Email"><input type="email" value={settings.companyEmail} onChange={(event) => updateSetting("companyEmail", event.target.value)} /></Field>
         <Field label="Timezone"><select value={settings.timezone} onChange={(event) => updateSetting("timezone", event.target.value)}><option>Asia/Kolkata</option><option>Asia/Qatar</option><option>UTC</option></select></Field>
-        <Field label="Language"><select value={settings.language} onChange={(event) => updateSetting("language", event.target.value)}><option>English</option><option>Tamil</option><option>Hindi</option></select></Field>
+        <Field label={t("settings.language")} hint="Changes the language immediately for you in this browser.">
+            <select
+                value={currentLanguage}
+                onChange={(event) => {
+                    changeAppLanguage(event.target.value);
+                    updateSetting("language", event.target.value === "ar" ? "Arabic" : "English");
+                }}
+            >
+                {LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
+            </select>
+        </Field>
     </div>;
 }
 

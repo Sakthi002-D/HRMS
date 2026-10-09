@@ -1,0 +1,28 @@
+{
+  "menu": {
+    "mainMenu": "MAIN MENU",
+    "account": "ACCOUNT",
+    "employeePortal": "EMPLOYEE PORTAL",
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "recruitment": "Recruitment",
+    "attendance": "Attendance",
+    "leaveManagement": "Leave Management",
+    "resignation": "Resignation",
+    "payroll": "Payroll",
+    "ticketing": "Ticketing",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Logout",
+    "profile": "Profile",
+    "documents": "Documents",
+    "applyLeave": "Apply Leave",
+    "manpowerRequests": "Manpower Requests",
+    "changePassword": "Change Password",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "settings": {
+    "language": "Language"
+  }
+}

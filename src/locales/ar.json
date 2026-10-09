@@ -1,0 +1,28 @@
+{
+  "menu": {
+    "mainMenu": "القائمة الرئيسية",
+    "account": "الحساب",
+    "employeePortal": "بوابة الموظف",
+    "dashboard": "لوحة التحكم",
+    "employees": "الموظفون",
+    "recruitment": "التوظيف",
+    "attendance": "الحضور",
+    "leaveManagement": "إدارة الإجازات",
+    "resignation": "الاستقالة",
+    "payroll": "الرواتب",
+    "ticketing": "التذاكر",
+    "reports": "التقارير",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج",
+    "profile": "الملف الشخصي",
+    "documents": "المستندات",
+    "applyLeave": "طلب إجازة",
+    "manpowerRequests": "طلبات القوى العاملة",
+    "changePassword": "تغيير كلمة المرور",
+    "expandSidebar": "توسيع الشريط الجانبي",
+    "collapseSidebar": "طي الشريط الجانبي"
+  },
+  "settings": {
+    "language": "اللغة"
+  }
+}

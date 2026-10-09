@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import "./Sidebar.css";
+import { useTranslation } from "react-i18next";
 import { scrollActiveIntoView } from "./sidebarScroll";
 import { purgeAllChatStorage } from "../../assistant/HRAssistant";
 import { APPLICATIONS_CHANGED_EVENT, MPRS_CHANGED_EVENT } from "../../recruitment/recruitmentApi";
@@ -67,6 +68,7 @@ function Sidebar({ collapsed, onToggle }) {
   const pendingMprApprovals = useMenuCount(mprApprovalsPath, MPRS_CHANGED_EVENT);
   const newApplications = useMenuCount(newApplicationsPath, APPLICATIONS_CHANGED_EVENT, undefined, NEW_APPLICATIONS_POLL_MS);
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -77,16 +79,16 @@ function Sidebar({ collapsed, onToggle }) {
     patterns.some((pattern) => (pattern instanceof RegExp ? pattern.test(pathname) : pathname.startsWith(pattern)));
 
   const menuItems = [
-    ["/hr-dashboard", "Dashboard", LayoutDashboard],
-    ["/employees", "Employees", Users],
-    ["/recruitment", "Recruitment", BriefcaseBusiness, pendingMprApprovals + newApplications, recruitmentBadgeLabel(pendingMprApprovals, newApplications)],
-    ["/attendance", "Attendance", Clock3],
-    ["/leave-management", "Leave Management", CalendarDays],
-    ["/resignations", "Resignation", DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
-    ["/payroll", "Payroll", IndianRupee],
-    ["/tickets", "Ticketing", Ticket],
+    ["/hr-dashboard", t("menu.dashboard"), LayoutDashboard],
+    ["/employees", t("menu.employees"), Users],
+    ["/recruitment", t("menu.recruitment"), BriefcaseBusiness, pendingMprApprovals + newApplications, recruitmentBadgeLabel(pendingMprApprovals, newApplications)],
+    ["/attendance", t("menu.attendance"), Clock3],
+    ["/leave-management", t("menu.leaveManagement"), CalendarDays],
+    ["/resignations", t("menu.resignation"), DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
+    ["/payroll", t("menu.payroll"), IndianRupee],
+    ["/tickets", t("menu.ticketing"), Ticket],
     // Any URL containing "report" or "accrual" (each report page) keeps Reports highlighted
-    ["/reports", "Reports", FileText, 0, "", [/report/i, /accrual/i]],
+    ["/reports", t("menu.reports"), FileText, 0, "", [/report/i, /accrual/i]],
   ];
 
   return (
@@ -97,14 +99,14 @@ function Sidebar({ collapsed, onToggle }) {
           type="button"
           className="sidebar-collapse-button"
           onClick={onToggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t("menu.expandSidebar") : t("menu.collapseSidebar")}
+          title={collapsed ? t("menu.expandSidebar") : t("menu.collapseSidebar")}
         >
           {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
         </button>
       </div>
       <div className="sidebar-scroll" ref={scrollRef}>
-        <div className="sidebar-section-title">MAIN MENU</div>
+        <div className="sidebar-section-title">{t("menu.mainMenu")}</div>
         <nav className="sidebar-menu">
           {menuItems.map(([path, label, Icon, badge, badgeLabel, extraMatches]) => (
             <NavLink
@@ -125,10 +127,10 @@ function Sidebar({ collapsed, onToggle }) {
       </div>
 
       <div className="sidebar-account">
-        <div className="sidebar-section-title">ACCOUNT</div>
+        <div className="sidebar-section-title">{t("menu.account")}</div>
         <button type="button" className="sidebar-link sidebar-button" onClick={() => navigate("/settings")}>
           <Settings size={19} strokeWidth={2} />
-          <span>Settings</span>
+          <span>{t("menu.settings")}</span>
         </button>
         <button
           type="button"
@@ -141,7 +143,7 @@ function Sidebar({ collapsed, onToggle }) {
           }}
         >
           <LogOut size={19} strokeWidth={2} />
-          <span>Logout</span>
+          <span>{t("menu.logout")}</span>
         </button>
       </div>
 
