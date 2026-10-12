@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePortalLanguage } from "../i18n";
 import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
@@ -61,6 +62,12 @@ const daysBetweenInclusive = (fromDate, toDate) => {
     if (!fromDate || !toDate || toDate < fromDate) return 0;
     return Math.floor((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
 };
+// Displayed text for an attendance status. The saved value (Present / Late / Absent) stays English.
+const attendanceStatusLabel = (t, value) => {
+    if (!value) return t("employeeAttendance.status.not_recorded", { defaultValue: "Not recorded" });
+    const key = String(value).trim().toLowerCase().replace(/\s+/g, "_");
+    return t(`employeeAttendance.status.${key}`, { defaultValue: String(value) });
+};
 const formatAttendanceTime = (time) => {
     if (!time || time === "-") return "-";
     const match = String(time).match(/^(\d{1,2}):(\d{2})/);
@@ -74,6 +81,8 @@ const formatAttendanceTime = (time) => {
 function EmployeeDashboard() {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    // Employee portal language (separate from the HR portal; Login stays English)
+    usePortalLanguage("employee");
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [employee, setEmployee] = useState(null);
@@ -898,7 +907,7 @@ function EmployeeDashboard() {
         const recordDate = String(record.attendance_date || "").slice(0, 10);
         const searchDate = normalizeAttendanceSearchDate(search);
         const matchesSearchDate = searchDate ? recordDate === searchDate : false;
-        return (!search || matchesSearchDate || `${record.attendance_date} ${formatProfileDate(record.attendance_date)} ${record.status}`.toLowerCase().includes(search))
+        return (!search || matchesSearchDate || `${record.attendance_date} ${formatProfileDate(record.attendance_date)} ${record.status} ${attendanceStatusLabel(t, record.status)}`.toLowerCase().includes(search))
             && (attendanceMonth === "all" || recordDate.slice(5, 7) === attendanceMonth)
             && (attendanceYear === "all" || recordDate.slice(0, 4) === attendanceYear)
             && (attendanceStatus === "all" || status === attendanceStatus);
@@ -908,7 +917,11 @@ function EmployeeDashboard() {
         (attendancePage - 1) * attendanceRows,
         attendancePage * attendanceRows
     );
-    const greeting = liveNow.getHours() < 12 ? "Good Morning" : liveNow.getHours() < 17 ? "Good Afternoon" : "Good Evening";
+    const greeting = liveNow.getHours() < 12
+        ? t("employeeAttendance.greeting.morning", { defaultValue: "Good Morning" })
+        : liveNow.getHours() < 17
+            ? t("employeeAttendance.greeting.afternoon", { defaultValue: "Good Afternoon" })
+            : t("employeeAttendance.greeting.evening", { defaultValue: "Good Evening" });
     const liveTime = liveNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
     const liveDate = liveNow.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     const toggleProfilePanel = (panel) => {
@@ -977,8 +990,8 @@ function EmployeeDashboard() {
 
                 {servingNotice && (
                     <div className="resignation-banner employee-resignation-banner" role="status">
-                        Serving notice – {daysLabel(activeResignation.days_remaining)} remaining. Last working day: {formatResignationDate(activeResignation.last_working_day)}
-                        <button type="button" onClick={() => setActiveSection("resignation")}>View resignation</button>
+                        {t("resignation.servingNotice", { days: daysLabel(activeResignation.days_remaining), date: formatResignationDate(activeResignation.last_working_day), defaultValue: "Serving notice – {{days}} remaining. Last working day: {{date}}" })}
+                        <button type="button" onClick={() => setActiveSection("resignation")}>{t("resignation.viewResignation", { defaultValue: "View resignation" })}</button>
                     </div>
                 )}
 
@@ -1051,7 +1064,7 @@ function EmployeeDashboard() {
                     employee={employee} greeting={greeting} liveTime={liveTime} liveDate={liveDate}
                     todayHours={todayHours} todayAttendance={todayAttendance} todayStatus={todayAttendance?.status || (shiftEnded ? "Absent" : "No attendance yet")} weekHours={weekHours}
                     attendanceDays={attendanceDays} monthHours={monthHours} currentMonthAttendance={currentMonthAttendance}
-                    formatAttendanceTime={formatAttendanceTime} attendanceRows={attendanceRows} setAttendanceRows={setAttendanceRows}
+                    formatAttendanceTime={formatAttendanceTime} attendanceStatusLabel={(value) => attendanceStatusLabel(t, value)} attendanceRows={attendanceRows} setAttendanceRows={setAttendanceRows}
                     attendanceMonth={attendanceMonth} setAttendanceMonth={setAttendanceMonth} attendanceMonthOptions={attendanceMonthOptions}
                     attendanceYear={attendanceYear} setAttendanceYear={setAttendanceYear} attendanceYearOptions={attendanceYearOptions}
                     attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} attendanceStatus={attendanceStatus}
@@ -1101,7 +1114,7 @@ function EmployeeDashboard() {
                         </div>
                         <div className="employee-stat-card">
                             <span><Check size={18} /></span>
-                            <div><small>{t("dashboard.pending")}</small><strong>{pendingLeaves}</strong></div>
+                            <div><small>{t("dashboard.approved")}</small><strong>{approvedLeaves}</strong></div>
                         </div>
                         <div className="employee-stat-card">
                             <span><X size={18} /></span>

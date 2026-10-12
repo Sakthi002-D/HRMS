@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Sidebar from "./common/Sidebar";
+import { usePortalLanguage } from "../../i18n";
 import "./DashboardLayout.css";
 import "./SharedTheme.css";
 
@@ -9,6 +10,8 @@ import "./SharedTheme.css";
 let rememberedCollapsed = false;
 
 function DashboardLayout({ children, className = "" }) {
+  // HR portal language (separate from the Employee portal; Login stays English)
+  usePortalLanguage("hr");
   // Each new page starts from the remembered choice
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => rememberedCollapsed);
 

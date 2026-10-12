@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Download, WalletCards } from "lucide-react";
 import { jsPDF } from "jspdf";
 import "./EmployeePayroll.css";
@@ -7,7 +8,17 @@ const dateInputValue = (value) => value ? String(value).slice(0, 10) : "";
 const formatMonth = (value) => value ? new Date(value).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "-";
 
 function EmployeePayroll({ records, loading }) {
+    const { t } = useTranslation();
     const latest = records[0];
+
+    // Displayed text for a transfer status. The saved value (e.g. "Paid") stays English and keeps driving the CSS colour class.
+    const statusLabel = (value) => {
+        if (!value) return "-";
+        const key = String(value).trim().toLowerCase().replace(/\s+/g, "_");
+        return t(`employeePayroll.status.${key}`, { defaultValue: String(value) });
+    };
+
+    // PDF stays English: jsPDF's built-in font cannot draw Arabic letters
     const downloadPayslip = (record) => {
         const pdf = new jsPDF();
         pdf.setFillColor(18, 48, 74);
@@ -39,16 +50,57 @@ function EmployeePayroll({ records, loading }) {
     };
 
     return <section className="employee-payroll-view">
-        <div className="employee-payroll-heading"><div><span className="employee-payroll-kicker">Salary &amp; benefits</span><h2>My Payroll</h2><p>View your salary, deductions and monthly payslips</p></div><WalletCards size={34} /></div>
-        {loading ? <div className="employee-payroll-empty">Loading payroll details...</div> : !records.length ? <div className="employee-payroll-empty">No payroll records available yet.</div> : <>
-            <div className="employee-payroll-summary">
-                <article><span>Net Salary</span><strong>{formatCurrency(latest.netSalary)}</strong><small>{formatMonth(latest.salaryMonth)}</small></article>
-                <article><span>Allowances</span><strong>{formatCurrency(latest.allowances)}</strong><small>Current month</small></article>
-                <article><span>Deductions</span><strong>{formatCurrency(latest.deductions)}</strong><small>Current month</small></article>
-                <article><span>Bank Transfer Status</span><strong className={latest.transferStatus.toLowerCase()}>{latest.transferStatus}</strong><small>{formatMonth(latest.salaryMonth)}</small></article>
+        <div className="employee-payroll-heading">
+            <div>
+                <span className="employee-payroll-kicker">{t("employeePayroll.kicker", { defaultValue: "Salary & benefits" })}</span>
+                <h2>{t("employeePayroll.title", { defaultValue: "My Payroll" })}</h2>
+                <p>{t("employeePayroll.subtitle", { defaultValue: "View your salary, deductions and monthly payslips" })}</p>
             </div>
-            <div className="employee-payroll-breakdown"><div><span>Basic Salary</span><strong>{formatCurrency(latest.basicSalary)}</strong></div><div><span>Allowances</span><strong>{formatCurrency(latest.allowances)}</strong></div><div><span>Deductions</span><strong>- {formatCurrency(latest.deductions)}</strong></div><div className="net"><span>Net Salary</span><strong>{formatCurrency(latest.netSalary)}</strong></div></div>
-            <section className="employee-salary-history"><div className="employee-payroll-section-heading"><h3>Salary History</h3><span>{records.length} record(s)</span></div><div className="employee-payroll-table-wrap"><table><thead><tr><th>Salary Month</th><th>Basic Salary</th><th>Allowances</th><th>Deductions</th><th>Net Salary</th><th>Transfer Status</th><th>Payslip</th></tr></thead><tbody>{records.map((record) => <tr key={record.id}><td>{formatMonth(record.salaryMonth)}</td><td>{formatCurrency(record.basicSalary)}</td><td>{formatCurrency(record.allowances)}</td><td>{formatCurrency(record.deductions)}</td><td><strong>{formatCurrency(record.netSalary)}</strong></td><td><span className={`employee-payroll-status ${record.transferStatus.toLowerCase()}`}>{record.transferStatus}</span></td><td><button type="button" className="employee-payslip-button" onClick={() => downloadPayslip(record)}><Download size={14} /> Download</button></td></tr>)}</tbody></table></div></section>
+            <WalletCards size={34} />
+        </div>
+        {loading ? <div className="employee-payroll-empty">{t("employeePayroll.loading", { defaultValue: "Loading payroll details..." })}</div> : !records.length ? <div className="employee-payroll-empty">{t("employeePayroll.empty", { defaultValue: "No payroll records available yet." })}</div> : <>
+            <div className="employee-payroll-summary">
+                <article><span>{t("employeePayroll.netSalary", { defaultValue: "Net Salary" })}</span><strong>{formatCurrency(latest.netSalary)}</strong><small>{formatMonth(latest.salaryMonth)}</small></article>
+                <article><span>{t("employeePayroll.allowances", { defaultValue: "Allowances" })}</span><strong>{formatCurrency(latest.allowances)}</strong><small>{t("employeePayroll.currentMonth", { defaultValue: "Current month" })}</small></article>
+                <article><span>{t("employeePayroll.deductions", { defaultValue: "Deductions" })}</span><strong>{formatCurrency(latest.deductions)}</strong><small>{t("employeePayroll.currentMonth", { defaultValue: "Current month" })}</small></article>
+                <article><span>{t("employeePayroll.bankTransferStatus", { defaultValue: "Bank Transfer Status" })}</span><strong className={latest.transferStatus.toLowerCase()}>{statusLabel(latest.transferStatus)}</strong><small>{formatMonth(latest.salaryMonth)}</small></article>
+            </div>
+            <div className="employee-payroll-breakdown">
+                <div><span>{t("employeePayroll.basicSalary", { defaultValue: "Basic Salary" })}</span><strong>{formatCurrency(latest.basicSalary)}</strong></div>
+                <div><span>{t("employeePayroll.allowances", { defaultValue: "Allowances" })}</span><strong>{formatCurrency(latest.allowances)}</strong></div>
+                <div><span>{t("employeePayroll.deductions", { defaultValue: "Deductions" })}</span><strong>- {formatCurrency(latest.deductions)}</strong></div>
+                <div className="net"><span>{t("employeePayroll.netSalary", { defaultValue: "Net Salary" })}</span><strong>{formatCurrency(latest.netSalary)}</strong></div>
+            </div>
+            <section className="employee-salary-history">
+                <div className="employee-payroll-section-heading">
+                    <h3>{t("employeePayroll.salaryHistory", { defaultValue: "Salary History" })}</h3>
+                    <span>{t("employeePayroll.records", { count: records.length, defaultValue: "{{count}} record(s)" })}</span>
+                </div>
+                <div className="employee-payroll-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>{t("employeePayroll.table.salaryMonth", { defaultValue: "Salary Month" })}</th>
+                                <th>{t("employeePayroll.basicSalary", { defaultValue: "Basic Salary" })}</th>
+                                <th>{t("employeePayroll.allowances", { defaultValue: "Allowances" })}</th>
+                                <th>{t("employeePayroll.deductions", { defaultValue: "Deductions" })}</th>
+                                <th>{t("employeePayroll.netSalary", { defaultValue: "Net Salary" })}</th>
+                                <th>{t("employeePayroll.table.transferStatus", { defaultValue: "Transfer Status" })}</th>
+                                <th>{t("employeePayroll.table.payslip", { defaultValue: "Payslip" })}</th>
+                            </tr>
+                        </thead>
+                        <tbody>{records.map((record) => <tr key={record.id}>
+                            <td>{formatMonth(record.salaryMonth)}</td>
+                            <td>{formatCurrency(record.basicSalary)}</td>
+                            <td>{formatCurrency(record.allowances)}</td>
+                            <td>{formatCurrency(record.deductions)}</td>
+                            <td><strong>{formatCurrency(record.netSalary)}</strong></td>
+                            <td><span className={`employee-payroll-status ${record.transferStatus.toLowerCase()}`}>{statusLabel(record.transferStatus)}</span></td>
+                            <td><button type="button" className="employee-payslip-button" onClick={() => downloadPayslip(record)}><Download size={14} /> {t("employeePayroll.download", { defaultValue: "Download" })}</button></td>
+                        </tr>)}</tbody>
+                    </table>
+                </div>
+            </section>
         </>}
     </section>;
 }

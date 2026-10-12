@@ -1,4 +1,5 @@
 // Shared helpers for the Resignation screens (Employee portal and HR portal).
+import i18n from "i18next";
 import { API_URL, api, formatDate, formatDateTime, getSessionEmployeeId } from "../recruitment/recruitmentApi";
 
 export { api, formatDate, formatDateTime, getSessionEmployeeId };
@@ -34,7 +35,17 @@ export const resignationTone = (status = "") => {
 
 export const isServingNotice = (resignation) => ["Accepted", "Serving Notice"].includes(resignation?.status);
 
-export const daysLabel = (days) => `${days} day${Number(days) === 1 ? "" : "s"}`;
+// "30 days" (English) / "30 يومًا" (Arabic). Same English text as before.
+export const daysLabel = (days) => i18n.t("resignation.days", { count: Number(days), defaultValue: `${days} day${Number(days) === 1 ? "" : "s"}` });
+
+// Displayed text for saved English values. The saved value itself never changes.
+const valueKey = (value) => String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+export const resignationStatusLabel = (status) => status ? i18n.t(`resignation.statuses.${valueKey(status)}`, { defaultValue: status }) : "";
+export const reasonCategoryLabel = (reason) => reason ? i18n.t(`resignation.reasons.${valueKey(reason)}`, { defaultValue: reason }) : "";
+export const resignationActionLabel = (action) => action ? i18n.t(`resignation.actions.${valueKey(action)}`, { defaultValue: action }) : "";
+export const noticeSourceLabel = (source) => source ? i18n.t(`resignation.noticeSource.${valueKey(source)}`, { defaultValue: String(source) }) : "";
+// Role keys exist only in ar.json, so English always shows the original label (fallback) unchanged
+export const resignationRoleLabel = (role, fallback) => i18n.t(`resignation.roles.${role}`, { defaultValue: fallback || role || "" });
 
 // Resignations waiting for HR action (HR sidebar badge, Dashboard welcome message)
 export const isPendingHR = (resignation) => resignation?.status === "Pending HR";

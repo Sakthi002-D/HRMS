@@ -1,21 +1,22 @@
 // Progress for a resignation: Submitted → <approvers> → Serving Notice → Completed.
 // Reuses the LeaveTracker stepper styles (leave-tracker-*) like MprTracker.
+import { useTranslation } from "react-i18next";
 import "../hr/LeaveTracker.css";
-import { daysLabel, formatDate } from "./resignationApi";
+import { daysLabel, formatDate, resignationRoleLabel, resignationStatusLabel } from "./resignationApi";
 
 const NODE_ICONS = { completed: "✓", rejected: "✕", cancelled: "✕", overdue: "!" };
 
-function buildSteps(resignation) {
+function buildSteps(resignation, t) {
     const { status, workflow = [], actions = [] } = resignation;
     const decided = actions.filter((action) => ["Approved", "Accepted"].includes(action.action));
     const decidedOn = (index) => formatDate(decided[index]?.created_at);
     const accepted = ["Accepted", "Serving Notice", "Completed"].includes(status);
 
     const steps = [
-        { key: "submitted", label: "Submitted", state: "completed", caption: null, date: formatDate(resignation.resignation_date) },
-        ...workflow.map((step, index) => ({ key: `${step.role}-${index}`, label: step.label, state: "upcoming", caption: null, date: null })),
-        { key: "notice", label: "Serving Notice", state: "upcoming", caption: null, date: null },
-        { key: "completed", label: "Completed", state: "upcoming", caption: null, date: null },
+        { key: "submitted", label: t("resignation.tracker.submitted", { defaultValue: "Submitted" }), state: "completed", caption: null, date: formatDate(resignation.resignation_date) },
+        ...workflow.map((step, index) => ({ key: `${step.role}-${index}`, label: resignationRoleLabel(step.role, step.label), state: "upcoming", caption: null, date: null })),
+        { key: "notice", label: resignationStatusLabel("Serving Notice"), state: "upcoming", caption: null, date: null },
+        { key: "completed", label: resignationStatusLabel("Completed"), state: "upcoming", caption: null, date: null },
     ];
     const approverStep = (index) => steps[index + 1];
     const noticeStep = steps[steps.length - 2];
@@ -24,13 +25,13 @@ function buildSteps(resignation) {
     if (accepted) {
         workflow.forEach((_, index) => Object.assign(approverStep(index), { state: "completed", date: decidedOn(index) }));
         if (status === "Completed") {
-            Object.assign(noticeStep, { state: "completed", caption: `Until ${formatDate(resignation.last_working_day)}` });
+            Object.assign(noticeStep, { state: "completed", caption: t("resignation.tracker.until", { date: formatDate(resignation.last_working_day), defaultValue: "Until {{date}}" }) });
             Object.assign(completedStep, { state: "completed", date: formatDate(resignation.completed_at) });
         } else {
             Object.assign(noticeStep, {
                 state: "current",
-                caption: resignation.days_remaining !== null ? `${daysLabel(resignation.days_remaining)} remaining` : null,
-                date: `Last day ${formatDate(resignation.last_working_day)}`,
+                caption: resignation.days_remaining !== null ? t("resignation.tracker.remaining", { days: daysLabel(resignation.days_remaining), defaultValue: "{{days}} remaining" }) : null,
+                date: t("resignation.tracker.lastDay", { date: formatDate(resignation.last_working_day), defaultValue: "Last day {{date}}" }),
             });
         }
         return steps;
@@ -43,9 +44,9 @@ function buildSteps(resignation) {
     });
     const node = approverStep(reached);
     if (node) {
-        if (status === "Rejected") Object.assign(node, { state: "rejected", caption: "Rejected" });
-        else if (status === "Withdrawn") Object.assign(node, { state: "cancelled", caption: "Withdrawn" });
-        else Object.assign(node, { state: "current", caption: "Awaiting approval" });
+        if (status === "Rejected") Object.assign(node, { state: "rejected", caption: resignationStatusLabel("Rejected") });
+        else if (status === "Withdrawn") Object.assign(node, { state: "cancelled", caption: resignationStatusLabel("Withdrawn") });
+        else Object.assign(node, { state: "current", caption: t("resignation.tracker.awaiting", { defaultValue: "Awaiting approval" }) });
     }
     return steps;
 }
@@ -53,16 +54,17 @@ function buildSteps(resignation) {
 const HEADLINE_TONE = { Completed: "completed", Rejected: "rejected", Withdrawn: "cancelled" };
 
 function ResignationTracker({ resignation }) {
-    const steps = buildSteps(resignation);
+    const { t } = useTranslation();
+    const steps = buildSteps(resignation, t);
     const tone = HEADLINE_TONE[resignation.status] || "current";
     const headline = resignation.status === "Serving Notice" && resignation.days_remaining !== null
-        ? `Serving notice – ${daysLabel(resignation.days_remaining)} remaining`
-        : resignation.status;
+        ? t("resignation.tracker.headlineServing", { days: daysLabel(resignation.days_remaining), defaultValue: "Serving notice – {{days}} remaining" })
+        : resignationStatusLabel(resignation.status);
 
     return (
         <div className="leave-tracker">
             <div className="leave-tracker-head">
-                <div className="leave-tracker-eyebrow">RESIGNATION PROGRESS</div>
+                <div className="leave-tracker-eyebrow">{t("resignation.tracker.eyebrow", { defaultValue: "RESIGNATION PROGRESS" })}</div>
                 <p className={`leave-tracker-status tone-${tone}`}>{headline}</p>
             </div>
             <ol className="leave-tracker-steps">

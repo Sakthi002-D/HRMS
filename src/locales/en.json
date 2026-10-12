@@ -1,4 +1,80 @@
 {
+    "employeePayroll": {
+        "kicker": "Salary & benefits",
+        "title": "My Payroll",
+        "subtitle": "View your salary, deductions and monthly payslips",
+        "loading": "Loading payroll details...",
+        "empty": "No payroll records available yet.",
+        "netSalary": "Net Salary",
+        "allowances": "Allowances",
+        "deductions": "Deductions",
+        "basicSalary": "Basic Salary",
+        "bankTransferStatus": "Bank Transfer Status",
+        "currentMonth": "Current month",
+        "salaryHistory": "Salary History",
+        "records_one": "{{count}} record",
+        "records_other": "{{count}} records",
+        "download": "Download",
+        "table": {
+            "salaryMonth": "Salary Month",
+            "transferStatus": "Transfer Status",
+            "payslip": "Payslip"
+        },
+        "status": {
+            "paid": "Paid",
+            "pending": "Pending",
+            "processing": "Processing",
+            "transferred": "Transferred",
+            "completed": "Completed",
+            "failed": "Failed"
+        }
+    },
+    "employeeAttendance": {
+        "greeting": {
+            "morning": "Good Morning",
+            "afternoon": "Good Afternoon",
+            "evening": "Good Evening"
+        },
+        "greetingWithName": "{{greeting}}, {{name}}",
+        "workingHours": "Working Hours",
+        "punchIn": "Punch In",
+        "punchOut": "Punch Out",
+        "recordedToday": "Attendance recorded today",
+        "totalHoursToday": "Total Hours Today",
+        "totalHoursWeek": "Total Hours This Week",
+        "totalHoursMonth": "Total Hours Month",
+        "attendanceDays_one": "{{count}} attendance day",
+        "attendanceDays_other": "{{count}} attendance days",
+        "recordedDays_one": "{{count}} recorded day",
+        "recordedDays_other": "{{count}} recorded days",
+        "rowsPerPage": "Rows per page",
+        "month": "Month",
+        "monthWise": "Month Wise",
+        "year": "Year",
+        "yearWise": "Year Wise",
+        "searchPlaceholder": "Search date or status...",
+        "selectStatus": "Select Status",
+        "status": {
+            "present": "Present",
+            "late": "Late",
+            "absent": "Absent",
+            "no_attendance_yet": "No attendance yet",
+            "not_recorded": "Not recorded"
+        },
+        "table": {
+            "date": "Date",
+            "checkIn": "Check In",
+            "status": "Status",
+            "checkOut": "Check Out",
+            "late": "Late",
+            "overtime": "Overtime",
+            "productionHours": "Production Hours"
+        },
+        "hoursValue": "{{value}} hrs",
+        "minutesValue": "{{value}} min",
+        "noRecords": "No attendance records found.",
+        "showing": "Showing {{from}}-{{to}} of {{total}} records"
+    },
   "menu": {
     "mainMenu": "MAIN MENU",
     "account": "ACCOUNT",
@@ -261,5 +337,443 @@
     "applied": "Leave applied successfully!",
     "noBackend": "Unable to connect to backend",
     "cancelFailed": "Unable to cancel leave request"
+  },
+  "employeeProfile": {
+    "overview": "Employee Overview",
+    "toggleAll": "Expand or collapse all profile sections",
+    "title": "My Profile",
+    "subtitle": "Complete employee information from HR records",
+    "employee": "Employee",
+    "editInfo": "Edit Info",
+    "message": "Message",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editPanel": "Edit {{title}}",
+    "expandPanel": "Expand {{title}}",
+    "collapsePanel": "Collapse {{title}}",
+    "defaultAbout": "Employee {{name}} is part of the {{department}} team as a {{designation}}.",
+    "defaultDepartment": "organization",
+    "defaultDesignation": "valued employee",
+    "basic": {
+      "title": "Basic information",
+      "phone": "Phone",
+      "qid": "QID",
+      "email": "Email",
+      "gender": "Gender",
+      "birthday": "Birthday",
+      "joiningDate": "Joining Date",
+      "employmentType": "Employment Type",
+      "address": "Address"
+    },
+    "personal": {
+      "title": "Personal Information",
+      "nationality": "Nationality",
+      "religion": "Religion",
+      "maritalStatus": "Marital status",
+      "childrenCount": "No. of children"
+    },
+    "emergency": {
+      "title": "Emergency Contact Number",
+      "primary": "Primary"
+    },
+    "panels": {
+      "about": "About Employee",
+      "bank": "Bank Information",
+      "family": "Family Information",
+      "employment": "Employment Details",
+      "position": "Position Details",
+      "education": "Education Details",
+      "experience": "Experience"
+    },
+    "bank": {
+      "accountHolder": "Account Holder",
+      "bankName": "Bank Name",
+      "accountNumber": "Account Number",
+      "branchName": "Branch Name",
+      "ifscCode": "IFSC Code",
+      "accountType": "Account Type"
+    },
+    "family": {
+      "fatherName": "Father Name",
+      "motherName": "Mother Name",
+      "spouseName": "Spouse Name",
+      "spouseEmployment": "Spouse Employment",
+      "maritalStatus": "Marital Status",
+      "children": "Children"
+    },
+    "employment": {
+      "legalEntity": "Legal Entity",
+      "workerType": "Worker Type",
+      "personnelNumber": "Personnel Number",
+      "employmentCategory": "Employment Category",
+      "employmentStart": "Employment Start",
+      "employmentEnd": "Employment End",
+      "employmentType": "Employment Type",
+      "projectRoleId": "Project Role ID",
+      "terminationReason": "Termination Reason",
+      "lastDateWorked": "Last Date Worked"
+    },
+    "position": {
+      "position": "Position",
+      "positionTitle": "Position Title",
+      "assignmentStart": "Assignment Start",
+      "assignmentEnd": "Assignment End",
+      "makePrimary": "Make Primary"
+    },
+    "education": {
+      "qualification": "Qualification",
+      "present": "Present",
+      "add": "+ Add Education"
+    },
+    "experience": {
+      "company": "Company",
+      "currentlyWorking": "Currently working",
+      "add": "+ Add Experience"
+    },
+    "work": {
+      "projects": "Projects",
+      "assets": "Assets",
+      "workforce": "Workforce",
+      "management": "{{name}} Management",
+      "managementHint": "Employee responsibilities and assigned work",
+      "operations": "{{name}} Operations",
+      "operationsHint": "Current role and organizational activities",
+      "noAssets": "No assets assigned"
+    },
+    "values": {
+      "yes": "Yes",
+      "no": "No",
+      "never": "Never",
+      "status": { "active": "Active", "inactive": "Inactive" },
+      "gender": { "male": "Male", "female": "Female", "other": "Other" },
+      "educationType": { "full_time": "Full Time", "part_time": "Part Time", "distance": "Distance" },
+      "maritalStatus": { "single": "Single", "married": "Married", "divorced": "Divorced", "widowed": "Widowed" },
+      "employmentType": { "full_time": "Full Time", "part_time": "Part Time", "contract": "Contract", "temporary": "Temporary", "intern": "Intern", "internship": "Internship" },
+      "workerType": { "employee": "Employee", "contractor": "Contractor" }
+    }
+  },
+  "profileEdit": {
+    "title": "Edit Employee Profile",
+    "subtitle": "Update your employee information",
+    "sections": {
+      "basic": "Basic information",
+      "personal": "Personal Information",
+      "emergency": "Emergency Contact Number",
+      "work": "Work information"
+    },
+    "fields": {
+      "employee_id": "QID",
+      "name": "Full Name",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "date_of_birth": "Birthday",
+      "joining_date": "Joining Date",
+      "gender": "Gender",
+      "employment_type": "Employment Type",
+      "passport_no": "Passport No",
+      "nationality": "Nationality",
+      "religion": "Religion",
+      "marital_status": "Marital Status",
+      "children_count": "No. of Children",
+      "emergency_contact": "Primary",
+      "designation": "Designation / Role",
+      "department": "Department",
+      "passport_exp_date": "Passport Exp Date",
+      "status": "Status",
+      "profile_photo": "Profile Photo"
+    },
+    "selectGender": "Select gender",
+    "selectEmploymentType": "Select employment type",
+    "selectMaritalStatus": "Select marital status",
+    "selectYear": "Select year",
+    "photoPreview": "Profile preview",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "sectionHeading": "Edit {{title}}",
+    "sectionSubtitle": "Update {{title}}",
+    "titles": {
+      "about": "About Employee",
+      "bank": "Bank Information",
+      "family": "Family Information",
+      "education": "Education Details",
+      "employment": "Employment Details",
+      "position": "Position Information",
+      "experience": "Experience"
+    },
+    "sectionFields": {
+      "about": "About Employee",
+      "account_holder_name": "Account Holder Name",
+      "account_number": "Account Number",
+      "bank_name": "Bank Name",
+      "branch_name": "Branch Name",
+      "ifsc_code": "IFSC Code",
+      "account_type": "Account Type",
+      "father_name": "Father Name",
+      "mother_name": "Mother Name",
+      "spouse_name": "Spouse Name",
+      "spouse_employment": "Spouse Employment",
+      "marital_status": "Marital Status",
+      "children_count": "Children Count",
+      "qualification": "Degree / Qualification",
+      "institution": "Institution / University",
+      "field_of_study": "Field of Study",
+      "specialization": "Specialization",
+      "start_year": "Start Year",
+      "end_year": "End Year",
+      "grade": "Grade / CGPA",
+      "education_type": "Education Type",
+      "location": "Location",
+      "legal_entity": "Legal Entity",
+      "worker_type": "Worker Type",
+      "employee_id": "Personnel Number",
+      "employment_category": "Employment Category",
+      "joining_date": "Employment Start Date",
+      "employment_end_date": "Employment End Date",
+      "employment_type": "Employment Type",
+      "project_role_id": "Project Role ID",
+      "termination_reason": "Termination Reason",
+      "last_date_worked": "Last Date Worked",
+      "position": "Position",
+      "position_title": "Position Title",
+      "assignment_start": "Assignment Start",
+      "assignment_end": "Assignment End",
+      "company_name": "Company Name",
+      "designation": "Job Title / Role",
+      "department": "Department",
+      "start_date": "Start Date",
+      "end_date": "End Date",
+      "currently_working": "Currently Working",
+      "company_location": "Company Location",
+      "job_description": "Job Description",
+      "responsibilities": "Responsibilities",
+      "skills": "Skills / Technologies Used",
+      "reason_for_leaving": "Reason for Leaving (Optional)"
+    }
+  },
+  "resignation": {
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "servingNotice": "Serving notice – {{days}} remaining. Last working day: {{date}}",
+    "viewResignation": "View resignation",
+    "loading": "Loading resignation...",
+    "tabs": {
+      "mine": "My Resignation",
+      "approvals": "My Approvals"
+    },
+    "form": {
+      "title": "Submit Resignation",
+      "subtitle": "Your resignation goes to your Line Manager, then HR.",
+      "resignationDate": "Resignation Date",
+      "noticePeriod": "Notice Period",
+      "lastWorkingDay": "Last Working Day",
+      "noticeEnds": "Notice ends {{date}}. You may request an earlier date.",
+      "earlyReleaseNote": "Early release requested – subject to approval",
+      "earlyReason": "Reason for early release *",
+      "earlyReasonPlaceholder": "Why do you need to leave before the notice period ends?",
+      "reasonCategory": "Reason Category *",
+      "selectReason": "Select reason",
+      "details": "Details *",
+      "detailsPlaceholder": "Tell us more about your decision",
+      "letter": "Resignation Letter (optional)",
+      "letterHint": "PDF, DOC/DOCX or image, up to 5 MB.",
+      "acknowledge": "I understand my final settlement will be processed by HR after my last working day.",
+      "cancel": "Cancel",
+      "submitting": "Submitting...",
+      "submit": "Submit",
+      "submitted": "Resignation submitted. You'll be notified at every step."
+    },
+    "errors": {
+      "chooseLastDay": "Choose your last working day",
+      "lastDayPast": "Last working day can't be in the past",
+      "lastDayAfter": "Last working day can't be after {{date}}",
+      "earlyReasonRequired": "Enter a reason for the early release",
+      "reasonRequired": "Choose a reason category",
+      "detailsRequired": "Enter the details",
+      "letterType": "Upload a PDF, Word document or image",
+      "letterSize": "The letter must be 5 MB or smaller",
+      "confirmRequired": "Please confirm to continue"
+    },
+    "status": {
+      "heading": "Resignation {{number}}",
+      "submittedOn": "Submitted on {{date}}",
+      "reason": "Reason",
+      "trackingDetails": "Tracking details",
+      "withdraw": "Withdraw Resignation"
+    },
+    "withdrawDialog": {
+      "title": "Withdraw resignation?",
+      "line1": "You are about to withdraw resignation <b>{{number}}</b>.",
+      "line2": "Your employment will continue as normal and the last working day of <b>{{date}}</b> will be cancelled.",
+      "keep": "Keep Resignation",
+      "confirm": "Yes, Withdraw",
+      "loading": "Withdrawing…",
+      "done": "Resignation {{number}} withdrawn. Your employment continues as normal."
+    },
+    "approvals": {
+      "no": "No",
+      "employee": "Employee",
+      "department": "Department",
+      "status": "Status",
+      "action": "Action",
+      "empty": "Nothing is waiting for your approval.",
+      "earlyRelease": "Early release requested",
+      "review": "Review"
+    },
+    "previous": {
+      "rejected": "Your previous resignation {{number}} was rejected",
+      "withdrawn": "Your previous resignation {{number}} was withdrawn",
+      "reason": "Reason: {{reason}}"
+    },
+    "reasons": {
+      "better_opportunity": "Better opportunity",
+      "personal": "Personal",
+      "relocation": "Relocation",
+      "higher_studies": "Higher studies",
+      "health": "Health",
+      "other": "Other"
+    },
+    "statuses": {
+      "pending_line_manager": "Pending Line Manager",
+      "pending_lm": "Pending LM",
+      "pending_hr": "Pending HR",
+      "accepted": "Accepted",
+      "serving_notice": "Serving Notice",
+      "completed": "Completed",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "noticeSource": {
+      "default": "default",
+      "employment_type": "employment type",
+      "grade": "grade"
+    },
+    "tracker": {
+      "eyebrow": "RESIGNATION PROGRESS",
+      "submitted": "Submitted",
+      "until": "Until {{date}}",
+      "remaining": "{{days}} remaining",
+      "lastDay": "Last day {{date}}",
+      "awaiting": "Awaiting approval",
+      "headlineServing": "Serving notice – {{days}} remaining"
+    },
+    "actions": {
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "completed": "Completed"
+    },
+    "log": {
+      "dateTime": "Date & time",
+      "action": "Action",
+      "by": "By",
+      "remark": "Remark",
+      "system": "System"
+    },
+    "early": {
+      "requested": "Early release requested",
+      "text": "Last working day {{requested}} instead of {{calculated}}.",
+      "reason": "Reason: {{reason}}"
+    },
+    "detail": {
+      "title": "Resignation",
+      "loading": "Loading...",
+      "employee": "Employee",
+      "decision": "Your decision",
+      "lwd": "Last working day",
+      "requestedHint": "Requested: {{date}}. Change it only if agreed with the employee; a remark is required and it's shown in the log.",
+      "remarkRequired": "Remark (required: why the last working day changed)",
+      "remarkOptional": "Remarks (optional; required to reject)",
+      "noticeEnds": "Notice Ends",
+      "daysRemaining": "Days Remaining",
+      "reasonCategory": "Reason Category",
+      "earlyRelease": "Early Release",
+      "yes": "Yes",
+      "no": "No",
+      "letter": "Resignation Letter",
+      "letterDefault": "Resignation letter",
+      "download": "(Download)",
+      "notAttached": "Not attached",
+      "earlyReason": "Early Release Reason",
+      "details": "Details",
+      "rejectionReason": "Rejection Reason",
+      "approvers": "Approvers",
+      "noApprover": "No approver assigned (Settings → Approval Workflows)",
+      "routedTo": "Routed to {{via}}",
+      "errors": {
+        "rejectReasonRequired": "Enter a reason for rejecting",
+        "chooseLwd": "Choose the last working day.",
+        "lwdPast": "Last working day can't be in the past.",
+        "lwdRemark": "Enter a remark explaining the changed last working day."
+      },
+      "dialog": {
+        "rejectTitle": "Reject resignation?",
+        "acceptTitle": "Accept resignation?",
+        "approveTitle": "Approve resignation?",
+        "rejectMessage": "{{number}} for {{name}} will be rejected and the employee will be notified.",
+        "acceptMessage": "{{name}} will start serving notice with the last working day on {{date}}.",
+        "approveMessage": "{{number}} will move to the next approver.",
+        "reason": "Reason: {{reason}}",
+        "remark": "Remark: {{remark}}",
+        "reject": "Reject",
+        "accept": "Accept",
+        "approve": "Approve",
+        "rejecting": "Rejecting...",
+        "saving": "Saving..."
+      }
+    }
+  },
+  "employeeRequest": {
+    "close": "Close request form",
+    "subtitle": "Submit your request to HR for review.",
+    "submittedTitle": "Request submitted",
+    "submittedMessage": "Your {{type}} has been sent to HR for review.",
+    "pendingReview": "Pending review",
+    "done": "Done",
+    "cancel": "Cancel",
+    "submit": "Submit Request",
+    "selectMonth": "Select month",
+    "selectYear": "Select year",
+    "selectOption": "Select {{label}}",
+    "fields": {
+      "purpose": "Purpose",
+      "salary_period": "Salary Period",
+      "destination": "Destination / Organization",
+      "letter_type": "Letter Type",
+      "expense_date": "Expense Date",
+      "amount": "Amount",
+      "description": "Description"
+    },
+    "placeholders": {
+      "salaryCertificate": { "purpose": "Why do you need the certificate?" },
+      "nocRequest": { "purpose": "Why do you need the NOC?", "destination": "Enter destination or organization" },
+      "letterRequest": { "purpose": "Why do you need this letter?" },
+      "expenseReimbursement": { "amount": "Enter amount", "description": "Describe the expense" }
+    },
+    "options": {
+      "letter_type": {
+        "employment_letter": "Employment Letter",
+        "experience_letter": "Experience Letter",
+        "promotion_letter": "Promotion Letter",
+        "other": "Other"
+      }
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
   }
 }
