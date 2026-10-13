@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { usePortalLanguage } from "../i18n";
+import { clearPortalLanguage, usePortalLanguage } from "../i18n";
 import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
@@ -221,6 +221,7 @@ function EmployeeDashboard() {
     window.history.pushState(null, "", window.location.href);
 
     const handleBackButton = () => {
+        clearPortalLanguage("employee");
         purgeAllChatStorage();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         sessionStorage.removeItem("loggedInEmployee");
@@ -487,6 +488,7 @@ function EmployeeDashboard() {
     };
 
     const logout = () => {
+     clearPortalLanguage("employee");
      purgeAllChatStorage();
      if (window.speechSynthesis) window.speechSynthesis.cancel();
      sessionStorage.removeItem("loggedInEmployee");

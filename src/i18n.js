@@ -20,11 +20,14 @@ export const LANGUAGES = [
 // The portal that is open right now: "hr", "employee", or null (Login, Careers, other pages)
 let activePortal = null;
 
+// Both portals keep the language only for the current login (sessionStorage, cleared on logout).
+const storageFor = () => sessionStorage;
+
 const readSavedLanguage = (portal) => {
     const key = LANGUAGE_STORAGE_KEYS[portal];
     if (!key) return "en";
     try {
-        return localStorage.getItem(key) === "ar" ? "ar" : "en";
+        return storageFor(portal).getItem(key) === "ar" ? "ar" : "en";
     } catch {
         return "en";
     }
@@ -48,9 +51,21 @@ export function changeAppLanguage(code) {
     const key = LANGUAGE_STORAGE_KEYS[activePortal];
     if (!key) return; // Outside a portal: change for this visit only, save nothing
     try {
-        localStorage.setItem(key, next);
+        storageFor(activePortal).setItem(key, next);
     } catch {
         // Storage blocked (private mode): the language still changes for this visit
+    }
+}
+
+// Forget a portal's saved language (used on logout). Also removes any older localStorage copy.
+export function clearPortalLanguage(portal) {
+    const key = LANGUAGE_STORAGE_KEYS[portal];
+    if (!key) return;
+    try {
+        storageFor(portal).removeItem(key);
+        localStorage.removeItem(key);
+    } catch {
+        // Storage blocked: nothing to clear
     }
 }
 

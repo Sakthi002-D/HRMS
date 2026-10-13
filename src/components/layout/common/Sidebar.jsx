@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import "./Sidebar.css";
 import { useTranslation } from "react-i18next";
+import { clearPortalLanguage } from "../../../i18n";
 import { scrollActiveIntoView } from "./sidebarScroll";
 import { purgeAllChatStorage } from "../../assistant/HRAssistant";
 import { APPLICATIONS_CHANGED_EVENT, MPRS_CHANGED_EVENT } from "../../recruitment/recruitmentApi";
@@ -136,6 +137,7 @@ function Sidebar({ collapsed, onToggle }) {
           type="button"
           className="sidebar-link sidebar-button"
           onClick={() => {
+            clearPortalLanguage("hr");
             purgeAllChatStorage();
             if (window.speechSynthesis) window.speechSynthesis.cancel();
             sessionStorage.removeItem("loggedInHR");
