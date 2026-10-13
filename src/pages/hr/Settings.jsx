@@ -55,6 +55,7 @@ const CURRENCIES = [
 ];
 
 function Settings() {
+    const { t } = useTranslation();
     const [activeGroup, setActiveGroup] = useState("general");
     const [settings, setSettings] = useState(() => {
         try {
@@ -86,8 +87,8 @@ function Settings() {
             <div className="settings-page">
                 <header className="settings-header">
                     <div>
-                        <h1>Settings</h1>
-                        <p>Manage your HRMS preferences and application configuration.</p>
+                        <h1>{t("settings.title", { defaultValue: "Settings" })}</h1>
+                        <p>{t("settings.subtitle", { defaultValue: "Manage your HRMS preferences and application configuration." })}</p>
                     </div>
                 </header>
 
@@ -96,7 +97,7 @@ function Settings() {
                         {settingGroups.map(({ id, label, icon: Icon }) => (
                             <button key={id} className={activeGroup === id ? "active" : ""} onClick={() => setActiveGroup(id)}>
                                 <Icon size={17} />
-                                <span>{label}</span>
+                                <span>{t(`settings.menu.${id}`, { defaultValue: label })}</span>
                                 <ChevronDown size={15} />
                             </button>
                         ))}
@@ -105,7 +106,7 @@ function Settings() {
                     <main className="settings-content">
                         <section className="settings-card">
                             <div className="settings-card-heading">
-                                <div><span className="settings-eyebrow">CONFIGURATION</span><h2>{settingGroups.find((group) => group.id === activeGroup)?.label}</h2><p>Update the settings used across your HRMS workspace.</p></div>
+                                <div><span className="settings-eyebrow">{t("settings.configuration", { defaultValue: "CONFIGURATION" })}</span><h2>{t(`settings.menu.${activeGroup}`, { defaultValue: settingGroups.find((group) => group.id === activeGroup)?.label })}</h2><p>{t("settings.cardSubtitle", { defaultValue: "Update the settings used across your HRMS workspace." })}</p></div>
                                 <div className="settings-heading-icon"><LockKeyhole size={20} /></div>
                             </div>
 
@@ -121,8 +122,8 @@ function Settings() {
 
                             {!SERVER_GROUPS.includes(activeGroup) && (
                                 <div className="settings-card-footer">
-                                    {saved && <span className="settings-saved"><Check size={15} /> Changes saved</span>}
-                                    <button className="settings-save-button" onClick={saveSettings}><Save size={15} /> Save Changes</button>
+                                    {saved && <span className="settings-saved"><Check size={15} /> {t("settings.common.changesSaved", { defaultValue: "Changes saved" })}</span>}
+                                    <button className="settings-save-button" onClick={saveSettings}><Save size={15} /> {t("profileEdit.save", { defaultValue: "Save Changes" })}</button>
                                 </div>
                             )}
                         </section>
@@ -142,10 +143,10 @@ function GeneralSettings({ settings, updateSetting }) {
     const currentLanguage = i18n.language === "ar" ? "ar" : "en";
 
     return <div className="settings-form-grid">
-        <Field label="Company Name"><input value={settings.companyName} onChange={(event) => updateSetting("companyName", event.target.value)} /></Field>
-        <Field label="Company Email"><input type="email" value={settings.companyEmail} onChange={(event) => updateSetting("companyEmail", event.target.value)} /></Field>
-        <Field label="Timezone"><select value={settings.timezone} onChange={(event) => updateSetting("timezone", event.target.value)}><option>Asia/Kolkata</option><option>Asia/Qatar</option><option>UTC</option></select></Field>
-        <Field label={t("settings.language")} hint="Changes the language immediately for you in this browser.">
+        <Field label={t("settings.general.companyName", { defaultValue: "Company Name" })}><input value={settings.companyName} onChange={(event) => updateSetting("companyName", event.target.value)} /></Field>
+        <Field label={t("settings.general.companyEmail", { defaultValue: "Company Email" })}><input type="email" dir="ltr" value={settings.companyEmail} onChange={(event) => updateSetting("companyEmail", event.target.value)} /></Field>
+        <Field label={t("settings.general.timezone", { defaultValue: "Timezone" })}><select dir="ltr" value={settings.timezone} onChange={(event) => updateSetting("timezone", event.target.value)}><option value="Asia/Kolkata">Asia/Kolkata</option><option value="Asia/Qatar">Asia/Qatar</option><option value="UTC">UTC</option></select></Field>
+        <Field label={t("settings.language")} hint={t("settings.general.languageHint", { defaultValue: "Changes the language for the HR portal until you log out." })}>
             <select
                 value={currentLanguage}
                 onChange={(event) => {
@@ -160,25 +161,29 @@ function GeneralSettings({ settings, updateSetting }) {
 }
 
 function WebsiteSettings({ settings, updateSetting }) {
+    const { t } = useTranslation();
     return <div className="settings-form-grid">
-        <Field label="Primary Theme Color" hint="Used for main buttons and accents."><div className="color-field"><input type="color" value={settings.primaryColor} onChange={(event) => updateSetting("primaryColor", event.target.value)} /><input value={settings.primaryColor} onChange={(event) => updateSetting("primaryColor", event.target.value)} /></div></Field>
-        <Field label="Date Format"><select value={settings.dateFormat} onChange={(event) => updateSetting("dateFormat", event.target.value)}><option>DD-MM-YYYY</option><option>MM-DD-YYYY</option><option>YYYY-MM-DD</option></select></Field>
+        <Field label={t("settings.website.primaryColor", { defaultValue: "Primary Theme Color" })} hint={t("settings.website.primaryColorHint", { defaultValue: "Used for main buttons and accents." })}><div className="color-field"><input type="color" value={settings.primaryColor} onChange={(event) => updateSetting("primaryColor", event.target.value)} /><input dir="ltr" value={settings.primaryColor} onChange={(event) => updateSetting("primaryColor", event.target.value)} /></div></Field>
+        <Field label={t("settings.website.dateFormat", { defaultValue: "Date Format" })}><select dir="ltr" value={settings.dateFormat} onChange={(event) => updateSetting("dateFormat", event.target.value)}><option value="DD-MM-YYYY">DD-MM-YYYY</option><option value="MM-DD-YYYY">MM-DD-YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></Field>
     </div>;
 }
 
 function AppSettings({ settings, updateSetting }) {
+    const { t } = useTranslation();
     return <div className="settings-toggle-list">
-        <Toggle label="Email Notifications" description="Receive important HRMS updates by email." checked={settings.emailNotifications} onChange={(value) => updateSetting("emailNotifications", value)} />
-        <Toggle label="Leave Notifications" description="Notify HR when a leave request is submitted." checked={settings.leaveNotifications} onChange={(value) => updateSetting("leaveNotifications", value)} />
-        <Toggle label="Attendance Reminders" description="Send reminders for missing attendance records." checked={settings.attendanceReminders} onChange={(value) => updateSetting("attendanceReminders", value)} />
+        <Toggle label={t("settings.app.emailNotifications", { defaultValue: "Email Notifications" })} description={t("settings.app.emailNotificationsHint", { defaultValue: "Receive important HRMS updates by email." })} checked={settings.emailNotifications} onChange={(value) => updateSetting("emailNotifications", value)} />
+        <Toggle label={t("settings.app.leaveNotifications", { defaultValue: "Leave Notifications" })} description={t("settings.app.leaveNotificationsHint", { defaultValue: "Notify HR when a leave request is submitted." })} checked={settings.leaveNotifications} onChange={(value) => updateSetting("leaveNotifications", value)} />
+        <Toggle label={t("settings.app.attendanceReminders", { defaultValue: "Attendance Reminders" })} description={t("settings.app.attendanceRemindersHint", { defaultValue: "Send reminders for missing attendance records." })} checked={settings.attendanceReminders} onChange={(value) => updateSetting("attendanceReminders", value)} />
     </div>;
 }
 
 function SystemSettings({ settings, updateSetting }) {
-    return <div className="settings-form-grid"><Field label="Session Timeout"><select value={settings.sessionTimeout} onChange={(event) => updateSetting("sessionTimeout", event.target.value)}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></Field></div>;
+    const { t } = useTranslation();
+    return <div className="settings-form-grid"><Field label={t("settings.system.sessionTimeout", { defaultValue: "Session Timeout" })}><select value={settings.sessionTimeout} onChange={(event) => updateSetting("sessionTimeout", event.target.value)}><option value="15">{t("settings.system.minutes", { count: 15, defaultValue: "{{count}} minutes" })}</option><option value="30">{t("settings.system.minutes", { count: 30, defaultValue: "{{count}} minutes" })}</option><option value="60">{t("settings.system.minutes", { count: 60, defaultValue: "{{count}} minutes" })}</option></select></Field></div>;
 }
 
 function FinancialSettings({ settings, updateSetting }) {
+    const { t } = useTranslation();
     // Choosing a currency also fills in its symbol (HR can still edit the symbol afterwards)
     const changeCurrency = (code) => {
         updateSetting("currency", code);
@@ -187,21 +192,22 @@ function FinancialSettings({ settings, updateSetting }) {
     };
 
     return <div className="settings-form-grid">
-        <Field label="Currency">
+        <Field label={t("settings.financial.currency", { defaultValue: "Currency" })}>
             <select value={settings.currency} onChange={(event) => changeCurrency(event.target.value)}>
                 {CURRENCIES.map((currency) => (
-                    <option key={currency.code} value={currency.code}>{currency.code} – {currency.name}</option>
+                    <option key={currency.code} value={currency.code}>{currency.code} – {t(`settings.financial.currencies.${currency.code}`, { defaultValue: currency.name })}</option>
                 ))}
             </select>
         </Field>
-        <Field label="Currency Symbol" hint="Filled in automatically from the currency. You can change it if needed.">
-            <input value={settings.currencySymbol} onChange={(event) => updateSetting("currencySymbol", event.target.value)} />
+        <Field label={t("settings.financial.currencySymbol", { defaultValue: "Currency Symbol" })} hint={t("settings.financial.currencySymbolHint", { defaultValue: "Filled in automatically from the currency. You can change it if needed." })}>
+            <input dir="ltr" value={settings.currencySymbol} onChange={(event) => updateSetting("currencySymbol", event.target.value)} />
         </Field>
     </div>;
 }
 
 function OtherSettings({ settings, updateSetting }) {
-    return <div className="settings-form-grid"><Field label="Support Email"><input type="email" value={settings.supportEmail} onChange={(event) => updateSetting("supportEmail", event.target.value)} /></Field></div>;
+    const { t } = useTranslation();
+    return <div className="settings-form-grid"><Field label={t("settings.other.supportEmail", { defaultValue: "Support Email" })}><input type="email" dir="ltr" value={settings.supportEmail} onChange={(event) => updateSetting("supportEmail", event.target.value)} /></Field></div>;
 }
 
 function Toggle({ label, description, checked, onChange }) {

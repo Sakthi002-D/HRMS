@@ -1,10 +1,34 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
 import API_URL from "../../config/api";
 import "./Attendance.css";
 
+// Fixed messages the backend sends for Punch In / Punch Out → translation keys.
+// Any other message is shown as the backend sent it.
+const SERVER_MESSAGES = {
+    "Employee ID is required": "employeeIdRequired",
+    "Active employee not found": "employeeNotFound",
+    "Employee has already punched in today": "alreadyPunchedIn",
+    "Employee has not punched in today": "notPunchedIn",
+    "Employee has already punched out today": "alreadyPunchedOut",
+    "Failed to process Punch In": "punchInProcessFailed",
+    "Failed to process Punch Out": "punchOutProcessFailed",
+};
+
 function Attendance() {
+    const { t } = useTranslation();
+    const serverMessage = (message) =>
+        SERVER_MESSAGES[message]
+            ? t(`hrAttendance.serverMessages.${SERVER_MESSAGES[message]}`, { defaultValue: message })
+            : message;
+    // Attendance status from the database ("Present", "On Leave") → shown label; the value itself stays English
+    const statusLabel = (value) => {
+        if (!value) return "";
+        const key = String(value).trim().toLowerCase().replace(/\s+/g, "_");
+        return t([`employeeAttendance.status.${key}`, `hrAttendance.status.${key}`], { defaultValue: String(value) });
+    };
     const [search, setSearch] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
@@ -78,7 +102,7 @@ const fetchAttendance = async () => {
     } catch (error) {
         console.error("Error fetching attendance:", error);
         setAttendanceData([]);
-        setMessage("Unable to connect to backend");
+        setMessage(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
     }
 };
 
@@ -89,7 +113,7 @@ const fetchAttendance = async () => {
 
     const handlePunchIn = async () => {
         if (!employeeId.trim()) {
-            setMessage("Please enter Employee ID");
+            setMessage(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
             return;
         }
 
@@ -113,17 +137,17 @@ const fetchAttendance = async () => {
             const data = await response.json();
 
             if (!response.ok) {
-                setMessage(data.message || "Punch In failed");
+                setMessage(serverMessage(data.message) || t("hrAttendance.messages.punchInFailed", { defaultValue: "Punch In failed" }));
                 return;
             }
 
-            setMessage("Punch In successful");
+            setMessage(t("hrAttendance.messages.punchInSuccess", { defaultValue: "Punch In successful" }));
             setEmployeeId("");
 
             await fetchAttendance();
         } catch (error) {
             console.error("Punch In error:", error);
-            setMessage("Unable to connect to backend");
+            setMessage(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
         } finally {
             setLoading(false);
         }
@@ -135,7 +159,7 @@ const fetchAttendance = async () => {
 
     const handlePunchOut = async () => {
         if (!employeeId.trim()) {
-            setMessage("Please enter Employee ID");
+            setMessage(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
             return;
         }
 
@@ -159,17 +183,17 @@ const fetchAttendance = async () => {
             const data = await response.json();
 
             if (!response.ok) {
-                setMessage(data.message || "Punch Out failed");
+                setMessage(serverMessage(data.message) || t("hrAttendance.messages.punchOutFailed", { defaultValue: "Punch Out failed" }));
                 return;
             }
 
-            setMessage("Punch Out successful");
+            setMessage(t("hrAttendance.messages.punchOutSuccess", { defaultValue: "Punch Out successful" }));
             setEmployeeId("");
 
             await fetchAttendance();
         } catch (error) {
             console.error("Punch Out error:", error);
-            setMessage("Unable to connect to backend");
+            setMessage(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
         } finally {
             setLoading(false);
         }
@@ -293,8 +317,8 @@ const fetchAttendance = async () => {
                 {/* Page Header */}
                 <div className="attendance-header">
                     <div>
-                        <h1>Attendance</h1>
-                        <p>Manage Employee Attendance</p>
+                        <h1>{t("menu.attendance", { defaultValue: "Attendance" })}</h1>
+                        <p>{t("hrAttendance.subtitle", { defaultValue: "Manage Employee Attendance" })}</p>
                     </div>
                 </div>
 
@@ -304,29 +328,29 @@ const fetchAttendance = async () => {
                     <input
                         type="text"
                         className="employee-id-input"
-                        placeholder="Enter Employee ID"
+                        placeholder={t("hrAttendance.enterEmployeeId", { defaultValue: "Enter Employee ID" })}
                         value={employeeId}
                         onChange={(e) =>
                             setEmployeeId(e.target.value)
                         }
                     />
 
-                   <button 
+                   <button
                         className="punch-btn punch-in-btn"
-                        onClick={handlePunchIn} 
-                        disabled={loading} 
-                    > 
-                        {loading 
-                        ? "Processing..." 
-                        : "Punch In"} 
-                    </button>
-
-                    <button 
-                        className="punch-btn punch-out-btn"
-                        onClick={handlePunchOut} 
+                        onClick={handlePunchIn}
                         disabled={loading}
                     >
-                            Punch Out
+                        {loading
+                        ? t("hrAttendance.processing", { defaultValue: "Processing..." })
+                        : t("hrAttendance.punchInButton", { defaultValue: "Punch In" })}
+                    </button>
+
+                    <button
+                        className="punch-btn punch-out-btn"
+                        onClick={handlePunchOut}
+                        disabled={loading}
+                    >
+                            {t("hrAttendance.punchOutButton", { defaultValue: "Punch Out" })}
                     </button>
 
                         {message && (
@@ -341,7 +365,7 @@ const fetchAttendance = async () => {
 
                     <input
                         type="text"
-                        placeholder="Search employee..."
+                        placeholder={t("hrAttendance.searchPlaceholder", { defaultValue: "Search employee..." })}
                         className="attendance-search"
                         value={search}
                         onChange={(e) =>
@@ -361,23 +385,23 @@ const fetchAttendance = async () => {
                         }
                     >
                         <option value="all">
-                            All Status
+                            {t("hrAttendance.allStatus", { defaultValue: "All Status" })}
                         </option>
 
                         <option value="Present">
-                            Present
+                            {statusLabel("Present")}
                         </option>
 
                         <option value="Absent">
-                            Absent
+                            {statusLabel("Absent")}
                         </option>
 
                         <option value="Late">
-                            Late
+                            {statusLabel("Late")}
                         </option>
 
                         <option value="On Leave">
-                            On Leave
+                            {statusLabel("On Leave")}
                         </option>
                     </select>
 
@@ -389,7 +413,7 @@ const fetchAttendance = async () => {
                             disabled={!filteredAttendance.length}
                             aria-expanded={isExportOpen}
                         >
-                            Export <span aria-hidden="true">⌄</span>
+                            {t("employeesList.export.button", { defaultValue: "Export" })} <span aria-hidden="true">⌄</span>
                         </button>
 
                         {isExportOpen && (
@@ -409,18 +433,18 @@ const fetchAttendance = async () => {
 
                         <thead>
                             <tr>
-                                <th>Employee ID</th>
-                                <th>Employee Name</th>
-                                <th>Department</th>
-                                <th>Date</th>
-                                <th>Punch In</th>
-                                <th>Status</th>
-                                <th>Punch Out</th>
-                                <th>Shift</th>
-                                <th>Normal Working Hours</th>
-                                <th>Overtime</th>
-                                <th>Late</th>
-                                <th>Working Hours</th>
+                                <th>{t("employeeSettings.employeeId", { defaultValue: "Employee ID" })}</th>
+                                <th>{t("hrAttendance.table.employeeName", { defaultValue: "Employee Name" })}</th>
+                                <th>{t("profileEdit.fields.department", { defaultValue: "Department" })}</th>
+                                <th>{t("employeeAttendance.table.date", { defaultValue: "Date" })}</th>
+                                <th>{t("employeeAttendance.punchIn", { defaultValue: "Punch In" })}</th>
+                                <th>{t("employeeAttendance.table.status", { defaultValue: "Status" })}</th>
+                                <th>{t("employeeAttendance.punchOut", { defaultValue: "Punch Out" })}</th>
+                                <th>{t("hrAttendance.table.shift", { defaultValue: "Shift" })}</th>
+                                <th>{t("hrAttendance.table.normalWorkingHours", { defaultValue: "Normal Working Hours" })}</th>
+                                <th>{t("employeeAttendance.table.overtime", { defaultValue: "Overtime" })}</th>
+                                <th>{t("employeeAttendance.table.late", { defaultValue: "Late" })}</th>
+                                <th>{t("employeeAttendance.workingHours", { defaultValue: "Working Hours" })}</th>
                             </tr>
                         </thead>
 
@@ -433,8 +457,9 @@ const fetchAttendance = async () => {
                                     key={`${employee.employeeID}-${employee.date}-${index}`}
                                 >
 
+                                    {/* IDs, dates, times and hours keep their left-to-right order in Arabic (dir="ltr") */}
                                     <td>
-                                        {employee.employeeID}
+                                        <span dir="ltr">{employee.employeeID}</span>
                                     </td>
 
                                     <td>
@@ -446,20 +471,22 @@ const fetchAttendance = async () => {
                                     </td>
 
                                     <td>
-                                        {new Date(
-                                            employee.date
-                                        ).toLocaleDateString(
-                                            "en-GB",
-                                            {
-                                                day: "2-digit",
-                                                month: "short",
-                                                year: "numeric",
-                                            }
-                                        )}
+                                        <span dir="ltr">
+                                            {new Date(
+                                                employee.date
+                                            ).toLocaleDateString(
+                                                "en-GB",
+                                                {
+                                                    day: "2-digit",
+                                                    month: "short",
+                                                    year: "numeric",
+                                                }
+                                            )}
+                                        </span>
                                     </td>
 
                                     <td>
-                                        <span className="punch-in-time">
+                                        <span className="punch-in-time" dir="ltr">
                                             {formatAttendanceTime(employee.punchIn)}
                                         </span>
                                     </td>
@@ -470,34 +497,34 @@ const fetchAttendance = async () => {
                                                 .toLowerCase()
                                                 .replace(" ", "-")}`}
                                         >
-                                            {employee.status}
+                                            {statusLabel(employee.status)}
                                         </span>
                                     </td>
 
                                     <td>
-                                        <span className="punch-out-time">
+                                        <span className="punch-out-time" dir="ltr">
                                             {formatAttendanceTime(employee.punchOut)}
                                         </span>
                                     </td>
 
                                     <td>
-                                        {employee.shift}
+                                        <span dir="ltr">{employee.shift}</span>
                                     </td>
 
                                     <td className="working-hours">
-                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.normalWorkingMinutes)}
+                                        <span dir="ltr">{employee.punchOut === "-" ? "-" : formatWorkingHours(employee.normalWorkingMinutes)}</span>
                                     </td>
 
                                     <td className="overtime-hours">
-                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes)}
+                                        <span dir="ltr">{employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes)}</span>
                                     </td>
 
                                     <td className="late-duration">
-                                        {formatWorkingHours(employee.lateMinutes)}
+                                        <span dir="ltr">{formatWorkingHours(employee.lateMinutes)}</span>
                                     </td>
 
                                     <td className="working-hours total-working-hours">
-                                        {employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes)}
+                                        <span dir="ltr">{employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes)}</span>
                                     </td>
 
                                 </tr>

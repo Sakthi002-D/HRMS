@@ -5,8 +5,19 @@
 // leave and "today" (YYYY-MM-DD in the company timezone) and returns
 // every stage's state + label, so it can be tested without React.
 // =========================================================
+import i18n from "i18next";
 
 export const DEFAULT_COMPANY_TIMEZONE = "Asia/Kolkata";
+
+// Translated text (leaveManagement.tracker.*). Falls back to the English default with the
+// values filled in when i18n isn't running (e.g. this logic used on its own).
+const tr = (key, defaultValue, options = {}) => {
+    if (i18n.isInitialized) return i18n.t(`leaveManagement.tracker.${key}`, { ...options, defaultValue });
+    return defaultValue.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options[name] ?? ""));
+};
+
+// Dates / IDs inside a sentence keep their left-to-right order on the Arabic page (invisible marks)
+const ltr = (value) => (value ? `⁦${value}⁩` : value);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -79,8 +90,6 @@ export const formatDateKey = (key) =>
           })
         : null;
 
-const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
-
 const pick = (leave, ...fields) => {
     for (const field of fields) {
         if (leave[field] !== undefined && leave[field] !== null && leave[field] !== "") {
@@ -115,7 +124,7 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
 
     const steps = TRACKER_STAGES.map((stage) => ({
         key: stage.key,
-        label: stage.label,
+        label: tr(`stages.${stage.key}`, stage.label),
         state: "upcoming",
         caption: null,
         date: null,
@@ -130,10 +139,11 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
     // Upcoming captions shared by pending/approved flows
     const describeUpcomingLeave = () => {
         if (fromKey && todayKey < fromKey) {
-            step.onLeave.caption = `Starts in ${plural(daysBetween(todayKey, fromKey), "day")}`;
+            const count = daysBetween(todayKey, fromKey);
+            step.onLeave.caption = tr("startsIn", `Starts in ${count} day${count === 1 ? "" : "s"}`, { count });
         }
         if (toKey && todayKey <= toKey) {
-            step.resumed.caption = `Expected ${formatDateKey(addDays(toKey, 1))}`;
+            step.resumed.caption = tr("expected", "Expected {{date}}", { date: ltr(formatDateKey(addDays(toKey, 1))) });
         }
     };
 
@@ -149,10 +159,10 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
         step.review.state = "completed";
         step.review.date = formatDateKey(reviewedKey);
         step.approved.state = "rejected";
-        step.approved.label = "Rejected";
+        step.approved.label = tr("rejected", "Rejected");
         step.approved.date = formatDateKey(reviewedKey);
 
-        headline = "Rejected by HR";
+        headline = tr("rejectedByHr", "Rejected by HR");
         tone = "rejected";
     } else if (status === "cancelled") {
         // Where was it stopped? Pending → review node. Approved → the
@@ -175,10 +185,13 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
         }
 
         step[stopKey].state = "cancelled";
-        step[stopKey].label = cancelledBy ? `Cancelled by ${cancelledBy}` : "Cancelled";
+        const cancelledText = cancelledBy
+            ? tr("cancelledBy", "Cancelled by {{id}}", { id: ltr(cancelledBy) })
+            : tr("cancelled", "Cancelled");
+        step[stopKey].label = cancelledText;
         step[stopKey].date = formatDateKey(cancelledKey);
 
-        headline = cancelledBy ? `Cancelled by ${cancelledBy}` : "Cancelled";
+        headline = cancelledText;
         tone = "cancelled";
     } else if (status === "approved") {
         step.review.state = "completed";
@@ -192,25 +205,25 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
             step.resumed.state = "completed";
             step.resumed.date = formatDateKey(resumedKey);
 
-            headline = `Resumed duty on ${formatDateKey(resumedKey)}`;
+            headline = tr("resumedOn", "Resumed duty on {{date}}", { date: ltr(formatDateKey(resumedKey)) });
             tone = "completed";
         } else if (!fromKey || todayKey < fromKey) {
             describeUpcomingLeave();
 
             const startsIn = fromKey ? daysBetween(todayKey, fromKey) : null;
             headline = startsIn
-                ? `Approved – leave starts in ${plural(startsIn, "day")}`
-                : "Approved";
+                ? tr("approvedStartsIn", `Approved – leave starts in ${startsIn} day${startsIn === 1 ? "" : "s"}`, { count: startsIn })
+                : tr("approved", "Approved");
             tone = "completed";
         } else if (todayKey <= toKey) {
             // Only count leave days that have passed, capped at the total
             const dayNumber = Math.min(daysBetween(fromKey, todayKey) + 1, totalDays);
 
             step.onLeave.state = "current";
-            step.onLeave.caption = `Day ${dayNumber} of ${totalDays}`;
+            step.onLeave.caption = tr("dayOf", "Day {{day}} of {{total}}", { day: dayNumber, total: totalDays });
             describeUpcomingLeave();
 
-            headline = `On leave – Day ${dayNumber} of ${totalDays}`;
+            headline = tr("onLeaveDayOf", "On leave – Day {{day}} of {{total}}", { day: dayNumber, total: totalDays });
             tone = "current";
         } else {
             step.onLeave.state = "completed";
@@ -222,25 +235,26 @@ export function getTrackerState(leave, today, { timeZone = getCompanyTimeZone() 
 
             if (overdueDays <= 0) {
                 step.resumed.state = "current";
-                step.resumed.caption = "Expected today";
+                step.resumed.caption = tr("expectedToday", "Expected today");
 
-                headline = "Leave ended – return expected today";
+                headline = tr("returnExpectedToday", "Leave ended – return expected today");
                 tone = "current";
             } else {
                 step.resumed.state = "overdue";
-                step.resumed.caption = `Not resumed – ${plural(overdueDays, "day")} overdue`;
+                const overdueText = tr("notResumedOverdue", `Not resumed – ${overdueDays} day${overdueDays === 1 ? "" : "s"} overdue`, { count: overdueDays });
+                step.resumed.caption = overdueText;
 
-                headline = `Not resumed – ${plural(overdueDays, "day")} overdue`;
+                headline = overdueText;
                 tone = "overdue";
             }
         }
     } else {
         // Pending (or any unknown status)
         step.review.state = "current";
-        step.review.caption = "Awaiting decision";
+        step.review.caption = tr("awaitingDecision", "Awaiting decision");
         describeUpcomingLeave();
 
-        headline = "Under HR review";
+        headline = tr("stages.review", "Under HR review");
         tone = "current";
     }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import LeaveTracker from "../../components/hr/LeaveTracker";
@@ -63,7 +64,19 @@ const MONTHS = [
     { value: "12", label: "December" },
 ];
 
+// Holiday names / dates come from the saved policy (English); shown translated when known
+const holidayKey = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
 function LeaveManagement() {
+    const { t } = useTranslation();
+    // Values stay English (filters, CSS classes, saving); only the shown text is translated
+    const leaveTypeLabel = (value) => (value ? t(`leaveTypes.${value}`, { defaultValue: value }) : value);
+    const statusLabel = (value) => (value ? t(`leaveDetails.status.${value.toLowerCase()}`, { defaultValue: value }) : value);
+    const monthLabel = (month) => (month.value === "all"
+        ? t("leaveManagement.allMonths", { defaultValue: month.label })
+        : t(`employeeRequest.months.${month.label.toLowerCase()}`, { defaultValue: month.label }));
+    const holidayName = (name) => t(`leaveManagement.holidays.names.${holidayKey(name)}`, { defaultValue: name });
+    const holidayDate = (date) => t(`leaveManagement.holidays.dates.${holidayKey(date)}`, { defaultValue: date });
     const showAlert = useAlert();
     const [searchParams] = useSearchParams();
 
@@ -294,7 +307,7 @@ function LeaveManagement() {
             );
 
             setError(
-                "Failed to load leave data"
+                t("leaveManagement.errors.loadFailed", { defaultValue: "Failed to load leave data" })
             );
         } finally {
             setLoading(false);
@@ -326,7 +339,7 @@ function LeaveManagement() {
             });
         } catch (error) {
             console.error("Error fetching leave policy:", error);
-            setPolicyMessage("Unable to load saved policy");
+            setPolicyMessage(t("leaveManagement.policy.loadFailed", { defaultValue: "Unable to load saved policy" }));
         } finally {
             setPolicyLoading(false);
         }
@@ -380,10 +393,10 @@ function LeaveManagement() {
                 }),
             });
             if (!response.ok) throw new Error("Failed to save leave policy");
-            setPolicyMessage("Policy saved successfully");
+            setPolicyMessage(t("leaveManagement.policy.saved", { defaultValue: "Policy saved successfully" }));
         } catch (error) {
             console.error("Error saving leave policy:", error);
-            setPolicyMessage("Unable to save policy");
+            setPolicyMessage(t("leaveManagement.policy.saveFailed", { defaultValue: "Unable to save policy" }));
         } finally {
             setPolicySaving(false);
         }
@@ -564,11 +577,13 @@ function LeaveManagement() {
     // SELECTED MONTH NAME
     // =========================================================
 
-    const selectedMonthLabel =
-        MONTHS.find(
-            (month) =>
-                month.value === selectedMonth
-        )?.label || "All Months";
+    const selectedMonthOption = MONTHS.find(
+        (month) =>
+            month.value === selectedMonth
+    );
+    const selectedMonthLabel = selectedMonthOption
+        ? monthLabel(selectedMonthOption)
+        : t("leaveManagement.allMonths", { defaultValue: "All Months" });
 
     // =========================================================
     // UPDATE STATUS
@@ -659,9 +674,11 @@ function LeaveManagement() {
                 err
             );
 
-            showAlert(
-                "Failed to update leave status. Please try again."
-            );
+            showAlert({
+                title: t("employeesList.alerts.titles.danger", { defaultValue: "Please check" }),
+                buttonText: t("employeesList.alerts.ok", { defaultValue: "OK" }),
+                message: t("leaveManagement.errors.updateFailed", { defaultValue: "Failed to update leave status. Please try again." }),
+            });
 
             return false;
         } finally {
@@ -723,7 +740,7 @@ function LeaveManagement() {
             if (!response.ok) {
                 throw new Error(
                     result.message ||
-                        "Failed to record resumption"
+                        t("leaveManagement.errors.resumeFailed", { defaultValue: "Failed to record resumption" })
                 );
             }
 
@@ -750,7 +767,11 @@ function LeaveManagement() {
                 err
             );
 
-            showAlert(err.message);
+            showAlert({
+                title: t("employeesList.alerts.titles.danger", { defaultValue: "Please check" }),
+                buttonText: t("employeesList.alerts.ok", { defaultValue: "OK" }),
+                message: err.message,
+            });
         } finally {
             setResuming(false);
         }
@@ -1017,12 +1038,11 @@ function LeaveManagement() {
 
                     <div>
                         <h1>
-                            Leave Management
+                            {t("menu.leaveManagement", { defaultValue: "Leave Management" })}
                         </h1>
 
                         <p>
-                            Manage employee leave
-                            requests
+                            {t("leaveManagement.subtitle", { defaultValue: "Manage employee leave requests" })}
                         </p>
                     </div>
 
@@ -1033,7 +1053,7 @@ function LeaveManagement() {
                             onClick={() => setIsPolicySetupOpen((open) => !open)}
                             aria-expanded={isPolicySetupOpen}
                         >
-                            Leave Policy Setup
+                            {t("leaveManagement.policy.title", { defaultValue: "Leave Policy Setup" })}
                         </button>
                         <div className="leave-export-menu">
                             <button
@@ -1044,7 +1064,7 @@ function LeaveManagement() {
                                 aria-expanded={isExportMenuOpen}
                                 aria-haspopup="menu"
                             >
-                                Export <span aria-hidden="true">⌄</span>
+                                {t("employeesList.export.button", { defaultValue: "Export" })} <span aria-hidden="true">⌄</span>
                             </button>
 
                             {isExportMenuOpen && (
@@ -1063,24 +1083,24 @@ function LeaveManagement() {
                 </div>
 
                 {isPolicySetupOpen && (
-                    <section className="leave-policy-panel" aria-label="Leave Policy Setup">
+                    <section className="leave-policy-panel" aria-label={t("leaveManagement.policy.title", { defaultValue: "Leave Policy Setup" })}>
                         <div className="leave-policy-heading">
                             <div>
-                                <h2>Leave Policy Setup</h2>
-                                <p>Configure the annual leave allowance used for employee reviews.</p>
+                                <h2>{t("leaveManagement.policy.title", { defaultValue: "Leave Policy Setup" })}</h2>
+                                <p>{t("leaveManagement.policy.description", { defaultValue: "Configure the annual leave allowance used for employee reviews." })}</p>
                             </div>
                             <button
                                 type="button"
                                 className="leave-policy-close"
                                 onClick={() => setIsPolicySetupOpen(false)}
-                                aria-label="Close leave policy setup"
+                                aria-label={t("leaveManagement.policy.close", { defaultValue: "Close leave policy setup" })}
                             >
                                 ×
                             </button>
                         </div>
                         <div className="leave-policy-fields">
                             <label>
-                                Annual Leave Yearly Entitlement
+                                {t("leaveManagement.policy.annualEntitlement", { defaultValue: "Annual Leave Yearly Entitlement" })}
                                 <input
                                     type="number"
                                     min="1"
@@ -1093,11 +1113,11 @@ function LeaveManagement() {
                                     }))}
                                 />
                                 <span>
-                                    days per year • accrues {(Number(leavePolicy.annualYearlyEntitlementDays || 0) / 12).toFixed(2)} days/month
+                                    {t("leaveManagement.policy.perYearAccrues", { rate: (Number(leavePolicy.annualYearlyEntitlementDays || 0) / 12).toFixed(2), defaultValue: "days per year • accrues {{rate}} days/month" })}
                                 </span>
                             </label>
                             <label>
-                                Leave Accrual Salary Basis
+                                {t("leaveManagement.policy.salaryBasis", { defaultValue: "Leave Accrual Salary Basis" })}
                                 <select
                                     value={leavePolicy.leaveAccrualSalaryBasis}
                                     disabled={policyLoading || policySaving}
@@ -1106,16 +1126,16 @@ function LeaveManagement() {
                                         leaveAccrualSalaryBasis: event.target.value,
                                     }))}
                                 >
-                                    <option value="total">Total salary (basic + allowances)</option>
-                                    <option value="basic">Basic salary</option>
+                                    <option value="total">{t("leaveManagement.policy.totalSalary", { defaultValue: "Total salary (basic + allowances)" })}</option>
+                                    <option value="basic">{t("leaveManagement.policy.basicSalary", { defaultValue: "Basic salary" })}</option>
                                 </select>
-                                <span>amount accrued = salary ÷ 12 per month</span>
+                                <span>{t("leaveManagement.policy.accrualFormula", { defaultValue: "amount accrued = salary ÷ 12 per month" })}</span>
                             </label>
                             {[
-                                ["sickEligibleAfterMonths", "Sick Leave Eligible After", "months", "1"],
-                                ["maternityDays", "Maternity Leave Days", "days", "1"],
-                                ["bereavementDays", "Bereavement Days", "days", "1"],
-                                ["compensatoryOffValidityDays", "Comp Off Validity", "days validity", "1"],
+                                ["sickEligibleAfterMonths", t("leaveManagement.policy.sickEligibleAfter", { defaultValue: "Sick Leave Eligible After" }), t("leaveManagement.policy.unitMonths", { defaultValue: "months" }), "1"],
+                                ["maternityDays", t("leaveManagement.policy.maternityDays", { defaultValue: "Maternity Leave Days" }), t("leaveManagement.policy.unitDays", { defaultValue: "days" }), "1"],
+                                ["bereavementDays", t("leaveManagement.policy.bereavementDays", { defaultValue: "Bereavement Days" }), t("leaveManagement.policy.unitDays", { defaultValue: "days" }), "1"],
+                                ["compensatoryOffValidityDays", t("leaveManagement.policy.compOffValidity", { defaultValue: "Comp Off Validity" }), t("leaveManagement.policy.unitDaysValidity", { defaultValue: "days validity" }), "1"],
                             ].map(([name, label, unit, step]) => (
                                 <label key={name}>
                                     {label}
@@ -1135,13 +1155,13 @@ function LeaveManagement() {
                             ))}
                         </div>
                         <div className="leave-policy-grades">
-                            <h3>Annual Leave Entitlement by Grade</h3>
-                            <p>Overrides the yearly entitlement for employees in a grade. Other employees use the default above.</p>
+                            <h3>{t("leaveManagement.policy.byGrade", { defaultValue: "Annual Leave Entitlement by Grade" })}</h3>
+                            <p>{t("leaveManagement.policy.byGradeDescription", { defaultValue: "Overrides the yearly entitlement for employees in a grade. Other employees use the default above." })}</p>
                             {leavePolicy.annualGradeOverrides.map((row, index) => (
                                 <div className="leave-policy-grade-row" key={index}>
                                     <input
                                         type="text"
-                                        placeholder="Grade (e.g. G5)"
+                                        placeholder={t("leaveManagement.policy.gradePlaceholder", { defaultValue: "Grade (e.g. G5)" })}
                                         value={row.grade}
                                         disabled={policyLoading || policySaving}
                                         onChange={(event) => setLeavePolicy((current) => ({
@@ -1164,10 +1184,10 @@ function LeaveManagement() {
                                             ),
                                         }))}
                                     />
-                                    <span>days/year • {(Number(row.days || 0) / 12).toFixed(2)}/month</span>
+                                    <span>{t("leaveManagement.policy.gradeRate", { rate: (Number(row.days || 0) / 12).toFixed(2), defaultValue: "days/year • {{rate}}/month" })}</span>
                                     <button
                                         type="button"
-                                        aria-label={`Remove grade ${row.grade}`}
+                                        aria-label={t("leaveManagement.policy.removeGrade", { grade: row.grade, defaultValue: "Remove grade {{grade}}" })}
                                         disabled={policyLoading || policySaving}
                                         onClick={() => setLeavePolicy((current) => ({
                                             ...current,
@@ -1187,39 +1207,41 @@ function LeaveManagement() {
                                     annualGradeOverrides: [...current.annualGradeOverrides, { grade: "", days: 30 }],
                                 }))}
                             >
-                                + Add grade
+                                {t("leaveManagement.policy.addGrade", { defaultValue: "+ Add grade" })}
                             </button>
                         </div>
                         <div className="leave-policy-types">
-                            <h3>Available Leave Types</h3>
+                            <h3>{t("leaveManagement.policy.availableTypes", { defaultValue: "Available Leave Types" })}</h3>
                             <div className="leave-policy-type-list">
                                 {leavePolicy.leaveTypes.map((leaveType) => (
-                                    <span key={leaveType}>{leaveType}</span>
+                                    <span key={leaveType}>{leaveTypeLabel(leaveType)}</span>
                                 ))}
                             </div>
                         </div>
                         <div className="leave-holiday-calendar">
-                            <h3>Qatar Holiday Calendar</h3>
+                            <h3>{t("leaveDetails.holidayCalendar", { defaultValue: "Qatar Holiday Calendar" })}</h3>
                             <div className="leave-holiday-list">
                                 {leavePolicy.qatarHolidayCalendar.map((holiday) => (
                                     <div className="leave-holiday-row" key={holiday.name}>
-                                        <strong>{holiday.name}</strong>
-                                        <span>{holiday.date}</span>
-                                        <b>{holiday.days} {holiday.days === 1 ? "day" : "days"}</b>
+                                        <strong>{holidayName(holiday.name)}</strong>
+                                        <span>{holidayDate(holiday.date)}</span>
+                                        <b>{t("leaveManagement.dayCount", { count: Number(holiday.days), defaultValue: `${holiday.days} ${holiday.days === 1 ? "day" : "days"}` })}</b>
                                     </div>
                                 ))}
                             </div>
                         </div>
                         <div className="leave-policy-rules">
-                            <p><strong>Sick Leave:</strong> Medical certificate required. First 14 days at 100% salary, next 28 days at 50%, additional 42 days unpaid.</p>
-                            <p><strong>Maternity Leave:</strong> Full pay, HR approval, medical certificate required.</p>
-                            <p><strong>Bereavement:</strong> Immediate family, manager approval.</p>
-                            <p><strong>Compensatory Off:</strong> Public holiday or weekend work, manager approval.</p>
+                            <p><Trans i18nKey="leaveManagement.policy.rules.sick" components={{ b: <strong /> }} defaults="<b>Sick Leave:</b> Medical certificate required. First 14 days at 100% salary, next 28 days at 50%, additional 42 days unpaid." /></p>
+                            <p><Trans i18nKey="leaveManagement.policy.rules.maternity" components={{ b: <strong /> }} defaults="<b>Maternity Leave:</b> Full pay, HR approval, medical certificate required." /></p>
+                            <p><Trans i18nKey="leaveManagement.policy.rules.bereavement" components={{ b: <strong /> }} defaults="<b>Bereavement:</b> Immediate family, manager approval." /></p>
+                            <p><Trans i18nKey="leaveManagement.policy.rules.compensatory" components={{ b: <strong /> }} defaults="<b>Compensatory Off:</b> Public holiday or weekend work, manager approval." /></p>
                         </div>
                         <div className="leave-policy-footer">
                             {policyMessage && <span>{policyMessage}</span>}
                             <button type="button" onClick={saveLeavePolicy} disabled={policyLoading || policySaving}>
-                                {policySaving ? "Saving..." : "Save Policy"}
+                                {policySaving
+                                    ? t("profileEdit.saving", { defaultValue: "Saving..." })
+                                    : t("leaveManagement.policy.save", { defaultValue: "Save Policy" })}
                             </button>
                         </div>
                     </section>
@@ -1236,7 +1258,7 @@ function LeaveManagement() {
                     <div className="leave-card total-request-card">
 
                         <h3>
-                            Total Requests
+                            {t("leaveManagement.cards.totalRequests", { defaultValue: "Total Requests" })}
                         </h3>
 
                         <h2>
@@ -1248,8 +1270,8 @@ function LeaveManagement() {
                         <p>
                             {selectedMonth ===
                             "all"
-                                ? "All leave requests"
-                                : `${selectedMonthLabel} requests`}
+                                ? t("leaveManagement.cards.allRequests", { defaultValue: "All leave requests" })
+                                : t("leaveManagement.cards.monthRequests", { month: selectedMonthLabel, defaultValue: "{{month}} requests" })}
                         </p>
 
                     </div>
@@ -1259,7 +1281,7 @@ function LeaveManagement() {
                     <div className="leave-card approved-card">
 
                         <h3>
-                            Approved
+                            {statusLabel("Approved")}
                         </h3>
 
                         <h2>
@@ -1271,8 +1293,8 @@ function LeaveManagement() {
                         <p>
                             {selectedMonth ===
                             "all"
-                                ? "Approved requests"
-                                : `${selectedMonthLabel} approved`}
+                                ? t("leaveManagement.cards.approvedRequests", { defaultValue: "Approved requests" })
+                                : t("leaveManagement.cards.monthApproved", { month: selectedMonthLabel, defaultValue: "{{month}} approved" })}
                         </p>
 
                     </div>
@@ -1282,7 +1304,7 @@ function LeaveManagement() {
                     <div className="leave-card rejected-card">
 
                         <h3>
-                            Rejected
+                            {statusLabel("Rejected")}
                         </h3>
 
                         <h2>
@@ -1294,8 +1316,8 @@ function LeaveManagement() {
                         <p>
                             {selectedMonth ===
                             "all"
-                                ? "Rejected requests"
-                                : `${selectedMonthLabel} rejected`}
+                                ? t("leaveManagement.cards.rejectedRequests", { defaultValue: "Rejected requests" })
+                                : t("leaveManagement.cards.monthRejected", { month: selectedMonthLabel, defaultValue: "{{month}} rejected" })}
                         </p>
 
                     </div>
@@ -1305,7 +1327,7 @@ function LeaveManagement() {
                     <div className="leave-card pending-card">
 
                         <h3>
-                            Pending
+                            {statusLabel("Pending")}
                         </h3>
 
                         <h2>
@@ -1317,8 +1339,8 @@ function LeaveManagement() {
                         <p>
                             {selectedMonth ===
                             "all"
-                                ? "Waiting for approval"
-                                : `${selectedMonthLabel} pending`}
+                                ? t("leaveManagement.cards.waitingApproval", { defaultValue: "Waiting for approval" })
+                                : t("leaveManagement.cards.monthPending", { month: selectedMonthLabel, defaultValue: "{{month}} pending" })}
                         </p>
 
                     </div>
@@ -1336,12 +1358,11 @@ function LeaveManagement() {
                         <div>
 
                             <h2>
-                                Leave Requests
+                                {t("leaveManagement.table.title", { defaultValue: "Leave Requests" })}
                             </h2>
 
                             <p>
-                                Click any employee row to review their leave
-                                balance and request.
+                                {t("leaveManagement.table.hint", { defaultValue: "Click any employee row to review their leave balance and request." })}
                             </p>
 
                         </div>
@@ -1353,7 +1374,7 @@ function LeaveManagement() {
                     <div className="leave-tools leave-request-filters">
                         <input
                             type="text"
-                            placeholder="Search employee..."
+                            placeholder={t("hrAttendance.searchPlaceholder", { defaultValue: "Search employee..." })}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -1364,20 +1385,20 @@ function LeaveManagement() {
                             value={selectedStatus}
                             onChange={(e) => setSelectedStatus(e.target.value)}
                         >
-                            <option value="all">All Status</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                            <option value="Cancelled">Cancelled</option>
+                            <option value="all">{t("hrAttendance.allStatus", { defaultValue: "All Status" })}</option>
+                            <option value="Pending">{statusLabel("Pending")}</option>
+                            <option value="Approved">{statusLabel("Approved")}</option>
+                            <option value="Rejected">{statusLabel("Rejected")}</option>
+                            <option value="Cancelled">{statusLabel("Cancelled")}</option>
                         </select>
 
                         <select
                             value={selectedLeaveType}
                             onChange={(e) => setSelectedLeaveType(e.target.value)}
                         >
-                            <option value="all">All Leave Types</option>
+                            <option value="all">{t("leaveManagement.allLeaveTypes", { defaultValue: "All Leave Types" })}</option>
                             {leaveTypes.map((type) => (
-                                <option key={type} value={type}>{type}</option>
+                                <option key={type} value={type}>{leaveTypeLabel(type)}</option>
                             ))}
                         </select>
 
@@ -1386,7 +1407,7 @@ function LeaveManagement() {
                             onChange={(e) => setSelectedMonth(e.target.value)}
                         >
                             {MONTHS.map((month) => (
-                                <option key={month.value} value={month.value}>{month.label}</option>
+                                <option key={month.value} value={month.value}>{monthLabel(month)}</option>
                             ))}
                         </select>
 
@@ -1397,7 +1418,7 @@ function LeaveManagement() {
 
                     {loading && (
                         <div className="leave-message">
-                            Loading leave requests...
+                            {t("leaveManagement.table.loading", { defaultValue: "Loading leave requests..." })}
                         </div>
                     )}
 
@@ -1422,35 +1443,35 @@ function LeaveManagement() {
                                         <tr>
 
                                             <th>
-                                                Employee ID
+                                                {t("employeeSettings.employeeId", { defaultValue: "Employee ID" })}
                                             </th>
 
                                             <th>
-                                                Employee Name
+                                                {t("hrAttendance.table.employeeName", { defaultValue: "Employee Name" })}
                                             </th>
 
                                             <th>
-                                                Leave Type
+                                                {t("leaveDetails.leaveType", { defaultValue: "Leave Type" })}
                                             </th>
 
                                             <th>
-                                                From Date
+                                                {t("leaveManagement.table.fromDate", { defaultValue: "From Date" })}
                                             </th>
 
                                             <th>
-                                                To Date
+                                                {t("leaveManagement.table.toDate", { defaultValue: "To Date" })}
                                             </th>
 
                                             <th>
-                                                Days
+                                                {t("leaveDetails.days", { defaultValue: "Days" })}
                                             </th>
 
                                             <th>
-                                                Reason
+                                                {t("leaveDetails.reason", { defaultValue: "Reason" })}
                                             </th>
 
                                             <th>
-                                                Status
+                                                {t("leaveDetails.statusHeader", { defaultValue: "Status" })}
                                             </th>
 
                                         </tr>
@@ -1467,9 +1488,7 @@ function LeaveManagement() {
                                                     colSpan="8"
                                                     className="no-data"
                                                 >
-                                                    No leave
-                                                    requests
-                                                    found
+                                                    {t("leaveManagement.table.empty", { defaultValue: "No leave requests found" })}
                                                 </td>
 
                                             </tr>
@@ -1499,9 +1518,7 @@ function LeaveManagement() {
                                                         {/* EMPLOYEE ID */}
 
                                                         <td className="employee-id">
-                                                            { 
-                                                                leave.employeeID
-                                                            }
+                                                            <span dir="ltr">{leave.employeeID}</span>
                                                         </td>
 
                                                         {/* EMPLOYEE NAME */}
@@ -1526,25 +1543,19 @@ function LeaveManagement() {
                                                         {/* LEAVE TYPE */}
 
                                                         <td>
-                                                            {
-                                                                leave.leaveType
-                                                            }
+                                                            {leaveTypeLabel(leave.leaveType)}
                                                         </td>
 
                                                         {/* FROM */}
 
                                                         <td>
-                                                            {
-                                                                leave.fromDate
-                                                            }
+                                                            <span dir="ltr" className="ltr-text">{leave.fromDate}</span>
                                                         </td>
 
                                                         {/* TO */}
 
                                                         <td>
-                                                            {
-                                                                leave.toDate
-                                                            }
+                                                            <span dir="ltr" className="ltr-text">{leave.toDate}</span>
                                                         </td>
 
                                                         {/* DAYS */}
@@ -1572,13 +1583,16 @@ function LeaveManagement() {
                                                             <span
                                                                 className={`leave-status ${leave.status?.toLowerCase()}`}
                                                             >
-                                                                {
-                                                                    leave.status
-                                                                }
+                                                                {statusLabel(leave.status)}
                                                             </span>
                                                             {leave.status?.toLowerCase() === "cancelled" && leave.cancelledBy && (
                                                                 <small className="cancelled-by-label">
-                                                                    Cancelled by {leave.cancelledBy}
+                                                                    <Trans
+                                                                        i18nKey="leaveManagement.cancelledBy"
+                                                                        values={{ id: leave.cancelledBy }}
+                                                                        components={{ ltr: <bdi dir="ltr" /> }}
+                                                                        defaults="Cancelled by <ltr>{{id}}</ltr>"
+                                                                    />
                                                                 </small>
                                                             )}
 
@@ -1625,7 +1639,7 @@ function LeaveManagement() {
                                 <div>
 
                                     <span className="review-label">
-                                        EMPLOYEE LEAVE REVIEW
+                                        {t("leaveManagement.review.kicker", { defaultValue: "EMPLOYEE LEAVE REVIEW" })}
                                     </span>
 
                                     <h2>
@@ -1635,9 +1649,7 @@ function LeaveManagement() {
                                     </h2>
 
                                     <p>
-                                        {
-                                            selectedEmployee.employeeID
-                                        }
+                                        <span dir="ltr">{selectedEmployee.employeeID}</span>
                                     </p>
 
                                 </div>
@@ -1668,15 +1680,15 @@ function LeaveManagement() {
                                     <div>
 
                                         <h3>
-                                            Leave Balance
+                                            {t("leaveManagement.review.balanceTitle", { defaultValue: "Leave Balance" })}
                                         </h3>
 
                                         <p>
                                             {isAnnualRequest
                                                 ? selectedAnnualBalance
-                                                    ? `Annual Leave accrued to date (${selectedAnnualBalance.monthlyAccrual} days/month).`
-                                                    : "Loading Annual Leave balance..."
-                                                : "Check available balance before approving."}
+                                                    ? t("leaveManagement.review.annualAccrued", { rate: selectedAnnualBalance.monthlyAccrual, defaultValue: "Annual Leave accrued to date ({{rate}} days/month)." })
+                                                    : t("leavePolicy.annualLoading", { defaultValue: "Loading Annual Leave balance..." })
+                                                : t("leaveManagement.review.checkBalance", { defaultValue: "Check available balance before approving." })}
                                         </p>
 
                                     </div>
@@ -1698,7 +1710,7 @@ function LeaveManagement() {
                                     <div className="balance-card">
 
                                         <span>
-                                            Total
+                                            {t("leaveManagement.review.total", { defaultValue: "Total" })}
                                         </span>
 
                                         <strong>
@@ -1708,7 +1720,7 @@ function LeaveManagement() {
                                         </strong>
 
                                         <small>
-                                            Days
+                                            {t("leaveDetails.days", { defaultValue: "Days" })}
                                         </small>
 
                                     </div>
@@ -1718,7 +1730,7 @@ function LeaveManagement() {
                                     <div className="balance-card used">
 
                                         <span>
-                                            Used
+                                            {t("leaveManagement.review.used", { defaultValue: "Used" })}
                                         </span>
 
                                         <strong>
@@ -1728,7 +1740,7 @@ function LeaveManagement() {
                                         </strong>
 
                                         <small>
-                                            Days
+                                            {t("leaveDetails.days", { defaultValue: "Days" })}
                                         </small>
 
                                     </div>
@@ -1738,7 +1750,7 @@ function LeaveManagement() {
                                     <div className="balance-card remaining">
 
                                         <span>
-                                            Remaining
+                                            {t("leaveManagement.review.remaining", { defaultValue: "Remaining" })}
                                         </span>
 
                                         <strong>
@@ -1748,7 +1760,7 @@ function LeaveManagement() {
                                         </strong>
 
                                         <small>
-                                            Days
+                                            {t("leaveDetails.days", { defaultValue: "Days" })}
                                         </small>
 
                                     </div>
@@ -1762,10 +1774,10 @@ function LeaveManagement() {
                                     <div className="usage-label">
 
                                         <span>
-                                            Leave usage
+                                            {t("leaveManagement.review.usage", { defaultValue: "Leave usage" })}
                                         </span>
 
-                                        <strong>
+                                        <strong dir="ltr">
                                             {
                                                 leaveUsagePercentage
                                             }
@@ -1799,12 +1811,11 @@ function LeaveManagement() {
                                     <div>
 
                                         <h3>
-                                            Leave Request
+                                            {t("leaveManagement.review.requestTitle", { defaultValue: "Leave Request" })}
                                         </h3>
 
                                         <p>
-                                            Details submitted
-                                            by the employee.
+                                            {t("leaveManagement.review.requestDescription", { defaultValue: "Details submitted by the employee." })}
                                         </p>
 
                                     </div>
@@ -1812,9 +1823,7 @@ function LeaveManagement() {
                                     <span
                                         className={`request-status ${selectedEmployee.status?.toLowerCase()}`}
                                     >
-                                        {
-                                            selectedEmployee.status
-                                        }
+                                        {statusLabel(selectedEmployee.status)}
                                     </span>
 
                                 </div>
@@ -1826,13 +1835,11 @@ function LeaveManagement() {
                                     <div className="request-detail">
 
                                         <span>
-                                            LEAVE TYPE
+                                            {t("leaveManagement.review.leaveTypeLabel", { defaultValue: "LEAVE TYPE" })}
                                         </span>
 
                                         <strong>
-                                            {
-                                                selectedEmployee.leaveType
-                                            }
+                                            {leaveTypeLabel(selectedEmployee.leaveType)}
                                         </strong>
 
                                     </div>
@@ -1842,17 +1849,11 @@ function LeaveManagement() {
                                     <div className="request-detail">
 
                                         <span>
-                                            REQUESTED DAYS
+                                            {t("leaveManagement.review.requestedDaysLabel", { defaultValue: "REQUESTED DAYS" })}
                                         </span>
 
                                         <strong className="requested-days">
-                                            {
-                                                requestedDays
-                                            }{" "}
-                                            {requestedDays ===
-                                            1
-                                                ? "Day"
-                                                : "Days"}
+                                            {t("leaveManagement.dayCountTitle", { count: requestedDays, defaultValue: `${requestedDays} ${requestedDays === 1 ? "Day" : "Days"}` })}
                                         </strong>
 
                                     </div>
@@ -1862,13 +1863,11 @@ function LeaveManagement() {
                                     <div className="request-detail">
 
                                         <span>
-                                            FROM DATE
+                                            {t("leaveManagement.review.fromDateLabel", { defaultValue: "FROM DATE" })}
                                         </span>
 
                                         <strong>
-                                            {
-                                                selectedEmployee.fromDate
-                                            }
+                                            <span dir="ltr">{selectedEmployee.fromDate}</span>
                                         </strong>
 
                                     </div>
@@ -1878,13 +1877,11 @@ function LeaveManagement() {
                                     <div className="request-detail">
 
                                         <span>
-                                            TO DATE
+                                            {t("leaveManagement.review.toDateLabel", { defaultValue: "TO DATE" })}
                                         </span>
 
                                         <strong>
-                                            {
-                                                selectedEmployee.toDate
-                                            }
+                                            <span dir="ltr">{selectedEmployee.toDate}</span>
                                         </strong>
 
                                     </div>
@@ -1894,7 +1891,7 @@ function LeaveManagement() {
                                     <div className="request-detail full-width">
 
                                         <span>
-                                            REASON
+                                            {t("leaveManagement.review.reasonLabel", { defaultValue: "REASON" })}
                                         </span>
 
                                         <strong>
@@ -1917,7 +1914,7 @@ function LeaveManagement() {
                                         <div className="leave-tracker-resume">
 
                                             <label htmlFor="resumed-on">
-                                                Resumed on
+                                                {t("leaveManagement.review.resumedOn", { defaultValue: "Resumed on" })}
                                             </label>
 
                                             <input
@@ -1957,8 +1954,8 @@ function LeaveManagement() {
                                                 }
                                             >
                                                 {resuming
-                                                    ? "Saving..."
-                                                    : "Mark as resumed"}
+                                                    ? t("profileEdit.saving", { defaultValue: "Saving..." })
+                                                    : t("leaveManagement.review.markResumed", { defaultValue: "Mark as resumed" })}
                                             </button>
 
                                         </div>
@@ -1995,35 +1992,23 @@ function LeaveManagement() {
                                         <strong>
 
                                             {hasSufficientBalance
-                                                ? "Sufficient leave balance"
-                                                : "Insufficient leave balance"}
+                                                ? t("leaveManagement.review.sufficient", { defaultValue: "Sufficient leave balance" })
+                                                : t("leaveManagement.review.insufficient", { defaultValue: "Insufficient leave balance" })}
 
                                         </strong>
 
                                         <p>
 
-                                            {
-                                                selectedEmployee.employeeName
-                                            }{" "}
-                                            has{" "}
-
-                                            <b>
-                                                {
-                                                    selectedEmployeeRemainingLeave
-                                                }{" "}
-                                                days
-                                            </b>{" "}
-
-                                            remaining and
-                                            requested{" "}
-
-                                            <b>
-                                                {
-                                                    requestedDays
-                                                }{" "}
-                                                days
-                                            </b>
-                                            .
+                                            <Trans
+                                                i18nKey="leaveManagement.review.balanceSentence"
+                                                values={{
+                                                    name: selectedEmployee.employeeName,
+                                                    remaining: selectedEmployeeRemainingLeave,
+                                                    requested: requestedDays,
+                                                }}
+                                                components={{ b: <b /> }}
+                                                defaults="{{name}} has <b>{{remaining}} days</b> remaining and requested <b>{{requested}} days</b>."
+                                            />
 
                                         </p>
 
@@ -2043,13 +2028,11 @@ function LeaveManagement() {
                                     <div>
 
                                         <h3>
-                                            Leave History
+                                            {t("leaveManagement.review.historyTitle", { defaultValue: "Leave History" })}
                                         </h3>
 
                                         <p>
-                                            Previous requests
-                                            from this
-                                            employee.
+                                            {t("leaveManagement.review.historyDescription", { defaultValue: "Previous requests from this employee." })}
                                         </p>
 
                                     </div>
@@ -2059,8 +2042,7 @@ function LeaveManagement() {
                                 {selectedEmployeeLeaves.length ===
                                 0 ? (
                                     <p className="empty-history">
-                                        No leave history
-                                        found.
+                                        {t("leaveManagement.review.noHistory", { defaultValue: "No leave history found." })}
                                     </p>
                                 ) : (
                                     selectedEmployeeLeaves.map(
@@ -2077,27 +2059,21 @@ function LeaveManagement() {
                                                 <div>
 
                                                     <strong>
-                                                        {
-                                                            leave.fromDate
-                                                        }{" "}
-                                                        -{" "}
-                                                        {
-                                                            leave.toDate
-                                                        }
+                                                        <span dir="ltr">
+                                                            {
+                                                                leave.fromDate
+                                                            }{" "}
+                                                            -{" "}
+                                                            {
+                                                                leave.toDate
+                                                            }
+                                                        </span>
                                                     </strong>
 
                                                     <span>
-                                                        {
-                                                            leave.leaveType
-                                                        }{" "}
+                                                        {leaveTypeLabel(leave.leaveType)}{" "}
                                                         •{" "}
-                                                        {
-                                                            leave.days
-                                                        }{" "}
-                                                        {leave.days ===
-                                                        1
-                                                            ? "Day"
-                                                            : "Days"}
+                                                        {t("leaveManagement.dayCountTitle", { count: leave.days, defaultValue: `${leave.days} ${leave.days === 1 ? "Day" : "Days"}` })}
                                                     </span>
 
                                                     <span>
@@ -2111,9 +2087,7 @@ function LeaveManagement() {
                                                 <span
                                                     className={`history-status ${leave.status?.toLowerCase()}`}
                                                 >
-                                                    {
-                                                        leave.status
-                                                    }
+                                                    {statusLabel(leave.status)}
                                                 </span>
 
                                             </div>
@@ -2146,8 +2120,8 @@ function LeaveManagement() {
                                         }
                                     >
                                         {updating
-                                            ? "Updating..."
-                                            : "✕ Reject"}
+                                            ? t("leaveManagement.review.updating", { defaultValue: "Updating..." })
+                                            : t("leaveManagement.review.reject", { defaultValue: "✕ Reject" })}
                                     </button>
 
                                     {/* APPROVE */}
@@ -2167,8 +2141,8 @@ function LeaveManagement() {
                                         }
                                     >
                                         {updating
-                                            ? "Updating..."
-                                            : "✓ Approve"}
+                                            ? t("leaveManagement.review.updating", { defaultValue: "Updating..." })
+                                            : t("leaveManagement.review.approve", { defaultValue: "✓ Approve" })}
                                     </button>
 
                                 </div>

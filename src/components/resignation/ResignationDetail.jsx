@@ -14,6 +14,7 @@ import {
     daysLabel,
     formatDate,
     formatDateTime,
+    ltrText,
     noticeSourceLabel,
     reasonCategoryLabel,
     resignationActionLabel,
@@ -40,7 +41,7 @@ export function ResignationLog({ actions }) {
             <tbody>
                 {actions.map((action) => (
                     <tr key={action.id}>
-                        <td>{formatDateTime(action.created_at)}</td>
+                        <td><span dir="ltr" className="ltr-text">{formatDateTime(action.created_at)}</span></td>
                         <td><strong>{resignationActionLabel(action.action)}</strong>{action.step_role && <small> · {resignationRoleLabel(action.step_role, logRoleFallback(action.step_role))}</small>}</td>
                         <td>{action.actor_name || t("resignation.log.system", { defaultValue: "System" })}</td>
                         <td>{action.remark || "—"}</td>
@@ -62,7 +63,7 @@ export function EarlyReleaseNote({ resignation }) {
                 ? t("resignation.form.earlyReleaseNote", { defaultValue: "Early release requested – subject to approval" })
                 : t("resignation.early.requested", { defaultValue: "Early release requested" })}</strong>
             <span>
-                {t("resignation.early.text", { requested: formatDate(resignation.requested_last_working_day), calculated: formatDate(resignation.calculated_last_working_day), defaultValue: "Last working day {{requested}} instead of {{calculated}}." })}
+                {t("resignation.early.text", { requested: ltrText(formatDate(resignation.requested_last_working_day)), calculated: ltrText(formatDate(resignation.calculated_last_working_day)), defaultValue: "Last working day {{requested}} instead of {{calculated}}." })}
                 {resignation.early_release_reason ? ` ${t("resignation.early.reason", { reason: resignation.early_release_reason, defaultValue: "Reason: {{reason}}" })}` : ""}
             </span>
         </div>
@@ -125,15 +126,15 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
                     : t("resignation.detail.dialog.approveTitle", { defaultValue: "Approve resignation?" }),
             message: action === "reject" ? (
                 <>
-                    <p>{t("resignation.detail.dialog.rejectMessage", { number: resignation.resignation_no, name: resignation.employee_name, defaultValue: "{{number}} for {{name}} will be rejected and the employee will be notified." })}</p>
+                    <p>{t("resignation.detail.dialog.rejectMessage", { number: ltrText(resignation.resignation_no), name: resignation.employee_name, defaultValue: "{{number}} for {{name}} will be rejected and the employee will be notified." })}</p>
                     <p className="resignation-dialog-reason">{t("resignation.detail.dialog.reason", { reason, defaultValue: "Reason: {{reason}}" })}</p>
                 </>
             ) : accepting ? (
                 <>
-                    <p>{t("resignation.detail.dialog.acceptMessage", { name: resignation.employee_name, date: formatDate(lastWorkingDay), defaultValue: "{{name}} will start serving notice with the last working day on {{date}}." })}</p>
+                    <p>{t("resignation.detail.dialog.acceptMessage", { name: resignation.employee_name, date: ltrText(formatDate(lastWorkingDay)), defaultValue: "{{name}} will start serving notice with the last working day on {{date}}." })}</p>
                     {reason && <p className="resignation-dialog-reason">{t("resignation.detail.dialog.remark", { remark: reason, defaultValue: "Remark: {{remark}}" })}</p>}
                 </>
-            ) : t("resignation.detail.dialog.approveMessage", { number: resignation.resignation_no, defaultValue: "{{number}} will move to the next approver." }),
+            ) : t("resignation.detail.dialog.approveMessage", { number: ltrText(resignation.resignation_no), defaultValue: "{{number}} will move to the next approver." }),
             confirmText: action === "reject"
                 ? t("resignation.detail.dialog.reject", { defaultValue: "Reject" })
                 : accepting
@@ -166,9 +167,11 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
             <div className="candidate-modal mpr-detail resignation-detail" onClick={(event) => event.stopPropagation()}>
                 <div className="candidate-modal-header">
                     <div>
-                        <h2>{resignation ? `${resignation.resignation_no} · ${resignation.employee_name}` : t("resignation.detail.title", { defaultValue: "Resignation" })}</h2>
+                        <h2>{resignation
+                            ? <><span dir="ltr" className="ltr-text">{resignation.resignation_no}</span> · {resignation.employee_name}</>
+                            : t("resignation.detail.title", { defaultValue: "Resignation" })}</h2>
                         {resignation && (
-                            <span>{resignation.employee_id} · {resignation.department || "—"} · {resignation.designation || t("resignation.detail.employee", { defaultValue: "Employee" })}</span>
+                            <span><span dir="ltr" className="ltr-text">{resignation.employee_id}</span> · {resignation.department || "—"} · {resignation.designation || t("resignation.detail.employee", { defaultValue: "Employee" })}</span>
                         )}
                     </div>
                     <button type="button" className="candidate-modal-close" onClick={onClose}>×</button>
@@ -195,7 +198,7 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
                                         <label>{t("resignation.detail.lwd", { defaultValue: "Last working day" })}</label>
                                         <DatePicker value={lastWorkingDay} onChange={setLastWorkingDay} minDate={resignation.today} today={resignation.today} autoPosition />
                                         <small>
-                                            {t("resignation.detail.requestedHint", { date: formatDate(resignation.requested_last_working_day), defaultValue: "Requested: {{date}}. Change it only if agreed with the employee; a remark is required and it's shown in the log." })}
+                                            {t("resignation.detail.requestedHint", { date: ltrText(formatDate(resignation.requested_last_working_day)), defaultValue: "Requested: {{date}}. Change it only if agreed with the employee; a remark is required and it's shown in the log." })}
                                         </small>
                                     </div>
                                 )}
@@ -230,10 +233,10 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
                         <section className="candidate-section">
                             <h3>{t("resignation.detail.title", { defaultValue: "Resignation" })}</h3>
                             <div className="candidate-grid">
-                                <div><label>{t("resignation.form.resignationDate", { defaultValue: "Resignation Date" })}</label><p>{formatDate(resignation.resignation_date)}</p></div>
+                                <div><label>{t("resignation.form.resignationDate", { defaultValue: "Resignation Date" })}</label><p><span dir="ltr">{formatDate(resignation.resignation_date)}</span></p></div>
                                 <div><label>{t("resignation.form.noticePeriod", { defaultValue: "Notice Period" })}</label><p>{daysLabel(resignation.notice_period_days)}{resignation.notice_period_source ? ` (${noticeSourceLabel(resignation.notice_period_source)})` : ""}</p></div>
-                                <div><label>{t("resignation.detail.noticeEnds", { defaultValue: "Notice Ends" })}</label><p>{formatDate(resignation.calculated_last_working_day)}</p></div>
-                                <div><label>{t("resignation.form.lastWorkingDay", { defaultValue: "Last Working Day" })}</label><p><strong>{formatDate(resignation.last_working_day)}</strong></p></div>
+                                <div><label>{t("resignation.detail.noticeEnds", { defaultValue: "Notice Ends" })}</label><p><span dir="ltr">{formatDate(resignation.calculated_last_working_day)}</span></p></div>
+                                <div><label>{t("resignation.form.lastWorkingDay", { defaultValue: "Last Working Day" })}</label><p><strong dir="ltr">{formatDate(resignation.last_working_day)}</strong></p></div>
                                 {resignation.days_remaining !== null && <div><label>{t("resignation.detail.daysRemaining", { defaultValue: "Days Remaining" })}</label><p>{resignation.days_remaining}</p></div>}
                                 <div><label>{t("resignation.detail.reasonCategory", { defaultValue: "Reason Category" })}</label><p>{reasonCategoryLabel(resignation.reason_category)}</p></div>
                                 <div><label>{t("resignation.detail.earlyRelease", { defaultValue: "Early Release" })}</label><p>{resignation.early_release ? t("resignation.detail.yes", { defaultValue: "Yes" }) : t("resignation.detail.no", { defaultValue: "No" })}</p></div>

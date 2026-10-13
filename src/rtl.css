@@ -207,6 +207,599 @@ html[dir="rtl"] .dashboard-header::before {
     right: 0;
 }
 
+/* HR Dashboard: red unread count on the bell goes top-LEFT */
+html[dir="rtl"] .notification-dot {
+    right: auto;
+    left: -5px;
+}
+
+/* HR Dashboard stat cards: the icon moves to the right, so the "—" marker moves to the left */
+html[dir="rtl"] .stat-growth {
+    right: auto;
+    left: 0;
+}
+
+/* HR Dashboard "View Details" arrow points left */
+html[dir="rtl"] .stat-link svg {
+    transform: scaleX(-1);
+}
+
+/* ---------- Stat cards (Employees List + Recruitment) ---------- */
+/* Both pages use the same card layout: colour bar + icon on the left, label pushed right of the icon
+   with margin-left, big number pinned to the right. Mirror it: bar + icon on the right, label next to
+   the icon, number on the left. Without this the label moves to the right edge, under the number. */
+html[dir="rtl"] .employees-page .stat-card::before,
+html[dir="rtl"] .recruitment-page .recruitment-card::before {
+    inset: 0 0 0 auto;
+}
+
+html[dir="rtl"] .employees-page .stat-icon,
+html[dir="rtl"] .recruitment-stat-icon {
+    left: auto;
+    right: 16px;
+}
+
+html[dir="rtl"] .employees-page .stat-card-content,
+html[dir="rtl"] .recruitment-card-content {
+    margin-left: 0;
+    margin-right: 42px;
+}
+
+html[dir="rtl"] .employees-page .stat-card strong {
+    right: auto;
+    left: 18px;
+}
+
+html[dir="rtl"] .recruitment-card-content strong {
+    right: auto;
+    left: 0;
+}
+
+/* ---------- Employees List ---------- */
+
+/* Search box: magnifier on the right, where Arabic text starts */
+html[dir="rtl"] .search-bar input {
+    padding: 11px 40px 11px 14px;
+}
+
+html[dir="rtl"] .search-bar-icon {
+    left: auto;
+    right: 14px;
+}
+
+/* Filters panel: "Clear filters" and the filters sit at the left end (mirror of the right end in English) */
+html[dir="rtl"] .clear-filters-button {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Add/Edit Employee form: phone and email are typed and shown left-to-right
+   ("+974 5512 3456", not reversed), kept right-aligned like the other fields */
+html[dir="rtl"] .employees-page input[type="tel"],
+html[dir="rtl"] .employees-page input[type="email"] {
+    direction: ltr;
+    text-align: right;
+}
+
+/* ---------- Recruitment (and the shared tables, pagination, stepper and dialogs it uses) ---------- */
+/* Dates, MPR / job / application numbers and amounts are wrapped in <span dir="ltr" class="ltr-text">
+   (keeps "03 Oct 2026" in order); in Arabic they also must not break at the hyphens or spaces */
+html[dir="rtl"] .ltr-text {
+    white-space: nowrap;
+}
+
+/* Table headers are forced to text-align: left, while the cells follow the page direction:
+   in Arabic the headers stayed on the left and the cells moved right. Align both to the right. */
+html[dir="rtl"] .jobs-table th {
+    text-align: right;
+}
+
+/* Job Applications summary cards (buttons with text-align: left) */
+html[dir="rtl"] .app-card {
+    text-align: right;
+}
+
+/* "2 new" badge next to the applications count: gap on the other side */
+html[dir="rtl"] .job-badge.new {
+    margin: 0 6px 0 0;
+}
+
+/* New application row: orange marker on the outer (right) edge of the first cell */
+html[dir="rtl"] .app-row-new td:first-child {
+    box-shadow: inset -3px 0 0 #ff7043;
+}
+
+/* Rows per page / search box: pushed to the far (left) end of the header row, like the right end in English */
+html[dir="rtl"] .tp-header-actions {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Approval progress stepper (MPR, Leave and Resignation trackers): steps run right-to-left,
+   so each connector line must go from a node to the next node on its LEFT */
+html[dir="rtl"] .leave-tracker-step::after {
+    left: calc(-50% + 18px);
+    right: calc(50% + 18px);
+}
+
+@media (max-width: 639.98px) {
+    html[dir="rtl"] .leave-tracker-step {
+        text-align: right;
+    }
+
+    html[dir="rtl"] .leave-tracker-step::after {
+        left: auto;
+        right: 13px;
+    }
+}
+
+/* Alert / confirm dialogs (approve, reject, cancel MPR, budget check): text-align: left → right */
+html[dir="rtl"] .app-alert-dialog {
+    text-align: right;
+}
+
+/* ---------- Export buttons (Attendance + Leave Management) ---------- */
+/* Text and "⌄" chevron side by side on one line, vertically centred. The chevron glyph sits low in
+   its box, and next to Arabic letters it looked like it was below the text, so it is lifted slightly. */
+html[dir="rtl"] .attendance-export-btn,
+html[dir="rtl"] .leave-export-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+html[dir="rtl"] .attendance-export-btn span,
+html[dir="rtl"] .leave-export-btn span {
+    display: inline-block;
+    line-height: 1;
+    transform: translateY(-0.2em);
+}
+
+/* ---------- Attendance (HR) ---------- */
+
+/* Export sits at the far (left) end of the toolbar, like the right end in English */
+html[dir="rtl"] .attendance-export-menu {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Excel / CSV menu opens under the button towards the page, not past the left edge */
+html[dir="rtl"] .attendance-export-options {
+    right: auto;
+    left: 0;
+}
+
+/* Employee ID is typed left-to-right ("EMP001"), kept right-aligned like the other fields */
+html[dir="rtl"] .employee-id-input {
+    direction: ltr;
+    text-align: right;
+}
+
+/* ---------- Leave Management (HR) ---------- */
+/* Stat cards: colour bar + dot on the left and number pinned right in English.
+   Mirror them, otherwise the label slides under the number on the right. */
+html[dir="rtl"] .leave-card {
+    padding: 16px 48px 16px 18px;
+}
+
+html[dir="rtl"] .leave-card::before {
+    left: auto;
+    right: 0;
+}
+
+html[dir="rtl"] .leave-card::after {
+    left: auto;
+    right: 15px;
+}
+
+html[dir="rtl"] .leave-card h2 {
+    right: auto;
+    left: 18px;
+}
+
+/* Table: headers and cells are forced left; align them to the right like the page */
+html[dir="rtl"] .leave-table th,
+html[dir="rtl"] .leave-table td {
+    text-align: right;
+}
+
+/* Row hover marker on the outer (right) edge */
+html[dir="rtl"] .leave-request-row:hover {
+    box-shadow: inset -3px 0 0 #d9e9f2;
+}
+
+/* Review pop-up: gap between the number and "Days" on the other side */
+html[dir="rtl"] .leave-page .balance-card small {
+    margin-left: 0 !important;
+    margin-right: 4px !important;
+}
+
+/* Leave Policy Setup: rules box accent line on the right; save message pushed to the far (left) end */
+html[dir="rtl"] .leave-policy-rules {
+    border-left: 0;
+    border-right: 3px solid #008db8;
+}
+
+html[dir="rtl"] .leave-policy-footer span {
+    margin-right: 0;
+    margin-left: auto;
+}
+
+/* ---------- Resignations (HR) ---------- */
+/* Summary cards (.recruitment-card .resignation-summary-card): the shared Recruitment rule above already
+   moves the ::before bar to the right; the coloured left border and left text alignment are mirrored here.
+   The label keeps margin-bottom: 12px inside a flex row, which lifts it above the number; in Arabic the
+   label and number sit on one line, centred, with a small gap. */
+html[dir="rtl"] .resignation-summary-card {
+    border-left-width: 2px;
+    border-left-color: transparent;
+    border-right: 4px solid #cbd5e1;
+    text-align: right;
+    gap: 12px;
+}
+
+html[dir="rtl"] .resignation-summary-card h3 {
+    margin-bottom: 0;
+}
+
+html[dir="rtl"] .resignation-summary-card.tone-pending-lm,
+html[dir="rtl"] .resignation-summary-card.tone-pending-hr { border-right-color: #f59e0b; }
+html[dir="rtl"] .resignation-summary-card.tone-serving { border-right-color: #0284c7; }
+html[dir="rtl"] .resignation-summary-card.tone-completed { border-right-color: #16a34a; }
+html[dir="rtl"] .resignation-summary-card.tone-closed { border-right-color: #94a3b8; }
+
+html[dir="rtl"] .resignation-summary-card.active {
+    border-color: #12304a;
+}
+
+/* "Rows per page" sits at the far (left) end of the filter bar, like the right end in English */
+html[dir="rtl"] .resignation-rows-control {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+@media (max-width: 700px) {
+    html[dir="rtl"] .resignation-rows-control {
+        margin-right: 0;
+    }
+}
+
+/* Month filter (native month input): keep "October 2026" in its normal order */
+html[dir="rtl"] .resignation-filters input[type="month"] {
+    direction: ltr;
+    text-align: right;
+}
+
+/* Success banner after a decision: wider padding on the text side (right) */
+html[dir="rtl"] .resignation-toast {
+    padding: 12px 18px 12px 14px;
+}
+
+/* ---------- Tickets (HR) ---------- */
+/* Stat cards: the gap after the icon was margin-left, so in Arabic the label ran into the icon.
+   Mirror it: icon on the right, label next to it with the same gap, number at the far (left) end. */
+html[dir="rtl"] .summary-copy {
+    margin-left: 0;
+    margin-right: 16px;
+}
+
+html[dir="rtl"] .ticket-summary-card .summary-copy > strong {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Ticket Categories / Support Agents sidebar on the right in Arabic (requested), ticket list on the left.
+   In RTL the first grid column is the right-hand one, so the sidebar takes column 1. */
+html[dir="rtl"] .tickets-content {
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 3fr);
+}
+
+html[dir="rtl"] .tickets-content > .ticket-sidebar {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+html[dir="rtl"] .tickets-content > .ticket-list {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+@media (max-width: 1000px) {
+    /* One column on smaller screens: list first, sidebar below (same as English) */
+    html[dir="rtl"] .tickets-content {
+        grid-template-columns: 1fr;
+    }
+
+    html[dir="rtl"] .tickets-content > .ticket-sidebar,
+    html[dir="rtl"] .tickets-content > .ticket-list {
+        grid-column: auto;
+        grid-row: auto;
+    }
+}
+
+/* Filters (search, status, sort) pushed to the far (left) end of the "Ticket List" bar */
+html[dir="rtl"] .ticket-filters {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+@media (max-width: 700px) {
+    html[dir="rtl"] .ticket-filters {
+        margin-right: 0;
+    }
+}
+
+/* Put On Hold / Resolve / Reopen button: bottom-LEFT corner of the ticket card */
+html[dir="rtl"] .ticket-action-button {
+    right: auto;
+    left: 18px;
+}
+
+/* Ticket number (TKT-0001) stays on one line */
+html[dir="rtl"] .ticket-number {
+    white-space: nowrap;
+}
+
+/* ---------- Employee Salary / Payroll (HR) ---------- */
+
+/* Header: the 14px indent before the title moves to the right side */
+html[dir="rtl"] .payroll-header {
+    padding-left: 0;
+    padding-right: 14px;
+}
+
+/* Export menu opens from the button's left edge (mirror of right: 0) */
+html[dir="rtl"] .payroll-export-options {
+    right: auto;
+    left: 0;
+}
+
+/* Actions column: the cell was display: flex, so it stopped being a table cell and its
+   bottom border / row background did not line up with the rest of the row.
+   Keep it a real table cell and put the edit / delete icons side by side inside it. */
+html[dir="rtl"] .payroll-table td.payroll-actions {
+    display: table-cell;
+    text-align: right;
+}
+
+html[dir="rtl"] .payroll-actions button {
+    display: inline-grid;
+    vertical-align: middle;
+}
+
+html[dir="rtl"] .payroll-actions button + button {
+    margin-right: 10px;
+}
+
+/* Add/Edit Salary form: Emp ID, email, phone and amounts are typed and shown left-to-right,
+   kept right-aligned like the other fields (same as the Add Employee form) */
+html[dir="rtl"] .salary-form-grid input[name="employeeID"],
+html[dir="rtl"] .salary-form-grid input[name="email"],
+html[dir="rtl"] .salary-form-grid input[name="phone"],
+html[dir="rtl"] .salary-form-grid input[name="basicSalary"],
+html[dir="rtl"] .salary-form-grid input[name="allowances"],
+html[dir="rtl"] .salary-form-grid input[name="deductions"] {
+    direction: ltr;
+    text-align: right;
+}
+
+/* ---------- Reports (hub + Employee / Attendance / Leave / Payroll / Annual Leave Accrual) ---------- */
+
+/* Page title: the blue accent bar (::before, left: 0) and the 14px gap next to it move to the right */
+html[dir="rtl"] .dashboard-content :is(.reports-header, .report-header, .payroll-report-header, .leave-report-header) > div:first-child {
+    padding-left: 0;
+    padding-right: 14px;
+}
+
+html[dir="rtl"] .dashboard-content :is(.reports-header, .report-header, .payroll-report-header, .leave-report-header) > div:first-child::before {
+    left: auto;
+    right: 0;
+}
+
+/* Report tables: headers are forced to text-align: left; align them right like the cells */
+html[dir="rtl"] .employee-report-table th,
+html[dir="rtl"] .report-table th,
+html[dir="rtl"] .leave-report-table th,
+html[dir="rtl"] .payroll-report-table th {
+    text-align: right;
+}
+
+/* Accrual toolbar: Export buttons sit at the far (left) end, mirror of the right end in English */
+html[dir="rtl"] .accrual-report-actions {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+@media (max-width: 700px) {
+    html[dir="rtl"] .accrual-report-actions {
+        margin-right: 0;
+    }
+}
+
+/* ---------- Settings (HR) ---------- */
+
+/* Settings menu: the side line and the active item's coloured bar move to the right edge,
+   text aligned right, and the chevron goes to the far (left) end */
+html[dir="rtl"] .settings-navigation {
+    border-left: 0;
+    border-right: 2px solid #e5eaf0;
+}
+
+html[dir="rtl"] .settings-navigation button {
+    border-left: 0;
+    border-right: 3px solid transparent;
+    text-align: right;
+}
+
+html[dir="rtl"] .settings-navigation button.active {
+    border-right-color: #03a9f4;
+}
+
+html[dir="rtl"] .settings-navigation button svg:last-child {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Narrow screens: the menu becomes a grid with a bottom line, same as English */
+@media (max-width: 800px) {
+    html[dir="rtl"] .settings-navigation,
+    html[dir="rtl"] .settings-navigation button {
+        border-right: 0;
+    }
+}
+
+/* "CONFIGURATION" eyebrow: letter-spacing pulls Arabic letters apart and breaks their joining */
+html[dir="rtl"] .settings-eyebrow {
+    letter-spacing: 0;
+}
+
+/* On/off switches: the knob starts on the right and slides left when switched on */
+html[dir="rtl"] .settings-switch span {
+    left: auto;
+    right: 3px;
+}
+
+html[dir="rtl"] .settings-switch.on span {
+    transform: translateX(-20px);
+}
+
+/* Emails, colour code, currency symbol, timezone, date format and agency phone are typed left-to-right,
+   kept right-aligned like the other fields (same as the Add Employee form) */
+html[dir="rtl"] .settings-page input[dir="ltr"],
+html[dir="rtl"] .settings-page select[dir="ltr"] {
+    text-align: right;
+}
+
+/* Approval Workflows / Recruitment Masters / Resignation tables: headers align right like the cells */
+html[dir="rtl"] .rs-table th {
+    text-align: right;
+}
+
+/* Location chips: the small × sits on the chip's top-left corner */
+html[dir="rtl"] .rs-chips .rs-chip .rs-chip-remove {
+    right: auto;
+    left: -7px;
+}
+
+/* ---------- Employee Details (HR) ---------- */
+
+/* "← Employee Details" / "← Back to Employees": the back arrow points right in Arabic */
+html[dir="rtl"] .details-back-arrow {
+    display: inline-block;
+    transform: scaleX(-1);
+}
+
+/* Text typed by people (address, names, about, company…) follows its own language's direction */
+html[dir="rtl"] .details-free-text {
+    unicode-bidi: plaintext;
+}
+
+/* Summary card rows: label at the start (right), value at the far (left) end, like the mirror of English */
+html[dir="rtl"] .info-section p strong {
+    text-align: left;
+}
+
+html[dir="rtl"] .emergency-section p b,
+html[dir="rtl"] .emergency-section p strong {
+    text-align: right;
+}
+
+/* Education record: Edit / Delete buttons at the far (left) end */
+html[dir="rtl"] .education-record > div:last-child {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Projects panel: the edit pencil sits in the top-left corner */
+html[dir="rtl"] .section-edit-button {
+    right: auto;
+    left: 20px;
+}
+
+/* Employee Documents: the upload icon moves to the top-left corner, with the title's room for it */
+html[dir="rtl"] .employee-document-upload-field h3 {
+    padding-right: 0;
+    padding-left: 26px;
+}
+
+html[dir="rtl"] .employee-document-upload-icon {
+    right: auto;
+    left: 14px;
+}
+
+/* Password Management: the red accent line moves to the right edge */
+html[dir="rtl"] .password-management-panel {
+    border-left: 1px solid #e1e6ec;
+    border-right: 4px solid #dc2626;
+}
+
+/* Reset password dialog: labels aligned right, the show/hide eye button on the left side of the field */
+html[dir="rtl"] .custom-password-field {
+    text-align: right;
+}
+
+html[dir="rtl"] .custom-password-field input {
+    padding: 13px 14px 13px 46px;
+}
+
+html[dir="rtl"] .password-visibility-button {
+    right: auto;
+    left: 10px;
+}
+
+/* ---------- Employee Requests (HR) ---------- */
+
+/* Page title: this page draws its own orange bar (border-left); in Arabic it sits on the right, next to the title */
+html[dir="rtl"] .hrreq-header {
+    border-left: 0;
+    padding-left: 0;
+    border-right: 4px solid #f0622d;
+    padding-right: 16px;
+}
+
+/* Table headers are forced to text-align: left; align them right like the cells */
+html[dir="rtl"] .hrreq-table th {
+    text-align: right;
+}
+
+/* Issued document row: the View button goes to the far (left) end */
+html[dir="rtl"] .hrreq-file-view {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Purpose / description / destination / HR response follow their own language's direction */
+html[dir="rtl"] .hrreq-free-text {
+    unicode-bidi: plaintext;
+}
+
+/* ---------- Date picker (shared) ---------- */
+/* Selected date / "DD-MM-YYYY" in the field always reads left-to-right */
+html[dir="rtl"] .date-picker-trigger > span {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+/* Popup opens from the field's right edge (mirror of the left edge in English).
+   Floating popups (autoPosition) are placed by JavaScript and stay as they are. */
+html[dir="rtl"] .date-picker-popup:not(.is-floating) {
+    left: auto;
+    right: 0;
+}
+
+/* Month arrows: "previous" points right and "next" points left in Arabic */
+html[dir="rtl"] .date-picker-nav > button svg {
+    transform: scaleX(-1);
+}
+
+/* Year list: scrollbar space on the left */
+html[dir="rtl"] .date-picker-years {
+    padding-right: 0;
+    padding-left: 4px;
+}
+
 /* ---------- Small details ---------- */
 /* Red unread count on the bell: top-LEFT */
 html[dir="rtl"] .employee-notification-count {

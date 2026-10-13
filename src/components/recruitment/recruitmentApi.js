@@ -1,4 +1,5 @@
 // Shared helpers for the Manpower Request (MPR) screens in the HR and Employee portals.
+import i18n from "i18next";
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -10,9 +11,22 @@ export async function api(path, { method = "GET", body } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || "Request failed");
+    if (!response.ok) throw new Error(data.message || i18n.t("recruitment.errors.requestFailed", { defaultValue: "Request failed" }));
     return data;
 }
+
+// Translated labels for values the backend sends in English ("Pending HR" → recruitment.statuses.pending_hr).
+// Only the shown text changes: filters, CSS tones and comparisons keep using the English value.
+const valueKey = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+export const mprStatusLabel = (status) => (status ? i18n.t(`recruitment.statuses.${valueKey(status)}`, { defaultValue: status }) : "");
+export const applicationStatusLabel = (status) => (status ? i18n.t(`recruitment.applicationStatuses.${valueKey(status)}`, { defaultValue: status }) : "");
+export const recruitmentActionLabel = (action) => (action ? i18n.t(`recruitment.actions.${valueKey(action)}`, { defaultValue: action }) : "");
+export const recruitmentValueLabel = (group, value) =>
+    value
+        ? i18n.t([`recruitment.values.${group}.${valueKey(value)}`, `employeeProfile.values.${group}.${valueKey(value)}`], { defaultValue: String(value) })
+        : value;
+// Workflow role names come from the backend; Arabic names live only in ar.json, so English keeps the backend label
+export const recruitmentRoleLabel = (role, fallback) => i18n.t(`recruitment.roles.${role}`, { defaultValue: fallback || role || "" });
 
 // Logged-in user's employee ID (HR portal or Employee portal session)
 export const getSessionEmployeeId = () => {
@@ -97,7 +111,7 @@ export async function fetchApplicationCv(applicationId, actorId) {
     );
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || "Unable to load the CV");
+        throw new Error(data.message || i18n.t("recruitment.errors.cvLoadFailed", { defaultValue: "Unable to load the CV" }));
     }
     return URL.createObjectURL(await response.blob());
 }

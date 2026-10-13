@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import useScrollLock from "../common/dialog/useScrollLock";
 import {
     downloadEmployeeDocument,
@@ -11,6 +12,7 @@ import {
 import "./employeeDocumentOverlays.css";
 
 export function DocumentToast({ toast, onClose }) {
+    const { t } = useTranslation();
     useEffect(() => {
         if (!toast) return undefined;
         const timer = window.setTimeout(onClose, 4500);
@@ -21,7 +23,7 @@ export function DocumentToast({ toast, onClose }) {
     return createPortal(
         <div className={`employee-document-toast ${toast.type}`} role={toast.type === "error" ? "alert" : "status"} aria-live="polite">
             <span>{toast.message}</span>
-            <button type="button" aria-label="Dismiss notification" onClick={onClose}>×</button>
+            <button type="button" aria-label={t("employeeDetails.preview.dismiss", { defaultValue: "Dismiss notification" })} onClick={onClose}>×</button>
         </div>,
         window.document.body
     );
@@ -30,6 +32,7 @@ export function DocumentToast({ toast, onClose }) {
 // Preview pop-up for an employee document (document.doc_type)
 // or for a file attached to an employee request (document.requestId).
 export function EmployeeDocumentPreviewModal({ employeeId, document, isHR = false, onClose, onError }) {
+    const { t } = useTranslation();
     const [preview, setPreview] = useState({ key: "", url: "", mime: "", loading: true, error: "" });
     useScrollLock(Boolean(document));
 
@@ -79,18 +82,18 @@ export function EmployeeDocumentPreviewModal({ employeeId, document, isHR = fals
                 <header>
                     <div>
                         <h2 id="employee-document-preview-title">{document.displayName}</h2>
-                        <p>{document.original_file_name}</p>
+                        <p><bdi>{document.original_file_name}</bdi></p>
                     </div>
                     <div className="employee-document-preview-actions">
-                        <button type="button" onClick={handleDownload}><Download size={16} />Download</button>
-                        <button type="button" className="close" onClick={onClose}><X size={17} />Close</button>
+                        <button type="button" onClick={handleDownload}><Download size={16} />{t("employeeDetails.preview.download", { defaultValue: "Download" })}</button>
+                        <button type="button" className="close" onClick={onClose}><X size={17} />{t("recruitment.common.close", { defaultValue: "Close" })}</button>
                     </div>
                 </header>
                 <div className="employee-document-preview-content">
-                    {currentPreview.loading && <p role="status">Loading preview...</p>}
+                    {currentPreview.loading && <p role="status">{t("employeeDetails.preview.loading", { defaultValue: "Loading preview..." })}</p>}
                     {currentPreview.error && <p className="error" role="alert">{currentPreview.error}</p>}
                     {currentPreview.url && mimeType === "application/pdf" && (
-                        <iframe src={currentPreview.url} title={`${document.displayName} preview`} />
+                        <iframe src={currentPreview.url} title={t("employeeDetails.preview.frameTitle", { name: document.displayName, defaultValue: "{{name}} preview" })} />
                     )}
                     {currentPreview.url && mimeType.startsWith("image/") && (
                         <img src={currentPreview.url} alt={`${document.displayName}: ${document.original_file_name}`} />

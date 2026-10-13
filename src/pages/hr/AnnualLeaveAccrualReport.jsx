@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import i18n from "i18next";
+import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useConfirm } from "../../components/common/dialog/dialogContext";
 import "./LeaveReport.css";
@@ -48,6 +50,7 @@ const downloadExcel = (report, fileName) => {
 };
 
 function AnnualLeaveAccrualReport() {
+    const { t } = useTranslation();
     const confirm = useConfirm();
     const [month, setMonth] = useState(currentCompanyMonth);
     // Result of the last load, tagged with the month it belongs to
@@ -65,7 +68,7 @@ function AnnualLeaveAccrualReport() {
 
         fetch(`${REPORT_URL}${query}`, { cache: "no-store" })
             .then((response) => {
-                if (!response.ok) throw new Error("Unable to load the accrual report");
+                if (!response.ok) throw new Error(i18n.t("reports.accrual.loadFailed", { defaultValue: "Unable to load the accrual report" }));
                 return response.json();
             })
             .then((data) => {
@@ -84,14 +87,15 @@ function AnnualLeaveAccrualReport() {
         if (!month) return;
         const confirmed = await confirm({
             variant: "warning",
-            title: `Export ${month} for Finance?`,
+            title: t("reports.accrual.confirmTitle", { month: `\u2066${month}\u2069`, defaultValue: "Export {{month}} for Finance?" }),
             message: (
                 <>
-                    <p>Rows with an amount will be marked as <strong>posted to Finance</strong> and frozen.</p>
-                    <p>GL posting (SHELTER-HCM-AP-16-002) is not connected yet; this downloads the Excel file for Finance.</p>
+                    <p><Trans i18nKey="reports.accrual.confirmPosted" components={{ strong: <strong /> }} defaults="Rows with an amount will be marked as <strong>posted to Finance</strong> and frozen." /></p>
+                    <p>{t("reports.accrual.confirmGl", { code: "\u2066SHELTER-HCM-AP-16-002\u2069", defaultValue: "GL posting ({{code}}) is not connected yet; this downloads the Excel file for Finance." })}</p>
                 </>
             ),
-            confirmText: "Export for Finance",
+            confirmText: t("reports.accrual.exportFinance", { defaultValue: "Export for Finance" }),
+            cancelText: t("profileEdit.cancel", { defaultValue: "Cancel" }),
         });
         if (!confirmed) return;
 
@@ -104,11 +108,11 @@ function AnnualLeaveAccrualReport() {
                 body: JSON.stringify({ month }),
             });
             const exported = await response.json();
-            if (!response.ok) throw new Error(exported.message || "Export failed");
+            if (!response.ok) throw new Error(exported.message || t("reports.accrual.exportFailed", { defaultValue: "Export failed" }));
 
             downloadExcel(exported, `annual-leave-accrual-${month}-${exported.postingReference}.xls`);
             setResult({ month, report: exported, error: "" });
-            setMessage(`${exported.postedCount} row(s) marked as posted • Reference ${exported.postingReference}`);
+            setMessage(t("reports.accrual.postedMessage", { count: exported.postedCount, reference: `\u2066${exported.postingReference}\u2069`, defaultValue: "{{count}} row(s) marked as posted • Reference {{reference}}" }));
         } catch (err) {
             setMessage(err.message);
         } finally {
@@ -125,19 +129,19 @@ function AnnualLeaveAccrualReport() {
 
                 <div className="leave-report-header accrual-report-header">
                     <div>
-                        <h1>Annual Leave Accrual</h1>
-                        <p>Monthly annual leave days and leave liability amount per employee, for Finance.</p>
+                        <h1>{t("reports.hub.cards.accrual.title", { defaultValue: "Annual Leave Accrual" })}</h1>
+                        <p>{t("reports.accrual.subtitle", { defaultValue: "Monthly annual leave days and leave liability amount per employee, for Finance." })}</p>
                     </div>
-                    <Link className="report-back-button" to="/reports">Back to Reports</Link>
+                    <Link className="report-back-button" to="/reports">{t("reports.common.backToReports", { defaultValue: "Back to Reports" })}</Link>
                 </div>
 
                 <div className="accrual-report-toolbar">
                     <label>
-                        Month
+                        {t("reports.accrual.month", { defaultValue: "Month" })}
                         <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
                     </label>
                     <button type="button" className="accrual-link-button" onClick={() => setMonth("")} disabled={!month}>
-                        All months
+                        {t("reports.accrual.allMonths", { defaultValue: "All months" })}
                     </button>
                     <div className="accrual-report-actions">
                         <button
@@ -146,16 +150,16 @@ function AnnualLeaveAccrualReport() {
                             onClick={() => downloadExcel(report, `annual-leave-accrual-${month || "all"}.xls`)}
                             disabled={!rows.length}
                         >
-                            Export to Excel
+                            {t("reports.accrual.exportExcel", { defaultValue: "Export to Excel" })}
                         </button>
                         <button
                             type="button"
                             className="accrual-primary-button"
                             onClick={exportForFinance}
                             disabled={!month || !rows.length || exporting}
-                            title={month ? "" : "Select a month to export for Finance"}
+                            title={month ? "" : t("reports.accrual.selectMonth", { defaultValue: "Select a month to export for Finance" })}
                         >
-                            {exporting ? "Exporting..." : "Export for Finance"}
+                            {exporting ? t("reports.accrual.exporting", { defaultValue: "Exporting..." }) : t("reports.accrual.exportFinance", { defaultValue: "Export for Finance" })}
                         </button>
                     </div>
                 </div>
@@ -164,71 +168,71 @@ function AnnualLeaveAccrualReport() {
 
                 <div className="leave-report-summary">
                     <div className="leave-report-card">
-                        <h3>Employees</h3>
+                        <h3>{t("reports.common.employees", { defaultValue: "Employees" })}</h3>
                         <h2>{loading ? "—" : totals?.employees ?? 0}</h2>
-                        <p>{month || "All months"}</p>
+                        <p>{month ? <span dir="ltr" className="ltr-text">{month}</span> : t("reports.accrual.allMonths", { defaultValue: "All months" })}</p>
                     </div>
                     <div className="leave-report-card">
-                        <h3>Days Accrued</h3>
+                        <h3>{t("reports.accrual.daysAccrued", { defaultValue: "Days Accrued" })}</h3>
                         <h2>{loading ? "—" : totals?.days ?? 0}</h2>
-                        <p>Annual leave days</p>
+                        <p>{t("reports.accrual.annualLeaveDays", { defaultValue: "Annual leave days" })}</p>
                     </div>
                     <div className="leave-report-card">
-                        <h3>Amount Accrued</h3>
-                        <h2>{loading ? "—" : formatAmount(totals?.amount ?? 0)}</h2>
-                        <p>Leave liability</p>
+                        <h3>{t("reports.accrual.amountAccrued", { defaultValue: "Amount Accrued" })}</h3>
+                        <h2>{loading ? "—" : <span dir="ltr" className="ltr-text">{formatAmount(totals?.amount ?? 0)}</span>}</h2>
+                        <p>{t("reports.accrual.leaveLiability", { defaultValue: "Leave liability" })}</p>
                     </div>
                     <div className="leave-report-card">
-                        <h3>Posted to Finance</h3>
-                        <h2>{loading ? "—" : `${totals?.posted ?? 0} / ${rows.length}`}</h2>
-                        <p>{totals?.missingSalary ? `${totals.missingSalary} without salary record` : "All rows have an amount"}</p>
+                        <h3>{t("reports.accrual.postedToFinance", { defaultValue: "Posted to Finance" })}</h3>
+                        <h2>{loading ? "—" : <span dir="ltr" className="ltr-text">{`${totals?.posted ?? 0} / ${rows.length}`}</span>}</h2>
+                        <p>{totals?.missingSalary ? t("reports.accrual.withoutSalary", { count: totals.missingSalary, defaultValue: "{{count}} without salary record" }) : t("reports.accrual.allRowsHaveAmount", { defaultValue: "All rows have an amount" })}</p>
                     </div>
                 </div>
 
                 <div className="leave-report-table-container">
-                    <h2>Accrual Ledger</h2>
+                    <h2>{t("reports.accrual.tableTitle", { defaultValue: "Accrual Ledger" })}</h2>
                     <table className="leave-report-table">
                         <thead>
                             <tr>
-                                <th>Employee ID</th>
-                                <th>Employee Name</th>
-                                <th>Department</th>
-                                <th>Grade</th>
-                                <th>Month</th>
-                                <th>Accrual Date</th>
-                                <th className="accrual-number">Days</th>
-                                <th>Basis</th>
-                                <th className="accrual-number">Salary</th>
-                                <th className="accrual-number">Amount</th>
-                                <th>Finance</th>
+                                <th>{t("reports.common.employeeId", { defaultValue: "Employee ID" })}</th>
+                                <th>{t("reports.common.employeeName", { defaultValue: "Employee Name" })}</th>
+                                <th>{t("reports.common.department", { defaultValue: "Department" })}</th>
+                                <th>{t("reports.accrual.grade", { defaultValue: "Grade" })}</th>
+                                <th>{t("reports.accrual.month", { defaultValue: "Month" })}</th>
+                                <th>{t("reports.accrual.accrualDate", { defaultValue: "Accrual Date" })}</th>
+                                <th className="accrual-number">{t("reports.leave.days", { defaultValue: "Days" })}</th>
+                                <th>{t("reports.accrual.basis", { defaultValue: "Basis" })}</th>
+                                <th className="accrual-number">{t("reports.accrual.salary", { defaultValue: "Salary" })}</th>
+                                <th className="accrual-number">{t("reports.accrual.amount", { defaultValue: "Amount" })}</th>
+                                <th>{t("reports.accrual.finance", { defaultValue: "Finance" })}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="11">Loading accrual ledger...</td></tr>
+                                <tr><td colSpan="11">{t("reports.accrual.loading", { defaultValue: "Loading accrual ledger..." })}</td></tr>
                             ) : error ? (
                                 <tr><td colSpan="11">{error}</td></tr>
                             ) : rows.length === 0 ? (
-                                <tr><td colSpan="11">No accruals for this month.</td></tr>
+                                <tr><td colSpan="11">{t("reports.accrual.empty", { defaultValue: "No accruals for this month." })}</td></tr>
                             ) : rows.map((row) => (
                                 <tr key={row.id}>
-                                    <td>{row.employee_id}</td>
+                                    <td><span dir="ltr" className="ltr-text">{row.employee_id}</span></td>
                                     <td>{row.employee_name}</td>
                                     <td>{row.department || "-"}</td>
                                     <td>{row.grade || "-"}</td>
-                                    <td>{row.accrual_month}</td>
-                                    <td>{row.accrual_date}</td>
-                                    <td className="accrual-number">{row.days_accrued}</td>
-                                    <td className="accrual-basis">{row.salary_basis}</td>
-                                    <td className="accrual-number">{formatAmount(row.salary_amount)}</td>
-                                    <td className="accrual-number">{formatAmount(row.amount_accrued)}</td>
+                                    <td><span dir="ltr" className="ltr-text">{row.accrual_month}</span></td>
+                                    <td><span dir="ltr" className="ltr-text">{row.accrual_date}</span></td>
+                                    <td className="accrual-number"><span dir="ltr" className="ltr-text">{row.days_accrued}</span></td>
+                                    <td className="accrual-basis">{t(`reports.accrual.basisValues.${row.salary_basis}`, { defaultValue: String(row.salary_basis) })}</td>
+                                    <td className="accrual-number"><span dir="ltr" className="ltr-text">{formatAmount(row.salary_amount)}</span></td>
+                                    <td className="accrual-number"><span dir="ltr" className="ltr-text">{formatAmount(row.amount_accrued)}</span></td>
                                     <td>
                                         {row.posted_to_finance ? (
-                                            <span className="accrual-status posted" title={row.posting_reference}>Posted</span>
+                                            <span className="accrual-status posted" title={row.posting_reference}>{t("reports.accrual.status.posted", { defaultValue: "Posted" })}</span>
                                         ) : row.amount_accrued === null ? (
-                                            <span className="accrual-status missing">No salary</span>
+                                            <span className="accrual-status missing">{t("reports.accrual.status.noSalary", { defaultValue: "No salary" })}</span>
                                         ) : (
-                                            <span className="accrual-status open">Not posted</span>
+                                            <span className="accrual-status open">{t("reports.accrual.status.notPosted", { defaultValue: "Not posted" })}</span>
                                         )}
                                     </td>
                                 </tr>
@@ -237,11 +241,11 @@ function AnnualLeaveAccrualReport() {
                         {!loading && !error && rows.length > 0 && (
                             <tfoot>
                                 <tr>
-                                    <td colSpan="6">Total ({totals.employees} employees)</td>
-                                    <td className="accrual-number">{totals.days}</td>
+                                    <td colSpan="6">{t("reports.accrual.total", { count: totals.employees, defaultValue: "Total ({{count}} employees)" })}</td>
+                                    <td className="accrual-number"><span dir="ltr" className="ltr-text">{totals.days}</span></td>
                                     <td />
                                     <td />
-                                    <td className="accrual-number">{formatAmount(totals.amount)}</td>
+                                    <td className="accrual-number"><span dir="ltr" className="ltr-text">{formatAmount(totals.amount)}</span></td>
                                     <td />
                                 </tr>
                             </tfoot>

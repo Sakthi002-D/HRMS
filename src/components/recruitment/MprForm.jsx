@@ -1,11 +1,12 @@
 // Manpower Request form (replaces the old "Create Job" form; keeps its fields and styling).
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useConfirm } from "../common/dialog/dialogContext";
 import DatePicker from "../layout/common/DatePicker";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
-import { api, getCompanyCurrency, isBudgetException } from "./recruitmentApi";
+import { api, getCompanyCurrency, isBudgetException, recruitmentValueLabel } from "./recruitmentApi";
 
 const emptyForm = (department) => ({
     request_type: "",
@@ -46,6 +47,7 @@ const fromMpr = (mpr) => ({
 });
 
 function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
+    const { t } = useTranslation();
     const [form, setForm] = useState(() => (mpr ? fromMpr(mpr) : emptyForm(meta.raiseDepartments.length === 1 ? meta.raiseDepartments[0] : "")));
     const [saving, setSaving] = useState("");
     const [error, setError] = useState("");
@@ -121,10 +123,10 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
             if (result.status === "under") {
                 const keep = await confirm({
                     variant: "success",
-                    title: "Within budget",
+                    title: t("recruitment.budget.within", { defaultValue: "Within budget" }),
                     message: details,
-                    cancelText: `Change to ${result.available}`,
-                    confirmText: `Continue with ${result.requested}`,
+                    cancelText: t("recruitment.budget.changeTo", { number: result.available, defaultValue: "Change to {{number}}" }),
+                    confirmText: t("recruitment.budget.continueWith", { number: result.requested, defaultValue: "Continue with {{number}}" }),
                     dismissValue: true,
                 });
                 setBudget({ key, data: result, acknowledged: false });
@@ -140,16 +142,20 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
             const noBudget = result.status === "no_budget";
             const carryOn = await confirm({
                 variant: noBudget ? "warning" : "danger",
-                title: noBudget ? "No budget set" : "Budget exceeded",
+                title: noBudget
+                    ? t("recruitment.budget.noBudget", { defaultValue: "No budget set" })
+                    : t("recruitment.budget.exceeded", { defaultValue: "Budget exceeded" }),
                 message: details,
-                cancelText: noBudget ? "Close" : "Edit Openings",
-                confirmText: "Continue with Justification",
+                cancelText: noBudget
+                    ? t("recruitment.common.close", { defaultValue: "Close" })
+                    : t("recruitment.budget.editOpenings", { defaultValue: "Edit Openings" }),
+                confirmText: t("recruitment.budget.continueWithJustification", { defaultValue: "Continue with Justification" }),
             });
             setBudget({ key, data: result, acknowledged: carryOn });
             focusField(carryOn ? justificationRef : openingsRef);
             return { ok: carryOn, values, result };
         } catch (err) {
-            setError(`Budget check failed: ${err.message}`);
+            setError(t("recruitment.budget.checkFailed", { message: err.message, defaultValue: "Budget check failed: {{message}}" }));
             return { ok: false, values, result: null };
         } finally {
             checkingRef.current = false;
@@ -180,10 +186,10 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     // Custom date pickers aren't covered by the browser's "required" check
     const applicationPeriodError = (values) => {
         const { application_start_date: start, application_end_date: end } = values;
-        if (!start) return "Choose the Application Start Date.";
-        if (start < today) return "Application Start Date must be today or later.";
-        if (!end) return "Choose the Application End Date.";
-        if (end < start) return "Application End Date must be on or after the Application Start Date.";
+        if (!start) return t("recruitment.form.errors.chooseStart", { defaultValue: "Choose the Application Start Date." });
+        if (start < today) return t("recruitment.form.errors.startPast", { defaultValue: "Application Start Date must be today or later." });
+        if (!end) return t("recruitment.form.errors.chooseEnd", { defaultValue: "Choose the Application End Date." });
+        if (end < start) return t("recruitment.form.errors.endBeforeStart", { defaultValue: "Application End Date must be on or after the Application Start Date." });
         return "";
     };
 
@@ -222,7 +228,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
         // An exceeded / missing budget always needs a justification (checked again by the server)
         if (isBudgetException(result) && !values.justification.trim()) {
-            setError("Budget exceeded: enter a justification to continue.");
+            setError(t("recruitment.form.errors.justificationNeeded", { defaultValue: "Budget exceeded: enter a justification to continue." }));
             focusField(justificationRef);
             return;
         }
@@ -232,31 +238,31 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     return (
         <div className="job-form-container mpr-form">
             <div className="job-form-header">
-                <h2>{mpr ? `Edit ${mpr.mpr_no}` : "New Manpower Request"}</h2>
+                <h2>{mpr ? t("recruitment.form.editTitle", { number: mpr.mpr_no, defaultValue: "Edit {{number}}" }) : t("recruitment.form.newTitle", { defaultValue: "New Manpower Request" })}</h2>
                 <button type="button" className="close-btn" onClick={onClose}>×</button>
             </div>
 
             {mpr?.status === "Sent Back" && (
                 <p className="mpr-form-note">
-                    Sent back for changes. Resubmitting continues the approval from the step that sent it back.
+                    {t("recruitment.form.sentBackNote", { defaultValue: "Sent back for changes. Resubmitting continues the approval from the step that sent it back." })}
                 </p>
             )}
 
             <form onSubmit={handleSubmit}>
-                <h3 className="mpr-form-section">Request</h3>
+                <h3 className="mpr-form-section">{t("recruitment.form.sectionRequest", { defaultValue: "Request" })}</h3>
                 <div className="form-grid">
                     <div className="form-group">
-                        <label>Request Type *</label>
+                        <label>{t("recruitment.fields.requestType", { defaultValue: "Request Type" })} *</label>
                         <select name="request_type" value={form.request_type} onChange={handleChange} required disabled={lockedDepartment}>
-                            <option value="">Select Request Type</option>
-                            {meta.requestTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                            <option value="">{t("recruitment.form.selectRequestType", { defaultValue: "Select Request Type" })}</option>
+                            {meta.requestTypes.map((type) => <option key={type} value={type}>{recruitmentValueLabel("requestType", type)}</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label>Department *</label>
+                        <label>{t("profileEdit.fields.department", { defaultValue: "Department" })} *</label>
                         <select name="department" value={form.department} onChange={handleDepartmentChange} required disabled={lockedDepartment}>
-                            <option value="">Select Department</option>
+                            <option value="">{t("recruitment.form.selectDepartment", { defaultValue: "Select Department" })}</option>
                             {meta.raiseDepartments.map((department) => <option key={department} value={department}>{department}</option>)}
                         </select>
                     </div>
@@ -264,9 +270,11 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                     {isReplacement && (
                         <>
                             <div className="form-group">
-                                <label>Employee Being Replaced *</label>
+                                <label>{t("recruitment.form.employeeBeingReplaced", { defaultValue: "Employee Being Replaced" })} *</label>
                                 <select name="replaced_employee_id" value={form.replaced_employee_id} onChange={handleChange} required>
-                                    <option value="">{form.department ? "Select Employee" : "Select a department first"}</option>
+                                    <option value="">{form.department
+                                        ? t("recruitment.form.selectEmployee", { defaultValue: "Select Employee" })
+                                        : t("recruitment.form.selectDepartmentFirst", { defaultValue: "Select a department first" })}</option>
                                     {employeeOptions.map((employee) => (
                                         <option key={employee.employee_id} value={employee.employee_id}>
                                             {employee.name} ({employee.employee_id}){employee.designation ? ` – ${employee.designation}` : ""}
@@ -275,8 +283,8 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Replacement Reason *</label>
-                                <input name="replacement_reason" value={form.replacement_reason} onChange={handleChange} placeholder="e.g. Resignation, end of contract" required />
+                                <label>{t("recruitment.fields.replacementReason", { defaultValue: "Replacement Reason" })} *</label>
+                                <input name="replacement_reason" value={form.replacement_reason} onChange={handleChange} placeholder={t("recruitment.form.replacementReasonPlaceholder", { defaultValue: "e.g. Resignation, end of contract" })} required />
                             </div>
                         </>
                     )}
@@ -284,50 +292,50 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
                 {isNewPosition && <BudgetBadge budget={budgetResult?.data} acknowledged={budgetResult?.acknowledged} />}
 
-                <h3 className="mpr-form-section">Position</h3>
+                <h3 className="mpr-form-section">{t("recruitment.fields.position", { defaultValue: "Position" })}</h3>
                 <div className="form-grid">
                     <div className="form-group">
-                        <label>Job Title *</label>
-                        <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Frontend Developer" required />
+                        <label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title" })} *</label>
+                        <input type="text" name="title" value={form.title} onChange={handleChange} placeholder={t("recruitment.form.jobTitlePlaceholder", { defaultValue: "e.g. Frontend Developer" })} required />
                     </div>
 
                     <div className="form-group">
-                        <label>No. of Openings *</label>
-                        <input ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder="e.g. 2" required />
+                        <label>{t("recruitment.fields.openingsCount", { defaultValue: "No. of Openings" })} *</label>
+                        <input ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder={t("recruitment.form.openingsPlaceholder", { defaultValue: "e.g. 2" })} required />
                     </div>
 
                     <div className="form-group">
-                        <label>Experience *</label>
-                        <input type="text" name="experience" value={form.experience} onChange={handleChange} placeholder="e.g. 0-2 Years" required />
+                        <label>{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
+                        <input type="text" name="experience" value={form.experience} onChange={handleChange} placeholder={t("recruitment.form.experiencePlaceholder", { defaultValue: "e.g. 0-2 Years" })} required />
                     </div>
 
                     <div className="form-group">
-                        <label>Location *</label>
+                        <label>{t("recruitment.fields.location", { defaultValue: "Location" })} *</label>
                         <select name="location" value={form.location} onChange={handleChange} required>
-                            <option value="">Select Location</option>
+                            <option value="">{t("recruitment.form.selectLocation", { defaultValue: "Select Location" })}</option>
                             {meta.locations.map((location) => <option key={location.id} value={location.name}>{location.name}</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label>Employment Type</label>
+                        <label>{t("profileEdit.sectionFields.employment_type", { defaultValue: "Employment Type" })}</label>
                         <select name="employment_type" value={form.employment_type} onChange={handleChange}>
-                            {meta.employmentTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                            {meta.employmentTypes.map((type) => <option key={type} value={type}>{recruitmentValueLabel("employmentType", type)}</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label>Required Skills *</label>
-                        <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder="e.g. React, Node.js, MongoDB" required />
+                        <label>{t("recruitment.fields.requiredSkills", { defaultValue: "Required Skills" })} *</label>
+                        <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder={t("recruitment.form.skillsPlaceholder", { defaultValue: "e.g. React, Node.js, MongoDB" })} required />
                     </div>
 
                     <div className="form-group">
-                        <label>Application Start Date *</label>
+                        <label>{t("recruitment.fields.applicationStartDate", { defaultValue: "Application Start Date" })} *</label>
                         <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
                     </div>
 
                     <div className="form-group">
-                        <label>Application End Date *</label>
+                        <label>{t("recruitment.fields.applicationEndDate", { defaultValue: "Application End Date" })} *</label>
                         <DatePicker
                             value={form.application_end_date}
                             onChange={(value) => set("application_end_date", value)}
@@ -338,68 +346,70 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                     </div>
 
                     <div className="form-group mpr-full">
-                        <label>Job Description *</label>
-                        <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder="Enter job description" rows="4" required />
+                        <label>{t("recruitment.fields.jobDescription", { defaultValue: "Job Description" })} *</label>
+                        <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder={t("recruitment.form.jobDescriptionPlaceholder", { defaultValue: "Enter job description" })} rows="4" required />
                     </div>
                 </div>
 
-                <h3 className="mpr-form-section">Compensation & Benefits</h3>
+                <h3 className="mpr-form-section">{t("recruitment.form.sectionCompensation", { defaultValue: "Compensation & Benefits" })}</h3>
                 <div className="form-grid">
                     <div className="form-group">
-                        <label>Minimum Salary ({currency} / month) *</label>
-                        <input type="number" name="salary_min" min="0" step="0.01" value={form.salary_min} onChange={handleChange} placeholder="e.g. 8000" required />
+                        <label>{t("recruitment.form.minimumSalary", { currency, defaultValue: "Minimum Salary ({{currency}} / month)" })} *</label>
+                        <input type="number" name="salary_min" min="0" step="0.01" value={form.salary_min} onChange={handleChange} placeholder={t("recruitment.form.minimumSalaryPlaceholder", { defaultValue: "e.g. 8000" })} required />
                     </div>
                     <div className="form-group">
-                        <label>Maximum Salary ({currency} / month) *</label>
-                        <input type="number" name="salary_max" min="0" step="0.01" value={form.salary_max} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder="e.g. 10000" required />
+                        <label>{t("recruitment.form.maximumSalary", { currency, defaultValue: "Maximum Salary ({{currency}} / month)" })} *</label>
+                        <input type="number" name="salary_max" min="0" step="0.01" value={form.salary_max} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder={t("recruitment.form.maximumSalaryPlaceholder", { defaultValue: "e.g. 10000" })} required />
                     </div>
 
-                    {[["air_ticket", "Air Ticket"], ["vehicle", "Vehicle"], ["accommodation", "Accommodation"]].map(([name, label]) => (
+                    {[["air_ticket", "Air Ticket", "airTicket"], ["vehicle", "Vehicle", "vehicle"], ["accommodation", "Accommodation", "accommodation"]].map(([name, label, key]) => (
                         <div className="form-group" key={name}>
-                            <label>{label}</label>
+                            <label>{t(`recruitment.fields.${key}`, { defaultValue: label })}</label>
                             <select value={form.benefits[name]} onChange={(event) => setBenefit(name, event.target.value)}>
-                                <option value="No">No</option>
-                                <option value="Yes">Yes</option>
+                                <option value="No">{t("employeeProfile.values.no", { defaultValue: "No" })}</option>
+                                <option value="Yes">{t("employeeProfile.values.yes", { defaultValue: "Yes" })}</option>
                             </select>
                         </div>
                     ))}
 
                     <div className="form-group">
-                        <label>Medical Insurance Category</label>
-                        <input value={form.benefits.medical_insurance_category} onChange={(event) => setBenefit("medical_insurance_category", event.target.value)} placeholder="e.g. Category B" />
+                        <label>{t("recruitment.fields.medicalInsurance", { defaultValue: "Medical Insurance Category" })}</label>
+                        <input value={form.benefits.medical_insurance_category} onChange={(event) => setBenefit("medical_insurance_category", event.target.value)} placeholder={t("recruitment.form.medicalInsurancePlaceholder", { defaultValue: "e.g. Category B" })} />
                     </div>
 
                     <div className="form-group mpr-full">
-                        <label>Allowances</label>
-                        <input value={form.benefits.allowances} onChange={(event) => setBenefit("allowances", event.target.value)} placeholder="e.g. Transport 500, Phone 200" />
+                        <label>{t("recruitment.fields.allowances", { defaultValue: "Allowances" })}</label>
+                        <input value={form.benefits.allowances} onChange={(event) => setBenefit("allowances", event.target.value)} placeholder={t("recruitment.form.allowancesPlaceholder", { defaultValue: "e.g. Transport 500, Phone 200" })} />
                     </div>
                 </div>
 
-                <h3 className="mpr-form-section">Assets Required</h3>
+                <h3 className="mpr-form-section">{t("recruitment.fields.assetsRequired", { defaultValue: "Assets Required" })}</h3>
                 <div className="mpr-checklist">
                     {meta.assetOptions.map((asset) => (
                         <label key={asset} className={form.assets.includes(asset) ? "checked" : ""}>
                             <input type="checkbox" checked={form.assets.includes(asset)} onChange={() => toggleAsset(asset)} />
-                            {asset}
+                            {recruitmentValueLabel("asset", asset)}
                         </label>
                     ))}
                 </div>
                 {form.assets.includes("Other") && (
                     <div className="form-group mpr-inline">
-                        <label>Other Asset *</label>
-                        <input name="asset_other" value={form.asset_other} onChange={handleChange} placeholder="Describe the other asset" required />
+                        <label>{t("recruitment.form.otherAsset", { defaultValue: "Other Asset" })} *</label>
+                        <input name="asset_other" value={form.asset_other} onChange={handleChange} placeholder={t("recruitment.form.otherAssetPlaceholder", { defaultValue: "Describe the other asset" })} required />
                     </div>
                 )}
 
                 <div className="form-group mpr-inline">
-                    <label>Justification {justificationRequired ? "*" : ""}</label>
+                    <label>{t("recruitment.fields.justification", { defaultValue: "Justification" })} {justificationRequired ? "*" : ""}</label>
                     <textarea
                         ref={justificationRef}
                         name="justification"
                         value={form.justification}
                         onChange={handleChange}
                         rows="3"
-                        placeholder={justificationRequired ? "Required: explain why this position is needed despite the budget" : "Why is this position needed?"}
+                        placeholder={justificationRequired
+                            ? t("recruitment.form.justificationRequiredPlaceholder", { defaultValue: "Required: explain why this position is needed despite the budget" })
+                            : t("recruitment.form.justificationPlaceholder", { defaultValue: "Why is this position needed?" })}
                         required={justificationRequired}
                     />
                 </div>
@@ -407,12 +417,18 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                 {error && <p className="mpr-form-error">{error}</p>}
 
                 <div className="form-actions">
-                    <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
+                    <button type="button" className="cancel-btn" onClick={onClose}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
                     <button type="button" className="cancel-btn" onClick={() => save("draft")} disabled={Boolean(saving)}>
-                        {saving === "draft" ? "Saving..." : "Save as Draft"}
+                        {saving === "draft"
+                            ? t("profileEdit.saving", { defaultValue: "Saving..." })
+                            : t("recruitment.form.saveDraft", { defaultValue: "Save as Draft" })}
                     </button>
                     <button type="submit" className="save-job-btn" disabled={Boolean(saving)}>
-                        {saving === "submit" ? "Submitting..." : mpr?.status === "Sent Back" ? "Resubmit" : "Submit"}
+                        {saving === "submit"
+                            ? t("recruitment.form.submitting", { defaultValue: "Submitting..." })
+                            : mpr?.status === "Sent Back"
+                                ? t("recruitment.form.resubmit", { defaultValue: "Resubmit" })
+                                : t("recruitment.form.submit", { defaultValue: "Submit" })}
                     </button>
                 </div>
             </form>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
 import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
@@ -9,7 +10,9 @@ import {
     api,
     formatDate,
     getSessionEmployeeId,
+    mprStatusLabel,
     notifyApplicationsChanged,
+    recruitmentValueLabel,
     statusTone,
 } from "../../components/recruitment/recruitmentApi";
 import "./Recruitment.css";
@@ -25,6 +28,7 @@ const TABS = [
 const APPLICATIONS_POLL_MS = 30000;
 
 function Recruitment() {
+    const { t } = useTranslation();
     const hrId = getSessionEmployeeId();
     const [activeTab, setActiveTab] = useState("manpower");
     const [mprFormOpen, setMprFormOpen] = useState(false);
@@ -130,15 +134,15 @@ function Recruitment() {
                 <>
                 <div className="recruitment-header">
                     <div>
-                        <h1>Recruitment</h1>
-                        <p>Manage manpower requests, job openings and recruitment activities</p>
+                        <h1>{t("menu.recruitment", { defaultValue: "Recruitment" })}</h1>
+                        <p>{t("recruitment.page.subtitle", { defaultValue: "Manage manpower requests, job openings and recruitment activities" })}</p>
                     </div>
 
                     <button
                         className="create-job-btn"
                         onClick={openNewManpowerRequest}
                     >
-                        + New Manpower Request
+                        {t("recruitment.mpr.newButton", { defaultValue: "+ New Manpower Request" })}
                     </button>
                 </div>
 
@@ -146,7 +150,7 @@ function Recruitment() {
 
                     <div className="recruitment-card">
                         <div className="recruitment-card-content">
-                            <span>Pending MPR Approvals</span>
+                            <span>{t("recruitment.page.pendingMprApprovals", { defaultValue: "Pending MPR Approvals" })}</span>
                             <strong>{summary?.pending_mpr_approvals ?? "—"}</strong>
                         </div>
                         <Clock3 className="recruitment-stat-icon pending" size={20} aria-hidden="true" />
@@ -154,7 +158,7 @@ function Recruitment() {
 
                     <div className="recruitment-card">
                         <div className="recruitment-card-content">
-                            <span>Open Jobs</span>
+                            <span>{t("recruitment.page.openJobs", { defaultValue: "Open Jobs" })}</span>
                             <strong>{summary?.open_jobs ?? "—"}</strong>
                         </div>
                         <Briefcase className="recruitment-stat-icon jobs" size={20} aria-hidden="true" />
@@ -162,7 +166,7 @@ function Recruitment() {
 
                     <div className="recruitment-card">
                         <div className="recruitment-card-content">
-                            <span>Open Positions</span>
+                            <span>{t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" })}</span>
                             <strong>{summary?.open_positions ?? "—"}</strong>
                         </div>
                         <UserPlus className="recruitment-stat-icon positions" size={20} aria-hidden="true" />
@@ -170,7 +174,7 @@ function Recruitment() {
 
                     <div className="recruitment-card">
                         <div className="recruitment-card-content">
-                            <span>Departments</span>
+                            <span>{t("recruitment.page.departments", { defaultValue: "Departments" })}</span>
                             <strong>{summary?.departments ?? "—"}</strong>
                         </div>
                         <Building2 className="recruitment-stat-icon departments" size={20} aria-hidden="true" />
@@ -190,9 +194,9 @@ function Recruitment() {
                             className={activeTab === tab.id ? "active" : ""}
                             onClick={() => setActiveTab(tab.id)}
                         >
-                            {tab.label}
+                            {t(`recruitment.tabs.${tab.id}`, { defaultValue: tab.label })}
                             {tab.id === "applications" && newApplications > 0 && (
-                                <em className="tab-badge" aria-label={`${newApplications} new`} title={`${newApplications} new (not reviewed)`}>
+                                <em className="tab-badge" aria-label={t("recruitment.page.newCount", { number: newApplications, defaultValue: "{{number}} new" })} title={t("recruitment.page.newNotReviewed", { number: newApplications, defaultValue: "{{number}} new (not reviewed)" })}>
                                     {newApplications > 99 ? "99+" : newApplications}
                                 </em>
                             )}
@@ -214,12 +218,12 @@ function Recruitment() {
                 <div className="jobs-section">
 
                     <div className="jobs-section-header">
-                        <h2>Job Openings</h2>
+                        <h2>{t("recruitment.tabs.jobs", { defaultValue: "Job Openings" })}</h2>
 
                         <div className="tp-header-actions">
                             <input
                                 type="text"
-                                placeholder="Search jobs..."
+                                placeholder={t("recruitment.jobs.searchPlaceholder", { defaultValue: "Search jobs..." })}
                                 className="job-search"
                                 value={jobSearch}
                                 onChange={(event) => setJobSearch(event.target.value)}
@@ -235,36 +239,36 @@ function Recruitment() {
 
                             <thead>
                                 <tr>
-                                    <th>Job ID</th>
-                                    <th>MPR No</th>
-                                    <th>Job Title</th>
-                                    <th>Department</th>
-                                    <th>Request Type</th>
-                                    <th>Filled / Openings</th>
-                                    <th>Experience</th>
-                                    <th>Location</th>
-                                    <th>Type</th>
-                                    <th>Application Deadline</th>
-                                    <th>Agency</th>
-                                    <th>Applications</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th>{t("recruitment.fields.jobId", { defaultValue: "Job ID" })}</th>
+                                    <th>{t("recruitment.fields.mprNo", { defaultValue: "MPR No" })}</th>
+                                    <th>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title" })}</th>
+                                    <th>{t("profileEdit.fields.department", { defaultValue: "Department" })}</th>
+                                    <th>{t("recruitment.fields.requestType", { defaultValue: "Request Type" })}</th>
+                                    <th>{t("recruitment.jobs.filledOpenings", { defaultValue: "Filled / Openings" })}</th>
+                                    <th>{t("recruitment.fields.experience", { defaultValue: "Experience" })}</th>
+                                    <th>{t("recruitment.fields.location", { defaultValue: "Location" })}</th>
+                                    <th>{t("recruitment.fields.type", { defaultValue: "Type" })}</th>
+                                    <th>{t("recruitment.fields.applicationDeadline", { defaultValue: "Application Deadline" })}</th>
+                                    <th>{t("recruitment.jobs.agency", { defaultValue: "Agency" })}</th>
+                                    <th>{t("recruitment.jobs.applications", { defaultValue: "Applications" })}</th>
+                                    <th>{t("profileEdit.fields.status", { defaultValue: "Status" })}</th>
+                                    <th>{t("recruitment.fields.action", { defaultValue: "Action" })}</th>
                                 </tr>
                             </thead>
 
                             <tbody>
 
                                 {visibleJobs.length === 0 && (
-                                    <tr><td colSpan="14">No job openings found.</td></tr>
+                                    <tr><td colSpan="14">{t("recruitment.jobs.empty", { defaultValue: "No job openings found." })}</td></tr>
                                 )}
 
                                 {jobsPager.pageItems.map((job) => (
                                     <tr key={job.id}>
 
-                                        <td>{job.job_id}</td>
+                                        <td><span dir="ltr" className="ltr-text">{job.job_id}</span></td>
 
                                         <td>
-                                            {job.mpr_no || <span className="job-badge legacy">No MPR (legacy)</span>}
+                                            {job.mpr_no ? <span dir="ltr" className="ltr-text">{job.mpr_no}</span> : <span className="job-badge legacy">{t("recruitment.jobs.noMprLegacy", { defaultValue: "No MPR (legacy)" })}</span>}
                                         </td>
 
                                         <td>
@@ -275,28 +279,28 @@ function Recruitment() {
 
                                         <td>{job.department}</td>
 
-                                        <td>{job.request_type || "—"}</td>
+                                        <td>{job.request_type ? recruitmentValueLabel("requestType", job.request_type) : "—"}</td>
 
-                                        <td>{job.filled ?? 0}/{job.openings}</td>
+                                        <td><span dir="ltr">{job.filled ?? 0}/{job.openings}</span></td>
 
                                         <td>{job.experience}</td>
 
                                         <td>{job.location}</td>
 
-                                        <td>{job.employment_type}</td>
+                                        <td>{recruitmentValueLabel("employmentType", job.employment_type)}</td>
 
                                         <td>
-                                            {job.application_deadline ? formatDate(job.application_deadline) : "—"}
+                                            {job.application_deadline ? <span dir="ltr" className="ltr-text">{formatDate(job.application_deadline)}</span> : "—"}
                                             {job.deadline_passed && (
                                                 <>
                                                     <br />
-                                                    <span className="job-badge deadline">Deadline passed</span>
+                                                    <span className="job-badge deadline">{t("recruitment.jobs.deadlinePassed", { defaultValue: "Deadline passed" })}</span>
                                                 </>
                                             )}
                                         </td>
 
                                         <td>
-                                            {job.sourcing === "Internal" ? "Internal" : job.agency_name || "—"}
+                                            {job.sourcing === "Internal" ? recruitmentValueLabel("sourcing", "Internal") : job.agency_name || "—"}
                                         </td>
 
                                         <td>
@@ -304,16 +308,16 @@ function Recruitment() {
                                                 type="button"
                                                 className="job-apps-link"
                                                 onClick={() => openJobApplications(job.job_id)}
-                                                title={`View applications for ${job.job_id}`}
+                                                title={t("recruitment.jobs.viewApplicationsFor", { id: job.job_id, defaultValue: "View applications for {{id}}" })}
                                             >
                                                 {job.applications_count ?? 0}
-                                                {job.new_applications > 0 && <span className="job-badge new">{job.new_applications} new</span>}
+                                                {job.new_applications > 0 && <span className="job-badge new">{t("recruitment.page.newCount", { number: job.new_applications, defaultValue: "{{number}} new" })}</span>}
                                             </button>
                                         </td>
 
                                         <td>
                                             <span className={`job-status tone-${statusTone(job.status)}`}>
-                                                {job.status}
+                                                {mprStatusLabel(job.status)}
                                             </span>
                                         </td>
 
@@ -325,7 +329,7 @@ function Recruitment() {
                                                     onClick={() => setPlanJob(job)}
                                                     disabled={!meta || String(job.status).toLowerCase() === "closed"}
                                                 >
-                                                    Edit Recruitment Plan
+                                                    {t("recruitment.jobs.editPlan", { defaultValue: "Edit Recruitment Plan" })}
                                                 </button>
                                             </div>
                                         </td>

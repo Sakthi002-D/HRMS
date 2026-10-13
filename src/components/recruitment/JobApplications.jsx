@@ -1,17 +1,19 @@
 // HR → Recruitment → Job Applications: cards, filters, table and the application detail.
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import DatePicker from "../layout/common/DatePicker";
 import ApplicationDetail from "./ApplicationDetail";
 import { Eye } from "lucide-react";
 import { usePagination, RowsPerPage, Pagination } from "../common/TablePagination";
 import { APPLICATION_STATUSES, CANDIDATE_TYPES, SOURCE_OPTIONS, experienceText, salaryText, sourceText } from "./applicationFormat";
-import { applicationTone, formatDate } from "./recruitmentApi";
+import { applicationStatusLabel, applicationTone, formatDate, recruitmentValueLabel } from "./recruitmentApi";
 
 const EMPTY_FILTERS = { job: "", department: "", type: "", source: "", status: "", from: "", to: "" };
 
 const uniqueSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
 function JobApplications({ actorId, applications, loading, error, jobs, jobFilter, onJobFilterChange, onChanged }) {
+    const { t } = useTranslation();
     const [filters, setFilters] = useState(EMPTY_FILTERS);
     const [search, setSearch] = useState("");
     const [viewId, setViewId] = useState(null);
@@ -70,10 +72,10 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
         <div className="jobs-section app-section">
             <div className="recruitment-cards four app-cards">
                 {[
-                    ["Total Applications", counts.total, ""],
-                    ["New", counts.New, "New"],
-                    ["Shortlisted", counts.Shortlisted, "Shortlisted"],
-                    ["Rejected", counts.Rejected, "Rejected"],
+                    [t("recruitment.applications.total", { defaultValue: "Total Applications" }), counts.total, ""],
+                    [applicationStatusLabel("New"), counts.New, "New"],
+                    [applicationStatusLabel("Shortlisted"), counts.Shortlisted, "Shortlisted"],
+                    [applicationStatusLabel("Rejected"), counts.Rejected, "Rejected"],
                 ].map(([label, value, status]) => (
                     <button
                         key={label}
@@ -89,11 +91,11 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
             </div>
 
             <div className="jobs-section-header">
-                <h2>Job Applications</h2>
+                <h2>{t("recruitment.tabs.applications", { defaultValue: "Job Applications" })}</h2>
                 <div className="tp-header-actions">
                     <input
                         type="search"
-                        placeholder="Search name, email or application no..."
+                        placeholder={t("recruitment.applications.searchPlaceholder", { defaultValue: "Search name, email or application no..." })}
                         className="job-search app-search"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
@@ -103,34 +105,34 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
             </div>
 
             <div className="app-filters">
-                <select value={activeFilters.job} onChange={(event) => setFilter("job")(event.target.value)} aria-label="Job">
-                    <option value="">All jobs</option>
+                <select value={activeFilters.job} onChange={(event) => setFilter("job")(event.target.value)} aria-label={t("recruitment.applications.job", { defaultValue: "Job" })}>
+                    <option value="">{t("recruitment.applications.allJobs", { defaultValue: "All jobs" })}</option>
                     {options.jobs.map(([id, title]) => <option key={id} value={id}>{id} – {title}</option>)}
                 </select>
-                <select value={activeFilters.department} onChange={(event) => setFilter("department")(event.target.value)} aria-label="Department">
-                    <option value="">All departments</option>
-                    {options.departments.map((value) => <option key={value}>{value}</option>)}
+                <select value={activeFilters.department} onChange={(event) => setFilter("department")(event.target.value)} aria-label={t("profileEdit.fields.department", { defaultValue: "Department" })}>
+                    <option value="">{t("recruitment.applications.allDepartments", { defaultValue: "All departments" })}</option>
+                    {options.departments.map((value) => <option key={value} value={value}>{value}</option>)}
                 </select>
-                <select value={activeFilters.type} onChange={(event) => setFilter("type")(event.target.value)} aria-label="Candidate type">
-                    <option value="">Fresher &amp; Experienced</option>
-                    {CANDIDATE_TYPES.map((value) => <option key={value}>{value}</option>)}
+                <select value={activeFilters.type} onChange={(event) => setFilter("type")(event.target.value)} aria-label={t("recruitment.applications.candidateType", { defaultValue: "Candidate type" })}>
+                    <option value="">{t("recruitment.applications.allCandidateTypes", { defaultValue: "Fresher & Experienced" })}</option>
+                    {CANDIDATE_TYPES.map((value) => <option key={value} value={value}>{recruitmentValueLabel("candidateType", value)}</option>)}
                 </select>
-                <select value={activeFilters.source} onChange={(event) => setFilter("source")(event.target.value)} aria-label="Source">
-                    <option value="">All sources</option>
-                    {options.sources.map((value) => <option key={value}>{value}</option>)}
+                <select value={activeFilters.source} onChange={(event) => setFilter("source")(event.target.value)} aria-label={t("recruitment.applications.source", { defaultValue: "Source" })}>
+                    <option value="">{t("recruitment.applications.allSources", { defaultValue: "All sources" })}</option>
+                    {options.sources.map((value) => <option key={value} value={value}>{recruitmentValueLabel("source", value)}</option>)}
                 </select>
-                <select value={activeFilters.status} onChange={(event) => setFilter("status")(event.target.value)} aria-label="Status">
-                    <option value="">All statuses</option>
-                    {uniqueSorted([...APPLICATION_STATUSES, ...applications.map((row) => row.status)]).map((value) => <option key={value}>{value}</option>)}
+                <select value={activeFilters.status} onChange={(event) => setFilter("status")(event.target.value)} aria-label={t("profileEdit.fields.status", { defaultValue: "Status" })}>
+                    <option value="">{t("recruitment.applications.allStatuses", { defaultValue: "All statuses" })}</option>
+                    {uniqueSorted([...APPLICATION_STATUSES, ...applications.map((row) => row.status)]).map((value) => <option key={value} value={value}>{applicationStatusLabel(value)}</option>)}
                 </select>
                 <div className="app-date-filter">
-                    <DatePicker value={activeFilters.from} onChange={setFilter("from")} placeholder="Applied from" autoPosition />
+                    <DatePicker value={activeFilters.from} onChange={setFilter("from")} placeholder={t("recruitment.applications.appliedFrom", { defaultValue: "Applied from" })} autoPosition />
                 </div>
                 <div className="app-date-filter">
-                    <DatePicker value={activeFilters.to} onChange={setFilter("to")} placeholder="Applied to" minDate={activeFilters.from || undefined} autoPosition />
+                    <DatePicker value={activeFilters.to} onChange={setFilter("to")} placeholder={t("recruitment.applications.appliedTo", { defaultValue: "Applied to" })} minDate={activeFilters.from || undefined} autoPosition />
                 </div>
                 {anyFilter && (
-                    <button type="button" className="cancel-btn app-clear" onClick={clearFilters}>Clear filters</button>
+                    <button type="button" className="cancel-btn app-clear" onClick={clearFilters}>{t("employeesList.filters.clear", { defaultValue: "Clear filters" })}</button>
                 )}
             </div>
 
@@ -142,50 +144,52 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                 <table className="jobs-table app-table">
                     <thead>
                         <tr>
-                            <th>Application No</th>
-                            <th>Candidate</th>
-                            <th>Job</th>
-                            <th>Type</th>
-                            <th>Experience</th>
-                            <th>Expected Salary</th>
-                            <th>Notice Period</th>
-                            <th>Source / Agency</th>
-                            <th>Applied On</th>
-                            <th>Status</th>
-                            <th>Action</th>
+                            <th>{t("recruitment.applications.applicationNo", { defaultValue: "Application No" })}</th>
+                            <th>{t("recruitment.applications.candidate", { defaultValue: "Candidate" })}</th>
+                            <th>{t("recruitment.applications.job", { defaultValue: "Job" })}</th>
+                            <th>{t("recruitment.fields.type", { defaultValue: "Type" })}</th>
+                            <th>{t("recruitment.fields.experience", { defaultValue: "Experience" })}</th>
+                            <th>{t("recruitment.applications.expectedSalary", { defaultValue: "Expected Salary" })}</th>
+                            <th>{t("recruitment.applications.noticePeriod", { defaultValue: "Notice Period" })}</th>
+                            <th>{t("recruitment.applications.sourceAgency", { defaultValue: "Source / Agency" })}</th>
+                            <th>{t("recruitment.applications.appliedOn", { defaultValue: "Applied On" })}</th>
+                            <th>{t("profileEdit.fields.status", { defaultValue: "Status" })}</th>
+                            <th>{t("recruitment.fields.action", { defaultValue: "Action" })}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading && !applications.length && (
-                            <tr><td colSpan="11">Loading applications...</td></tr>
+                            <tr><td colSpan="11">{t("recruitment.applications.loading", { defaultValue: "Loading applications..." })}</td></tr>
                         )}
                         {!loading && visible.length === 0 && (
-                            <tr><td colSpan="11">{applications.length ? "No applications match these filters." : "No applications yet."}</td></tr>
+                            <tr><td colSpan="11">{applications.length
+                                ? t("recruitment.applications.noMatch", { defaultValue: "No applications match these filters." })
+                                : t("recruitment.applications.none", { defaultValue: "No applications yet." })}</td></tr>
                         )}
                         {pager.pageItems.map((row) => (
                             <tr key={row.id} className={row.status === "New" ? "app-row-new" : ""}>
-                                <td><strong>{row.application_id}</strong></td>
+                                <td><strong dir="ltr" className="ltr-text">{row.application_id}</strong></td>
                                 <td>
                                     <strong>{row.candidate_name}</strong>
-                                    <small className="app-sub">{row.email}</small>
+                                    <small className="app-sub"><span dir="ltr">{row.email}</span></small>
                                 </td>
                                 <td>
-                                    <strong>{row.job_id}</strong>
+                                    <strong dir="ltr" className="ltr-text">{row.job_id}</strong>
                                     <small className="app-sub">{row.job_title || "—"}</small>
                                 </td>
                                 <td>
                                     {row.candidate_type
-                                        ? <span className={`app-type ${row.candidate_type === "Fresher" ? "fresher" : "experienced"}`}>{row.candidate_type}</span>
+                                        ? <span className={`app-type ${row.candidate_type === "Fresher" ? "fresher" : "experienced"}`}>{recruitmentValueLabel("candidateType", row.candidate_type)}</span>
                                         : "—"}
                                 </td>
                                 <td>{experienceText(row)}</td>
-                                <td>{salaryText(row.expected_salary, row.salary_currency, row.expected_ctc)}</td>
-                                <td>{row.notice_period || "—"}</td>
+                                <td><span dir="ltr">{salaryText(row.expected_salary, row.salary_currency, row.expected_ctc)}</span></td>
+                                <td>{row.notice_period ? recruitmentValueLabel("noticePeriod", row.notice_period) : "—"}</td>
                                 <td>{sourceText(row)}</td>
-                                <td>{formatDate(row.applied_on)}</td>
-                                <td><span className={`mpr-status ${applicationTone(row.status)}`}>{row.status}</span></td>
+                                <td><span dir="ltr" className="ltr-text">{formatDate(row.applied_on)}</span></td>
+                                <td><span className={`mpr-status ${applicationTone(row.status)}`}>{applicationStatusLabel(row.status)}</span></td>
                                 <td>
-                                    <button type="button" className="employee-view-button" onClick={() => setViewId(row.id)} aria-label="View" title="View">
+                                    <button type="button" className="employee-view-button" onClick={() => setViewId(row.id)} aria-label={t("recruitment.common.view", { defaultValue: "View" })} title={t("recruitment.common.view", { defaultValue: "View" })}>
                                         <Eye size={18} strokeWidth={2} aria-hidden="true" />
                                     </button>
                                 </td>

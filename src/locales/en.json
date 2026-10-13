@@ -99,7 +99,157 @@
     "collapseSidebar": "Collapse sidebar"
   },
   "settings": {
-    "language": "Language"
+    "language": "Language",
+    "title": "Settings",
+    "subtitle": "Manage your HRMS preferences and application configuration.",
+    "configuration": "CONFIGURATION",
+    "cardSubtitle": "Update the settings used across your HRMS workspace.",
+    "menu": {
+      "general": "General Settings",
+      "website": "Website Settings",
+      "app": "App Settings",
+      "system": "System Settings",
+      "financial": "Financial Settings",
+      "other": "Other Settings",
+      "approval": "Approval Workflows",
+      "recruitment": "Recruitment Masters",
+      "resignation": "Resignation"
+    },
+    "common": {
+      "changesSaved": "Changes saved",
+      "add": "Add",
+      "save": "Save",
+      "remove": "Remove",
+      "removing": "Removing…"
+    },
+    "general": {
+      "companyName": "Company Name",
+      "companyEmail": "Company Email",
+      "timezone": "Timezone",
+      "languageHint": "Changes the language for the HR portal until you log out."
+    },
+    "website": {
+      "primaryColor": "Primary Theme Color",
+      "primaryColorHint": "Used for main buttons and accents.",
+      "dateFormat": "Date Format"
+    },
+    "app": {
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsHint": "Receive important HRMS updates by email.",
+      "leaveNotifications": "Leave Notifications",
+      "leaveNotificationsHint": "Notify HR when a leave request is submitted.",
+      "attendanceReminders": "Attendance Reminders",
+      "attendanceRemindersHint": "Send reminders for missing attendance records."
+    },
+    "system": {
+      "sessionTimeout": "Session Timeout",
+      "minutes_one": "{{count}} minutes",
+      "minutes_other": "{{count}} minutes"
+    },
+    "financial": {
+      "currency": "Currency",
+      "currencySymbol": "Currency Symbol",
+      "currencySymbolHint": "Filled in automatically from the currency. You can change it if needed.",
+      "currencies": {
+        "QAR": "Qatari Riyal",
+        "INR": "Indian Rupee",
+        "AED": "UAE Dirham",
+        "SAR": "Saudi Riyal",
+        "KWD": "Kuwaiti Dinar",
+        "BHD": "Bahraini Dinar",
+        "OMR": "Omani Rial",
+        "USD": "US Dollar",
+        "EUR": "Euro",
+        "GBP": "British Pound"
+      }
+    },
+    "other": {
+      "supportEmail": "Support Email"
+    },
+    "workflows": {
+      "loading": "Loading approval workflows...",
+      "saved": "Approval workflows saved. New submissions use these steps; MPRs already in approval keep theirs.",
+      "mprSteps": "Manpower Request approval steps",
+      "mprStepsHint": "Approvers act in this order. \"COO/CTO\" is picked per department below.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeStep": "Remove step",
+      "addStep": "+ Add approver step",
+      "execByDepartment": "COO / CTO by department",
+      "defaultExec": "Default ({{exec}})",
+      "defaultForOthers": "Default for other departments",
+      "jobCodes": "Job ID department codes",
+      "jobCodesHint": "New job openings get IDs like IT001, FIN001. Existing JOB001 / JOB002 are unchanged.",
+      "save": "Save Workflows",
+      "whoHolds": "Who holds each role",
+      "whoHoldsHint": "Coordinators raise MPRs for their department; approvers act from the Employee portal (Manpower Requests → My Approvals). Line Managers approve resignations for their department (Resignation → My Approvals); Payroll is notified when HR accepts one. HR portal users are always HR approvers.",
+      "role": "Role",
+      "employee": "Employee",
+      "assign": "Assign",
+      "noRoles": "No roles assigned yet.",
+      "allDepartments": "All"
+    },
+    "recruitmentMasters": {
+      "locationAdded": "Location added",
+      "removeLocationTitle": "Remove location \"{{name}}\"?",
+      "removeLocationMessage": "This location will be removed from the list. This can't be undone.",
+      "locationRemoved": "Location \"{{name}}\" removed",
+      "locationInUse_one": "\"{{name}}\" is used by {{count}} record (requests or job openings), so it can't be deleted. Click the chip to make it inactive instead.",
+      "locationInUse_other": "\"{{name}}\" is used by {{count}} records (requests or job openings), so it can't be deleted. Click the chip to make it inactive instead.",
+      "agencyAdded": "Agency added",
+      "deleteAgencyTitle": "Delete agency \"{{name}}\"?",
+      "deleteAgencyMessage": "This agency will be removed from the list. This can't be undone.",
+      "agencyDeleted": "Agency \"{{name}}\" deleted",
+      "agencyInUse_one": "\"{{name}}\" is used by {{count}} record (job openings or applications), so it can't be deleted. Set it to Inactive instead.",
+      "agencyInUse_other": "\"{{name}}\" is used by {{count}} records (job openings or applications), so it can't be deleted. Set it to Inactive instead.",
+      "budgetSaved": "Budget saved",
+      "locations": "Locations",
+      "locationsHint": "Used by the Manpower Request \"Location\" dropdown. Inactive locations are hidden from new requests.",
+      "locationPlaceholder": "e.g. Doha",
+      "clickToDeactivate": "Click to deactivate",
+      "clickToActivate": "Click to activate",
+      "inactiveName": "{{name}} (inactive)",
+      "removeName": "Remove {{name}}",
+      "agencies": "Recruitment Agencies",
+      "agencyName": "Agency name *",
+      "contactPerson": "Contact person",
+      "contact": "Contact",
+      "noAgencies": "No agencies yet.",
+      "deleteAgencyLabel": "Delete agency {{name}}",
+      "budget": "Department Headcount Budget",
+      "budgetHint": "Budgeted Positions is the number of NEW people HR approves for the department and year; the Annual Salary Budget ({{currency}}) is the total yearly amount for them. New Position MPRs are checked against it (existing employees aren't counted). Saving an existing department + year updates it.",
+      "departmentRequired": "Department *",
+      "year": "Year",
+      "budgetedPositions": "Budgeted Positions",
+      "budgetedPositionsRequired": "Budgeted Positions *",
+      "salaryBudget": "Annual Salary Budget",
+      "salaryBudgetRequired": "Annual Salary Budget ({{currency}}) *",
+      "salaryBudgetColumn": "Annual Salary Budget ({{currency}})",
+      "noBudgets": "No budgets yet. Without one, a New Position MPR shows \"No budget set\" and needs a justification.",
+      "deleteBudget": "Delete budget"
+    },
+    "resignation": {
+      "noticeDays": "Notice period (days)",
+      "noOverrides": "No overrides. The default applies.",
+      "addOverride": "Add override",
+      "loading": "Loading resignation settings...",
+      "saved": "Resignation settings saved. New resignations use this notice period.",
+      "noticePeriod": "Notice period",
+      "noticePeriodHint": "Last working day = resignation date + notice period. A grade override wins over an employment type override.",
+      "defaultNotice": "Default notice period (days)",
+      "gradeOverrides": "Grade overrides",
+      "grade": "Grade",
+      "gradeOverridesHint": "Notice period for employees in a grade.",
+      "typeOverrides": "Employment type overrides",
+      "employmentType": "Employment type",
+      "typeOverridesHint": "Used when the employee's grade has no override.",
+      "save": "Save Resignation Settings",
+      "workflowTitle": "Resignation approval steps",
+      "workflowHint": "Approvers act in this order; HR accepts last. Line Manager falls back to the Department Head, then HR, when nobody holds the role for the employee's department.",
+      "hrAccepts": "{{role}} (accepts)",
+      "workflowSaved": "Resignation workflow saved. Resignations already in approval keep their steps.",
+      "saveWorkflow": "Save Resignation Workflow"
+    }
   },
   "employeeHeader": {
     "dashboard": { "title": "Employee Dashboard", "subtitle": "Welcome back, {{name}}" },
@@ -638,6 +788,7 @@
       "pending_line_manager": "Pending Line Manager",
       "pending_lm": "Pending LM",
       "pending_hr": "Pending HR",
+      "pending_department_head": "Pending Department Head",
       "accepted": "Accepted",
       "serving_notice": "Serving Notice",
       "completed": "Completed",
@@ -774,6 +925,1280 @@
       "october": "October",
       "november": "November",
       "december": "December"
+    }
+  },
+  "hrDashboard": {
+    "title": "HR Dashboard",
+    "subtitle": "Welcome back! Here's what's happening with your workforce.",
+    "openNotifications": "Open notifications",
+    "unreadNotifications_one": "{{count}} unread notifications",
+    "unreadNotifications_other": "{{count}} unread notifications",
+    "profilePhotoAlt": "{{name}} profile",
+    "hrAdministrator": "HR Administrator",
+    "welcomeBack": "Welcome back, {{name}}",
+    "pendingApprovals": "You have <b>{{count}} pending approvals</b> to review.",
+    "pendingApprovals_one": "You have <b>{{count}} pending approvals</b> to review.",
+    "pendingApprovals_other": "You have <b>{{count}} pending approvals</b> to review.",
+    "resignationsWaiting_one": "{{count}} resignation waiting for HR",
+    "resignationsWaiting_other": "{{count}} resignations waiting for HR",
+    "manageEmployees": "Manage Employees",
+    "reviewRequests": "Review Requests",
+    "endOfService": {
+      "title": "Pending End of Service",
+      "description": "Employees whose resignation completed after their last working day. End of Service processing will follow.",
+      "pendingCount": "{{number}} pending",
+      "empty": "No employees pending End of Service.",
+      "lastWorkingDay": "Last working day {{date}}",
+      "viewEmployee": "View employee"
+    },
+    "stats": {
+      "viewDetails": "View Details",
+      "totalEmployees": "Total Employees",
+      "activeEmployees": "Active employees",
+      "presentTodayTitle": "Present Today",
+      "presentTodayNote": "Present today",
+      "onLeave": "On Leave",
+      "pendingApproval": "{{number}} pending approval",
+      "payrollStatus": "Payroll Status",
+      "currentPayrollStatus": "Current payroll status",
+      "noPayrollData": "No payroll data",
+      "openPositionsTitle": "Open Positions",
+      "openPositionsNote": "Open positions",
+      "newJoiners": "New Joiners",
+      "joinedThisMonth": "Joined this month",
+      "openTicketsTitle": "Open Tickets",
+      "openTicketsNote": "Open tickets",
+      "viewHrReports": "View HR reports"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "addEmployee": "Add Employee",
+      "leaveRequest": "Leave Request",
+      "runPayroll": "Run Payroll",
+      "employeeRequests": "Employee Requests"
+    }
+  },
+  "employeesList": {
+    "title": "Employees List",
+    "subtitle": "Manage all company employees",
+    "listView": "List view",
+    "gridView": "Grid view",
+    "directory": "DIRECTORY",
+    "employeeList": "Employee List",
+    "loading": "Loading employees...",
+    "searchPlaceholder": "Search employees",
+    "export": {
+      "button": "Export",
+      "nothingTitle": "Nothing to export",
+      "nothingMessage": "No employees to export"
+    },
+    "filters": {
+      "button": "Filters",
+      "ariaLabel": "Employee filters",
+      "clear": "Clear filters",
+      "dateRange": "Date range",
+      "allDates": "All dates",
+      "last30Days": "Last 30 days",
+      "allDesignations": "All designations",
+      "byStatus": "Filter by status",
+      "allStatus": "All status"
+    },
+    "table": {
+      "name": "Name",
+      "designation": "Designation",
+      "view": "View",
+      "viewEmployee": "View {{name}}",
+      "delete": "Delete",
+      "archive": "Archive"
+    },
+    "grid": {
+      "noDesignation": "Employee",
+      "noDepartment": "General",
+      "viewDetails": "View details"
+    },
+    "pagination": {
+      "previous": "← Previous",
+      "next": "Next →"
+    },
+    "archive": {
+      "title": "Archive Employee",
+      "message": "This will remove the employee from active work while preserving their record. Continue?",
+      "exitStatus": "Exit status",
+      "lastDateWorked": "Last date worked",
+      "reason": "Reason"
+    },
+    "alerts": {
+      "titles": {
+        "danger": "Please check",
+        "warning": "Please check",
+        "info": "Notice",
+        "success": "Success"
+      },
+      "ok": "OK"
+    },
+    "success": {
+      "added": "Employee added successfully!",
+      "updated": "Employee updated successfully!",
+      "archived": "Employee archived successfully. Their record is still searchable."
+    },
+    "errors": {
+      "exitStatusInvalid": "Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated",
+      "lastDateWorkedRequired": "Please select last date worked.",
+      "archiveFailed": "Failed to delete employee",
+      "employeeIdRequired": "Please enter Employee ID",
+      "employeeIdExists": "Employee ID already exists!",
+      "titleRequired": "Title is required.",
+      "firstNameRequired": "First Name is required.",
+      "lastNameRequired": "Last Name is required.",
+      "designationRequired": "Please enter Designation",
+      "departmentRequired": "Please enter Department",
+      "startDateRequired": "Please select Employment Start Date",
+      "employmentTypeRequired": "Please select Employment Type",
+      "employmentCategoryRequired": "Please select Employment Category",
+      "projectRoleRequired": "Please select Project Role ID",
+      "terminationReasonRequired": "Please enter Termination Reason",
+      "lastDateWorkedFieldRequired": "Please enter Last Date Worked",
+      "positionRequired": "Please select Position",
+      "positionTitleRequired": "Please enter Position Title",
+      "assignmentEndRequired": "Please select Assignment End",
+      "assignmentStartRequired": "Please select Assignment Start",
+      "emailRequired": "Please enter Email",
+      "emailInvalid": "Please enter a valid email address",
+      "phoneRequired": "Please enter phone number",
+      "phoneNumberRequired": "Please enter Phone Number",
+      "indianPhoneInvalid": "Please enter a valid 10-digit Indian phone number",
+      "phoneInvalid": "Please enter a valid phone number",
+      "addFailed": "Failed to add employee",
+      "updateFailed": "Failed to update employee"
+    },
+    "form": {
+      "editTitle": "Edit Employee",
+      "personalDetails": "Personal Details",
+      "enterEmployeeId": "Enter employee ID",
+      "title": "Title",
+      "selectTitle": "Select title",
+      "firstName": "First Name",
+      "enterFirstName": "Enter first name",
+      "middleName": "Middle Name",
+      "enterMiddleName": "Enter middle name",
+      "lastName": "Last Name",
+      "enterLastName": "Enter last name",
+      "dateOfBirth": "Date of Birth",
+      "countryOption": "{{country}} ({{code}})",
+      "enterPhone": "Enter phone number",
+      "enterEmail": "Enter email address",
+      "enterAddress": "Enter address",
+      "jobDetails": "Job Details",
+      "enterDesignation": "Enter designation",
+      "enterDepartment": "Enter department",
+      "details": "Details",
+      "selectEmploymentCategory": "Select employment category",
+      "selectProjectRole": "Select project role",
+      "fixedDate": "Fixed date",
+      "selectPosition": "Select position",
+      "bankDetails": "Bank Details",
+      "enterAccountNumber": "Enter account number",
+      "reAccountNumber": "Re-Account Number",
+      "reEnterAccountNumber": "Re-enter account number",
+      "enterBankName": "Enter bank name",
+      "enterBranchName": "Enter branch name",
+      "enterIfscCode": "Enter IFSC code",
+      "selectAccountType": "Select account type",
+      "branchAddress": "Branch Address",
+      "enterBranchAddress": "Enter branch address",
+      "otherDetails": "Other Details",
+      "enterPassportNumber": "Enter passport number",
+      "enterNationality": "Enter nationality",
+      "enterReligion": "Enter religion",
+      "enterChildrenCount": "Enter number of children",
+      "emergencyContact": "Emergency Contact",
+      "enterEmergencyContact": "Enter emergency contact",
+      "photoPreviewAlt": "Profile perview"
+    },
+    "values": {
+      "status": {
+        "resigned": "Resigned",
+        "retired": "Retired",
+        "dismissed": "Dismissed",
+        "terminated": "Terminated"
+      },
+      "title": {
+        "mr": "Mr",
+        "ms": "Ms",
+        "mrs": "Mrs",
+        "dr": "Dr"
+      },
+      "employmentCategory": {
+        "regular": "Regular",
+        "temporary": "Temporary",
+        "contractor": "Contractor"
+      },
+      "projectRole": {
+        "developer": "Developer",
+        "manager": "Manager",
+        "hr": "HR",
+        "support": "Support"
+      },
+      "position": {
+        "developer": "Developer",
+        "designer": "Designer",
+        "accountant": "Accountant",
+        "hr_executive": "HR Executive",
+        "manager": "Manager"
+      },
+      "accountType": {
+        "savings": "Savings",
+        "current": "Current"
+      },
+      "country": {
+        "qatar": "Qatar",
+        "india": "India",
+        "usa": "USA",
+        "uk": "UK",
+        "australia": "Australia",
+        "uae": "UAE"
+      }
+    }
+  },
+  "recruitment": {
+    "actions": {
+      "applied": "Applied",
+      "approved": "Approved",
+      "cancelled": "Cancelled",
+      "created": "Created",
+      "job_opening_created": "Job opening created",
+      "notified": "Notified",
+      "put_on_hold": "Put on hold",
+      "recruitment_plan_saved": "Recruitment plan saved",
+      "rejected": "Rejected",
+      "resubmitted": "Resubmitted",
+      "saved_as_draft": "Saved as draft",
+      "sent_back": "Sent Back",
+      "shortlisted": "Shortlisted",
+      "submitted": "Submitted"
+    },
+    "applicationDetail": {
+      "actions": {
+        "hold": {
+          "busy": "Saving...",
+          "label": "Put On Hold",
+          "title": "Put this application on hold?"
+        },
+        "reject": {
+          "busy": "Rejecting...",
+          "label": "Reject",
+          "title": "Reject this application?"
+        },
+        "shortlist": {
+          "busy": "Shortlisting...",
+          "label": "Shortlist",
+          "title": "Shortlist this candidate?"
+        }
+      },
+      "application": "Application",
+      "appliedAt": "applied",
+      "ariaLabel": "Application details",
+      "availableFrom": "Available to Join From",
+      "careersPage": "Careers page",
+      "certifications": "Certifications",
+      "company": "Company",
+      "confirmMessage": "<b>{{name}}</b> (<ltr>{{id}}</ltr>) for {{job}}.",
+      "coverLetter": "Cover Letter",
+      "currentCompany": "Current / Last Company",
+      "currentDesignation": "Current / Last Designation",
+      "currentLocation": "Current Location",
+      "currentSalary": "Current Monthly Salary",
+      "cv": "CV",
+      "cvOf": "CV of {{name}}",
+      "cvResume": "CV / Resume",
+      "download": "Download",
+      "earlierForm": "Earlier application form",
+      "education": "Education",
+      "expectedSalary": "Expected Monthly Salary",
+      "fileSizeKb": "{{size}} KB",
+      "fresherDetails": "Fresher Details",
+      "from": "From",
+      "hidePreview": "Hide preview",
+      "highestQualification": "Highest Qualification",
+      "hrDecision": "HR decision",
+      "inQatar": "Currently in Qatar",
+      "institution": "Institution",
+      "internships": "Internships / Projects",
+      "lastRemark": "Last remark:",
+      "legacyResume": "Resume (uploaded before the Careers page)",
+      "linkedin": "LinkedIn",
+      "nextPhaseNote": "Interview scheduling (FRD 1.2) comes in the next phase.",
+      "nextPhaseTitle": "Coming in the next phase (FRD 1.2)",
+      "noCv": "No CV was uploaded with this application.",
+      "noFurtherActions": "No further review actions: this application is {{status}}.",
+      "noSkills": "No skills listed.",
+      "percentageCgpa": "Percentage / CGPA",
+      "preview": "Preview",
+      "remarkPlaceholder": "Remarks (required to reject)",
+      "scheduleInterview": "Schedule Interview",
+      "skillsCover": "Skills & Cover Letter",
+      "submittedVia": "Submitted via",
+      "title": "Job Application",
+      "to": "To",
+      "totalExperience": "Total Experience",
+      "viewResume": "View Resume →",
+      "willingToRelocate": "Willing to Relocate",
+      "wordNoPreview": "Word documents can't be previewed in the browser; download to open.",
+      "workExperience": "Work Experience",
+      "yearOfPassing": "Year of Passing"
+    },
+    "applicationStatuses": {
+      "new": "New",
+      "on_hold": "On Hold",
+      "rejected": "Rejected",
+      "shortlisted": "Shortlisted"
+    },
+    "applications": {
+      "agencySource": "Agency: {{name}}",
+      "allCandidateTypes": "Fresher & Experienced",
+      "allDepartments": "All departments",
+      "allJobs": "All jobs",
+      "allSources": "All sources",
+      "allStatuses": "All statuses",
+      "applicationNo": "Application No",
+      "appliedFrom": "Applied from",
+      "appliedOn": "Applied On",
+      "appliedTo": "Applied to",
+      "candidate": "Candidate",
+      "candidateType": "Candidate type",
+      "expectedSalary": "Expected Salary",
+      "job": "Job",
+      "loading": "Loading applications...",
+      "months_one": "{{count}} mo",
+      "months_other": "{{count}} mos",
+      "noMatch": "No applications match these filters.",
+      "none": "No applications yet.",
+      "noticePeriod": "Notice Period",
+      "present": "Present",
+      "referralSource": "Referral: {{name}}",
+      "searchPlaceholder": "Search name, email or application no...",
+      "source": "Source",
+      "sourceAgency": "Source / Agency",
+      "total": "Total Applications",
+      "years_one": "{{count}} yr",
+      "years_other": "{{count}} yrs"
+    },
+    "budget": {
+      "alreadyUsed": "Already used by other requests",
+      "amountsIn": "Amounts in {{currency}}",
+      "annualSalaryBudget": "Annual salary budget",
+      "available": "Available",
+      "budgetedPositions": "Budgeted positions",
+      "changeTo": "Change to {{number}}",
+      "checkFailed": "Budget check failed: {{message}}",
+      "continueWith": "Continue with {{number}}",
+      "continueWithJustification": "Continue with Justification",
+      "costLine": "Cost of this request: {{cost}} of {{available}} available",
+      "costOfAvailable": "{{cost}} of {{available}} available",
+      "editOpenings": "Edit Openings",
+      "exceeded": "Budget exceeded",
+      "exceedsBy": "→ exceeds by {{amount}}",
+      "exception": "Budget exception",
+      "justificationRequired": "Justification is required.",
+      "legacyCheck": "Checked with the previous budget method before this MPR was updated.",
+      "morePositions_one": "{{count}} more position can be filled within this budget.",
+      "morePositions_other": "{{count}} more positions can be filled within this budget.",
+      "noBudget": "No budget set",
+      "positionsExceededReason_one": "{{count}} position requested, {{available}} available (exceeds by {{exceededBy}})",
+      "positionsExceededReason_other": "{{count}} positions requested, {{available}} available (exceeds by {{exceededBy}})",
+      "requestCost": "Cost of this request",
+      "requested": "Requested",
+      "salaryAvailable": "Salary budget available",
+      "salaryExceededReason": "Cost {{cost}} exceeds the {{available}} salary budget available by {{exceededBy}}",
+      "within": "Within budget",
+      "withinStillAvailable_one": "Within budget – {{count}} position still available",
+      "withinStillAvailable_other": "Within budget – {{count}} positions still available",
+      "youRequested": "You requested"
+    },
+    "common": {
+      "close": "Close",
+      "listSeparator": ", ",
+      "loading": "Loading...",
+      "view": "View"
+    },
+    "detail": {
+      "approvers": "Approvers",
+      "approving": "Approving...",
+      "cancelDialog": {
+        "confirm": "Yes, Cancel MPR",
+        "keep": "Keep MPR",
+        "message": "Manpower request <b>{{number}}</b> will be cancelled. This can't be undone.",
+        "title": "Cancel manpower request?"
+      },
+      "cancelMpr": "Cancel MPR",
+      "compensationTitle": "Compensation, Benefits & Assets",
+      "editDraft": "Edit Draft",
+      "editResubmit": "Edit & Resubmit",
+      "errors": {
+        "rejectReason": "Enter the reason for rejecting.",
+        "sendBackRemark": "Enter a remark for the coordinator."
+      },
+      "exceededWarning": "Budget exceeded: review the budget details above and the justification before approving.",
+      "jobChip": "Job {{id}}",
+      "medicalInsurance": "Medical Insurance",
+      "noBudgetWarning": "No budget set: review the budget details above and the justification before approving.",
+      "none": "None",
+      "otherAsset": "Other: {{name}}",
+      "raisedBy": "raised by {{name}}",
+      "remarkPlaceholder": "Remark (required to reject or send back)",
+      "replacing": "Replacing",
+      "salaryPerMonth": "Salary (per month)",
+      "sendBack": "Send Back",
+      "sendingBack": "Sending back...",
+      "title": "Manpower Request",
+      "yourDecision": "Your decision"
+    },
+    "errors": {
+      "cvLoadFailed": "Unable to load the CV",
+      "requestFailed": "Request failed"
+    },
+    "fields": {
+      "accommodation": "Accommodation",
+      "action": "Action",
+      "airTicket": "Air Ticket",
+      "allowances": "Allowances",
+      "applicationDeadline": "Application Deadline",
+      "applicationEndDate": "Application End Date",
+      "applicationStartDate": "Application Start Date",
+      "assetsRequired": "Assets Required",
+      "experience": "Experience",
+      "jobDescription": "Job Description",
+      "jobId": "Job ID",
+      "jobTitle": "Job Title",
+      "justification": "Justification",
+      "location": "Location",
+      "medicalInsurance": "Medical Insurance Category",
+      "mprNo": "MPR No",
+      "openingsCount": "No. of Openings",
+      "position": "Position",
+      "replacementReason": "Replacement Reason",
+      "requestType": "Request Type",
+      "requiredSkills": "Required Skills",
+      "type": "Type",
+      "vehicle": "Vehicle"
+    },
+    "form": {
+      "allowancesPlaceholder": "e.g. Transport 500, Phone 200",
+      "editTitle": "Edit {{number}}",
+      "employeeBeingReplaced": "Employee Being Replaced",
+      "errors": {
+        "chooseEnd": "Choose the Application End Date.",
+        "chooseStart": "Choose the Application Start Date.",
+        "endBeforeStart": "Application End Date must be on or after the Application Start Date.",
+        "justificationNeeded": "Budget exceeded: enter a justification to continue.",
+        "startPast": "Application Start Date must be today or later."
+      },
+      "experiencePlaceholder": "e.g. 0-2 Years",
+      "jobDescriptionPlaceholder": "Enter job description",
+      "jobTitlePlaceholder": "e.g. Frontend Developer",
+      "justificationPlaceholder": "Why is this position needed?",
+      "justificationRequiredPlaceholder": "Required: explain why this position is needed despite the budget",
+      "maximumSalary": "Maximum Salary ({{currency}} / month)",
+      "maximumSalaryPlaceholder": "e.g. 10000",
+      "medicalInsurancePlaceholder": "e.g. Category B",
+      "minimumSalary": "Minimum Salary ({{currency}} / month)",
+      "minimumSalaryPlaceholder": "e.g. 8000",
+      "newTitle": "New Manpower Request",
+      "openingsPlaceholder": "e.g. 2",
+      "otherAsset": "Other Asset",
+      "otherAssetPlaceholder": "Describe the other asset",
+      "replacementReasonPlaceholder": "e.g. Resignation, end of contract",
+      "resubmit": "Resubmit",
+      "saveDraft": "Save as Draft",
+      "sectionCompensation": "Compensation & Benefits",
+      "sectionRequest": "Request",
+      "selectDepartment": "Select Department",
+      "selectDepartmentFirst": "Select a department first",
+      "selectEmployee": "Select Employee",
+      "selectLocation": "Select Location",
+      "selectRequestType": "Select Request Type",
+      "sentBackNote": "Sent back for changes. Resubmitting continues the approval from the step that sent it back.",
+      "skillsPlaceholder": "e.g. React, Node.js, MongoDB",
+      "submit": "Submit",
+      "submitting": "Submitting..."
+    },
+    "jobs": {
+      "agency": "Agency",
+      "applications": "Applications",
+      "deadlinePassed": "Deadline passed",
+      "editPlan": "Edit Recruitment Plan",
+      "empty": "No job openings found.",
+      "filledOpenings": "Filled / Openings",
+      "noMprLegacy": "No MPR (legacy)",
+      "searchPlaceholder": "Search jobs...",
+      "viewApplicationsFor": "View applications for {{id}}"
+    },
+    "log": {
+      "by": "By",
+      "date": "Date",
+      "noApplicationEntries": "No tracking entries (application received before tracking was added).",
+      "remark": "Remark",
+      "statusChange": "{{from}} → {{to}}",
+      "system": "System",
+      "title": "Tracking details"
+    },
+    "mpr": {
+      "applicationPeriod": "Application Period",
+      "budget": "Budget",
+      "cannotRaise": "Only HR or a Department Coordinator can raise a Manpower Request. Ask HR to assign you in Settings → Approval Workflows.",
+      "draftNotice": "{{number}} saved as draft",
+      "loadingList": "Loading manpower requests...",
+      "myApprovals": "My Approvals",
+      "newButton": "+ New Manpower Request",
+      "noRequests": "No manpower requests yet.",
+      "nothingToApprove": "Nothing is waiting for your approval.",
+      "openings": "Openings",
+      "raisedBy": "Raised By",
+      "submittedNotice": "{{number}} submitted: {{status}}",
+      "untitled": "Untitled"
+    },
+    "page": {
+      "departments": "Departments",
+      "newCount": "{{number}} new",
+      "newNotReviewed": "{{number}} new (not reviewed)",
+      "openJobs": "Open Jobs",
+      "pendingMprApprovals": "Pending MPR Approvals",
+      "subtitle": "Manage manpower requests, job openings and recruitment activities"
+    },
+    "pagination": {
+      "perPage": "{{size}} per page",
+      "tablePages": "Table pages"
+    },
+    "plan": {
+      "agency": "Recruitment Agency",
+      "interviewPanel": "Interview Panel ({{number}} selected)",
+      "noAgencies": "No agencies — add one in Settings → Recruitment Masters",
+      "note": "Saving the plan moves an Open job to Recruitment In Progress. After the deadline, new applications are no longer accepted.",
+      "recruiter": "Assigned Recruiter",
+      "save": "Save Plan",
+      "selectAgency": "Select Agency",
+      "selectRecruiter": "Select Recruiter",
+      "selectSourcing": "Select Sourcing",
+      "sourcing": "Sourcing",
+      "title": "Recruitment Plan"
+    },
+    "statuses": {
+      "active": "Active",
+      "approved": "Approved",
+      "cancelled": "Cancelled",
+      "closed": "Closed",
+      "draft": "Draft",
+      "open": "Open",
+      "pending_ceo": "Pending CEO",
+      "pending_coo": "Pending COO",
+      "pending_coo_cto": "Pending COO/CTO",
+      "pending_cto": "Pending CTO",
+      "pending_department_head": "Pending Department Head",
+      "pending_finance": "Pending Finance",
+      "pending_hr": "Pending HR",
+      "recruitment_in_progress": "Recruitment In Progress",
+      "rejected": "Rejected",
+      "sent_back": "Sent Back"
+    },
+    "tabs": {
+      "applications": "Job Applications",
+      "jobs": "Job Openings",
+      "manpower": "Manpower Requests"
+    },
+    "tracker": {
+      "approvedHeadline": "Approved – job opening {{id}} created",
+      "awaitingApproval": "Awaiting approval",
+      "eyebrow": "APPROVAL PROGRESS",
+      "jobOpening": "Job Opening",
+      "sentBack": "Sent back",
+      "submitted": "Submitted"
+    },
+    "values": {
+      "asset": {
+        "access_card": "Access Card",
+        "laptop": "Laptop",
+        "mobile": "Mobile",
+        "other": "Other",
+        "sim": "SIM",
+        "vehicle": "Vehicle"
+      },
+      "candidateType": {
+        "experienced": "Experienced",
+        "fresher": "Fresher"
+      },
+      "gender": {
+        "prefer_not_to_say": "Prefer not to say"
+      },
+      "noticePeriod": {
+        "15_days": "15 days",
+        "30_days": "30 days",
+        "60_days": "60 days",
+        "90_days": "90 days",
+        "immediate": "Immediate"
+      },
+      "qualification": {
+        "bachelor_s_degree": "Bachelor's Degree",
+        "diploma": "Diploma",
+        "doctorate": "Doctorate",
+        "high_school": "High School",
+        "master_s_degree": "Master's Degree",
+        "other": "Other"
+      },
+      "requestType": {
+        "new_position": "New Position",
+        "replacement": "Replacement"
+      },
+      "source": {
+        "company_website": "Company website",
+        "employee_referral": "Employee referral",
+        "linkedin": "LinkedIn",
+        "naukrigulf": "NaukriGulf",
+        "other": "Other",
+        "recruitment_agency": "Recruitment agency"
+      },
+      "sourcing": {
+        "agency": "Agency",
+        "both": "Both",
+        "internal": "Internal"
+      },
+      "visaStatus": {
+        "family_visa": "Family visa",
+        "other": "Other",
+        "visit_visa": "Visit visa",
+        "work_visa": "Work visa"
+      }
+    }
+  },
+  "hrAttendance": {
+    "subtitle": "Manage Employee Attendance",
+    "enterEmployeeId": "Enter Employee ID",
+    "processing": "Processing...",
+    "punchInButton": "Punch In",
+    "punchOutButton": "Punch Out",
+    "searchPlaceholder": "Search employee...",
+    "allStatus": "All Status",
+    "messages": {
+      "punchInSuccess": "Punch In successful",
+      "punchOutSuccess": "Punch Out successful",
+      "punchInFailed": "Punch In failed",
+      "punchOutFailed": "Punch Out failed"
+    },
+    "serverMessages": {
+      "employeeIdRequired": "Employee ID is required",
+      "employeeNotFound": "Active employee not found",
+      "alreadyPunchedIn": "Employee has already punched in today",
+      "notPunchedIn": "Employee has not punched in today",
+      "alreadyPunchedOut": "Employee has already punched out today",
+      "punchInProcessFailed": "Failed to process Punch In",
+      "punchOutProcessFailed": "Failed to process Punch Out"
+    },
+    "status": {
+      "on_leave": "On Leave"
+    },
+    "table": {
+      "employeeName": "Employee Name",
+      "shift": "Shift",
+      "normalWorkingHours": "Normal Working Hours"
+    },
+    "datePicker": {
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "clear": "Clear",
+      "today": "Today"
+    }
+  },
+  "leaveManagement": {
+    "subtitle": "Manage employee leave requests",
+    "allMonths": "All Months",
+    "allLeaveTypes": "All Leave Types",
+    "cancelledBy": "Cancelled by <ltr>{{id}}</ltr>",
+    "dayCount_one": "{{count}} day",
+    "dayCount_other": "{{count}} days",
+    "dayCountTitle_one": "{{count}} Day",
+    "dayCountTitle_other": "{{count}} Days",
+    "cards": {
+      "totalRequests": "Total Requests",
+      "allRequests": "All leave requests",
+      "monthRequests": "{{month}} requests",
+      "approvedRequests": "Approved requests",
+      "monthApproved": "{{month}} approved",
+      "rejectedRequests": "Rejected requests",
+      "monthRejected": "{{month}} rejected",
+      "waitingApproval": "Waiting for approval",
+      "monthPending": "{{month}} pending"
+    },
+    "table": {
+      "title": "Leave Requests",
+      "hint": "Click any employee row to review their leave balance and request.",
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "loading": "Loading leave requests...",
+      "empty": "No leave requests found"
+    },
+    "errors": {
+      "loadFailed": "Failed to load leave data",
+      "updateFailed": "Failed to update leave status. Please try again.",
+      "resumeFailed": "Failed to record resumption"
+    },
+    "policy": {
+      "title": "Leave Policy Setup",
+      "description": "Configure the annual leave allowance used for employee reviews.",
+      "close": "Close leave policy setup",
+      "annualEntitlement": "Annual Leave Yearly Entitlement",
+      "perYearAccrues": "days per year • accrues {{rate}} days/month",
+      "salaryBasis": "Leave Accrual Salary Basis",
+      "totalSalary": "Total salary (basic + allowances)",
+      "basicSalary": "Basic salary",
+      "accrualFormula": "amount accrued = salary ÷ 12 per month",
+      "sickEligibleAfter": "Sick Leave Eligible After",
+      "unitMonths": "months",
+      "maternityDays": "Maternity Leave Days",
+      "unitDays": "days",
+      "bereavementDays": "Bereavement Days",
+      "compOffValidity": "Comp Off Validity",
+      "unitDaysValidity": "days validity",
+      "byGrade": "Annual Leave Entitlement by Grade",
+      "byGradeDescription": "Overrides the yearly entitlement for employees in a grade. Other employees use the default above.",
+      "gradePlaceholder": "Grade (e.g. G5)",
+      "gradeRate": "days/year • {{rate}}/month",
+      "removeGrade": "Remove grade {{grade}}",
+      "addGrade": "+ Add grade",
+      "availableTypes": "Available Leave Types",
+      "rules": {
+        "sick": "<b>Sick Leave:</b> Medical certificate required. First 14 days at 100% salary, next 28 days at 50%, additional 42 days unpaid.",
+        "maternity": "<b>Maternity Leave:</b> Full pay, HR approval, medical certificate required.",
+        "bereavement": "<b>Bereavement:</b> Immediate family, manager approval.",
+        "compensatory": "<b>Compensatory Off:</b> Public holiday or weekend work, manager approval."
+      },
+      "save": "Save Policy",
+      "saved": "Policy saved successfully",
+      "saveFailed": "Unable to save policy",
+      "loadFailed": "Unable to load saved policy"
+    },
+    "holidays": {
+      "names": {
+        "national_day": "National Day",
+        "national_sports_day": "National Sports Day",
+        "eid_al_fitr": "Eid al-Fitr",
+        "eid_al_adha": "Eid al-Adha",
+        "islamic_new_year": "Islamic New Year",
+        "prophet_s_birthday": "Prophet's Birthday"
+      },
+      "dates": {
+        "18_december": "18 December",
+        "second_tuesday_of_february": "Second Tuesday of February",
+        "islamic_calendar": "Islamic calendar"
+      }
+    },
+    "review": {
+      "kicker": "EMPLOYEE LEAVE REVIEW",
+      "balanceTitle": "Leave Balance",
+      "annualAccrued": "Annual Leave accrued to date ({{rate}} days/month).",
+      "checkBalance": "Check available balance before approving.",
+      "total": "Total",
+      "used": "Used",
+      "remaining": "Remaining",
+      "usage": "Leave usage",
+      "requestTitle": "Leave Request",
+      "requestDescription": "Details submitted by the employee.",
+      "leaveTypeLabel": "LEAVE TYPE",
+      "requestedDaysLabel": "REQUESTED DAYS",
+      "fromDateLabel": "FROM DATE",
+      "toDateLabel": "TO DATE",
+      "reasonLabel": "REASON",
+      "resumedOn": "Resumed on",
+      "markResumed": "Mark as resumed",
+      "sufficient": "Sufficient leave balance",
+      "insufficient": "Insufficient leave balance",
+      "balanceSentence": "{{name}} has <b>{{remaining}} days</b> remaining and requested <b>{{requested}} days</b>.",
+      "historyTitle": "Leave History",
+      "historyDescription": "Previous requests from this employee.",
+      "noHistory": "No leave history found.",
+      "updating": "Updating...",
+      "reject": "✕ Reject",
+      "approve": "✓ Approve"
+    },
+    "tracker": {
+      "eyebrow": "LEAVE TRACKER",
+      "stages": {
+        "applied": "Applied",
+        "review": "Under HR review",
+        "approved": "Approved",
+        "onLeave": "On leave",
+        "resumed": "Resumed duty"
+      },
+      "rejected": "Rejected",
+      "rejectedByHr": "Rejected by HR",
+      "cancelled": "Cancelled",
+      "cancelledBy": "Cancelled by {{id}}",
+      "resumedOn": "Resumed duty on {{date}}",
+      "approved": "Approved",
+      "approvedStartsIn_one": "Approved – leave starts in {{count}} day",
+      "approvedStartsIn_other": "Approved – leave starts in {{count}} days",
+      "startsIn_one": "Starts in {{count}} day",
+      "startsIn_other": "Starts in {{count}} days",
+      "expected": "Expected {{date}}",
+      "dayOf": "Day {{day}} of {{total}}",
+      "onLeaveDayOf": "On leave – Day {{day}} of {{total}}",
+      "expectedToday": "Expected today",
+      "returnExpectedToday": "Leave ended – return expected today",
+      "notResumedOverdue_one": "Not resumed – {{count}} day overdue",
+      "notResumedOverdue_other": "Not resumed – {{count}} days overdue",
+      "awaitingDecision": "Awaiting decision"
+    }
+  },
+  "hrResignations": {
+    "title": "Resignations",
+    "subtitle": "Manage employee resignation requests",
+    "searchPlaceholder": "Search name or employee ID",
+    "searchLabel": "Search by name or employee ID",
+    "filterByDepartment": "Filter by department",
+    "month": "Resignation month",
+    "dismiss": "Dismiss",
+    "cards": {
+      "closed": "Rejected / Withdrawn"
+    },
+    "table": {
+      "resignationNo": "Resignation No",
+      "earlyRelease": "Early Release",
+      "none": "No resignations yet.",
+      "noMatch": "No resignations match these filters."
+    },
+    "banner": {
+      "rejected": "Resignation {{number}} rejected. {{name}} has been notified.",
+      "accepted": "Resignation {{number}} accepted. {{name}} has been notified.",
+      "approved": "Resignation {{number}} approved. {{name}} has been notified."
+    }
+  },
+  "tickets": {
+    "title": "Tickets",
+    "subtitle": "Manage employee support tickets",
+    "addTicket": "Add Ticket",
+    "cards": {
+      "new": "New Tickets",
+      "open": "Open Tickets",
+      "solved": "Solved Tickets",
+      "pending": "Pending Tickets"
+    },
+    "listTitle": "Ticket List",
+    "searchPlaceholder": "Search tickets",
+    "statusFilterLabel": "Select status",
+    "selectStatus": "Select Status",
+    "sortLabel": "Sort tickets",
+    "sortBy": "Sort By : {{option}}",
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest"
+    },
+    "general": "General",
+    "values": {
+      "status": {
+        "open": "Open",
+        "on_hold": "On Hold",
+        "reopened": "Reopened",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "priority": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "category": {
+        "it_support": "IT Support",
+        "hr": "HR",
+        "payroll": "Payroll",
+        "leave_attendance": "Leave & Attendance",
+        "facilities": "Facilities",
+        "other": "Other"
+      }
+    },
+    "meta": {
+      "raisedBy": "Raised by {{name}}",
+      "unknown": "Unknown",
+      "assignedTo": "· Assigned to {{name}}",
+      "unassigned": "Unassigned",
+      "updated": "▣ Updated {{time}}",
+      "comments_one": "{{count}} Comments",
+      "comments_other": "{{count}} Comments"
+    },
+    "updated": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} min ago",
+      "minutesAgo_other": "{{count}} min ago",
+      "hoursAgo_one": "{{count}} hours ago",
+      "hoursAgo_other": "{{count}} hours ago"
+    },
+    "actions": {
+      "putOnHold": "Put On Hold",
+      "resolve": "Resolve",
+      "reopen": "Reopen"
+    },
+    "empty": {
+      "loading": "Loading tickets...",
+      "noMatch": "No tickets match your filters.",
+      "none": "No tickets yet. Click Add Ticket to create one."
+    },
+    "sidebar": {
+      "categories": "Ticket Categories",
+      "noCategories": "No ticket category data available.",
+      "agents": "Support Agents",
+      "noAgents": "No support agent data available.",
+      "agentEmployee": "Agent employee",
+      "addAgent": "Add agent...",
+      "agentCategory": "Agent category",
+      "allCategories": "All categories",
+      "add": "Add"
+    },
+    "form": {
+      "subject": "Subject",
+      "subjectPlaceholder": "Short summary of the issue",
+      "description": "Description",
+      "descriptionPlaceholder": "Details (optional)",
+      "category": "Category",
+      "priority": "Priority",
+      "raisedBy": "Raised By",
+      "selectEmployee": "Select employee",
+      "assignTo": "Assign To",
+      "autoAssign": "Auto-assign",
+      "creating": "Creating...",
+      "create": "Create Ticket"
+    },
+    "errors": {
+      "loadFailed": "Unable to load tickets",
+      "subjectRequired": "Subject is required",
+      "raisedByRequired": "Select who raised the ticket"
+    }
+  },
+  "hrPayroll": {
+    "title": "Employee Salary",
+    "subtitle": "Manage employee salary records",
+    "addSalary": "Add Salary",
+    "export": {
+      "excel": "Excel",
+      "csv": "CSV"
+    },
+    "listTitle": "Employee Salary List",
+    "designation": "Designation",
+    "sortBy": "Sort By: {{option}}",
+    "sort": {
+      "employeeId": "Employee ID",
+      "name": "Name",
+      "salary": "Salary"
+    },
+    "search": "Search",
+    "table": {
+      "empId": "Emp ID",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "designation": "Designation",
+      "joiningDate": "Joining Date",
+      "salary": "Salary",
+      "payslip": "Payslip",
+      "actions": "Actions"
+    },
+    "loading": "Loading salary records...",
+    "empty": "No salary records found",
+    "generateSlip": "Generate Slip",
+    "editSalaryLabel": "Edit salary",
+    "deleteSalaryLabel": "Delete salary",
+    "records_one": "{{count}} records",
+    "records_other": "{{count}} records",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "form": {
+      "editTitle": "Edit Salary",
+      "empId": "Emp ID",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "department": "Department",
+      "designation": "Designation",
+      "joiningDate": "Joining Date",
+      "salaryMonth": "Salary Month",
+      "basicSalary": "Basic Salary",
+      "allowances": "Allowances",
+      "deductions": "Deductions",
+      "save": "Save Salary"
+    },
+    "delete": {
+      "title": "Delete salary record?",
+      "message": "The salary record for <strong>{{name}}</strong> will be permanently deleted.",
+      "confirm": "Delete",
+      "deleting": "Deleting…"
+    },
+    "errors": {
+      "deleteFailed": "Unable to delete salary record",
+      "saveFailed": "Unable to save salary"
+    }
+  },
+  "reports": {
+    "hub": {
+      "title": "Reports",
+      "subtitle": "View and analyze HR reports",
+      "viewReport": "View Report",
+      "cards": {
+        "employee": {
+          "title": "Employee Report",
+          "description": "View employee details and department information."
+        },
+        "attendance": {
+          "title": "Attendance Report",
+          "description": "View employee attendance and working hours."
+        },
+        "leave": {
+          "title": "Leave Report",
+          "description": "View leave requests, approvals and leave usage."
+        },
+        "payroll": {
+          "title": "Payroll Report",
+          "description": "View salary, deductions and payroll information."
+        },
+        "accrual": {
+          "title": "Annual Leave Accrual",
+          "description": "Monthly annual leave days and liability amount per employee, for Finance."
+        }
+      }
+    },
+    "common": {
+      "backToReports": "Back to Reports",
+      "noData": "No data",
+      "thisYear": "This Year",
+      "thisMonth": "This Month",
+      "chartPeriod": "{{title}} period",
+      "totalEmployees": "Total Employees",
+      "employees": "Employees",
+      "employeeId": "Employee ID",
+      "employeeName": "Employee Name",
+      "department": "Department",
+      "designation": "Designation",
+      "joiningDate": "Joining Date",
+      "status": "Status"
+    },
+    "employee": {
+      "allEmployees": "All employees",
+      "activeEmployees": "Active Employees",
+      "currentlyWorking": "Currently working",
+      "departments": "Departments",
+      "activeDepartments": "Active departments",
+      "inactive": "Inactive",
+      "inactiveEmployees": "Inactive employees",
+      "inactiveSeries": "Inactive Employees",
+      "chartTitle": "Employee Growth",
+      "tableTitle": "Employee Details",
+      "loading": "Loading employee data...",
+      "empty": "No employee data available."
+    },
+    "attendance": {
+      "activeEmployees": "Active employees",
+      "averageAttendance": "Average Attendance",
+      "currentMonth": "Current month",
+      "totalPresent": "Total Present",
+      "recordedAttendance": "Recorded attendance",
+      "totalAbsent": "Total Absent",
+      "chartTitle": "Attendance",
+      "tableTitle": "Employee Attendance",
+      "workingDays": "Working Days",
+      "loading": "Loading attendance data...",
+      "empty": "No attendance data available."
+    },
+    "leave": {
+      "totalRequests": "Total Leave Requests",
+      "thisMonth": "This month",
+      "approvedRequests": "Approved requests",
+      "waitingApproval": "Waiting for approval",
+      "rejectedRequests": "Rejected requests",
+      "chartTitle": "Leave Usage",
+      "tableTitle": "Employee Leave Balance",
+      "days": "Days",
+      "reason": "Reason",
+      "loading": "Loading leave data...",
+      "empty": "No leave data available."
+    },
+    "payroll": {
+      "totalPayroll": "Total Payroll",
+      "processed": "Processed",
+      "noPayrollData": "No payroll data",
+      "chartTitle": "Payroll Trend",
+      "netPayroll": "Net Payroll",
+      "tableTitle": "Employee Payroll",
+      "empty": "No payroll data available."
+    },
+    "accrual": {
+      "subtitle": "Monthly annual leave days and leave liability amount per employee, for Finance.",
+      "month": "Month",
+      "allMonths": "All months",
+      "exportExcel": "Export to Excel",
+      "exportFinance": "Export for Finance",
+      "exporting": "Exporting...",
+      "selectMonth": "Select a month to export for Finance",
+      "confirmTitle": "Export {{month}} for Finance?",
+      "confirmPosted": "Rows with an amount will be marked as <strong>posted to Finance</strong> and frozen.",
+      "confirmGl": "GL posting ({{code}}) is not connected yet; this downloads the Excel file for Finance.",
+      "postedMessage_one": "{{count}} row(s) marked as posted • Reference {{reference}}",
+      "postedMessage_other": "{{count}} row(s) marked as posted • Reference {{reference}}",
+      "loadFailed": "Unable to load the accrual report",
+      "exportFailed": "Export failed",
+      "daysAccrued": "Days Accrued",
+      "annualLeaveDays": "Annual leave days",
+      "amountAccrued": "Amount Accrued",
+      "leaveLiability": "Leave liability",
+      "postedToFinance": "Posted to Finance",
+      "withoutSalary_one": "{{count}} without salary record",
+      "withoutSalary_other": "{{count}} without salary record",
+      "allRowsHaveAmount": "All rows have an amount",
+      "tableTitle": "Accrual Ledger",
+      "grade": "Grade",
+      "accrualDate": "Accrual Date",
+      "basis": "Basis",
+      "salary": "Salary",
+      "amount": "Amount",
+      "finance": "Finance",
+      "basisValues": {
+        "basic": "basic",
+        "total": "total"
+      },
+      "loading": "Loading accrual ledger...",
+      "empty": "No accruals for this month.",
+      "status": {
+        "posted": "Posted",
+        "noSalary": "No salary",
+        "notPosted": "Not posted"
+      },
+      "total_one": "Total ({{count}} employees)",
+      "total_other": "Total ({{count}} employees)"
+    }
+  },
+  "employeeDetails": {
+    "loading": "Loading employee details...",
+    "notFoundTitle": "Employee Not Found",
+    "notFoundMessage": "The requested employee could not be found.",
+    "backToEmployees": "Back to Employees",
+    "backTitle": "Employee Details",
+    "toggleAll": "Expand or collapse all employee details",
+    "fullTimeFallback": "Full time",
+    "noDetails": "No details added yet.",
+    "workDetails": "Employee work details",
+    "noAssetsHint": "Company assets assigned to this employee will appear here.",
+    "editProjects": "Edit projects",
+    "editTitle": "Edit Employee Details",
+    "editSection": "Edit {{section}} Details",
+    "unableToSave": "Unable to save changes",
+    "experience": {
+      "role": "Role",
+      "start": "Start",
+      "end": "End"
+    },
+    "fields": {
+      "dateOfBirth": "Date of Birth",
+      "designation": "Designation",
+      "description": "Description",
+      "projectName": "Project Name",
+      "projectLead": "Project Lead",
+      "deadline": "Deadline"
+    },
+    "documents": {
+      "title": "Employee Documents",
+      "subtitle": "HR uploads the Employment Contract, Offer Letter and QID Copy. Visa and Passport copies are uploaded by the employee from the Employee portal.",
+      "uploadedByEmployee": "{{file}} · Uploaded by employee on {{date}}",
+      "uploadedByHr": "{{file}} · Uploaded by HR on {{date}}",
+      "noDocument": "No document uploaded",
+      "waitingForEmployee": "Waiting for employee upload"
+    },
+    "deleteEducation": {
+      "title": "Delete education record?",
+      "message": "This education record will be permanently removed from this employee profile.",
+      "confirm": "Delete Record"
+    },
+    "password": {
+      "title": "Password Management",
+      "description": "Generate a temporary password for this employee when they cannot access their account.",
+      "hint": "The employee should change this temporary password after logging in.",
+      "reset": "Reset Password",
+      "modalTitle": "Reset employee password",
+      "setFor": "Set a new password for {{name}}",
+      "newPassword": "New password",
+      "enterNew": "Enter new password",
+      "show": "Show password",
+      "hide": "Hide password",
+      "repeatPassword": "Repeat password",
+      "repeatNew": "Repeat new password",
+      "minimum": "Minimum 6 characters",
+      "mustMatch": "Both passwords must match",
+      "tooShort": "New password must be at least 6 characters.",
+      "mismatch": "New password and repeat password do not match.",
+      "resetFailed": "Failed to reset employee password",
+      "resetError": "Unable to reset employee password",
+      "updatedTitle": "Password updated successfully",
+      "updatedMessage": "The password for {{name}} was updated successfully.",
+      "canLogIn": "The employee can now log in with the new password.",
+      "done": "Done"
+    },
+    "errors": {
+      "apiUnavailable": "Employee details API is unavailable ({{status}}). Restart or redeploy the backend.",
+      "notFound": "Employee not found",
+      "connection": "Unable to connect to backend",
+      "updateFailed": "Failed to update employee",
+      "saveFailed": "Failed to save details",
+      "deleteEducationFailed": "Unable to delete education record"
+    },
+    "preview": {
+      "download": "Download",
+      "loading": "Loading preview...",
+      "frameTitle": "{{name}} preview",
+      "dismiss": "Dismiss notification"
+    }
+  },
+  "hrEmployeeRequests": {
+    "title": "Employee Requests",
+    "subtitle": "Review and respond to employee document and certificate requests.",
+    "sectionLabel": "Employee requests",
+    "search": "Search employee name or ID",
+    "filterType": "Filter by request type",
+    "allTypes": "All request types",
+    "filterStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "requestType": "Request Type",
+    "requestedOn": "Requested On",
+    "action": "Action",
+    "loading": "Loading employee requests...",
+    "empty": "No employee requests yet.",
+    "noMatch": "No requests match these filters.",
+    "viewRequestFrom": "View request from {{name}}",
+    "replaceDocumentFile": "Replace document ({{file}})",
+    "uploadForEmployee": "Upload document for the employee",
+    "replaceDocument": "Replace document",
+    "uploadDocument": "Upload document",
+    "approveFirst": "Approve the request first, then upload the document",
+    "uploadLocked": "Upload locked until the request is approved",
+    "detailsTitle": "Employee Request Details",
+    "employee": "Employee",
+    "requestDetails": "Request Details",
+    "noDetails": "No additional details provided.",
+    "hrResponse": "HR response:",
+    "issuedDocument": "Issued document",
+    "notUploadedYet": "Not uploaded yet. Use the upload icon in the table.",
+    "rejectedNoDocument": "Request rejected – no document will be issued",
+    "reject": "Reject",
+    "approve": "Approve",
+    "documentUploaded": "{{type}} document uploaded for {{name}}",
+    "previewTitle": "{{type}} – {{name}}",
+    "confirm": {
+      "approveTitle": "Approved {{type}}?",
+      "rejectTitle": "Rejected {{type}}?",
+      "approveMessage": "{{name}} ({{id}}) requested a {{type}}. This will mark the request as approved.",
+      "rejectMessage": "{{name}} ({{id}}) requested a {{type}}. This will mark the request as rejected.",
+      "approve": "Approved",
+      "reject": "Rejected",
+      "approving": "Approved...",
+      "rejecting": "Rejected..."
+    },
+    "errors": {
+      "loadFailed": "Unable to load employee requests",
+      "updateFailed": "Unable to update employee request"
     }
   }
 }

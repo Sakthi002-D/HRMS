@@ -1,11 +1,12 @@
 // Approval progress for a Manpower Request.
 // Reuses the LeaveTracker stepper styles (leave-tracker-*) so both trackers look the same.
+import { useTranslation } from "react-i18next";
 import "../hr/LeaveTracker.css";
-import { formatDate } from "./recruitmentApi";
+import { formatDate, mprStatusLabel, recruitmentRoleLabel } from "./recruitmentApi";
 
 const NODE_ICONS = { completed: "✓", rejected: "✕", cancelled: "✕", overdue: "!" };
 
-function buildSteps(mpr) {
+function buildSteps(t, mpr) {
     const workflow = mpr.workflow || [];
     const actions = mpr.actions || [];
     const status = mpr.status || "Draft";
@@ -21,15 +22,15 @@ function buildSteps(mpr) {
     const steps = [
         {
             key: "submitted",
-            label: "Submitted",
+            label: t("recruitment.tracker.submitted", { defaultValue: "Submitted" }),
             state: status === "Draft" ? "current" : "completed",
-            caption: status === "Draft" ? "Draft" : null,
+            caption: status === "Draft" ? mprStatusLabel("Draft") : null,
             date: status === "Draft" ? null : formatDate(submittedAt),
         },
-        ...workflow.map((step) => ({ key: step.role, label: step.label, state: "upcoming", caption: null, date: null })),
+        ...workflow.map((step) => ({ key: step.role, label: recruitmentRoleLabel(step.role, step.label), state: "upcoming", caption: null, date: null })),
         {
             key: "job",
-            label: "Job Opening",
+            label: t("recruitment.tracker.jobOpening", { defaultValue: "Job Opening" }),
             state: status === "Approved" ? "completed" : "upcoming",
             caption: mpr.job_id || null,
             date: null,
@@ -49,16 +50,16 @@ function buildSteps(mpr) {
         });
         const node = stepAt(active);
         if (node) {
-            if (status === "Rejected") Object.assign(node, { state: "rejected", caption: "Rejected" });
-            else if (status === "Sent Back") Object.assign(node, { state: "overdue", caption: "Sent back" });
-            else Object.assign(node, { state: "current", caption: "Awaiting approval" });
+            if (status === "Rejected") Object.assign(node, { state: "rejected", caption: mprStatusLabel("Rejected") });
+            else if (status === "Sent Back") Object.assign(node, { state: "overdue", caption: t("recruitment.tracker.sentBack", { defaultValue: "Sent back" }) });
+            else Object.assign(node, { state: "current", caption: t("recruitment.tracker.awaitingApproval", { defaultValue: "Awaiting approval" }) });
         }
     } else if (status === "Cancelled") {
         workflow.forEach((step, index) => {
             if (index < current) Object.assign(stepAt(index), { state: "completed", date: formatDate(approvedOn[step.role]) });
         });
         const node = mpr.workflow_steps ? stepAt(current) : steps[0];
-        if (node) Object.assign(node, { state: "cancelled", caption: "Cancelled" });
+        if (node) Object.assign(node, { state: "cancelled", caption: mprStatusLabel("Cancelled") });
     }
 
     return steps;
@@ -67,14 +68,17 @@ function buildSteps(mpr) {
 const HEADLINE_TONE = { Approved: "completed", Rejected: "rejected", Cancelled: "cancelled", "Sent Back": "overdue", Draft: "current" };
 
 function MprTracker({ mpr }) {
-    const steps = buildSteps(mpr);
+    const { t } = useTranslation();
+    const steps = buildSteps(t, mpr);
     const tone = HEADLINE_TONE[mpr.status] || "current";
-    const headline = mpr.status === "Approved" && mpr.job_id ? `Approved – job opening ${mpr.job_id} created` : mpr.status;
+    const headline = mpr.status === "Approved" && mpr.job_id
+        ? t("recruitment.tracker.approvedHeadline", { id: mpr.job_id, defaultValue: "Approved – job opening {{id}} created" })
+        : mprStatusLabel(mpr.status);
 
     return (
         <div className="leave-tracker">
             <div className="leave-tracker-head">
-                <div className="leave-tracker-eyebrow">APPROVAL PROGRESS</div>
+                <div className="leave-tracker-eyebrow">{t("recruitment.tracker.eyebrow", { defaultValue: "APPROVAL PROGRESS" })}</div>
                 <p className={`leave-tracker-status tone-${tone}`}>{headline}</p>
             </div>
             <ol className="leave-tracker-steps">
@@ -88,7 +92,7 @@ function MprTracker({ mpr }) {
                         <div className="leave-tracker-text">
                             <div className="leave-tracker-label">{step.label}</div>
                             {step.caption && <div className="leave-tracker-caption">{step.caption}</div>}
-                            {step.date && step.date !== "—" && <div className="leave-tracker-date">{step.date}</div>}
+                            {step.date && step.date !== "—" && <div className="leave-tracker-date"><span dir="ltr" className="ltr-text">{step.date}</span></div>}
                         </div>
                     </li>
                 ))}

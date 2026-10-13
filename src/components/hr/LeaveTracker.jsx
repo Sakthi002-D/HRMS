@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { getCompanyToday, getTrackerState } from "./leaveTrackerState";
 import "./LeaveTracker.css";
 
@@ -9,6 +10,7 @@ const NODE_ICONS = {
 };
 
 function LeaveTracker({ leave, today = getCompanyToday() }) {
+    const { t } = useTranslation();
     if (!leave) return null;
 
     const { steps, headline, tone } = getTrackerState(leave, today);
@@ -16,7 +18,7 @@ function LeaveTracker({ leave, today = getCompanyToday() }) {
     return (
         <div className="leave-tracker">
             <div className="leave-tracker-head">
-                <div className="leave-tracker-eyebrow">LEAVE TRACKER</div>
+                <div className="leave-tracker-eyebrow">{t("leaveManagement.tracker.eyebrow", { defaultValue: "LEAVE TRACKER" })}</div>
                 <p className={`leave-tracker-status tone-${tone}`}>{headline}</p>
             </div>
 
@@ -39,7 +41,7 @@ function LeaveTracker({ leave, today = getCompanyToday() }) {
                             )}
 
                             {step.date && (
-                                <div className="leave-tracker-date">{step.date}</div>
+                                <div className="leave-tracker-date"><span dir="ltr">{step.date}</span></div>
                             )}
                         </div>
                     </li>

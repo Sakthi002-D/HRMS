@@ -17,6 +17,7 @@ import {
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { purgeAllChatStorage } from "../../components/assistant/HRAssistant";
 import { api, formatDate, isPendingHR } from "../../components/resignation/resignationApi";
@@ -26,7 +27,17 @@ import "./HRDashboard.css";
 
 const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
+// Used by <Trans> for the bold "pending approvals" part when it links to the Resignation page
+function ApprovalsLink({ children, ...props }) {
+  return (
+    <Link {...props}>
+      <strong>{children}</strong>
+    </Link>
+  );
+}
+
 function HRDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
@@ -65,7 +76,11 @@ function HRDashboard() {
     return matchedName ? matchedName.trim() : "HR Administrator";
   })();
 
-  const hrRoleLabel = "HR Administrator";
+  // hrDisplayName stays English (it is part of the read-notifications storage key); only the shown text is translated
+  const hrAdministratorLabel = t("hrDashboard.hrAdministrator", { defaultValue: "HR Administrator" });
+  const hrShownName = hrDisplayName === "HR Administrator" ? hrAdministratorLabel : hrDisplayName;
+  const hrRoleLabel = hrAdministratorLabel;
+  const valueLabel = (group, value) => t(`hrDashboard.values.${group}.${String(value).trim().toLowerCase().replace(/[\s-]+/g, "_")}`, { defaultValue: String(value) });
   const hrProfilePhoto = typeof hrProfile.profile_photo === "string"
     ? hrProfile.profile_photo.trim()
     : "";
@@ -222,9 +237,9 @@ function HRDashboard() {
         <header className="dashboard-header">
 
           <div>
-            <h1>HR Dashboard</h1>
+            <h1>{t("hrDashboard.title", { defaultValue: "HR Dashboard" })}</h1>
             <p>
-              Welcome back! Here's what's happening with your workforce.
+              {t("hrDashboard.subtitle", { defaultValue: "Welcome back! Here's what's happening with your workforce." })}
             </p>
           </div>
 
@@ -235,13 +250,13 @@ function HRDashboard() {
 
               <button
                 className="notification-btn"
-                aria-label="Open notifications"
+                aria-label={t("hrDashboard.openNotifications", { defaultValue: "Open notifications" })}
                 onClick={() => navigate("/hr/notifications")}
               >
                 <Bell size={19} />
 
                 {unreadCount > 0 && (
-                  <span className="notification-dot" aria-label={`${unreadCount} unread notifications`}>
+                  <span className="notification-dot" aria-label={t("hrDashboard.unreadNotifications", { count: unreadCount, defaultValue: "{{count}} unread notifications" })}>
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -255,14 +270,14 @@ function HRDashboard() {
 
               <div className="profile-avatar">
                 {hrProfilePhoto ? (
-                  <img src={hrProfilePhoto} alt={`${hrDisplayName} profile`} />
+                  <img src={hrProfilePhoto} alt={t("hrDashboard.profilePhotoAlt", { name: hrShownName, defaultValue: "{{name}} profile" })} />
                 ) : (
                   hrInitials || "HR"
                 )}
               </div>
 
               <div className="profile-info">
-                <strong>{hrDisplayName}</strong>
+                <strong>{hrShownName}</strong>
                 <small>{hrRoleLabel}</small>
               </div>
 
@@ -275,45 +290,49 @@ function HRDashboard() {
         <section className="welcome-card">
           <div className="welcome-avatar">HR</div>
           <div className="welcome-copy">
-            <h2>Welcome back, {hrDisplayName}</h2>
+            <h2>{t("hrDashboard.welcomeBack", { name: hrShownName, defaultValue: "Welcome back, {{name}}" })}</h2>
             <p>
-              You have{" "}
-              {pendingHRResignations > 0 ? (
-                <Link to="/resignations" className="welcome-approvals-link" title={`${pendingHRResignations} resignation${pendingHRResignations === 1 ? "" : "s"} waiting for HR`}>
-                  <strong>{pendingApprovals} pending approvals</strong>
-                </Link>
-              ) : (
-                <strong>{pendingApprovals} pending approvals</strong>
-              )}{" "}
-              to review.
+              <Trans
+                i18nKey="hrDashboard.pendingApprovals"
+                count={pendingApprovals}
+                values={{ count: pendingApprovals }}
+                components={{
+                  b: pendingHRResignations > 0 ? (
+                    <ApprovalsLink to="/resignations" className="welcome-approvals-link" title={t("hrDashboard.resignationsWaiting", { count: pendingHRResignations, defaultValue: "{{count}} resignations waiting for HR" })} />
+                  ) : (
+                    <strong />
+                  ),
+                }}
+                defaults="You have <b>{{count}} pending approvals</b> to review."
+              />
             </p>
           </div>
           <div className="welcome-actions">
-            <Link to="/employees">Manage Employees</Link>
-            <Link to="/leave-management" className="primary-action">Review Requests</Link>
+            <Link to="/employees">{t("hrDashboard.manageEmployees", { defaultValue: "Manage Employees" })}</Link>
+            <Link to="/leave-management" className="primary-action">{t("hrDashboard.reviewRequests", { defaultValue: "Review Requests" })}</Link>
           </div>
         </section>
 
         <section className="employee-request-review-panel">
           <div className="employee-request-review-heading">
             <div>
-              <h2>Pending End of Service</h2>
-              <p>Employees whose resignation completed after their last working day. End of Service processing will follow.</p>
+              <h2>{t("hrDashboard.endOfService.title", { defaultValue: "Pending End of Service" })}</h2>
+              <p>{t("hrDashboard.endOfService.description", { defaultValue: "Employees whose resignation completed after their last working day. End of Service processing will follow." })}</p>
             </div>
-            <span>{endOfService.length} pending</span>
+            <span>{t("hrDashboard.endOfService.pendingCount", { number: endOfService.length, defaultValue: "{{number}} pending" })}</span>
           </div>
           {endOfService.length === 0 ? (
-            <div className="employee-request-review-empty">No employees pending End of Service.</div>
+            <div className="employee-request-review-empty">{t("hrDashboard.endOfService.empty", { defaultValue: "No employees pending End of Service." })}</div>
           ) : (
             <div className="employee-request-review-list">
               {endOfService.map((row) => (
                 <article className="employee-request-review-item" key={row.id}>
                   <div>
                     <strong>{row.employee_name} ({row.employee_id})</strong>
-                    <span>{row.department || "—"} · Last working day {formatDate(row.last_working_day)}{row.resignation_no ? ` · ${row.resignation_no}` : ""}</span>
+                    <span>{row.department || "—"} · {t("hrDashboard.endOfService.lastWorkingDay", { date: formatDate(row.last_working_day), defaultValue: "Last working day {{date}}" })}{row.resignation_no ? ` · ${row.resignation_no}` : ""}</span>
                   </div>
                   <div className="employee-request-review-actions">
-                    <Link className="review-request-button" to={`/employees/employeedetails/${employeeSlug(row.employee_name)}`}>View employee</Link>
+                    <Link className="review-request-button" to={`/employees/employeedetails/${employeeSlug(row.employee_name)}`}>{t("hrDashboard.endOfService.viewEmployee", { defaultValue: "View employee" })}</Link>
                   </div>
                 </article>
               ))}
@@ -342,11 +361,11 @@ function HRDashboard() {
               </div>
 
               <div className="stat-content">
-                <span>Total Employees</span>
+                <span>{t("hrDashboard.stats.totalEmployees", { defaultValue: "Total Employees" })}</span>
                 <h3>{dashboardData?.totalEmployees ?? "—"}</h3>
-                <small>Active employees</small>
+                <small>{t("hrDashboard.stats.activeEmployees", { defaultValue: "Active employees" })}</small>
               </div>
-              <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
+              <Link className="stat-link" to="/employees">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -365,11 +384,11 @@ function HRDashboard() {
               </div>
 
               <div className="stat-content">
-                <span>Present Today</span>
+                <span>{t("hrDashboard.stats.presentTodayTitle", { defaultValue: "Present Today" })}</span>
                 <h3>{dashboardData?.presentToday ?? "—"}</h3>
-                <small>Present today</small>
+                <small>{t("hrDashboard.stats.presentTodayNote", { defaultValue: "Present today" })}</small>
               </div>
-              <Link className="stat-link" to="/attendance">View Details <ArrowRight size={13} /></Link>
+              <Link className="stat-link" to="/attendance">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -388,11 +407,11 @@ function HRDashboard() {
               </div>
 
               <div className="stat-content">
-                <span>On Leave</span>
+                <span>{t("hrDashboard.stats.onLeave", { defaultValue: "On Leave" })}</span>
                 <h3>{dashboardData?.onLeave ?? "—"}</h3>
-                <small>{dashboardData?.pendingLeaves ?? "—"} pending approval</small>
+                <small>{t("hrDashboard.stats.pendingApproval", { number: dashboardData?.pendingLeaves ?? "—", defaultValue: "{{number}} pending approval" })}</small>
               </div>
-              <Link className="stat-link" to="/leave-management">View Details <ArrowRight size={13} /></Link>
+              <Link className="stat-link" to="/leave-management">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
 
             </div>
 
@@ -411,11 +430,11 @@ function HRDashboard() {
               </div>
 
               <div className="stat-content">
-                <span>Payroll Status</span>
-                <h3>{dashboardData?.payrollStatus ?? "—"}</h3>
-                <small>{dashboardData?.payrollStatus ? "Current payroll status" : "No payroll data"}</small>
+                <span>{t("hrDashboard.stats.payrollStatus", { defaultValue: "Payroll Status" })}</span>
+                <h3>{dashboardData?.payrollStatus ? valueLabel("payrollStatus", dashboardData.payrollStatus) : (dashboardData?.payrollStatus ?? "—")}</h3>
+                <small>{dashboardData?.payrollStatus ? t("hrDashboard.stats.currentPayrollStatus", { defaultValue: "Current payroll status" }) : t("hrDashboard.stats.noPayrollData", { defaultValue: "No payroll data" })}</small>
               </div>
-              <Link className="stat-link" to="/payroll">View Details <ArrowRight size={13} /></Link>
+              <Link className="stat-link" to="/payroll">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
             </div>
 
             <div className="stat-card recruitment-card">
@@ -424,11 +443,11 @@ function HRDashboard() {
                   <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
-                  <span>Open Positions</span>
+                  <span>{t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" })}</span>
                   <h3>{dashboardData?.openPositions ?? "—"}</h3>
-                  <small>Open positions</small>
+                  <small>{t("hrDashboard.stats.openPositionsNote", { defaultValue: "Open positions" })}</small>
                 </div>
-                <Link className="stat-link" to="/recruitment">View Details <ArrowRight size={13} /></Link>
+                <Link className="stat-link" to="/recruitment">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
               </div>
 
             <div className="stat-card joiners-card">
@@ -437,11 +456,11 @@ function HRDashboard() {
                   <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
-                  <span>New Joiners</span>
+                  <span>{t("hrDashboard.stats.newJoiners", { defaultValue: "New Joiners" })}</span>
                   <h3>{dashboardData?.newJoiners ?? "—"}</h3>
-                  <small>Joined this month</small>
+                  <small>{t("hrDashboard.stats.joinedThisMonth", { defaultValue: "Joined this month" })}</small>
                 </div>
-                <Link className="stat-link" to="/employees">View Details <ArrowRight size={13} /></Link>
+                <Link className="stat-link" to="/employees">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
               </div>
 
             <div className="stat-card tickets-card">
@@ -450,11 +469,11 @@ function HRDashboard() {
                   <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
-                  <span>Open Tickets</span>
+                  <span>{t("hrDashboard.stats.openTicketsTitle", { defaultValue: "Open Tickets" })}</span>
                   <h3>{dashboardData?.openTickets ?? "—"}</h3>
-                  <small>Open tickets</small>
+                  <small>{t("hrDashboard.stats.openTicketsNote", { defaultValue: "Open tickets" })}</small>
                 </div>
-                <Link className="stat-link" to="/tickets">View Details <ArrowRight size={13} /></Link>
+                <Link className="stat-link" to="/tickets">{t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} /></Link>
               </div>
 
             <div className="stat-card department-card">
@@ -463,12 +482,12 @@ function HRDashboard() {
                   <span className="stat-growth">—</span>
                 </div>
                 <div className="stat-content">
-                  <span>Reports</span>
+                  <span>{t("menu.reports", { defaultValue: "Reports" })}</span>
                   <h3>—</h3>
-                  <small>View HR reports</small>
+                  <small>{t("hrDashboard.stats.viewHrReports", { defaultValue: "View HR reports" })}</small>
                 </div>
                 <Link className="stat-link" to="/reports">
-                  View Details <ArrowRight size={13} />
+                  {t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" })} <ArrowRight size={13} />
                 </Link>
               </div>
 
@@ -478,7 +497,7 @@ function HRDashboard() {
 
         {/* ================= QUICK ACTIONS ================= */}
         <section className="dashboard-section quick-actions-panel">
-          <h2>Quick Actions</h2>
+          <h2>{t("hrDashboard.quickActions.title", { defaultValue: "Quick Actions" })}</h2>
           <div className="quick-actions">
 
             {/* Employees */}
@@ -489,7 +508,7 @@ function HRDashboard() {
               <div className="action-icon">
                 <UserPlus size={21} />
               </div>
-              <h3>Add Employee</h3>
+              <h3>{t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}</h3>
             </Link>
 
 
@@ -501,7 +520,7 @@ function HRDashboard() {
               <div className="action-icon">
                 <ClipboardCheck size={21} />
               </div>
-              <h3>Leave Request</h3>
+              <h3>{t("hrDashboard.quickActions.leaveRequest", { defaultValue: "Leave Request" })}</h3>
             </Link>
 
 
@@ -513,7 +532,7 @@ function HRDashboard() {
               <div className="action-icon">
                 <IndianRupee size={21} />
               </div>
-              <h3>Run Payroll</h3>
+              <h3>{t("hrDashboard.quickActions.runPayroll", { defaultValue: "Run Payroll" })}</h3>
             </Link>
 
 
@@ -525,7 +544,7 @@ function HRDashboard() {
               <div className="action-icon">
                 <FileText size={21} />
               </div>
-              <h3>Employee Requests</h3>
+              <h3>{t("hrDashboard.quickActions.employeeRequests", { defaultValue: "Employee Requests" })}</h3>
             </Link>
 
           </div>

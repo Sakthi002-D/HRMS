@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Download, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useAlert, useConfirm } from "../../components/common/dialog/dialogContext";
 import "./Payroll.css";
@@ -21,6 +22,7 @@ const formatDisplayDate = (value) => {
 };
 
 function Payroll() {
+    const { t } = useTranslation();
     const confirm = useConfirm();
     const showAlert = useAlert();
     const [payrollData, setPayrollData] = useState([]);
@@ -85,15 +87,16 @@ function Payroll() {
 
     const deleteSalary = (employee) => confirm({
         variant: "danger",
-        title: "Delete salary record?",
-        message: <>The salary record for <strong>{employee.employeeName}</strong> will be permanently deleted.</>,
-        confirmText: "Delete",
-        loadingText: "Deleting…",
+        title: t("hrPayroll.delete.title", { defaultValue: "Delete salary record?" }),
+        message: <Trans i18nKey="hrPayroll.delete.message" values={{ name: employee.employeeName }} components={{ strong: <strong /> }} defaults="The salary record for <strong>{{name}}</strong> will be permanently deleted." />,
+        confirmText: t("hrPayroll.delete.confirm", { defaultValue: "Delete" }),
+        cancelText: t("profileEdit.cancel", { defaultValue: "Cancel" }),
+        loadingText: t("hrPayroll.delete.deleting", { defaultValue: "Deleting…" }),
         onConfirm: async () => {
             const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
-                throw new Error(data.message || "Unable to delete salary record");
+                throw new Error(data.message || t("hrPayroll.errors.deleteFailed", { defaultValue: "Unable to delete salary record" }));
             }
             setPayrollData((previous) => previous.filter((item) => item.id !== employee.id));
         },
@@ -128,7 +131,7 @@ function Payroll() {
         });
         if (!response.ok) {
             const error = await response.json();
-            showAlert({ variant: "danger", message: error.message || "Unable to save salary" });
+            showAlert({ variant: "danger", message: error.message || t("hrPayroll.errors.saveFailed", { defaultValue: "Unable to save salary" }), buttonText: t("employeesList.alerts.ok", { defaultValue: "OK" }) });
             return;
         }
         const saved = await response.json();
@@ -154,56 +157,56 @@ function Payroll() {
             <div className="payroll-page">
                 <div className="payroll-header">
                     <div>
-                        <h1>Employee Salary</h1>
-                        <p>Manage employee salary records</p>
+                        <h1>{t("hrPayroll.title", { defaultValue: "Employee Salary" })}</h1>
+                        <p>{t("hrPayroll.subtitle", { defaultValue: "Manage employee salary records" })}</p>
                     </div>
                     <div className="payroll-header-actions">
                         <div className="payroll-export-menu">
                             <button type="button" className="payroll-export-btn" onClick={() => setIsExportOpen((open) => !open)} aria-expanded={isExportOpen}>
-                                <Download size={14} /> Export <ChevronDown size={14} />
+                                <Download size={14} /> {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} />
                             </button>
-                            {isExportOpen && <div className="payroll-export-options"><button type="button" onClick={() => exportPayroll("excel")}>Excel</button><button type="button" onClick={() => exportPayroll("csv")}>CSV</button></div>}
+                            {isExportOpen && <div className="payroll-export-options"><button type="button" onClick={() => exportPayroll("excel")}>{t("hrPayroll.export.excel", { defaultValue: "Excel" })}</button><button type="button" onClick={() => exportPayroll("csv")}>{t("hrPayroll.export.csv", { defaultValue: "CSV" })}</button></div>}
                         </div>
-                        <button type="button" className="add-salary-btn" onClick={() => setEditingEmployee({})}><PlusCircle size={15} /> Add Salary</button>
+                        <button type="button" className="add-salary-btn" onClick={() => setEditingEmployee({})}><PlusCircle size={15} /> {t("hrPayroll.addSalary", { defaultValue: "Add Salary" })}</button>
                     </div>
                 </div>
 
                 <div className="payroll-table-container">
                     <div className="payroll-list-header">
-                        <h2>Employee Salary List</h2>
+                        <h2>{t("hrPayroll.listTitle", { defaultValue: "Employee Salary List" })}</h2>
                         <div className="payroll-list-filters">
-                            <select value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}><option>August 2026</option><option>July 2026</option><option>June 2026</option></select>
-                            <select value={selectedDesignation} onChange={(event) => setSelectedDesignation(event.target.value)}><option value="All">Designation</option>{designations.map((designation) => <option key={designation}>{designation}</option>)}</select>
-                            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}><option value="recent">Sort By: Employee ID</option><option value="name">Sort By: Name</option><option value="salary">Sort By: Salary</option></select>
+                            <select value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}><option value="August 2026">August 2026</option><option value="July 2026">July 2026</option><option value="June 2026">June 2026</option></select>
+                            <select value={selectedDesignation} onChange={(event) => setSelectedDesignation(event.target.value)}><option value="All">{t("hrPayroll.designation", { defaultValue: "Designation" })}</option>{designations.map((designation) => <option key={designation} value={designation}>{designation}</option>)}</select>
+                            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}><option value="recent">{t("hrPayroll.sortBy", { option: t("hrPayroll.sort.employeeId", { defaultValue: "Employee ID" }), defaultValue: "Sort By: {{option}}" })}</option><option value="name">{t("hrPayroll.sortBy", { option: t("hrPayroll.sort.name", { defaultValue: "Name" }), defaultValue: "Sort By: {{option}}" })}</option><option value="salary">{t("hrPayroll.sortBy", { option: t("hrPayroll.sort.salary", { defaultValue: "Salary" }), defaultValue: "Sort By: {{option}}" })}</option></select>
                         </div>
                     </div>
 
                     <div className="payroll-table-controls">
-                        <input type="text" placeholder="Search" value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} />
+                        <input type="text" placeholder={t("hrPayroll.search", { defaultValue: "Search" })} value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} />
                         <div className="payroll-controls-spacer" />
-                        <label htmlFor="payroll-rows">Rows per page</label>
+                        <label htmlFor="payroll-rows">{t("employeeAttendance.rowsPerPage", { defaultValue: "Rows per page" })}</label>
                         <select id="payroll-rows" value={rowsPerPage} onChange={(event) => { setRowsPerPage(Number(event.target.value)); setCurrentPage(1); }}><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
                     </div>
 
                     <div className="payroll-table-scroll">
                         <table className="payroll-table">
-                            <thead><tr><th>Emp ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Designation</th><th>Joining Date</th><th>Salary</th><th>Payslip</th><th>Actions</th></tr></thead>
-                            <tbody>{loading ? <tr><td colSpan="9" className="payroll-empty">Loading salary records...</td></tr> : visiblePayroll.length ? visiblePayroll.map((employee) => <tr key={employee.id || employee.employeeID}>
-                                <td>{employee.employeeID}</td><td>{employee.employeeName}</td><td>{employee.email}</td><td>{employee.phone}</td>
+                            <thead><tr><th>{t("hrPayroll.table.empId", { defaultValue: "Emp ID" })}</th><th>{t("hrPayroll.table.name", { defaultValue: "Name" })}</th><th>{t("hrPayroll.table.email", { defaultValue: "Email" })}</th><th>{t("hrPayroll.table.phone", { defaultValue: "Phone" })}</th><th>{t("hrPayroll.table.designation", { defaultValue: "Designation" })}</th><th>{t("hrPayroll.table.joiningDate", { defaultValue: "Joining Date" })}</th><th>{t("hrPayroll.table.salary", { defaultValue: "Salary" })}</th><th>{t("hrPayroll.table.payslip", { defaultValue: "Payslip" })}</th><th>{t("hrPayroll.table.actions", { defaultValue: "Actions" })}</th></tr></thead>
+                            <tbody>{loading ? <tr><td colSpan="9" className="payroll-empty">{t("hrPayroll.loading", { defaultValue: "Loading salary records..." })}</td></tr> : visiblePayroll.length ? visiblePayroll.map((employee) => <tr key={employee.id || employee.employeeID}>
+                                <td><span dir="ltr" className="ltr-text">{employee.employeeID}</span></td><td>{employee.employeeName}</td><td><span dir="ltr" className="ltr-text">{employee.email}</span></td><td><span dir="ltr" className="ltr-text">{employee.phone}</span></td>
                                 <td>{employee.designation}</td>
-                                <td>{formatDisplayDate(employee.joiningDate)}</td><td>{formatCurrency(employee.netSalary)}</td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>Generate Slip</button></td>
-                                <td className="payroll-actions"><button type="button" aria-label="Edit salary" onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label="Delete salary" onClick={() => deleteSalary(employee)}><Trash2 size={15} /></button></td>
-                            </tr>) : <tr><td colSpan="9" className="payroll-empty">No salary records found</td></tr>}</tbody>
+                                <td><span dir="ltr" className="ltr-text">{formatDisplayDate(employee.joiningDate)}</span></td><td><span dir="ltr" className="ltr-text">{formatCurrency(employee.netSalary)}</span></td><td><button type="button" className="payslip-btn" onClick={() => downloadPayslip(employee)}>{t("hrPayroll.generateSlip", { defaultValue: "Generate Slip" })}</button></td>
+                                <td className="payroll-actions"><button type="button" aria-label={t("hrPayroll.editSalaryLabel", { defaultValue: "Edit salary" })} onClick={() => setEditingEmployee(employee)}><Pencil size={15} /></button><button type="button" aria-label={t("hrPayroll.deleteSalaryLabel", { defaultValue: "Delete salary" })} onClick={() => deleteSalary(employee)}><Trash2 size={15} /></button></td>
+                            </tr>) : <tr><td colSpan="9" className="payroll-empty">{t("hrPayroll.empty", { defaultValue: "No salary records found" })}</td></tr>}</tbody>
                         </table>
                     </div>
-                    <div className="payroll-pagination"><span>{filteredPayroll.length} records</span><button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>Previous</button><strong>{currentPage} / {totalPages}</strong><button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>Next</button></div>
+                    <div className="payroll-pagination"><span>{t("hrPayroll.records", { count: filteredPayroll.length, defaultValue: "{{count}} records" })}</span><button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>{t("hrPayroll.pagination.previous", { defaultValue: "Previous" })}</button><strong dir="ltr">{currentPage} / {totalPages}</strong><button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>{t("hrPayroll.pagination.next", { defaultValue: "Next" })}</button></div>
                 </div>
             </div>
 
             {editingEmployee && <div className="salary-modal-overlay" onClick={() => setEditingEmployee(null)}><form className="salary-modal" onSubmit={saveSalary} onClick={(event) => event.stopPropagation()}>
-                <h2>{editingEmployee.employeeID ? "Edit Salary" : "Add Salary"}</h2>
-                <div className="salary-form-grid">{[["employeeID", "Emp ID", editingEmployee.employeeID || ""], ["employeeName", "Name", editingEmployee.employeeName || ""], ["email", "Email", editingEmployee.email || ""], ["phone", "Phone", editingEmployee.phone || ""], ["department", "Department", editingEmployee.department || ""], ["designation", "Designation", editingEmployee.designation || "Developer"], ["joiningDate", "Joining Date", dateInputValue(editingEmployee.joiningDate)], ["salaryMonth", "Salary Month", dateInputValue(editingEmployee.salaryMonth) || "2026-08-01"], ["basicSalary", "Basic Salary", editingEmployee.basicSalary || ""], ["allowances", "Allowances", editingEmployee.allowances || ""], ["deductions", "Deductions", editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} type={name.includes("Date") || name === "salaryMonth" ? "date" : "text"} defaultValue={value} required /></label>)}</div>
-                <div className="salary-modal-actions"><button type="button" onClick={() => setEditingEmployee(null)}>Cancel</button><button type="submit">Save Salary</button></div>
+                <h2>{editingEmployee.employeeID ? t("hrPayroll.form.editTitle", { defaultValue: "Edit Salary" }) : t("hrPayroll.addSalary", { defaultValue: "Add Salary" })}</h2>
+                <div className="salary-form-grid">{[["employeeID", t("hrPayroll.form.empId", { defaultValue: "Emp ID" }), editingEmployee.employeeID || ""], ["employeeName", t("hrPayroll.form.name", { defaultValue: "Name" }), editingEmployee.employeeName || ""], ["email", t("hrPayroll.form.email", { defaultValue: "Email" }), editingEmployee.email || ""], ["phone", t("hrPayroll.form.phone", { defaultValue: "Phone" }), editingEmployee.phone || ""], ["department", t("hrPayroll.form.department", { defaultValue: "Department" }), editingEmployee.department || ""], ["designation", t("hrPayroll.form.designation", { defaultValue: "Designation" }), editingEmployee.designation || "Developer"], ["joiningDate", t("hrPayroll.form.joiningDate", { defaultValue: "Joining Date" }), dateInputValue(editingEmployee.joiningDate)], ["salaryMonth", t("hrPayroll.form.salaryMonth", { defaultValue: "Salary Month" }), dateInputValue(editingEmployee.salaryMonth) || "2026-08-01"], ["basicSalary", t("hrPayroll.form.basicSalary", { defaultValue: "Basic Salary" }), editingEmployee.basicSalary || ""], ["allowances", t("hrPayroll.form.allowances", { defaultValue: "Allowances" }), editingEmployee.allowances || ""], ["deductions", t("hrPayroll.form.deductions", { defaultValue: "Deductions" }), editingEmployee.deductions || ""]].map(([name, label, value]) => <label key={name}>{label}<input name={name} type={name.includes("Date") || name === "salaryMonth" ? "date" : "text"} defaultValue={value} required /></label>)}</div>
+                <div className="salary-modal-actions"><button type="button" onClick={() => setEditingEmployee(null)}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button><button type="submit">{t("hrPayroll.form.save", { defaultValue: "Save Salary" })}</button></div>
             </form></div>}
         </DashboardLayout>
     );

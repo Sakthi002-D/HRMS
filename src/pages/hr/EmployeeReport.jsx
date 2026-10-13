@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ReportChart from "../../components/layout/common/ReportChart";
 import "./EmployeeReport.css";
 
 function EmployeeReport() {
+    const { t } = useTranslation();
 
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -44,84 +46,84 @@ function EmployeeReport() {
                 {/* Header */}
                 <div className="report-header">
                     <div>
-                        <h1>Employee Report</h1>
-                        <p>View employee details and department information.</p>
+                        <h1>{t("reports.hub.cards.employee.title", { defaultValue: "Employee Report" })}</h1>
+                        <p>{t("reports.hub.cards.employee.description", { defaultValue: "View employee details and department information." })}</p>
                     </div>
-                    <Link className="report-back-button" to="/reports">Back to Reports</Link>
+                    <Link className="report-back-button" to="/reports">{t("reports.common.backToReports", { defaultValue: "Back to Reports" })}</Link>
                 </div>
 
                 {/* Summary */}
                 <div className="report-summary">
 
                     <div className="report-card">
-                        <h3>Total Employees</h3>
+                        <h3>{t("reports.common.totalEmployees", { defaultValue: "Total Employees" })}</h3>
                         <h2>{loading ? "—" : employees.length}</h2>
-                        <p>All employees</p>
+                        <p>{t("reports.employee.allEmployees", { defaultValue: "All employees" })}</p>
                     </div>
 
                     <div className="report-card">
-                        <h3>Active Employees</h3>
+                        <h3>{t("reports.employee.activeEmployees", { defaultValue: "Active Employees" })}</h3>
                         <h2>
                             {employees.filter(
                                 employee => employee.status === "Active"
                             ).length}
                         </h2>
-                        <p>Currently working</p>
+                        <p>{t("reports.employee.currentlyWorking", { defaultValue: "Currently working" })}</p>
                     </div>
 
                     <div className="report-card">
-                        <h3>Departments</h3>
+                        <h3>{t("reports.employee.departments", { defaultValue: "Departments" })}</h3>
                         <h2>{departments.length}</h2>
-                        <p>Active departments</p>
+                        <p>{t("reports.employee.activeDepartments", { defaultValue: "Active departments" })}</p>
                     </div>
 
                     <div className="report-card">
-                        <h3>Inactive</h3>
+                        <h3>{t("reports.employee.inactive", { defaultValue: "Inactive" })}</h3>
                         <h2>
                             {employees.filter(
                                 employee => employee.status === "Inactive"
                             ).length}
                         </h2>
-                        <p>Inactive employees</p>
+                        <p>{t("reports.employee.inactiveEmployees", { defaultValue: "Inactive employees" })}</p>
                     </div>
 
                 </div>
 
                 <ReportChart
-                    title="Employee Growth"
-                    labels={chartLabels.length ? chartLabels : ["No data"]}
-                    series={[{ name: "Active Employees", color: "#08bf5b", values: activeByDepartment.length ? activeByDepartment : [0] }, { name: "Inactive Employees", color: "#dce2e7", values: inactiveByDepartment.length ? inactiveByDepartment : [0] }]}
+                    title={t("reports.employee.chartTitle", { defaultValue: "Employee Growth" })}
+                    labels={chartLabels.length ? chartLabels : [t("reports.common.noData", { defaultValue: "No data" })]}
+                    series={[{ name: t("reports.employee.activeEmployees", { defaultValue: "Active Employees" }), color: "#08bf5b", values: activeByDepartment.length ? activeByDepartment : [0] }, { name: t("reports.employee.inactiveSeries", { defaultValue: "Inactive Employees" }), color: "#dce2e7", values: inactiveByDepartment.length ? inactiveByDepartment : [0] }]}
                 />
 
                 {/* Employee Table */}
                 <div className="employee-report-table">
 
-                    <h2>Employee Details</h2>
+                    <h2>{t("reports.employee.tableTitle", { defaultValue: "Employee Details" })}</h2>
 
                     <table>
 
                         <thead>
                             <tr>
-                                <th>Employee ID</th>
-                                <th>Employee Name</th>
-                                <th>Department</th>
-                                <th>Designation</th>
-                                <th>Joining Date</th>
-                                <th>Status</th>
+                                <th>{t("reports.common.employeeId", { defaultValue: "Employee ID" })}</th>
+                                <th>{t("reports.common.employeeName", { defaultValue: "Employee Name" })}</th>
+                                <th>{t("reports.common.department", { defaultValue: "Department" })}</th>
+                                <th>{t("reports.common.designation", { defaultValue: "Designation" })}</th>
+                                <th>{t("reports.common.joiningDate", { defaultValue: "Joining Date" })}</th>
+                                <th>{t("reports.common.status", { defaultValue: "Status" })}</th>
                             </tr>
                         </thead>
 
                         <tbody>
 
                             {loading ? (
-                                <tr><td colSpan="6">Loading employee data...</td></tr>
+                                <tr><td colSpan="6">{t("reports.employee.loading", { defaultValue: "Loading employee data..." })}</td></tr>
                             ) : employees.length === 0 ? (
-                                <tr><td colSpan="6">No employee data available.</td></tr>
+                                <tr><td colSpan="6">{t("reports.employee.empty", { defaultValue: "No employee data available." })}</td></tr>
                             ) : employees.map((employee) => (
 
                                 <tr key={employee.id}>
 
-                                    <td>{employee.id}</td>
+                                    <td><span dir="ltr" className="ltr-text">{employee.id}</span></td>
 
                                     <td>{employee.name}</td>
 
@@ -129,13 +131,13 @@ function EmployeeReport() {
 
                                     <td>{employee.designation}</td>
 
-                                    <td>{employee.joiningDate}</td>
+                                    <td><span dir="ltr" className="ltr-text">{employee.joiningDate}</span></td>
 
                                     <td>
                                         <span
                                             className={`employee-status ${employee.status.toLowerCase()}`}
                                         >
-                                            {employee.status}
+                                            {t(`employeeProfile.values.status.${employee.status.toLowerCase()}`, { defaultValue: employee.status })}
                                         </span>
                                     </td>
 

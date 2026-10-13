@@ -1,10 +1,12 @@
 // HR: sourcing, agency, application deadline, recruiter and interview panel for a job opening.
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
-import { api } from "./recruitmentApi";
+import { api, recruitmentValueLabel } from "./recruitmentApi";
 
 function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
+    const { t } = useTranslation();
     const [form, setForm] = useState({
         sourcing: job.sourcing || "",
         agency_id: job.agency_id ? String(job.agency_id) : "",
@@ -65,9 +67,11 @@ function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
             <div className="candidate-modal mpr-plan-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="candidate-modal-header">
                     <div>
-                        <h2>Recruitment Plan</h2>
+                        <h2>{t("recruitment.plan.title", { defaultValue: "Recruitment Plan" })}</h2>
                         <span>
-                            {job.job_id} · {job.title} · {job.mpr_no ? `MPR ${job.mpr_no}` : "No MPR (legacy)"}
+                            <span dir="ltr" className="ltr-text">{job.job_id}</span> · {job.title} · {job.mpr_no
+                                ? <span dir="ltr" className="ltr-text">MPR {job.mpr_no}</span>
+                                : t("recruitment.jobs.noMprLegacy", { defaultValue: "No MPR (legacy)" })}
                         </span>
                     </div>
                     <button type="button" className="candidate-modal-close" onClick={onClose}>×</button>
@@ -76,28 +80,30 @@ function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
                 <form onSubmit={save}>
                     <div className="form-grid">
                         <div className="form-group">
-                            <label>Sourcing *</label>
+                            <label>{t("recruitment.plan.sourcing", { defaultValue: "Sourcing" })} *</label>
                             <select value={form.sourcing} onChange={(event) => set("sourcing", event.target.value)} required>
-                                <option value="">Select Sourcing</option>
-                                {meta.sourcingOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                                <option value="">{t("recruitment.plan.selectSourcing", { defaultValue: "Select Sourcing" })}</option>
+                                {meta.sourcingOptions.map((option) => <option key={option} value={option}>{recruitmentValueLabel("sourcing", option)}</option>)}
                             </select>
                         </div>
 
                         <div className="form-group">
-                            <label>Recruitment Agency {needsAgency ? "*" : ""}</label>
+                            <label>{t("recruitment.plan.agency", { defaultValue: "Recruitment Agency" })} {needsAgency ? "*" : ""}</label>
                             <select
                                 value={form.agency_id}
                                 onChange={(event) => set("agency_id", event.target.value)}
                                 required={needsAgency}
                                 disabled={!needsAgency}
                             >
-                                <option value="">{meta.agencies.length ? "Select Agency" : "No agencies — add one in Settings → Recruitment Masters"}</option>
+                                <option value="">{meta.agencies.length
+                                    ? t("recruitment.plan.selectAgency", { defaultValue: "Select Agency" })
+                                    : t("recruitment.plan.noAgencies", { defaultValue: "No agencies — add one in Settings → Recruitment Masters" })}</option>
                                 {meta.agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
                             </select>
                         </div>
 
                         <div className="form-group">
-                            <label>Application Deadline *</label>
+                            <label>{t("recruitment.fields.applicationDeadline", { defaultValue: "Application Deadline" })} *</label>
                             <input
                                 type="date"
                                 min={meta.today}
@@ -108,9 +114,9 @@ function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
                         </div>
 
                         <div className="form-group">
-                            <label>Assigned Recruiter</label>
+                            <label>{t("recruitment.plan.recruiter", { defaultValue: "Assigned Recruiter" })}</label>
                             <select value={form.recruiter_employee_id} onChange={(event) => set("recruiter_employee_id", event.target.value)}>
-                                <option value="">Select Recruiter</option>
+                                <option value="">{t("recruitment.plan.selectRecruiter", { defaultValue: "Select Recruiter" })}</option>
                                 {employees.map((employee) => (
                                     <option key={employee.employee_id} value={employee.employee_id}>
                                         {employee.name} ({employee.employee_id})
@@ -121,12 +127,12 @@ function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
                     </div>
 
                     <div className="form-group mpr-inline">
-                        <label>Interview Panel ({form.interview_panel.length} selected)</label>
+                        <label>{t("recruitment.plan.interviewPanel", { number: form.interview_panel.length, defaultValue: "Interview Panel ({{number}} selected)" })}</label>
                         <input
                             type="search"
                             value={panelSearch}
                             onChange={(event) => setPanelSearch(event.target.value)}
-                            placeholder="Search employees"
+                            placeholder={t("employeesList.searchPlaceholder", { defaultValue: "Search employees" })}
                         />
                         <div className="mpr-panel-list">
                             {panelOptions.map((employee) => (
@@ -143,14 +149,14 @@ function RecruitmentPlanModal({ job, meta, actorId, onClose, onSaved }) {
                     </div>
 
                     <p className="mpr-muted">
-                        Saving the plan moves an Open job to Recruitment In Progress. After the deadline, new applications are no longer accepted.
+                        {t("recruitment.plan.note", { defaultValue: "Saving the plan moves an Open job to Recruitment In Progress. After the deadline, new applications are no longer accepted." })}
                     </p>
                     {error && <p className="mpr-form-error">{error}</p>}
 
                     <div className="form-actions">
-                        <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
+                        <button type="button" className="cancel-btn" onClick={onClose}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
                         <button type="submit" className="save-job-btn" disabled={saving}>
-                            {saving ? "Saving..." : "Save Plan"}
+                            {saving ? t("profileEdit.saving", { defaultValue: "Saving..." }) : t("recruitment.plan.save", { defaultValue: "Save Plan" })}
                         </button>
                     </div>
                 </form>

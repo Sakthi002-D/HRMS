@@ -47,6 +47,10 @@ export const noticeSourceLabel = (source) => source ? i18n.t(`resignation.notice
 // Role keys exist only in ar.json, so English always shows the original label (fallback) unchanged
 export const resignationRoleLabel = (role, fallback) => i18n.t(`resignation.roles.${role}`, { defaultValue: fallback || role || "" });
 
+// A date or number inside a translated sentence keeps its left-to-right order on the Arabic page
+// ("12 Oct 2026", "RES-2026-0011"). Invisible marks, so English looks exactly the same.
+export const ltrText = (value) => (value ? `⁦${value}⁩` : value);
+
 // Resignations waiting for HR action (HR sidebar badge, Dashboard welcome message)
 export const isPendingHR = (resignation) => resignation?.status === "Pending HR";
 

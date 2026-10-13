@@ -2,7 +2,7 @@
 // Reuses the LeaveTracker stepper styles (leave-tracker-*) like MprTracker.
 import { useTranslation } from "react-i18next";
 import "../hr/LeaveTracker.css";
-import { daysLabel, formatDate, resignationRoleLabel, resignationStatusLabel } from "./resignationApi";
+import { daysLabel, formatDate, ltrText, resignationRoleLabel, resignationStatusLabel } from "./resignationApi";
 
 const NODE_ICONS = { completed: "✓", rejected: "✕", cancelled: "✕", overdue: "!" };
 
@@ -25,13 +25,13 @@ function buildSteps(resignation, t) {
     if (accepted) {
         workflow.forEach((_, index) => Object.assign(approverStep(index), { state: "completed", date: decidedOn(index) }));
         if (status === "Completed") {
-            Object.assign(noticeStep, { state: "completed", caption: t("resignation.tracker.until", { date: formatDate(resignation.last_working_day), defaultValue: "Until {{date}}" }) });
+            Object.assign(noticeStep, { state: "completed", caption: t("resignation.tracker.until", { date: ltrText(formatDate(resignation.last_working_day)), defaultValue: "Until {{date}}" }) });
             Object.assign(completedStep, { state: "completed", date: formatDate(resignation.completed_at) });
         } else {
             Object.assign(noticeStep, {
                 state: "current",
                 caption: resignation.days_remaining !== null ? t("resignation.tracker.remaining", { days: daysLabel(resignation.days_remaining), defaultValue: "{{days}} remaining" }) : null,
-                date: t("resignation.tracker.lastDay", { date: formatDate(resignation.last_working_day), defaultValue: "Last day {{date}}" }),
+                date: t("resignation.tracker.lastDay", { date: ltrText(formatDate(resignation.last_working_day)), defaultValue: "Last day {{date}}" }),
             });
         }
         return steps;
@@ -78,7 +78,8 @@ function ResignationTracker({ resignation }) {
                         <div className="leave-tracker-text">
                             <div className="leave-tracker-label">{step.label}</div>
                             {step.caption && <div className="leave-tracker-caption">{step.caption}</div>}
-                            {step.date && step.date !== "—" && <div className="leave-tracker-date">{step.date}</div>}
+                            {/* dir="auto": a plain date ("12 Oct 2026") reads left-to-right, an Arabic sentence right-to-left */}
+                            {step.date && step.date !== "—" && <div className="leave-tracker-date"><span dir="auto">{step.date}</span></div>}
                         </div>
                     </li>
                 ))}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./TablePagination.css";
 
 // Splits a list into pages. Goes back to page 1 when the list or page size changes.
@@ -21,23 +22,26 @@ export function usePagination(items = [], initialSize = 10) {
 
 // "Rows per page [10 ▾]"  or, with `inline`, a plain dropdown "10 per page"
 export function RowsPerPage({ value, onChange, options = [10, 25, 50], inline = false }) {
+    const { t } = useTranslation();
+    const rowsPerPage = t("employeeAttendance.rowsPerPage", { defaultValue: "Rows per page" });
+
     if (inline) {
         return (
             <select
                 className="tp-rows-inline"
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                aria-label="Rows per page"
-                title="Rows per page"
+                aria-label={rowsPerPage}
+                title={rowsPerPage}
             >
-                {options.map((size) => <option key={size} value={size}>{size} per page</option>)}
+                {options.map((size) => <option key={size} value={size}>{t("recruitment.pagination.perPage", { size, defaultValue: "{{size}} per page" })}</option>)}
             </select>
         );
     }
 
     return (
         <label className="tp-rows">
-            <span>Rows per page</span>
+            <span>{rowsPerPage}</span>
             <select value={value} onChange={(e) => onChange(Number(e.target.value))}>
                 {options.map((size) => <option key={size} value={size}>{size}</option>)}
             </select>
@@ -47,6 +51,7 @@ export function RowsPerPage({ value, onChange, options = [10, 25, 50], inline = 
 
 // "← Previous  1  2  3  …  Next →"
 export function Pagination({ page, pageCount, onChange }) {
+    const { t } = useTranslation();
     if (pageCount <= 1) return null;
 
     const pages = [];
@@ -63,9 +68,9 @@ export function Pagination({ page, pageCount, onChange }) {
     }
 
     return (
-        <nav className="tp-pagination" aria-label="Table pages">
+        <nav className="tp-pagination" aria-label={t("recruitment.pagination.tablePages", { defaultValue: "Table pages" })}>
             <button type="button" className="tp-nav" disabled={page === 1} onClick={() => onChange(page - 1)}>
-                ← Previous
+                {t("employeesList.pagination.previous", { defaultValue: "← Previous" })}
             </button>
             {pages.map((item) =>
                 typeof item === "number" ? (
@@ -83,7 +88,7 @@ export function Pagination({ page, pageCount, onChange }) {
                 )
             )}
             <button type="button" className="tp-nav" disabled={page === pageCount} onClick={() => onChange(page + 1)}>
-                Next →
+                {t("employeesList.pagination.next", { defaultValue: "Next →" })}
             </button>
         </nav>
     );

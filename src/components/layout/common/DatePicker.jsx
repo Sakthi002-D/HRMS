@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import "./DatePicker.css";
 
@@ -35,6 +36,7 @@ const formatDisplayDate = (value) => {
   - autoPosition: render the popup above everything (portal) and flip it right/up to stay on screen
 */
 function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, today, autoPosition = false }) {
+  const { t } = useTranslation();
   const wrapperRef = useRef(null);
   const popupRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -165,7 +167,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
                   new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1)
                 )
               }
-              aria-label="Previous month"
+              aria-label={t("hrAttendance.datePicker.previousMonth", { defaultValue: "Previous month" })}
             >
               <ChevronLeft size={17} />
             </button>
@@ -190,7 +192,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
                   new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1)
                 )
               }
-              aria-label="Next month"
+              aria-label={t("hrAttendance.datePicker.nextMonth", { defaultValue: "Next month" })}
             >
               <ChevronRight size={17} />
             </button>
@@ -246,7 +248,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
           )}
           <div className="date-picker-footer">
             <button type="button" onClick={() => onChange("")}>
-              Clear
+              {t("hrAttendance.datePicker.clear", { defaultValue: "Clear" })}
             </button>
             <button
               type="button"
@@ -258,7 +260,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
                 setOpen(false);
               }}
             >
-              Today
+              {t("hrAttendance.datePicker.today", { defaultValue: "Today" })}
             </button>
           </div>
         </div>

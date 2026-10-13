@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "./Employees.css";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import SearchBar from "../../components/layout/common/SearchBar";
@@ -69,7 +70,27 @@ const fileToDataUrl = (file) => {
 };
 
 function Employees() {
-  const showAlert = useAlert();
+  const { t } = useTranslation();
+  const showAppAlert = useAlert();
+
+  // Same alert as before, with the dialog title and OK button translated too
+  const showAlert = (options) => {
+    const alert = typeof options === "string" ? { message: options } : options;
+    const variant = alert.variant || "danger";
+    const defaultTitle = { danger: "Please check", warning: "Please check", info: "Notice", success: "Success" }[variant];
+    return showAppAlert({
+      title: t(`employeesList.alerts.titles.${variant}`, { defaultValue: defaultTitle }),
+      buttonText: t("employeesList.alerts.ok", { defaultValue: "OK" }),
+      ...alert,
+    });
+  };
+
+  // Shows a translated label for an English value ("Full Time" → employeesList/employeeProfile values.*.full_time); the value itself stays English
+  const valueLabel = (group, value) => {
+    if (!value) return value;
+    const key = String(value).trim().toLowerCase().replace(/[\s-]+/g, "_");
+    return t([`employeesList.values.${group}.${key}`, `employeeProfile.values.${group}.${key}`], { defaultValue: String(value) });
+  };
 
   const navigate = useNavigate();
   // =========================
@@ -246,6 +267,15 @@ useEffect(() => {
     { name: "UAE", code: "+971" },
   ];
 
+  // "Qatar (+974)": the country name is translated; the code is wrapped in invisible left-to-right marks
+  // (LRI … PDI) so Arabic shows "+974", not "974+"
+  const countryOptionLabel = (country) =>
+    t("employeesList.form.countryOption", {
+      country: valueLabel("country", country.name),
+      code: `⁦${country.code}⁩`,
+      defaultValue: "{{country}} ({{code}})",
+    });
+
   // =========================
   // RESET FORM
   // =========================
@@ -340,12 +370,12 @@ const resetForm = () => {
     const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
 
     if (!allowedStatuses.includes(exitStatus)) {
-      showAlert("Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated");
+      showAlert(t("employeesList.errors.exitStatusInvalid", { defaultValue: "Please enter one of: Inactive, Resigned, Retired, Dismissed, Terminated" }));
       return;
     }
 
     if (!lastDateWorked) {
-      showAlert("Please select last date worked.");
+      showAlert(t("employeesList.errors.lastDateWorkedRequired", { defaultValue: "Please select last date worked." }));
       return;
     }
 
@@ -366,7 +396,7 @@ const resetForm = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        showAlert(data.message || "Failed to delete employee");
+        showAlert(data.message || t("employeesList.errors.archiveFailed", { defaultValue: "Failed to delete employee" }));
         return;
       }
 
@@ -380,16 +410,16 @@ const resetForm = () => {
       });
 
       await fetchEmployees();
-      showAlert({ variant: "success", message: "Employee archived successfully. Their record is still searchable." });
+      showAlert({ variant: "success", message: t("employeesList.success.archived", { defaultValue: "Employee archived successfully. Their record is still searchable." }) });
     } catch (error) {
       console.error("Error deleting employee:", error);
-      showAlert("Unable to connect to backend");
+      showAlert(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
     }
   };
 
   const exportEmployeesToCSV = () => {
   if (employees.length === 0) {
-    showAlert({ variant: "info", title: "Nothing to export", message: "No employees to export" });
+    showAlert({ variant: "info", title: t("employeesList.export.nothingTitle", { defaultValue: "Nothing to export" }), message: t("employeesList.export.nothingMessage", { defaultValue: "No employees to export" }) });
     return;
   }
 
@@ -528,59 +558,59 @@ const resetForm = () => {
     }
 
     if (!employeeId) {
-      showAlert("Please enter Employee ID");
+      showAlert(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
       return;
     }
 
     if (isEmployeeIdExists(employeeId)) {
-      showAlert("Employee ID already exists!");
+      showAlert(t("employeesList.errors.employeeIdExists", { defaultValue: "Employee ID already exists!" }));
       return;
     }
 
     if (!formData.title) {
-      showAlert("Title is required.");
+      showAlert(t("employeesList.errors.titleRequired", { defaultValue: "Title is required." }));
       return;
     }
 
     if (!formData.firstName.trim()) {
-      showAlert("First Name is required.");
+      showAlert(t("employeesList.errors.firstNameRequired", { defaultValue: "First Name is required." }));
       return;
     }
 
     if (!formData.lastName.trim()) {
-      showAlert("Last Name is required.");
+      showAlert(t("employeesList.errors.lastNameRequired", { defaultValue: "Last Name is required." }));
       return;
     }
 
     if (!formData.designation.trim()) {
-      showAlert("Please enter Designation");
+      showAlert(t("employeesList.errors.designationRequired", { defaultValue: "Please enter Designation" }));
       return;
     }
 
     if (!formData.department.trim()) {
-      showAlert("Please enter Department");
+      showAlert(t("employeesList.errors.departmentRequired", { defaultValue: "Please enter Department" }));
       return;
     }
 
     if (!formData.joiningDate) {
-      showAlert("Please select Employment Start Date");
+      showAlert(t("employeesList.errors.startDateRequired", { defaultValue: "Please select Employment Start Date" }));
       return;
     }
 
     if (!formData.employmentType) {
-      showAlert("Please select Employment Type");
+      showAlert(t("employeesList.errors.employmentTypeRequired", { defaultValue: "Please select Employment Type" }));
       return;
     }
 
     const markedFields = [
-      ["employmentCategory", "Please select Employment Category"],
-      ["projectRoleId", "Please select Project Role ID"],
-      ["terminationReason", "Please enter Termination Reason"],
-      ["lastDateWorked", "Please enter Last Date Worked"],
-      ["position", "Please select Position"],
-      ["positionTitle", "Please enter Position Title"],
-      ["assignmentEnd", "Please select Assignment End"],
-      ["assignmentStart", "Please select Assignment Start"],
+      ["employmentCategory", t("employeesList.errors.employmentCategoryRequired", { defaultValue: "Please select Employment Category" })],
+      ["projectRoleId", t("employeesList.errors.projectRoleRequired", { defaultValue: "Please select Project Role ID" })],
+      ["terminationReason", t("employeesList.errors.terminationReasonRequired", { defaultValue: "Please enter Termination Reason" })],
+      ["lastDateWorked", t("employeesList.errors.lastDateWorkedFieldRequired", { defaultValue: "Please enter Last Date Worked" })],
+      ["position", t("employeesList.errors.positionRequired", { defaultValue: "Please select Position" })],
+      ["positionTitle", t("employeesList.errors.positionTitleRequired", { defaultValue: "Please enter Position Title" })],
+      ["assignmentEnd", t("employeesList.errors.assignmentEndRequired", { defaultValue: "Please select Assignment End" })],
+      ["assignmentStart", t("employeesList.errors.assignmentStartRequired", { defaultValue: "Please select Assignment Start" })],
     ];
 
     for (const [field, message] of markedFields) {
@@ -591,17 +621,17 @@ const resetForm = () => {
     }
 
     if (!formData.email.trim()) {
-      showAlert("Please enter Email");
+      showAlert(t("employeesList.errors.emailRequired", { defaultValue: "Please enter Email" }));
       return;
     }
 
     if (!isValidEmail(formData.email)) {
-      showAlert("Please enter a valid email address");
+      showAlert(t("employeesList.errors.emailInvalid", { defaultValue: "Please enter a valid email address" }));
       return;
     }
 
     if (!formData.phone.trim()) {
-      showAlert("Please enter phone number");
+      showAlert(t("employeesList.errors.phoneRequired", { defaultValue: "Please enter phone number" }));
       return;
     }
 
@@ -612,7 +642,7 @@ const resetForm = () => {
         phoneDigits.length !== 10 ||
         !/^[6-9]\d{9}$/.test(phoneDigits)
       ) {
-        showAlert("Please enter a valid 10-digit Indian phone number");
+        showAlert(t("employeesList.errors.indianPhoneInvalid", { defaultValue: "Please enter a valid 10-digit Indian phone number" }));
         return;
       }
     } else if (
@@ -621,7 +651,7 @@ const resetForm = () => {
         formData.phoneCountryCode
       )
     ) {
-      showAlert("Please enter a valid phone number");
+      showAlert(t("employeesList.errors.phoneInvalid", { defaultValue: "Please enter a valid phone number" }));
       return;
     }
 const profilePhoto = await fileToDataUrl(formData.profilePhoto);
@@ -678,7 +708,7 @@ const employeeData = {
 
       if (!response.ok) {
         console.error("Backend error:", data);
-        showAlert(data.message || "Failed to add employee");
+        showAlert(data.message || t("employeesList.errors.addFailed", { defaultValue: "Failed to add employee" }));
         return;
       }
 
@@ -687,14 +717,14 @@ const employeeData = {
       // Get the latest data from the database
       await fetchEmployees();
 
-      showAlert({ variant: "success", message: "Employee added successfully!" });
+      showAlert({ variant: "success", message: t("employeesList.success.added", { defaultValue: "Employee added successfully!" }) });
 
       setIsModalOpen(false);
       setEditingEmployeeId(null);
       resetForm();
     } catch (error) {
       console.error("Error adding employee:", error);
-      showAlert("Unable to connect to backend");
+      showAlert(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
     }
   };
 
@@ -849,7 +879,7 @@ const updateEmployee = async () => {
   }
 
   if (!employeeId) {
-    showAlert("Please enter Employee ID");
+    showAlert(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
     return;
   }
 
@@ -859,37 +889,37 @@ const updateEmployee = async () => {
       editingEmployeeId
     )
   ) {
-    showAlert("Employee ID already exists!");
+    showAlert(t("employeesList.errors.employeeIdExists", { defaultValue: "Employee ID already exists!" }));
     return;
   }
 
   if (!formData.firstName.trim()) {
-    showAlert("First Name is required.");
+    showAlert(t("employeesList.errors.firstNameRequired", { defaultValue: "First Name is required." }));
     return;
   }
 
   if (!formData.lastName.trim()) {
-    showAlert("Last Name is required.");
+    showAlert(t("employeesList.errors.lastNameRequired", { defaultValue: "Last Name is required." }));
     return;
   }
 
   if (!formData.designation.trim()) {
-    showAlert("Please enter Designation");
+    showAlert(t("employeesList.errors.designationRequired", { defaultValue: "Please enter Designation" }));
     return;
   }
 
   if (!formData.department.trim()) {
-    showAlert("Please enter Department");
+    showAlert(t("employeesList.errors.departmentRequired", { defaultValue: "Please enter Department" }));
     return;
   }
 
   if (!formData.email.trim()) {
-    showAlert("Please enter Email");
+    showAlert(t("employeesList.errors.emailRequired", { defaultValue: "Please enter Email" }));
     return;
   }
 
   if (!formData.phone.trim()) {
-    showAlert("Please enter Phone Number");
+    showAlert(t("employeesList.errors.phoneNumberRequired", { defaultValue: "Please enter Phone Number" }));
     return;
   }
 
@@ -947,14 +977,14 @@ const updateEmployee = async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      showAlert(data.message || "Failed to update employee");
+      showAlert(data.message || t("employeesList.errors.updateFailed", { defaultValue: "Failed to update employee" }));
       return;
     }
 
     // Get the latest data from the database
     await fetchEmployees();
 
-    showAlert({ variant: "success", message: "Employee updated successfully!" });
+    showAlert({ variant: "success", message: t("employeesList.success.updated", { defaultValue: "Employee updated successfully!" }) });
 
     setEditingEmployeeId(null);
     setIsModalOpen(false);
@@ -962,7 +992,7 @@ const updateEmployee = async () => {
 
   } catch (error) {
     console.error("Error updating employee:", error);
-    showAlert("Unable to connect to backend");
+    showAlert(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
   }
 };
 
@@ -973,37 +1003,41 @@ const updateEmployee = async () => {
   const columns = [
     {
       key: "id",
-      label: "Employee ID",
+      label: t("employeeSettings.employeeId", { defaultValue: "Employee ID" }),
+      // IDs, emails and phones always read left-to-right, also on the Arabic (RTL) page
+      render: (employee) => <span dir="ltr">{employee.id}</span>,
     },
 
     {
       key: "name",
-      label: "Name",
+      label: t("employeesList.table.name", { defaultValue: "Name" }),
     },
 
     {
       key: "designation",
-      label: "Designation",
+      label: t("employeesList.table.designation", { defaultValue: "Designation" }),
     },
 
     {
       key: "department",
-      label: "Department",
+      label: t("profileEdit.fields.department", { defaultValue: "Department" }),
     },
 
     {
       key: "email",
-      label: "Email",
+      label: t("profileEdit.fields.email", { defaultValue: "Email" }),
+      render: (employee) => <span dir="ltr">{employee.email}</span>,
     },
 
     {
       key: "phone",
-      label: "Phone",
+      label: t("profileEdit.fields.phone", { defaultValue: "Phone" }),
+      render: (employee) => <span dir="ltr">{employee.phone}</span>,
     },
 
     {
       key: "status",
-      label: "Status",
+      label: t("profileEdit.fields.status", { defaultValue: "Status" }),
 
       render: (employee) => (
         <span
@@ -1013,21 +1047,21 @@ const updateEmployee = async () => {
               : "status inactive"
           }
         >
-          {employee.status}
+          {valueLabel("status", employee.status)}
         </span>
       ),
     },
 
     {
       key: "view",
-      label: "View",
+      label: t("employeesList.table.view", { defaultValue: "View" }),
       render: (employee) => (
         <button
           type="button"
           className="employee-view-button"
           onClick={() => viewEmployee(employee)}
-          aria-label={`View ${employee.name}`}
-          title={`View ${employee.name}`}
+          aria-label={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
+          title={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
         >
           <Eye size={18} strokeWidth={2} aria-hidden="true" />
         </button>
@@ -1036,14 +1070,14 @@ const updateEmployee = async () => {
 
 {
   key: "delete",
-  label: "Delete",
+  label: t("employeesList.table.delete", { defaultValue: "Delete" }),
 
   render: (employee) => (
     <Button
       variant="danger"
       onClick={() => deleteEmployee(employee)}
     >
-      Archive
+      {t("employeesList.table.archive", { defaultValue: "Archive" })}
     </Button>
   ),
 },
@@ -1161,23 +1195,23 @@ const filteredEmployees =
 
         <div className="employees-header">
           <div>
-            <h1>Employees List</h1>
+            <h1>{t("employeesList.title", { defaultValue: "Employees List" })}</h1>
             <p>
-              Manage all company employees
+              {t("employeesList.subtitle", { defaultValue: "Manage all company employees" })}
             </p>
           </div>
 
          <div className="header-actions">
-            <button type="button" className={`view-toggle ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label="List view">
+            <button type="button" className={`view-toggle ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label={t("employeesList.listView", { defaultValue: "List view" })}>
               <List size={16} />
             </button>
-            <button type="button" className={`view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label="Grid view">
+            <button type="button" className={`view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label={t("employeesList.gridView", { defaultValue: "Grid view" })}>
               <Grid2X2 size={15} />
             </button>
             <Button variant="secondary" onClick={exportEmployeesToCSV}>
-              Export <ChevronDown size={14} />
+              {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} />
             </Button>
-            <Button onClick={openAddEmployee}>⊕ Add Employee</Button>
+            <Button onClick={openAddEmployee}>⊕ {t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}</Button>
 
         </div>
 
@@ -1187,7 +1221,7 @@ const filteredEmployees =
 
   <div className="stat-card">
     <div className="stat-card-content">
-      <span>Total Employees</span>
+      <span>{t("hrDashboard.stats.totalEmployees", { defaultValue: "Total Employees" })}</span>
       <strong>{employees.length}</strong>
     </div>
     <Users className="stat-icon total" size={23} />
@@ -1195,7 +1229,7 @@ const filteredEmployees =
 
   <div className="stat-card">
     <div className="stat-card-content">
-      <span>Active</span>
+      <span>{valueLabel("status", "Active")}</span>
       <strong>
         {employees.filter(
           (employee) => employee.status === "Active"
@@ -1207,7 +1241,7 @@ const filteredEmployees =
 
   <div className="stat-card">
     <div className="stat-card-content">
-      <span>Inactive</span>
+      <span>{valueLabel("status", "Inactive")}</span>
       <strong>
         {employees.filter(
           (employee) => employee.status === "Inactive"
@@ -1219,7 +1253,7 @@ const filteredEmployees =
 
   <div className="stat-card">
     <div className="stat-card-content">
-      <span>New Joiners</span>
+      <span>{t("hrDashboard.stats.newJoiners", { defaultValue: "New Joiners" })}</span>
       <strong>{newJoiners}</strong>
     </div>
     <UserPlus className="stat-icon joiners" size={23} />
@@ -1231,8 +1265,8 @@ const filteredEmployees =
 
         <div className="employee-list-header">
           <div>
-            <p className="employee-list-kicker">DIRECTORY</p>
-            <h2>Employee List</h2>
+            <p className="employee-list-kicker">{t("employeesList.directory", { defaultValue: "DIRECTORY" })}</p>
+            <h2>{t("employeesList.employeeList", { defaultValue: "Employee List" })}</h2>
           </div>
           <button
             type="button"
@@ -1241,14 +1275,14 @@ const filteredEmployees =
             aria-expanded={showFilters}
           >
             <SlidersHorizontal size={16} />
-            Filters
+            {t("employeesList.filters.button", { defaultValue: "Filters" })}
             <span className="filter-count">3</span>
           </button>
         </div>
 
         <div className="employee-table-container">
           {showFilters && (
-            <div className="employee-list-filters" aria-label="Employee filters">
+            <div className="employee-list-filters" aria-label={t("employeesList.filters.ariaLabel", { defaultValue: "Employee filters" })}>
               <button
                 type="button"
                 className="clear-filters-button"
@@ -1260,20 +1294,20 @@ const filteredEmployees =
                   setShowFilters(false);
                 }}
               >
-                Clear filters
+                {t("employeesList.filters.clear", { defaultValue: "Clear filters" })}
               </button>
               <div className="filter-field">
-                <span>Date range</span>
+                <span>{t("employeesList.filters.dateRange", { defaultValue: "Date range" })}</span>
                 <select value={dateRangeFilter} onChange={(e) => { setDateRangeFilter(e.target.value); setCurrentPage(1); setShowFilters(false); }}>
-                  <option value="all">All dates</option>
-                  <option value="7">Last 7 days</option>
-                  <option value="30">Last 30 days</option>
+                  <option value="all">{t("employeesList.filters.allDates", { defaultValue: "All dates" })}</option>
+                  <option value="7">{t("dashboard.last7Days", { defaultValue: "Last 7 days" })}</option>
+                  <option value="30">{t("employeesList.filters.last30Days", { defaultValue: "Last 30 days" })}</option>
                 </select>
               </div>
               <div className="filter-field">
-                <span>Designation</span>
+                <span>{t("employeesList.table.designation", { defaultValue: "Designation" })}</span>
                 <select value={designationFilter} onChange={(e) => { setDesignationFilter(e.target.value); setCurrentPage(1); setShowFilters(false); }}>
-                  <option value="All">All designations</option>
+                  <option value="All">{t("employeesList.filters.allDesignations", { defaultValue: "All designations" })}</option>
                   {designations.map((designation) => <option key={designation} value={designation}>{designation}</option>)}
                 </select>
               </div>
@@ -1283,7 +1317,7 @@ const filteredEmployees =
           {loading ? (
             <div className="employees-loading" role="status" aria-live="polite">
               <span className="employees-loading-spinner" aria-hidden="true"></span>
-              <p>Loading employees...</p>
+              <p>{t("employeesList.loading", { defaultValue: "Loading employees..." })}</p>
             </div>
           ) : (
             <>
@@ -1293,11 +1327,11 @@ const filteredEmployees =
                     id="employee-search"
                     value={search}
                     onChange={setSearch}
-                    placeholder="Search employees"
+                    placeholder={t("employeesList.searchPlaceholder", { defaultValue: "Search employees" })}
                   />
                 </div>
                 <div className="table-controls-spacer" />
-                <label htmlFor="employees-per-page">Rows per page</label>
+                <label htmlFor="employees-per-page">{t("employeeAttendance.rowsPerPage", { defaultValue: "Rows per page" })}</label>
                 <select
                   id="employees-per-page"
                   value={employeesPerPage}
@@ -1317,15 +1351,15 @@ const filteredEmployees =
                     setStatusFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  aria-label="Filter by status"
+                  aria-label={t("employeesList.filters.byStatus", { defaultValue: "Filter by status" })}
                 >
-                  <option value="All">All status</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Resigned">Resigned</option>
-                  <option value="Retired">Retired</option>
-                  <option value="Dismissed">Dismissed</option>
-                  <option value="Terminated">Terminated</option>
+                  <option value="All">{t("employeesList.filters.allStatus", { defaultValue: "All status" })}</option>
+                  <option value="Active">{valueLabel("status", "Active")}</option>
+                  <option value="Inactive">{valueLabel("status", "Inactive")}</option>
+                  <option value="Resigned">{valueLabel("status", "Resigned")}</option>
+                  <option value="Retired">{valueLabel("status", "Retired")}</option>
+                  <option value="Dismissed">{valueLabel("status", "Dismissed")}</option>
+                  <option value="Terminated">{valueLabel("status", "Terminated")}</option>
                 </select>
               </div>
               {viewMode === "grid" ? (
@@ -1334,12 +1368,12 @@ const filteredEmployees =
                     <article className="employee-grid-card" key={employee.id}>
                       <div className="employee-grid-card-top">
                         <div className="employee-avatar">{employee.name?.charAt(0)?.toUpperCase()}</div>
-                        <span className={employee.status === "Active" ? "status active" : "status inactive"}>{employee.status}</span>
+                        <span className={employee.status === "Active" ? "status active" : "status inactive"}>{valueLabel("status", employee.status)}</span>
                       </div>
                       <h3>{employee.name}</h3>
-                      <p>{employee.designation || "Employee"}</p>
-                      <span>{employee.department || "General"}{employee.phone ? ` · ${employee.phone}` : ""}</span>
-                      <Button variant="secondary" onClick={() => viewEmployee(employee)}>View details</Button>
+                      <p>{employee.designation || t("employeesList.grid.noDesignation", { defaultValue: "Employee" })}</p>
+                      <span>{employee.department || t("employeesList.grid.noDepartment", { defaultValue: "General" })}{employee.phone ? <> · <span dir="ltr">{employee.phone}</span></> : ""}</span>
+                      <Button variant="secondary" onClick={() => viewEmployee(employee)}>{t("employeesList.grid.viewDetails", { defaultValue: "View details" })}</Button>
                     </article>
                   ))}
                 </div>
@@ -1354,7 +1388,7 @@ const filteredEmployees =
                     setCurrentPage((prev) => prev - 1)
                   }
                 >
-                  ← Previous
+                  {t("employeesList.pagination.previous", { defaultValue: "← Previous" })}
                 </button>
 
                 {Array.from(
@@ -1382,7 +1416,7 @@ const filteredEmployees =
                     setCurrentPage((prev) => prev + 1)
                   }
                 >
-                  Next →
+                  {t("employeesList.pagination.next", { defaultValue: "Next →" })}
                 </button>
 
               </div>
@@ -1404,15 +1438,15 @@ const filteredEmployees =
               terminationReason: "Resigned",
             })
           }
-          title="Archive Employee"
+          title={t("employeesList.archive.title", { defaultValue: "Archive Employee" })}
         >
           <div className="archive-modal-body">
-            <p className="archive-modal-title">{archiveModal.employeeName || "Employee"}</p>
-            <p className="archive-modal-text">This will remove the employee from active work while preserving their record. Continue?</p>
+            <p className="archive-modal-title">{archiveModal.employeeName || t("employeesList.grid.noDesignation", { defaultValue: "Employee" })}</p>
+            <p className="archive-modal-text">{t("employeesList.archive.message", { defaultValue: "This will remove the employee from active work while preserving their record. Continue?" })}</p>
 
             <div className="archive-form-grid">
               <div className="archive-form-group">
-                <label htmlFor="archive-status">Exit status</label>
+                <label htmlFor="archive-status">{t("employeesList.archive.exitStatus", { defaultValue: "Exit status" })}</label>
                 <select
                   id="archive-status"
                   value={archiveModal.exitStatus}
@@ -1423,16 +1457,16 @@ const filteredEmployees =
                     }))
                   }
                 >
-                  <option value="Inactive">Inactive</option>
-                  <option value="Resigned">Resigned</option>
-                  <option value="Retired">Retired</option>
-                  <option value="Dismissed">Dismissed</option>
-                  <option value="Terminated">Terminated</option>
+                  <option value="Inactive">{valueLabel("status", "Inactive")}</option>
+                  <option value="Resigned">{valueLabel("status", "Resigned")}</option>
+                  <option value="Retired">{valueLabel("status", "Retired")}</option>
+                  <option value="Dismissed">{valueLabel("status", "Dismissed")}</option>
+                  <option value="Terminated">{valueLabel("status", "Terminated")}</option>
                 </select>
               </div>
 
               <div className="archive-form-group">
-                <label htmlFor="archive-last-date">Last date worked</label>
+                <label htmlFor="archive-last-date">{t("employeesList.archive.lastDateWorked", { defaultValue: "Last date worked" })}</label>
                 <input
                   id="archive-last-date"
                   type="date"
@@ -1447,7 +1481,7 @@ const filteredEmployees =
               </div>
 
               <div className="archive-form-group archive-form-group-full">
-                <label htmlFor="archive-reason">Reason</label>
+                <label htmlFor="archive-reason">{t("employeesList.archive.reason", { defaultValue: "Reason" })}</label>
                 <input
                   id="archive-reason"
                   type="text"
@@ -1470,8 +1504,8 @@ const filteredEmployees =
                 exitStatus: "Resigned",
                 lastDateWorked: new Date().toISOString().slice(0, 10),
                 terminationReason: "Resigned",
-              })}>Cancel</button>
-              <button type="button" className="archive-confirm-btn" onClick={confirmArchiveEmployee}>OK</button>
+              })}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
+              <button type="button" className="archive-confirm-btn" onClick={confirmArchiveEmployee}>{t("employeesList.alerts.ok", { defaultValue: "OK" })}</button>
             </div>
           </div>
         </Modal>
@@ -1488,8 +1522,8 @@ const filteredEmployees =
           }}
           title={
             editingEmployeeId
-              ? "Edit Employee"
-              : "Add Employee"
+              ? t("employeesList.form.editTitle", { defaultValue: "Edit Employee" })
+              : t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })
           }
         >
 
@@ -1498,7 +1532,7 @@ const filteredEmployees =
             {/* ================= PERSONAL DETAILS ================= */}
 
             <h3>
-              Personal Details
+              {t("employeesList.form.personalDetails", { defaultValue: "Personal Details" })}
             </h3>
 
             {/* Employee ID */}
@@ -1506,12 +1540,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Employee ID <span className="required-mark">*</span>
+                {t("employeeSettings.employeeId", { defaultValue: "Employee ID" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter employee ID"
+                placeholder={t("employeesList.form.enterEmployeeId", { defaultValue: "Enter employee ID" })}
                 required
                 aria-required="true"
                 aria-invalid={invalidFields.employeeId ? "true" : "false"}
@@ -1531,7 +1565,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Title <span className="required-mark">*</span>
+                {t("employeesList.form.title", { defaultValue: "Title" })} <span className="required-mark">*</span>
               </label>
 
               <select
@@ -1546,11 +1580,11 @@ const filteredEmployees =
                   updateFormField("title", e.target.value)
                 }
               >
-                <option value="">Select title</option>
-                <option value="Mr">Mr</option>
-                <option value="Ms">Ms</option>
-                <option value="Mrs">Mrs</option>
-                <option value="Dr">Dr</option>
+                <option value="">{t("employeesList.form.selectTitle", { defaultValue: "Select title" })}</option>
+                <option value="Mr">{valueLabel("title", "Mr")}</option>
+                <option value="Ms">{valueLabel("title", "Ms")}</option>
+                <option value="Mrs">{valueLabel("title", "Mrs")}</option>
+                <option value="Dr">{valueLabel("title", "Dr")}</option>
               </select>
 
             </div>
@@ -1560,12 +1594,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                First Name <span className="required-mark">*</span>
+                {t("employeesList.form.firstName", { defaultValue: "First Name" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter first name"
+                placeholder={t("employeesList.form.enterFirstName", { defaultValue: "Enter first name" })}
                 required
                 aria-required="true"
                 aria-invalid={invalidFields.firstName ? "true" : "false"}
@@ -1585,12 +1619,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Middle Name
+                {t("employeesList.form.middleName", { defaultValue: "Middle Name" })}
               </label>
 
               <input
                 type="text"
-                placeholder="Enter middle name"
+                placeholder={t("employeesList.form.enterMiddleName", { defaultValue: "Enter middle name" })}
                 value={formData.middleName}
 
                 onChange={(e) =>
@@ -1605,12 +1639,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Last Name <span className="required-mark">*</span>
+                {t("employeesList.form.lastName", { defaultValue: "Last Name" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter last name"
+                placeholder={t("employeesList.form.enterLastName", { defaultValue: "Enter last name" })}
                 required
                 aria-required="true"
                 aria-invalid={invalidFields.lastName ? "true" : "false"}
@@ -1630,7 +1664,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Date of Birth
+                {t("employeesList.form.dateOfBirth", { defaultValue: "Date of Birth" })}
               </label>
 
               <DatePicker
@@ -1650,7 +1684,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Gender
+                {t("profileEdit.fields.gender", { defaultValue: "Gender" })}
               </label>
 
               <select
@@ -1668,19 +1702,19 @@ const filteredEmployees =
               >
 
                 <option value="">
-                  Select gender
+                  {t("profileEdit.selectGender", { defaultValue: "Select gender" })}
                 </option>
 
                 <option value="Male">
-                  Male
+                  {valueLabel("gender", "Male")}
                 </option>
 
                 <option value="Female">
-                  Female
+                  {valueLabel("gender", "Female")}
                 </option>
 
                 <option value="Other">
-                  Other
+                  {valueLabel("gender", "Other")}
                 </option>
 
               </select>
@@ -1692,7 +1726,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Phone <span className="required-mark">*</span>
+                {t("profileEdit.fields.phone", { defaultValue: "Phone" })} <span className="required-mark">*</span>
               </label>
 
               <div className="phone-input">
@@ -1738,8 +1772,7 @@ const filteredEmployees =
                           country.name
                         }
                       >
-                        {country.name}{" "}
-                        ({country.code})
+                        {countryOptionLabel(country)}
                       </option>
 
                     )
@@ -1749,7 +1782,7 @@ const filteredEmployees =
 
                 <input
                   type="tel"
-                  placeholder="Enter phone number"
+                  placeholder={t("employeesList.form.enterPhone", { defaultValue: "Enter phone number" })}
 
                   value={
                     formData.phone
@@ -1776,12 +1809,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Email <span className="required-mark">*</span>
+                {t("profileEdit.fields.email", { defaultValue: "Email" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="email"
-                placeholder="Enter email address"
+                placeholder={t("employeesList.form.enterEmail", { defaultValue: "Enter email address" })}
 
                 className={invalidFields.email ? "field-invalid" : ""}
                 value={formData.email}
@@ -1798,11 +1831,11 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Address
+                {t("profileEdit.fields.address", { defaultValue: "Address" })}
               </label>
 
               <textarea
-                placeholder="Enter address"
+                placeholder={t("employeesList.form.enterAddress", { defaultValue: "Enter address" })}
 
                 value={
                   formData.address
@@ -1822,7 +1855,7 @@ const filteredEmployees =
             {/* ================= JOB DETAILS ================= */}
 
             <h3>
-              Job Details
+              {t("employeesList.form.jobDetails", { defaultValue: "Job Details" })}
             </h3>
 
             {/* Designation */}
@@ -1830,12 +1863,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Designation <span className="required-mark">*</span>
+                {t("employeesList.table.designation", { defaultValue: "Designation" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter designation"
+                placeholder={t("employeesList.form.enterDesignation", { defaultValue: "Enter designation" })}
 
                 className={invalidFields.designation ? "field-invalid" : ""}
                 value={formData.designation}
@@ -1852,12 +1885,12 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Department <span className="required-mark">*</span>
+                {t("profileEdit.fields.department", { defaultValue: "Department" })} <span className="required-mark">*</span>
               </label>
 
               <input
                 type="text"
-                placeholder="Enter department"
+                placeholder={t("employeesList.form.enterDepartment", { defaultValue: "Enter department" })}
 
                 className={invalidFields.department ? "field-invalid" : ""}
 
@@ -1873,7 +1906,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Employment Start Date <span className="required-mark">*</span>
+                {t("profileEdit.sectionFields.joining_date", { defaultValue: "Employment Start Date" })} <span className="required-mark">*</span>
               </label>
 
               <DatePicker
@@ -1893,7 +1926,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Employment Type <span className="required-mark">*</span>
+                {t("profileEdit.sectionFields.employment_type", { defaultValue: "Employment Type" })} <span className="required-mark">*</span>
               </label>
 
               <select
@@ -1915,23 +1948,23 @@ const filteredEmployees =
               >
 
                 <option value="">
-                  Select employment type
+                  {t("profileEdit.selectEmploymentType", { defaultValue: "Select employment type" })}
                 </option>
 
                 <option value="Full Time">
-                  Full Time
+                  {valueLabel("employmentType", "Full Time")}
                 </option>
 
                 <option value="Part Time">
-                  Part Time
+                  {valueLabel("employmentType", "Part Time")}
                 </option>
 
                 <option value="Contract">
-                  Contract
+                  {valueLabel("employmentType", "Contract")}
                 </option>
 
                 <option value="Intern">
-                  Intern
+                  {valueLabel("employmentType", "Intern")}
                 </option>
 
               </select>
@@ -1943,7 +1976,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Status
+                {t("profileEdit.fields.status", { defaultValue: "Status" })}
               </label>
 
               <select
@@ -1961,14 +1994,14 @@ const filteredEmployees =
               >
 
                 <option value="Active">
-                  Active
+                  {valueLabel("status", "Active")}
                 </option>
 
-                <option value="Inactive">Inactive</option>
-                <option value="Resigned">Resigned</option>
-                <option value="Retired">Retired</option>
-                <option value="Dismissed">Dismissed</option>
-                <option value="Terminated">Terminated</option>
+                <option value="Inactive">{valueLabel("status", "Inactive")}</option>
+                <option value="Resigned">{valueLabel("status", "Resigned")}</option>
+                <option value="Retired">{valueLabel("status", "Retired")}</option>
+                <option value="Dismissed">{valueLabel("status", "Dismissed")}</option>
+                <option value="Terminated">{valueLabel("status", "Terminated")}</option>
 
               </select>
 
@@ -1976,189 +2009,189 @@ const filteredEmployees =
 
             {/* ================= DETAILS ================= */}
 
-            <h3>Details</h3>
+            <h3>{t("employeesList.form.details", { defaultValue: "Details" })}</h3>
 
             <div className="form-group">
-              <label>Legal Entity <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.legal_entity", { defaultValue: "Legal Entity" })} <span className="required-mark">*</span></label>
               <input type="text" value={formData.legalEntity} disabled required />
             </div>
 
             <div className="form-group">
-              <label>Worker Type <span className="required-mark">*</span></label>
-              <input type="text" value={formData.workerType} disabled required />
+              <label>{t("profileEdit.sectionFields.worker_type", { defaultValue: "Worker Type" })} <span className="required-mark">*</span></label>
+              <input type="text" value={valueLabel("workerType", formData.workerType)} disabled required />
             </div>
 
             <div className="form-group">
-              <label>Employment Category <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.employment_category", { defaultValue: "Employment Category" })} <span className="required-mark">*</span></label>
               <select
                 value={formData.employmentCategory}
                 className={invalidFields.employmentCategory ? "field-invalid" : ""}
                 required
                 onChange={(e) => setFormData((previous) => ({ ...previous, employmentCategory: e.target.value }))}
               >
-                <option value="">Select employment category</option>
-                <option value="Regular">Regular</option>
-                <option value="Temporary">Temporary</option>
-                <option value="Contractor">Contractor</option>
+                <option value="">{t("employeesList.form.selectEmploymentCategory", { defaultValue: "Select employment category" })}</option>
+                <option value="Regular">{valueLabel("employmentCategory", "Regular")}</option>
+                <option value="Temporary">{valueLabel("employmentCategory", "Temporary")}</option>
+                <option value="Contractor">{valueLabel("employmentCategory", "Contractor")}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Project Role ID <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.project_role_id", { defaultValue: "Project Role ID" })} <span className="required-mark">*</span></label>
               <select
                 value={formData.projectRoleId}
                 className={invalidFields.projectRoleId ? "field-invalid" : ""}
                 required
                 onChange={(e) => setFormData((previous) => ({ ...previous, projectRoleId: e.target.value }))}
               >
-                <option value="">Select project role</option>
-                <option value="Developer">Developer</option>
-                <option value="Manager">Manager</option>
-                <option value="HR">HR</option>
-                <option value="Support">Support</option>
+                <option value="">{t("employeesList.form.selectProjectRole", { defaultValue: "Select project role" })}</option>
+                <option value="Developer">{valueLabel("projectRole", "Developer")}</option>
+                <option value="Manager">{valueLabel("projectRole", "Manager")}</option>
+                <option value="HR">{valueLabel("projectRole", "HR")}</option>
+                <option value="Support">{valueLabel("projectRole", "Support")}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Employment End Date <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.employment_end_date", { defaultValue: "Employment End Date" })} <span className="required-mark">*</span></label>
               <select value={formData.employmentEndDate} required onChange={(e) => setFormData((previous) => ({ ...previous, employmentEndDate: e.target.value }))}>
-                <option value="Never">Never</option>
-                <option value="Fixed date">Fixed date</option>
+                <option value="Never">{t("employeeProfile.values.never", { defaultValue: "Never" })}</option>
+                <option value="Fixed date">{t("employeesList.form.fixedDate", { defaultValue: "Fixed date" })}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Termination Reason <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.termination_reason", { defaultValue: "Termination Reason" })} <span className="required-mark">*</span></label>
               <input type="text" value={formData.terminationReason} required className={invalidFields.terminationReason ? "field-invalid" : ""} onChange={(e) => updateFormField("terminationReason", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Last Date Worked <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.last_date_worked", { defaultValue: "Last Date Worked" })} <span className="required-mark">*</span></label>
               <input type="text" value={formData.lastDateWorked} required className={invalidFields.lastDateWorked ? "field-invalid" : ""} onChange={(e) => updateFormField("lastDateWorked", e.target.value)} />
             </div>
 
             {/* ================= POSITION DETAILS ================= */}
 
-            <h3>Position Details</h3>
+            <h3>{t("employeeProfile.panels.position", { defaultValue: "Position Details" })}</h3>
 
             <div className="form-group">
-              <label>Position <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.position", { defaultValue: "Position" })} <span className="required-mark">*</span></label>
               <select value={formData.position} required className={invalidFields.position ? "field-invalid" : ""} onChange={(e) => setFormData((previous) => ({ ...previous, position: e.target.value }))}>
-                <option value="">Select position</option>
-                <option value="Developer">Developer</option>
-                <option value="Designer">Designer</option>
-                <option value="Accountant">Accountant</option>
-                <option value="HR Executive">HR Executive</option>
-                <option value="Manager">Manager</option>
+                <option value="">{t("employeesList.form.selectPosition", { defaultValue: "Select position" })}</option>
+                <option value="Developer">{valueLabel("position", "Developer")}</option>
+                <option value="Designer">{valueLabel("position", "Designer")}</option>
+                <option value="Accountant">{valueLabel("position", "Accountant")}</option>
+                <option value="HR Executive">{valueLabel("position", "HR Executive")}</option>
+                <option value="Manager">{valueLabel("position", "Manager")}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Position Title <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.position_title", { defaultValue: "Position Title" })} <span className="required-mark">*</span></label>
               <input type="text" value={formData.positionTitle} required className={invalidFields.positionTitle ? "field-invalid" : ""} onChange={(e) => updateFormField("positionTitle", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Assignment End <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.assignment_end", { defaultValue: "Assignment End" })} <span className="required-mark">*</span></label>
               <DatePicker value={formData.assignmentEnd} onChange={(value) => setFormData((previous) => ({ ...previous, assignmentEnd: value }))} />
             </div>
 
             <div className="form-group">
-              <label>Assignment Start <span className="required-mark">*</span></label>
+              <label>{t("profileEdit.sectionFields.assignment_start", { defaultValue: "Assignment Start" })} <span className="required-mark">*</span></label>
               <DatePicker value={formData.assignmentStart} onChange={(value) => setFormData((previous) => ({ ...previous, assignmentStart: value }))} />
             </div>
 
             <div className="form-group">
-              <label>Make Primary <span className="required-mark">*</span></label>
+              <label>{t("employeeProfile.position.makePrimary", { defaultValue: "Make Primary" })} <span className="required-mark">*</span></label>
               <select value={formData.makePrimary ? "Yes" : "No"} required onChange={(e) => setFormData((previous) => ({ ...previous, makePrimary: e.target.value === "Yes" }))}>
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
+                <option value="No">{t("employeeProfile.values.no", { defaultValue: "No" })}</option>
+                <option value="Yes">{t("employeeProfile.values.yes", { defaultValue: "Yes" })}</option>
               </select>
             </div>
 
             {/* ================= BANK DETAILS ================= */}
 
-            <h3>Bank Details</h3>
+            <h3>{t("employeesList.form.bankDetails", { defaultValue: "Bank Details" })}</h3>
 
             <div className="form-group">
-              <label>Account Number</label>
-              <input type="text" inputMode="numeric" placeholder="Enter account number" value={formData.accountNumber} onChange={(e) => updateFormField("accountNumber", e.target.value)} />
+              <label>{t("profileEdit.sectionFields.account_number", { defaultValue: "Account Number" })}</label>
+              <input type="text" inputMode="numeric" placeholder={t("employeesList.form.enterAccountNumber", { defaultValue: "Enter account number" })} value={formData.accountNumber} onChange={(e) => updateFormField("accountNumber", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Re-Account Number</label>
-              <input type="text" inputMode="numeric" placeholder="Re-enter account number" value={formData.reAccountNumber} onChange={(e) => updateFormField("reAccountNumber", e.target.value)} />
+              <label>{t("employeesList.form.reAccountNumber", { defaultValue: "Re-Account Number" })}</label>
+              <input type="text" inputMode="numeric" placeholder={t("employeesList.form.reEnterAccountNumber", { defaultValue: "Re-enter account number" })} value={formData.reAccountNumber} onChange={(e) => updateFormField("reAccountNumber", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Bank Name</label>
-              <input type="text" placeholder="Enter bank name" value={formData.bankName} onChange={(e) => updateFormField("bankName", e.target.value)} />
+              <label>{t("profileEdit.sectionFields.bank_name", { defaultValue: "Bank Name" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterBankName", { defaultValue: "Enter bank name" })} value={formData.bankName} onChange={(e) => updateFormField("bankName", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Branch Name</label>
-              <input type="text" placeholder="Enter branch name" value={formData.branchName} onChange={(e) => updateFormField("branchName", e.target.value)} />
+              <label>{t("profileEdit.sectionFields.branch_name", { defaultValue: "Branch Name" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterBranchName", { defaultValue: "Enter branch name" })} value={formData.branchName} onChange={(e) => updateFormField("branchName", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>IFSC Code</label>
-              <input type="text" placeholder="Enter IFSC code" value={formData.ifscCode} onChange={(e) => updateFormField("ifscCode", e.target.value.toUpperCase())} />
+              <label>{t("profileEdit.sectionFields.ifsc_code", { defaultValue: "IFSC Code" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterIfscCode", { defaultValue: "Enter IFSC code" })} value={formData.ifscCode} onChange={(e) => updateFormField("ifscCode", e.target.value.toUpperCase())} />
             </div>
 
             <div className="form-group">
-              <label>Account Type</label>
+              <label>{t("profileEdit.sectionFields.account_type", { defaultValue: "Account Type" })}</label>
               <select value={formData.accountType} onChange={(e) => setFormData((previous) => ({ ...previous, accountType: e.target.value }))}>
-                <option value="">Select account type</option>
-                <option value="Savings">Savings</option>
-                <option value="Current">Current</option>
+                <option value="">{t("employeesList.form.selectAccountType", { defaultValue: "Select account type" })}</option>
+                <option value="Savings">{valueLabel("accountType", "Savings")}</option>
+                <option value="Current">{valueLabel("accountType", "Current")}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Branch Address</label>
-              <textarea placeholder="Enter branch address" value={formData.branchAddress} onChange={(e) => updateFormField("branchAddress", e.target.value)} />
+              <label>{t("employeesList.form.branchAddress", { defaultValue: "Branch Address" })}</label>
+              <textarea placeholder={t("employeesList.form.enterBranchAddress", { defaultValue: "Enter branch address" })} value={formData.branchAddress} onChange={(e) => updateFormField("branchAddress", e.target.value)} />
             </div>
 
             {/* ================= OTHER DETAILS ================= */}
 
             <h3>
-              Other Details
+              {t("employeesList.form.otherDetails", { defaultValue: "Other Details" })}
             </h3>
 
             <div className="form-group">
-              <label>Passport No</label>
-              <input type="text" placeholder="Enter passport number" value={formData.passportNo} onChange={(e) => updateFormField("passportNo", e.target.value)} />
+              <label>{t("profileEdit.fields.passport_no", { defaultValue: "Passport No" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterPassportNumber", { defaultValue: "Enter passport number" })} value={formData.passportNo} onChange={(e) => updateFormField("passportNo", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Passport Exp Date</label>
+              <label>{t("profileEdit.fields.passport_exp_date", { defaultValue: "Passport Exp Date" })}</label>
               <DatePicker value={formData.passportExpDate} onChange={(value) => setFormData((previous) => ({ ...previous, passportExpDate: value }))} />
             </div>
 
             <div className="form-group">
-              <label>Nationality</label>
-              <input type="text" placeholder="Enter nationality" value={formData.nationality} onChange={(e) => updateFormField("nationality", e.target.value)} />
+              <label>{t("profileEdit.fields.nationality", { defaultValue: "Nationality" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterNationality", { defaultValue: "Enter nationality" })} value={formData.nationality} onChange={(e) => updateFormField("nationality", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Religion</label>
-              <input type="text" placeholder="Enter religion" value={formData.religion} onChange={(e) => updateFormField("religion", e.target.value)} />
+              <label>{t("profileEdit.fields.religion", { defaultValue: "Religion" })}</label>
+              <input type="text" placeholder={t("employeesList.form.enterReligion", { defaultValue: "Enter religion" })} value={formData.religion} onChange={(e) => updateFormField("religion", e.target.value)} />
             </div>
 
             <div className="form-group">
-              <label>Marital Status</label>
+              <label>{t("profileEdit.fields.marital_status", { defaultValue: "Marital Status" })}</label>
               <select value={formData.maritalStatus} onChange={(e) => setFormData((previous) => ({ ...previous, maritalStatus: e.target.value }))}>
-                <option value="">Select marital status</option>
-                <option value="Single">Single</option>
-                <option value="Married">Married</option>
-                <option value="Divorced">Divorced</option>
-                <option value="Widowed">Widowed</option>
+                <option value="">{t("profileEdit.selectMaritalStatus", { defaultValue: "Select marital status" })}</option>
+                <option value="Single">{valueLabel("maritalStatus", "Single")}</option>
+                <option value="Married">{valueLabel("maritalStatus", "Married")}</option>
+                <option value="Divorced">{valueLabel("maritalStatus", "Divorced")}</option>
+                <option value="Widowed">{valueLabel("maritalStatus", "Widowed")}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>No. of Children</label>
-              <input type="number" min="0" placeholder="Enter number of children" value={formData.childrenCount} onChange={(e) => setFormData((previous) => ({ ...previous, childrenCount: e.target.value }))} />
+              <label>{t("profileEdit.fields.children_count", { defaultValue: "No. of Children" })}</label>
+              <input type="number" min="0" placeholder={t("employeesList.form.enterChildrenCount", { defaultValue: "Enter number of children" })} value={formData.childrenCount} onChange={(e) => setFormData((previous) => ({ ...previous, childrenCount: e.target.value }))} />
             </div>
 
             {/* Emergency Contact */}
@@ -2166,7 +2199,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Emergency Contact
+                {t("employeesList.form.emergencyContact", { defaultValue: "Emergency Contact" })}
               </label>
 
               <div className="phone-input">
@@ -2189,14 +2222,14 @@ const filteredEmployees =
                 >
                   {countries.map((country) => (
                     <option key={country.name} value={country.name}>
-                      {country.name} ({country.code})
+                      {countryOptionLabel(country)}
                     </option>
                   ))}
                 </select>
 
                 <input
                   type="tel"
-                  placeholder="Enter emergency contact"
+                  placeholder={t("employeesList.form.enterEmergencyContact", { defaultValue: "Enter emergency contact" })}
                   value={formData.emergencyContact}
                   onChange={(e) =>
                     setFormData((previous) => ({
@@ -2217,7 +2250,7 @@ const filteredEmployees =
             <div className="form-group">
 
               <label>
-                Profile Photo
+                {t("profileEdit.fields.profile_photo", { defaultValue: "Profile Photo" })}
               </label>
 
               <input
@@ -2241,7 +2274,7 @@ const filteredEmployees =
                       ? formData.profilePhoto
                       : URL.createObjectURL(formData.profilePhoto)
                     }
-                    alt="Profile perview"
+                    alt={t("employeesList.form.photoPreviewAlt", { defaultValue: "Profile perview" })}
                 />
                 </div>
              )}
@@ -2261,7 +2294,7 @@ const filteredEmployees =
                   resetForm();
                 }}
               >
-                Cancel
+                {t("profileEdit.cancel", { defaultValue: "Cancel" })}
               </Button>
 
               <Button
@@ -2272,8 +2305,8 @@ const filteredEmployees =
                 }
               >
                 {editingEmployeeId
-                  ? "Save Changes"
-                  : "Add Employee"}
+                  ? t("profileEdit.save", { defaultValue: "Save Changes" })
+                  : t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}
               </Button>
 
             </div>

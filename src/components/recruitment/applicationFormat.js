@@ -1,16 +1,20 @@
 // Display helpers for job applications (HR Recruitment → Job Applications)
-import { formatMoney } from "./recruitmentApi";
+import i18n from "i18next";
+import { formatMoney, recruitmentValueLabel } from "./recruitmentApi";
 
 export const APPLICATION_STATUSES = ["New", "Shortlisted", "On Hold", "Rejected"];
 export const CANDIDATE_TYPES = ["Fresher", "Experienced"];
 export const SOURCE_OPTIONS = ["Company website", "LinkedIn", "NaukriGulf", "Recruitment agency", "Employee referral", "Other"];
 
 export const experienceText = (row) => {
-    if (row.candidate_type === "Fresher") return "Fresher";
+    if (row.candidate_type === "Fresher") return recruitmentValueLabel("candidateType", "Fresher");
     if (row.experience_years !== null && row.experience_years !== undefined) {
         const years = Number(row.experience_years);
         const months = Number(row.experience_months || 0);
-        return [`${years} yr${years === 1 ? "" : "s"}`, months ? `${months} mo${months === 1 ? "" : "s"}` : ""].filter(Boolean).join(" ");
+        return [
+            i18n.t("recruitment.applications.years", { count: years, defaultValue: `${years} yr${years === 1 ? "" : "s"}` }),
+            months ? i18n.t("recruitment.applications.months", { count: months, defaultValue: `${months} mo${months === 1 ? "" : "s"}` }) : "",
+        ].filter(Boolean).join(" ");
     }
     return row.total_experience || "—";
 };
@@ -21,13 +25,21 @@ export const salaryText = (amount, currency, legacy) =>
 
 export const sourceText = (row) => {
     if (!row.source) return "—";
-    if (row.source === "Recruitment agency") return row.agency_name ? `Agency: ${row.agency_name}` : "Recruitment agency";
-    if (row.source === "Employee referral") return row.referrer ? `Referral: ${row.referrer}` : "Employee referral";
-    return row.source;
+    if (row.source === "Recruitment agency") {
+        return row.agency_name
+            ? i18n.t("recruitment.applications.agencySource", { name: row.agency_name, defaultValue: "Agency: {{name}}" })
+            : recruitmentValueLabel("source", "Recruitment agency");
+    }
+    if (row.source === "Employee referral") {
+        return row.referrer
+            ? i18n.t("recruitment.applications.referralSource", { name: row.referrer, defaultValue: "Referral: {{name}}" })
+            : recruitmentValueLabel("source", "Employee referral");
+    }
+    return recruitmentValueLabel("source", row.source);
 };
 
 export const monthText = (value) => {
-    if (!value) return "Present";
+    if (!value) return i18n.t("recruitment.applications.present", { defaultValue: "Present" });
     const date = new Date(`${value}-01T00:00:00`);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 };
