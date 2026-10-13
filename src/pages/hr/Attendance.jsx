@@ -34,10 +34,73 @@ function Attendance() {
     const [selectedStatus, setSelectedStatus] = useState("all");
 
     const [attendanceData, setAttendanceData] = useState([]);
-    const [employeeId, setEmployeeId] = useState("");
+    const [d365Employees, setD365Employees] = useState([]);
+    const [employeeOption, setEmployeeOption] = useState("");
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [employeesLoading, setEmployeesLoading] = useState(true);
+    const [employeesLoadError, setEmployeesLoadError] = useState(false);
+    const [employeeLoadAttempt, setEmployeeLoadAttempt] = useState(0);
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const [isExportOpen, setIsExportOpen] = useState(false);
+
+    const getEmployeeOptionLabel = (employee) =>
+        `${employee.name} (${employee.personnelNumber}) - ${employee.employmentLegalEntityId} / ${employee.employmentId}`;
+
+    const getPunchPayload = (employee) => ({
+        personnelNumber: employee.personnelNumber,
+        employmentLegalEntityId: employee.employmentLegalEntityId,
+        employmentId: employee.employmentId,
+    });
+
+    useEffect(() => {
+        const controller = new AbortController();
+        let isCurrent = true;
+        const timeoutId = window.setTimeout(() => controller.abort(), 65_000);
+
+        const loadEmployees = async () => {
+            setEmployeesLoading(true);
+            setEmployeesLoadError(false);
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/api/d365/employees?view=attendance`,
+                    { signal: controller.signal }
+                );
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch D365 employees: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error("D365 employee response is not a list");
+                }
+
+                if (isCurrent) {
+                    setD365Employees(data);
+                }
+            } catch (error) {
+                console.error("Error loading D365 employees:", error);
+                if (isCurrent) {
+                    setD365Employees([]);
+                    setEmployeesLoadError(true);
+                }
+            } finally {
+                window.clearTimeout(timeoutId);
+                if (isCurrent) {
+                    setEmployeesLoading(false);
+                }
+            }
+        };
+
+        loadEmployees();
+
+        return () => {
+            isCurrent = false;
+            window.clearTimeout(timeoutId);
+            controller.abort();
+        };
+    }, [employeeLoadAttempt]);
 
     // =========================
     // FETCH ATTENDANCE
@@ -112,8 +175,8 @@ const fetchAttendance = async () => {
 // =========================
 
     const handlePunchIn = async () => {
-        if (!employeeId.trim()) {
-            setMessage(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
+        if (!selectedEmployee) {
+            setMessage(t("hrAttendance.errors.employeeNotSelected", { defaultValue: "Please select an employee" }));
             return;
         }
 
@@ -128,9 +191,7 @@ const fetchAttendance = async () => {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({
-                        employee_id: employeeId.trim(),
-                    }),
+                    body: JSON.stringify(getPunchPayload(selectedEmployee)),
                 }
             );
 
@@ -142,7 +203,8 @@ const fetchAttendance = async () => {
             }
 
             setMessage(t("hrAttendance.messages.punchInSuccess", { defaultValue: "Punch In successful" }));
-            setEmployeeId("");
+            setEmployeeOption("");
+            setSelectedEmployee(null);
 
             await fetchAttendance();
         } catch (error) {
@@ -158,8 +220,8 @@ const fetchAttendance = async () => {
     // =========================
 
     const handlePunchOut = async () => {
-        if (!employeeId.trim()) {
-            setMessage(t("employeesList.errors.employeeIdRequired", { defaultValue: "Please enter Employee ID" }));
+        if (!selectedEmployee) {
+            setMessage(t("hrAttendance.errors.employeeNotSelected", { defaultValue: "Please select an employee" }));
             return;
         }
 
@@ -174,9 +236,7 @@ const fetchAttendance = async () => {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({
-                        employee_id: employeeId.trim(),
-                    }),
+                    body: JSON.stringify(getPunchPayload(selectedEmployee)),
                 }
             );
 
@@ -188,7 +248,8 @@ const fetchAttendance = async () => {
             }
 
             setMessage(t("hrAttendance.messages.punchOutSuccess", { defaultValue: "Punch Out successful" }));
-            setEmployeeId("");
+            setEmployeeOption("");
+            setSelectedEmployee(null);
 
             await fetchAttendance();
         } catch (error) {
@@ -328,12 +389,52 @@ const fetchAttendance = async () => {
                     <input
                         type="text"
                         className="employee-id-input"
-                        placeholder={t("hrAttendance.enterEmployeeId", { defaultValue: "Enter Employee ID" })}
-                        value={employeeId}
-                        onChange={(e) =>
-                            setEmployeeId(e.target.value)
-                        }
+                        list="attendance-d365-employees"
+                        placeholder={employeesLoading ? t("hrAttendance.loadingEmployees", { defaultValue: "Loading employees..." }) : t("hrAttendance.searchEmployees", { defaultValue: "Search employees..." })}
+                        aria-label={t("hrAttendance.searchEmployeeAria", { defaultValue: "Search or select an employee" })}
+                        autoComplete="off"
+                        disabled={employeesLoading || employeesLoadError || !d365Employees.length}
+                        value={employeeOption}
+                        onChange={(event) => {
+                            const value = event.target.value;
+                            setEmployeeOption(value);
+                            setSelectedEmployee(
+                                d365Employees.find(
+                                    (employee) => getEmployeeOptionLabel(employee) === value
+                                ) || null
+                            );
+                        }}
                     />
+                    <datalist id="attendance-d365-employees">
+                        {d365Employees.map((employee) => (
+                            <option
+                                key={`${employee.personnelNumber}-${employee.employmentLegalEntityId}-${employee.employmentId}`}
+                                value={getEmployeeOptionLabel(employee)}
+                            />
+                        ))}
+                    </datalist>
+
+                    {selectedEmployee && (
+                        <span className="attendance-selected-employee">
+                            {selectedEmployee.name} - Employee ID: {selectedEmployee.personnelNumber}
+                        </span>
+                    )}
+                    {employeesLoadError && (
+                        <span className="attendance-employee-load-error" role="alert">
+                            Unable to load employees. Please try again.{" "}
+                            <button
+                                type="button"
+                                onClick={() => setEmployeeLoadAttempt((attempt) => attempt + 1)}
+                            >
+                                Retry
+                            </button>
+                        </span>
+                    )}
+                    {!employeesLoading && !employeesLoadError && d365Employees.length === 0 && (
+                        <span className="attendance-employee-status">
+                            No employees available.
+                        </span>
+                    )}
 
                    <button
                         className="punch-btn punch-in-btn"

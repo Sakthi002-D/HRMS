@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./EmployeeLogin.css";
 import { useAlert } from "../components/common/dialog/dialogContext";
+import { storeAuthToken } from "../utils/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -42,6 +43,7 @@ function EmployeeLogin() {
                 return;
             }
 
+            storeAuthToken(data.token);
             sessionStorage.setItem(
                 "loggedInEmployee",
                 JSON.stringify(data.employee)

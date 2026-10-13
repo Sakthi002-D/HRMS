@@ -26,3 +26,14 @@ backend/.env
 .env
 # Candidate CVs (local fallback storage) must never be committed
 backend/uploads/cvs/
+
+# Project snapshot archive - bundles backend/node_modules and .env secrets
+HRMS-current.zip
+
+# TLS certificates / private keys must never be committed
+HRMS-certs/
+*.crt
+*.key
+*.pem
+*.pfx
+*.p12

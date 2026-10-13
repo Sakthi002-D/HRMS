@@ -18,6 +18,8 @@ import { getCompanyToday } from "./services/leaveDateRules.js";
 import { ensureCareerSchema, requireHRActor } from "./services/careerApplications.js";
 import { validateLeaveDates } from "./services/leaveDateRules.js";
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
+import { D365Error, findD365Employee, getD365Employees } from "./services/d365Employees.js";
+import { getAttendanceCounts } from "./services/attendanceCounts.js";
 import {
     ensureAnnualLeaveAccrualSchema,
     exportAnnualLeaveAccrualForFinance,
@@ -26,6 +28,7 @@ import {
     startAnnualLeaveAccrualScheduler,
 } from "./services/annualLeaveAccrual.js";
 import { randomBytes } from "node:crypto";
+import { createLoginHandler, requireAuth, requireHR, requireSelfOrHR, stripPassword } from "./middleware/auth.js";
 
 
 const app = express();
@@ -61,6 +64,146 @@ app.get("/", (req, res) => {
         message: "HRMS Backend is running",
     });
 });
+
+app.get("/api/d365/employees", async (req, res) => {
+    if (req.query.view !== "attendance") {
+        return res.status(400).json({ message: "Unsupported employee view" });
+    }
+
+    try {
+        res.json(await getD365Employees());
+    } catch (error) {
+        if (error instanceof D365Error) {
+            console.error(
+                `D365 employees error [stage=${error.stage} upstreamStatus=${error.upstreamStatus ?? "n/a"} code=${error.code ?? "n/a"}]: ${error.message}`
+            );
+            return res.status(error.httpStatus).json({
+                message: "Failed to fetch D365 employees",
+                stage: error.stage,
+                detail: error.message,
+            });
+        }
+
+        console.error("D365 employees route error:", error?.code || error?.name, error?.message);
+        res.status(500).json({ message: "Failed to fetch D365 employees", stage: "server" });
+    }
+});
+
+// Punches for D365 employees are stored with the D365 identity and no HRMS employee_id
+const D365_IDENTITY_FIELDS = ["personnelNumber", "employmentLegalEntityId", "employmentId"];
+
+const hasD365Identity = (body) => D365_IDENTITY_FIELDS.some((field) => body?.[field] != null);
+
+const resolveD365Identity = async (body, res) => {
+    if (!D365_IDENTITY_FIELDS.every((field) => typeof body[field] === "string" && body[field].trim() !== "")) {
+        res.status(400).json({ message: "personnelNumber, employmentLegalEntityId and employmentId are required" });
+        return null;
+    }
+
+    try {
+        const employee = await findD365Employee(body);
+        if (!employee) {
+            res.status(404).json({ message: "D365 employee not found" });
+            return null;
+        }
+        return employee;
+    } catch (error) {
+        if (error instanceof D365Error) {
+            console.error(`D365 employee verification error [stage=${error.stage} upstreamStatus=${error.upstreamStatus ?? "n/a"}]: ${error.message}`);
+            res.status(error.httpStatus).json({ message: "Unable to verify D365 employee", stage: error.stage });
+            return null;
+        }
+        throw error;
+    }
+};
+
+const D365_ATTENDANCE_WHERE = `personnel_number = $1
+    AND employment_legal_entity_id = $2
+    AND employment_id = $3
+    AND attendance_date = $4::date`;
+
+const handleD365PunchIn = async (req, res) => {
+    const employee = await resolveD365Identity(req.body, res);
+    if (!employee) return;
+
+    const timeResult = await pool.query(`
+        SELECT
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date AS today,
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time AS current_time
+    `);
+    const { today, current_time: punchTime } = timeResult.rows[0];
+    const identity = [employee.personnelNumber, employee.employmentLegalEntityId, employee.employmentId];
+
+    const existing = await pool.query(`SELECT * FROM attendance WHERE ${D365_ATTENDANCE_WHERE}`, [...identity, today]);
+    if (existing.rows.length > 0) {
+        return res.status(400).json({
+            message: "Employee has already punched in today",
+            attendance: existing.rows[0],
+        });
+    }
+
+    const [hours, minutes] = punchTime.toString().substring(0, 5).split(":").map(Number);
+    const lateMinutes = Math.max(0, hours * 60 + minutes - 9 * 60);
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO attendance
+                (employee_id, attendance_date, punch_in, status, late_minutes, shift, project,
+                 personnel_number, employment_legal_entity_id, employment_id,
+                 employee_name_snapshot, d365_sync_status)
+             VALUES (NULL, $1, $2, $3, $4, '09:00 - 18:00', 'HRMS Portal', $5, $6, $7, $8, 'verified')
+             RETURNING *`,
+            [today, punchTime, lateMinutes > 0 ? "Late" : "Present", lateMinutes, ...identity, employee.name]
+        );
+
+        res.status(201).json({
+            message: "Punch In successful",
+            employee: { employee_id: employee.personnelNumber, name: employee.name },
+            attendance: result.rows[0],
+        });
+    } catch (error) {
+        if (error.code === "23505") {
+            return res.status(400).json({ message: "Employee has already punched in today" });
+        }
+        throw error;
+    }
+};
+
+const handleD365PunchOut = async (req, res) => {
+    const employee = await resolveD365Identity(req.body, res);
+    if (!employee) return;
+
+    const identity = [employee.personnelNumber, employee.employmentLegalEntityId, employee.employmentId];
+    const existing = await pool.query(
+        `SELECT * FROM attendance
+         WHERE ${D365_ATTENDANCE_WHERE.replace("$4::date", "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date")}`,
+        identity
+    );
+
+    if (existing.rows.length === 0) {
+        return res.status(400).json({ message: "Employee has not punched in today" });
+    }
+    if (existing.rows[0].punch_out) {
+        return res.status(400).json({
+            message: "Employee has already punched out today",
+            attendance: existing.rows[0],
+        });
+    }
+
+    const result = await pool.query(
+        `UPDATE attendance
+         SET punch_out = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
+         WHERE id = $1
+         RETURNING *`,
+        [existing.rows[0].id]
+    );
+
+    res.json({
+        message: "Punch Out successful",
+        employee: { employee_id: employee.personnelNumber, name: employee.name },
+        attendance: result.rows[0],
+    });
+};
 
 
 
@@ -127,7 +270,39 @@ app.get("/api/attendance", async (req, res) => {
 
         const result = await pool.query(query, values);
 
-        res.json(result.rows);
+        const d365Result = await pool.query(
+            `SELECT
+                id,
+                personnel_number AS employee_id,
+                'D365' AS source,
+                personnel_number,
+                employment_legal_entity_id,
+                employment_id,
+                COALESCE(employee_name_snapshot, '') AS employee_name,
+                COALESCE(department_snapshot, '') AS department,
+                attendance_date,
+                punch_in,
+                COALESCE(status, 'Present') AS status,
+                punch_out,
+                COALESCE(late_minutes, 0) AS late_minutes,
+                COALESCE(shift, '09:00 - 18:00') AS shift,
+                project,
+                CASE WHEN punch_out IS NOT NULL
+                    THEN ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60) END AS working_minutes,
+                CASE WHEN punch_out IS NOT NULL
+                    THEN LEAST(ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60), 540) END AS normal_working_minutes,
+                CASE WHEN punch_out IS NOT NULL
+                    THEN GREATEST(ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60) - 540, 0) END AS overtime_minutes
+             FROM attendance
+             WHERE employee_id IS NULL
+               AND personnel_number IS NOT NULL
+               AND attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)`,
+            values
+        );
+
+        const punched = [...d365Result.rows, ...result.rows.filter((row) => row.id != null)]
+            .sort((a, b) => b.id - a.id);
+        res.json([...punched, ...result.rows.filter((row) => row.id == null)]);
 
     } catch (error) {
         console.error("Error fetching attendance:", error);
@@ -226,6 +401,10 @@ app.post("/api/attendance", async (req, res) => {
 
 app.post("/api/attendance/punch-in", async (req, res) => {
     try {
+        if (hasD365Identity(req.body)) {
+            return await handleD365PunchIn(req, res);
+        }
+
         const { employee_id } = req.body;
 
         if (!employee_id) {
@@ -355,6 +534,10 @@ app.post("/api/attendance/punch-in", async (req, res) => {
 
 app.post("/api/attendance/punch-out", async (req, res) => {
     try {
+        if (hasD365Identity(req.body)) {
+            return await handleD365PunchOut(req, res);
+        }
+
         const { employee_id, punch_out } = req.body;
 
         if (!employee_id) {
@@ -449,8 +632,7 @@ app.get("/api/employees", async (req, res) => {
             "SELECT * FROM employees ORDER BY id ASC"
         );
 
-        res.json(result.rows);
-
+        res.json(result.rows.map(stripPassword));
     } catch (error) {
         console.error(error);
 
@@ -526,7 +708,7 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
     }
 });
 
-app.put("/api/employees/:employeeId/about", async (req, res) => {
+app.put("/api/employees/:employeeId/about", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const result = await pool.query(
             "UPDATE employees SET about = $1 WHERE employee_id = $2 RETURNING about",
@@ -546,7 +728,7 @@ const detailTableConfig = {
     project: { table: "employee_projects", key: "employee_id", columns: ["project_name", "description", "project_lead", "start_date", "deadline", "status"] },
 };
 
-app.post("/api/employees/:employeeId/education", async (req, res) => {
+app.post("/api/employees/:employeeId/education", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const columns = ["qualification", "institution", "field_of_study", "specialization", "start_year", "end_year", "grade", "education_type", "location", "currently_pursuing", "certificate_url"];
         const values = columns.map((column) => column === "currently_pursuing" ? Boolean(req.body[column]) : req.body[column] ?? null);
@@ -558,7 +740,7 @@ app.post("/api/employees/:employeeId/education", async (req, res) => {
     }
 });
 
-app.put("/api/employees/:employeeId/education/:educationId", async (req, res) => {
+app.put("/api/employees/:employeeId/education/:educationId", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const columns = ["qualification", "institution", "field_of_study", "specialization", "start_year", "end_year", "grade", "education_type", "location", "currently_pursuing", "certificate_url"];
         const values = columns.map((column) => column === "currently_pursuing" ? Boolean(req.body[column]) : req.body[column] ?? null);
@@ -572,7 +754,7 @@ app.put("/api/employees/:employeeId/education/:educationId", async (req, res) =>
     }
 });
 
-app.delete("/api/employees/:employeeId/education/:educationId", async (req, res) => {
+app.delete("/api/employees/:employeeId/education/:educationId", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const result = await pool.query("DELETE FROM employee_education WHERE id = $1 AND employee_id = $2 RETURNING id", [req.params.educationId, req.params.employeeId]);
         if (!result.rows.length) return res.status(404).json({ message: "Education record not found" });
@@ -584,7 +766,7 @@ app.delete("/api/employees/:employeeId/education/:educationId", async (req, res)
 });
 
 for (const [section, config] of Object.entries(detailTableConfig)) {
-    app.put(`/api/employees/:employeeId/${section}`, async (req, res) => {
+    app.put(`/api/employees/:employeeId/${section}`, requireAuth(pool), requireSelfOrHR, async (req, res) => {
         try {
             const { employeeId } = req.params;
             const employeeResult = await pool.query(
@@ -627,7 +809,7 @@ for (const [section, config] of Object.entries(detailTableConfig)) {
     });
 }
 
-app.post("/api/employees/:employeeId/experience", async (req, res) => {
+app.post("/api/employees/:employeeId/experience", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const employeeResult = await pool.query(
             "SELECT id FROM employees WHERE employee_id = $1",
@@ -650,7 +832,7 @@ app.post("/api/employees/:employeeId/experience", async (req, res) => {
     }
 });
 
-app.put("/api/employees/:employeeId/experience/:experienceId", async (req, res) => {
+app.put("/api/employees/:employeeId/experience/:experienceId", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const columns = ["company_name", "designation", "department", "employment_type", "start_date", "end_date", "currently_working", "company_location", "job_description", "responsibilities", "skills", "reason_for_leaving"];
         const values = columns.map((column) => column === "currently_working" ? Boolean(req.body[column]) : req.body[column] ?? null);
@@ -664,7 +846,7 @@ app.put("/api/employees/:employeeId/experience/:experienceId", async (req, res) 
     }
 });
 
-app.delete("/api/employees/:employeeId/experience/:experienceId", async (req, res) => {
+app.delete("/api/employees/:employeeId/experience/:experienceId", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const result = await pool.query("DELETE FROM employee_experience WHERE id = $1 AND employee_id = (SELECT id FROM employees WHERE employee_id = $2) RETURNING id", [req.params.experienceId, req.params.employeeId]);
         if (!result.rows.length) return res.status(404).json({ message: "Experience record not found" });
@@ -962,7 +1144,7 @@ app.post("/api/reset-password", async (req, res) => {
 });
 
 // Add New Employees
-app.post("/api/employees", async (req, res) => {
+app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const {
             employee_id,
@@ -1070,7 +1252,7 @@ app.post("/api/employees", async (req, res) => {
             ]
         );
 
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(stripPassword(result.rows[0]));
 
     } catch (error) {
         console.error("Error adding employee", error);
@@ -1083,7 +1265,7 @@ app.post("/api/employees", async (req, res) => {
 
 
 // Update Employee
-app.put("/api/employees/:employeeId", async (req, res) => {
+app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const { employeeId } = req.params;
 
@@ -1121,6 +1303,32 @@ app.put("/api/employees/:employeeId", async (req, res) => {
         make_primary,
         profile_photo
         } = req.body;
+
+        // Employee IDs are referenced by attendance, leave, payroll and D365 mapping: never rewritten here
+        if (employee_id !== undefined && employee_id !== null && String(employee_id) !== employeeId) {
+            return res.status(400).json({ message: "Employee ID cannot be changed" });
+        }
+
+        // Employees may self-edit personal details only; master fields keep their stored values
+        let master = {};
+        if (req.auth.role !== "hr") {
+            const current = await pool.query("SELECT * FROM employees WHERE employee_id = $1", [employeeId]);
+            if (current.rows.length === 0) {
+                return res.status(404).json({ message: "Employee not found" });
+            }
+            const c = current.rows[0];
+            master = {
+                name: c.name, department: c.department, designation: c.designation,
+                joining_date: c.joining_date, employment_type: c.employment_type, status: c.status,
+                legal_entity: c.legal_entity, worker_type: c.worker_type,
+                employment_category: c.employment_category, project_role_id: c.project_role_id,
+                employment_end_date: c.employment_end_date, termination_reason: c.termination_reason,
+                last_date_worked: c.last_date_worked, position: c.position, position_title: c.position_title,
+                assignment_start: c.assignment_start, assignment_end: c.assignment_end,
+                make_primary: c.make_primary,
+            };
+        }
+        const pick = (field, submitted) => (field in master ? master[field] : submitted);
 
         const result = await pool.query(
   `UPDATE employees
@@ -1160,18 +1368,18 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     WHERE employee_id = $33
    RETURNING *`,
   [
-    employee_id,
-    name,
+    employeeId,
+    pick("name", name),
     normalizeDateValue(date_of_birth),
     gender,
-    department,
-    designation,
+    pick("department", department),
+    pick("designation", designation),
     email,
     phone,
     address,
-    normalizeDateValue(joining_date),
-    employment_type,
-    status,
+    pick("joining_date", normalizeDateValue(joining_date)),
+    pick("employment_type", employment_type),
+    pick("status", status),
     emergency_contact,
     passport_no,
     normalizeDateValue(passport_exp_date),
@@ -1179,18 +1387,18 @@ app.put("/api/employees/:employeeId", async (req, res) => {
     religion,
     marital_status,
     children_count === "" || children_count == null ? null : Number(children_count),
-    legal_entity || "SHLT",
-    worker_type || "Employee",
-    employment_category || null,
-    project_role_id || null,
-    employment_end_date || "Never",
-    termination_reason || null,
-    last_date_worked || null,
-    position || designation,
-    position_title || designation,
-    normalizeDateValue(assignment_start),
-    normalizeDateValue(assignment_end),
-    Boolean(make_primary),
+    pick("legal_entity", legal_entity || "SHLT"),
+    pick("worker_type", worker_type || "Employee"),
+    pick("employment_category", employment_category || null),
+    pick("project_role_id", project_role_id || null),
+    pick("employment_end_date", employment_end_date || "Never"),
+    pick("termination_reason", termination_reason || null),
+    pick("last_date_worked", last_date_worked || null),
+    pick("position", position || designation),
+    pick("position_title", position_title || designation),
+    pick("assignment_start", normalizeDateValue(assignment_start)),
+    pick("assignment_end", normalizeDateValue(assignment_end)),
+    pick("make_primary", Boolean(make_primary)),
     profile_photo || null,
     employeeId
   ]
@@ -1202,7 +1410,7 @@ app.put("/api/employees/:employeeId", async (req, res) => {
             });
         }
 
-        res.json(result.rows[0]);
+        res.json(stripPassword(result.rows[0]));
 
     } catch (error) {
         console.error("Error updating employee:", error);
@@ -1215,7 +1423,7 @@ app.put("/api/employees/:employeeId", async (req, res) => {
 });
 
 // Set a custom password, or generate a one-time temporary password.
-app.post("/api/employees/:employeeId/reset-password", async (req, res) => {
+app.post("/api/employees/:employeeId/reset-password", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const customPassword = String(req.body?.custom_password || "").trim();
         if (customPassword && customPassword.length < 6) {
@@ -1249,7 +1457,7 @@ app.post("/api/employees/:employeeId/reset-password", async (req, res) => {
     }
 });
 
-app.post("/api/employees/:employeeId/change-password", async (req, res) => {
+app.post("/api/employees/:employeeId/change-password", requireAuth(pool), requireSelfOrHR, async (req, res) => {
     try {
         const { current_password, new_password, repeat_password } = req.body || {};
         if (!current_password || !new_password || !repeat_password) {
@@ -1266,7 +1474,8 @@ app.post("/api/employees/:employeeId/change-password", async (req, res) => {
             "SELECT password FROM employees WHERE employee_id = $1 AND status = 'Active'",
             [req.params.employeeId]
         );
-        if (result.rows.length === 0 || !(await bcrypt.compare(current_password, result.rows[0].password))) {
+        if (result.rows.length === 0 || !result.rows[0].password
+            || !(await bcrypt.compare(current_password, result.rows[0].password))) {
             return res.status(401).json({ message: "Current password is incorrect" });
         }
 
@@ -1394,7 +1603,7 @@ app.get("/api/hr/employee-requests", async (req, res) => {
     }
 });
 
-app.put("/api/hr/employee-requests/:id", async (req, res) => {
+app.put("/api/hr/employee-requests/:id", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const { status, hr_response = "" } = req.body;
         if (!["Approved", "Rejected"].includes(status)) {
@@ -1567,7 +1776,7 @@ app.delete("/api/payroll/:id", async (req, res) => {
 
 
 // Archive Employee while preserving the employee and related history.
-app.patch("/api/employees/:employeeId/status", async (req, res) => {
+app.patch("/api/employees/:employeeId/status", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const { employeeId } = req.params;
         const { status, termination_reason, last_date_worked } = req.body;
@@ -1589,7 +1798,7 @@ app.patch("/api/employees/:employeeId/status", async (req, res) => {
             return res.status(404).json({ message: "Employee not found" });
         }
 
-        res.json({ message: "Employee archived successfully", employee: result.rows[0] });
+        res.json({ message: "Employee archived successfully", employee: stripPassword(result.rows[0]) });
     } catch (error) {
         console.error("Error archiving employee:", error);
         res.status(500).json({ message: "Failed to archive employee" });
@@ -1597,7 +1806,7 @@ app.patch("/api/employees/:employeeId/status", async (req, res) => {
 });
 
 // Delete Employee
-app.delete("/api/employees/:employeeId", async (req, res) => {
+app.delete("/api/employees/:employeeId", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const { employeeId } = req.params;
 
@@ -1616,7 +1825,7 @@ app.delete("/api/employees/:employeeId", async (req, res) => {
 
         res.json({
             message: "Employee deleted successfully",
-            employee: result.rows[0]
+            employee: stripPassword(result.rows[0])
         });
 
     } catch (error) {
@@ -2303,12 +2512,7 @@ app.get("/api/dashboard", async (req, res) => {
             WHERE status = 'Active'
         `);
 
-        const attendanceResult = await pool.query(`
-            SELECT COUNT(DISTINCT employee_id)::int AS present_today
-            FROM attendance
-            WHERE attendance_date = CURRENT_DATE
-              AND LOWER(status) IN ('present', 'late')
-        `);
+        const attendanceCounts = await getAttendanceCounts(pool);
 
         const leavesResult = await pool.query(`
             SELECT COUNT(*)::int AS pending_leaves
@@ -2374,7 +2578,7 @@ app.get("/api/dashboard", async (req, res) => {
 
         res.json({
             totalEmployees: employeesResult.rows[0].total_employees,
-            presentToday: attendanceResult.rows[0].present_today,
+            presentToday: attendanceCounts.present,
             onLeave: onLeaveResult.rows[0].on_leave,
             pendingLeaves: leavesResult.rows[0].pending_leaves,
             openTickets: openTickets,
@@ -2555,62 +2759,7 @@ app.put("/api/job-applications/:id/status", withHR(async (req, res) => {
 }));
 
 
-app.post("/api/login", async (req, res) => {
-  try {
-    const { employee_id, password } = req.body;
-
-    if (!employee_id || !password) {
-      return res.status(400).json({
-        message: "Employee ID and password are required",
-      });
-    }
-
-    const result = await pool.query(
-      `SELECT *
-       FROM employees
-       WHERE employee_id = $1`,
-      [employee_id.trim()]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        message: "Invalid employee ID or password",
-      });
-    }
-
-    const employee = result.rows[0];
-
-    if (employee.access_disabled === true) {
-      return res.status(403).json({
-        message: "Your account has been disabled. Please contact HR.",
-      });
-    }
-
-    // Compare plain password with bcrypt hash
-    const passwordMatch = await bcrypt.compare(
-      password,
-      employee.password
-    );
-
-    if (!passwordMatch) {
-      return res.status(401).json({
-        message: "Invalid employee ID or password",
-      });
-    }
-
-    return res.status(200).json({
-      message: "Login successful",
-            employee: employee,
-    });
-
-  } catch (error) {
-    console.error("LOGIN ERROR:", error);
-
-    return res.status(500).json({
-      message: "Server error during login",
-    });
-  }
-});
+app.post("/api/login", createLoginHandler(pool));
 // =========================
 // SERVER
 // =========================

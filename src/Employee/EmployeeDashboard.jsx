@@ -24,6 +24,7 @@ import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditMo
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
 import API_URL from "../config/api";
+import { authHeaders } from "../utils/auth";
 
 const DEFAULT_QATAR_HOLIDAYS = [
     { name: "National Day", date: "18 December", days: 1 },
@@ -585,7 +586,7 @@ function EmployeeDashboard() {
                 if (field in body) body[field] = body[field] === "" ? null : Number(body[field]);
             });
             const recordId = isEducation ? educationEditorId : isExperience ? experienceEditorId : null;
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}${isEducation ? `/education${recordId ? `/${recordId}` : ""}` : isExperience ? `/experience${recordId ? `/${recordId}` : ""}` : `/${sectionEditor === "about" ? "about" : isEmployeeSection ? "" : sectionEditor}`}`, { method: (isEducation || isExperience) && !recordId ? "POST" : "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}${isEducation ? `/education${recordId ? `/${recordId}` : ""}` : isExperience ? `/experience${recordId ? `/${recordId}` : ""}` : `/${sectionEditor === "about" ? "about" : isEmployeeSection ? "" : sectionEditor}`}`, { method: (isEducation || isExperience) && !recordId ? "POST" : "PUT", headers: authHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
             const responseText = await response.text();
             let data;
             try {
@@ -607,7 +608,7 @@ function EmployeeDashboard() {
     };
 
     const deleteEducation = async (educationId) => {
-        const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, { method: "DELETE" });
+        const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, { method: "DELETE", headers: authHeaders() });
         if (!response.ok) return showAlert("Unable to delete education");
         setEmployee((current) => ({ ...current, education: (current.education || []).filter((record) => record.id !== educationId) }));
     };
@@ -624,7 +625,7 @@ function EmployeeDashboard() {
             setLoading(true);
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/change-password`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                            headers: authHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify(passwordForm),
             });
             const data = await response.json();
@@ -683,7 +684,7 @@ function EmployeeDashboard() {
 
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: authHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify(normalizedProfile),
             });
             const data = await response.json();

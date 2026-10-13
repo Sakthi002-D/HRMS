@@ -9,6 +9,7 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import Modal from "../../components/layout/common/Modal";
 import { useConfirm } from "../../components/common/dialog/dialogContext";
 import API_URL from "../../config/api";
+import { authHeaders } from "../../utils/auth";
 import "./EmployeeRequests.css";
 
 const REQUEST_STATUSES = ["Pending", "Approved", "Rejected"];
@@ -166,7 +167,7 @@ function EmployeeRequests() {
                 try {
                     const response = await fetch(`${API_URL}/api/hr/employee-requests/${request.id}`, {
                         method: "PUT",
-                        headers: { "Content-Type": "application/json" },
+                        headers: authHeaders({ "Content-Type": "application/json" }),
                         body: JSON.stringify({
                             status,
                             hr_response: status === "Approved"

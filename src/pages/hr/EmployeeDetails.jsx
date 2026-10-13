@@ -15,6 +15,7 @@ import {
 import "./EmployeeDetails.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { authHeaders } from "../../utils/auth";
 // [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
     ["employment_contract", "Employment Contract", "HR"],
@@ -240,7 +241,7 @@ function EmployeeDetails() {
         try {
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: authHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify(editForm),
             });
             const data = await readApiResponse(response);
@@ -325,7 +326,7 @@ function EmployeeDetails() {
                     : { ...sectionForm };
             const response = await fetch(endpoint, {
                 method,
-                headers: { "Content-Type": "application/json" },
+                headers: authHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify(body),
             });
             const data = await readApiResponse(response);
@@ -354,6 +355,7 @@ function EmployeeDetails() {
         try {
             const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, {
                 method: "DELETE",
+                headers: authHeaders(),
             });
             if (!response.ok) {
                 throw new Error(t("employeeDetails.errors.deleteEducationFailed", { defaultValue: "Unable to delete education record" }));
@@ -390,7 +392,7 @@ function EmployeeDetails() {
                 `${API_URL}/api/employees/${employee.employee_id}/reset-password`,
                 {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: authHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ custom_password: submittedNewPassword }),
                 }
             );

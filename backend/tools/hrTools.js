@@ -1,4 +1,5 @@
 import pool from "../db.js";
+import { getAttendanceCounts } from "../services/attendanceCounts.js";
 
 /**
  * HR / Admin Tools - Authorized functions available strictly to users with role === 'hr'.
@@ -151,21 +152,16 @@ export async function getEmployeeCount({ department } = {}) {
 export async function getAttendanceOverview({ date } = {}) {
     const targetDate = date || new Date().toISOString().slice(0, 10);
 
-    const countsRes = await pool.query(`
-        SELECT 
-            COUNT(DISTINCT CASE WHEN LOWER(a.status) IN ('present', 'late') THEN a.employee_id END)::int AS present_count,
-            COUNT(DISTINCT CASE WHEN LOWER(a.status) = 'late' THEN a.employee_id END)::int AS late_count
-        FROM attendance a
-        WHERE a.attendance_date = $1
-    `, [targetDate]);
+    const counts = await getAttendanceCounts(pool, targetDate);
 
     const totalActiveRes = await pool.query(
         `SELECT COUNT(*)::int AS total FROM employees WHERE status = 'Active'`
     );
     const totalActive = totalActiveRes.rows[0].total;
-    const presentCount = countsRes.rows[0].present_count;
-    const lateCount = countsRes.rows[0].late_count;
-    const absentCount = Math.max(0, totalActive - presentCount);
+    const presentCount = counts.present;
+    const lateCount = counts.late;
+    // Absent is measured against HRMS employees only; D365 punches are not in that headcount
+    const absentCount = Math.max(0, totalActive - counts.hrmsPresent);
 
     // Sample list of absent employees
     const absentEmployeesRes = await pool.query(`
@@ -175,7 +171,7 @@ export async function getAttendanceOverview({ date } = {}) {
           AND e.employee_id NOT IN (
               SELECT DISTINCT a.employee_id 
               FROM attendance a 
-              WHERE a.attendance_date = $1 AND LOWER(a.status) IN ('present', 'late')
+              WHERE a.attendance_date = $1 AND a.employee_id IS NOT NULL AND LOWER(a.status) IN ('present', 'late')
           )
         ORDER BY e.name ASC
         LIMIT 15
@@ -186,6 +182,8 @@ export async function getAttendanceOverview({ date } = {}) {
         totalActiveEmployees: totalActive,
         presentToday: presentCount,
         lateToday: lateCount,
+        d365PresentToday: counts.d365Present,
+        d365LateToday: counts.d365Late,
         absentToday: absentCount,
         absentEmployeesSample: absentEmployeesRes.rows
     };

@@ -22,6 +22,7 @@ import {
 import { useAlert } from "../../components/common/dialog/dialogContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { authHeaders } from "../../utils/auth";
 
 const formatPhoneNumber = (phone) => {
   const value = String(phone || "").trim();
@@ -384,7 +385,7 @@ const resetForm = () => {
         `${API_URL}/api/employees/${employeeId}/status`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             status: exitStatus,
             last_date_worked: lastDateWorked,
@@ -697,9 +698,9 @@ const employeeData = {
         `${API_URL}/api/employees`,
         {
           method: "POST",
-          headers: {
+          headers: authHeaders({
             "Content-Type": "application/json",
-          },
+          }),
           body: JSON.stringify(employeeData),
         }
       );
@@ -967,9 +968,9 @@ const updateEmployee = async () => {
       `${API_URL}/api/employees/${editingEmployeeId}`,
       {
         method: "PUT",
-        headers: {
+        headers: authHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify(employeeData),
       }
     );

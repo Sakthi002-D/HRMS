@@ -232,6 +232,33 @@
     border-color: #1e5a7a;
 }
 
+.employee-id-input:disabled {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.attendance-selected-employee,
+.attendance-employee-status {
+    color: #475569;
+    font-size: 13px;
+}
+
+.attendance-employee-load-error {
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.attendance-employee-load-error button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #991b1b;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .punch-btn {
     height: 40px;
     padding: 0 18px;

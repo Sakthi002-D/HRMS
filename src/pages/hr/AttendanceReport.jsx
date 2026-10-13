@@ -5,6 +5,11 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import ReportChart from "../../components/layout/common/ReportChart";
 import "./AttendanceReport.css";
 
+// D365 rows are identified by the full D365 identity so they never merge with HRMS employee IDs
+const getPersonKey = (item) => item.source === "D365"
+    ? `D365|${item.personnel_number}|${item.employment_legal_entity_id}|${item.employment_id}`
+    : `HRMS|${item.employee_id}`;
+
 function AttendanceReport() {
     const { t } = useTranslation();
     const [attendanceData, setAttendanceData] = useState([]);
@@ -25,6 +30,7 @@ function AttendanceReport() {
     const absentCount = attendanceData.filter((item) => String(item.status).toLowerCase() === "absent").length;
     const attendancePercentage = attendanceData.length ? Math.round((presentCount / attendanceData.length) * 100) : 0;
     const departments = useMemo(() => [...new Set(attendanceData.map((item) => item.department).filter(Boolean))].slice(0, 8), [attendanceData]);
+    const totalPeople = new Set(attendanceData.map(getPersonKey)).size;
 
     return (
         <DashboardLayout>
@@ -42,7 +48,7 @@ function AttendanceReport() {
 
                     <div className="report-card">
                         <h3>{t("reports.common.totalEmployees", { defaultValue: "Total Employees" })}</h3>
-                        <h2>{loading ? "—" : new Set(attendanceData.map((item) => item.employee_id)).size}</h2>
+                        <h2>{loading ? "—" : totalPeople}</h2>
                         <p>{t("reports.attendance.activeEmployees", { defaultValue: "Active employees" })}</p>
                     </div>
 
@@ -99,10 +105,10 @@ function AttendanceReport() {
                                 const isPresent = ["present", "late"].includes(String(employee.status).toLowerCase());
                                 const attendance = isPresent ? 100 : 0;
                                 return (
-                                <tr key={employee.employeeID}>
+                                <tr key={employee.id ?? getPersonKey(employee)}>
 
                                     <td><span dir="ltr" className="ltr-text">{employee.employee_id}</span></td>
-                                    <td>{employee.employee_name}</td>
+                                    <td>{employee.employee_name}{employee.source === "D365" && <small> (D365)</small>}</td>
                                     <td>{employee.department}</td>
                                     <td>1</td>
                                     <td>{isPresent ? 1 : 0}</td>

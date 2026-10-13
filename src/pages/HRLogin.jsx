@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./HRLogin.css";
 import API_URL from "../config/api";
 import { useAlert } from "../components/common/dialog/dialogContext";
+import { storeAuthToken } from "../utils/auth";
 
 function HRLogin() {
   const showAlert = useAlert();
@@ -52,6 +53,7 @@ function HRLogin() {
       // Clear previous sessions
       sessionStorage.removeItem("loggedInEmployee");
       sessionStorage.removeItem("loggedInHR");
+      storeAuthToken(data.token);
 
       const role = user.role?.toLowerCase();
 

@@ -10,7 +10,9 @@
     "test:resignation": "node scripts/testResignation.js",
     "test:mpr-budget": "node scripts/testMprBudget.js",
     "test:careers": "node scripts/testCareers.js",
-    "test:mpr-period": "node scripts/testMprApplicationPeriod.js"
+    "test:mpr-period": "node scripts/testMprApplicationPeriod.js",
+    "test:attendance-counts": "node scripts/testAttendanceCounts.js",
+    "test:employee-auth": "node scripts/testEmployeeAuth.js"
   },
   "keywords": [],
   "author": "",

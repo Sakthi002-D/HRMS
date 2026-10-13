@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./Login.css";
 import API_URL from "../config/api";
 import { useAlert } from "../components/common/dialog/dialogContext";
+import { clearStaleSession, storeAuthToken } from "../utils/auth";
 
 function Login() {
   const showAlert = useAlert();
@@ -17,6 +18,7 @@ function Login() {
   // IF USER IS ALREADY LOGGED IN
   // ==================================================
   useEffect(() => {
+    clearStaleSession();
     const hrSession = sessionStorage.getItem("loggedInHR");
     const employeeSession =
       sessionStorage.getItem("loggedInEmployee");
@@ -94,6 +96,7 @@ function Login() {
       // ==================================================
       sessionStorage.removeItem("loggedInEmployee");
       sessionStorage.removeItem("loggedInHR");
+      storeAuthToken(data.token);
 
       // ==================================================
       // GET ROLE

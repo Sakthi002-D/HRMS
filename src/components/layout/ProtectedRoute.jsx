@@ -1,7 +1,11 @@
 import { Navigate, Outlet } from "react-router-dom";
 import HRAssistant from "../assistant/HRAssistant";
+import { clearStaleSession } from "../../utils/auth";
 
 function ProtectedRoute({ role }) {
+
+  // Sessions without a token (created before token auth) must sign in again
+  clearStaleSession();
 
   const employeeSession =
     sessionStorage.getItem("loggedInEmployee");
