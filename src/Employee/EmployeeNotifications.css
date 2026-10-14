@@ -48,6 +48,16 @@
     box-sizing: border-box;
 }
 
+/* From / To date filters: the shared DatePicker (Attendance look), same 42px height as the other filters */
+.empnotif-date {
+    min-width: 0;
+}
+
+.empnotif-date .date-picker-trigger {
+    height: 42px;
+    min-height: 42px;
+}
+
 .empnotif-clear {
     height: 42px;
     padding: 0 16px;

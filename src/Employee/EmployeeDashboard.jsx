@@ -68,6 +68,20 @@ const attendanceStatusLabel = (t, value) => {
     const key = String(value).trim().toLowerCase().replace(/\s+/g, "_");
     return t(`employeeAttendance.status.${key}`, { defaultValue: String(value) });
 };
+// Change Password: English messages from the backend route (and the frontend fallback) → translation key.
+// Any other message is shown as it arrives.
+const PASSWORD_MESSAGE_KEYS = {
+    "All password fields are required": "allRequired",
+    "New password must be at least 6 characters": "tooShort",
+    "New password and repeat password do not match": "mismatch",
+    "Current password is incorrect": "currentIncorrect",
+    "Failed to change password": "failed",
+    "Unable to change password": "unable",
+};
+const passwordErrorLabel = (t, message) => (PASSWORD_MESSAGE_KEYS[message]
+    ? t(`changePassword.errors.${PASSWORD_MESSAGE_KEYS[message]}`, { defaultValue: message })
+    : message || t("changePassword.errors.unable", { defaultValue: "Unable to change password" }));
+
 const formatAttendanceTime = (time) => {
     if (!time || time === "-") return "-";
     const match = String(time).match(/^(\d{1,2}):(\d{2})/);
@@ -629,12 +643,12 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || "Unable to change password");
-            showAlert("Password changed successfully", "success");
+            showAlert(t("changePassword.success", { defaultValue: "Password changed successfully" }), "success");
             setPasswordForm({ current_password: "", new_password: "", repeat_password: "" });
             setShowChangePassword(false);
             setActiveSection("settings");
         } catch (error) {
-            showAlert(error.message || "Unable to change password");
+            showAlert(passwordErrorLabel(t, error.message));
         } finally {
             setLoading(false);
         }
@@ -982,7 +996,7 @@ function EmployeeDashboard() {
                         <p>{t(`employeeHeader.${activeSection}.subtitle`, { name: employee.name })}</p>
                     </div>
                     {activeSection === "dashboard" && <div className="employee-notification-wrapper">
-                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label="Open notifications">
+                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
                             <Bell size={19} />
                             {notifications.filter((notification) => !notification.read).length > 0 && <span className="employee-notification-count">{notifications.filter((notification) => !notification.read).length}</span>}
                         </button>

@@ -8,6 +8,11 @@ const POPUP_GAP = 8;
 const SCREEN_MARGIN = 8;
 const SMALL_SCREEN = 640;
 
+// Month names reuse employeeRequest.months.*; weekday short names are datePicker.weekdays.*
+// (English defaults = the labels shown before). First day of the week stays Sunday.
+const MONTH_KEYS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const WEEKDAYS = [["su", "Su"], ["mo", "Mo"], ["tu", "Tu"], ["we", "We"], ["th", "Th"], ["fr", "Fr"], ["sa", "Sa"]];
+
 const toDateKey = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
@@ -92,9 +97,13 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
         boundary ? boundary.right - SCREEN_MARGIN : viewportWidth
       );
 
+      const rtl = document.documentElement.dir === "rtl";
       let left;
       if (viewportWidth < SMALL_SCREEN) {
         left = trigger.left + trigger.width / 2 - width / 2;
+      } else if (rtl) {
+        left = trigger.right - width;
+        if (left < minLeft) left = trigger.left;
       } else {
         left = trigger.left;
         if (left + width > maxRight) left = trigger.right - width;
@@ -120,6 +129,19 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
       window.removeEventListener("scroll", place, true);
     };
   }, [open, autoPosition, yearPickerOpen, visibleMonth]);
+
+  // Inline popup in Arabic opens from the field's right edge (rtl.css). If that would run off the
+  // left of the screen, open it from the field's left edge instead. English is not affected.
+  useLayoutEffect(() => {
+    const popup = popupRef.current;
+    if (!open || autoPosition || !popup || document.documentElement.dir !== "rtl") return;
+    popup.style.left = "";
+    popup.style.right = "";
+    if (popup.getBoundingClientRect().left < SCREEN_MARGIN) {
+      popup.style.left = "0";
+      popup.style.right = "auto";
+    }
+  }, [open, autoPosition, yearPickerOpen]);
 
   const togglePicker = () => {
     if (!open && minMonthIndex !== null && visibleMonthIndex < minMonthIndex) {
@@ -173,8 +195,8 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
             </button>
             <div className="date-picker-heading">
               <span>
-                {visibleMonth.toLocaleString("en-US", {
-                  month: "long",
+                {t(`employeeRequest.months.${MONTH_KEYS[visibleMonth.getMonth()]}`, {
+                  defaultValue: visibleMonth.toLocaleString("en-US", { month: "long" }),
                 })}
               </span>
               <button
@@ -182,7 +204,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
                 className="date-picker-year"
                 onClick={() => setYearPickerOpen((previous) => !previous)}
               >
-                {visibleMonth.getFullYear()}
+                <bdi>{visibleMonth.getFullYear()}</bdi>
               </button>
             </div>
             <button
@@ -221,8 +243,8 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
           ) : (
             <>
               <div className="date-picker-weekdays">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                  <span key={day}>{day}</span>
+                {WEEKDAYS.map(([key, label]) => (
+                  <span key={key}>{t(`datePicker.weekdays.${key}`, { defaultValue: label })}</span>
                 ))}
               </div>
               <div className="date-picker-days">

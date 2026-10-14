@@ -1858,6 +1858,13 @@
     "searchLabel": "البحث بالاسم أو رقم الموظف",
     "filterByDepartment": "التصفية حسب القسم",
     "month": "شهر الاستقالة",
+    "monthPicker": {
+      "choose": "اختر الشهر",
+      "previousYear": "السنة السابقة",
+      "nextYear": "السنة التالية",
+      "clear": "مسح",
+      "thisMonth": "هذا الشهر"
+    },
     "dismiss": "إغلاق",
     "cards": {
       "closed": "مرفوضة / مسحوبة"
@@ -2366,5 +2373,223 @@
       "salary_month": "شهر الراتب",
       "salary_year": "سنة الراتب"
     }
-  }
+  },
+    "employeeNotifications": {
+        "openNotifications": "فتح الإشعارات",
+        "unreadOf": "<b>{{unread}}</b> غير مقروءة من أصل {{total}}",
+        "searchPlaceholder": "ابحث في العنوان أو الرسالة",
+        "searchLabel": "البحث في الإشعارات",
+        "statusFilterLabel": "التصفية حسب حالة القراءة",
+        "allMessages": "جميع الرسائل",
+        "unread": "غير مقروءة",
+        "read": "مقروءة",
+        "moduleFilterLabel": "التصفية حسب القسم",
+        "allModules": "جميع الأقسام",
+        "fromDate": "من تاريخ",
+        "toDate": "إلى تاريخ",
+        "clear": "مسح",
+        "empty": "لا توجد إشعارات جديدة، أنت على اطلاع بكل شيء.",
+        "noMatch": "لا توجد إشعارات مطابقة لعوامل التصفية هذه.",
+        "modules": {
+            "leave": "الإجازات",
+            "general": "عام"
+        },
+        "kinds": {
+            "leave_approved": {
+                "title": "تمت الموافقة على الإجازة",
+                "message_zero": "طلب {{leaveTypeLabel}} ({{days}} يوم)",
+                "message_one": "طلب {{leaveTypeLabel}} (يوم واحد)",
+                "message_two": "طلب {{leaveTypeLabel}} (يومان)",
+                "message_few": "طلب {{leaveTypeLabel}} ({{days}} أيام)",
+                "message_many": "طلب {{leaveTypeLabel}} ({{days}} يومًا)",
+                "message_other": "طلب {{leaveTypeLabel}} ({{days}} يوم)"
+            },
+            "leave_rejected": {
+                "title": "تم رفض الإجازة",
+                "message_zero": "طلب {{leaveTypeLabel}} ({{days}} يوم)",
+                "message_one": "طلب {{leaveTypeLabel}} (يوم واحد)",
+                "message_two": "طلب {{leaveTypeLabel}} (يومان)",
+                "message_few": "طلب {{leaveTypeLabel}} ({{days}} أيام)",
+                "message_many": "طلب {{leaveTypeLabel}} ({{days}} يومًا)",
+                "message_other": "طلب {{leaveTypeLabel}} ({{days}} يوم)"
+            },
+            "payroll_released": {
+                "title": "تم صرف الراتب",
+                "message": "تفاصيل راتبك وقسيمة الراتب متاحة الآن."
+            },
+            "document_expiring": {
+                "title": "مستندات قاربت على الانتهاء",
+                "message": "جواز سفرك أو أحد مستنداتك على وشك الانتهاء.",
+                "time": "تنتهي في {{date}}"
+            },
+            "request_approved": {
+                "title": "تمت الموافقة على {{requestTypeLabel}} – المستند جاهز",
+                "message": "وافقت الموارد البشرية على طلبك ({{requestTypeLabel}}) ورفعت الملف \"{{fileName}}\". افتح المستندات ← طلبات إلى الموارد البشرية لعرضه."
+            },
+            "request_rejected": {
+                "title": "تم رفض {{requestTypeLabel}}",
+                "message": "تم رفض طلبك ({{requestTypeLabel}}). يُرجى التواصل مع الموارد البشرية لمعرفة التفاصيل."
+            },
+            "request_rejected_default": {
+                "title": "تم رفض {{requestTypeLabel}}",
+                "message": "تم رفض طلبك. يُرجى التواصل مع الموارد البشرية لمعرفة التفاصيل."
+            },
+            "request_rejected_reason": {
+                "title": "تم رفض {{requestTypeLabel}}",
+                "message": "{{reason}}"
+            },
+            "hr_document_added": {
+                "title": "أضافت الموارد البشرية مستندًا لك: {{docLabelText}}",
+                "message": "الملف \"{{fileName}}\" متاح الآن في المستندات."
+            },
+            "resignation_submitted": {
+                "title": "تم تقديم الاستقالة {{number}}",
+                "message": "حالة استقالتك: {{statusLabel}}. آخر يوم عمل: {{date}}."
+            },
+            "resignation_step_approved": {
+                "title": "الاستقالة {{number}}: {{statusLabel}}",
+                "message": "تمت الموافقة على استقالتك من قِبل {{roleLabel}} ({{actor}}). حالتها الآن: {{statusLabel}}."
+            },
+            "resignation_accepted": {
+                "title": "تم قبول الاستقالة {{number}}",
+                "message": "قبلت الموارد البشرية استقالتك. أنت في فترة الإشعار حتى {{date}}."
+            },
+            "resignation_accepted_changed": {
+                "title": "تم قبول الاستقالة {{number}}",
+                "message": "قبلت الموارد البشرية استقالتك. أنت في فترة الإشعار حتى {{date}}. تم تغيير آخر يوم عمل لك من {{previousDate}}."
+            },
+            "resignation_rejected": {
+                "title": "تم رفض الاستقالة {{number}}",
+                "message": "تم رفض استقالتك من قِبل {{roleLabel}} ({{actor}}): {{reason}}"
+            },
+            "resignation_withdrawn": {
+                "title": "تم سحب الاستقالة {{number}}",
+                "message": "لقد سحبت استقالتك. يستمر عملك بشكل طبيعي."
+            },
+            "resignation_withdrawn_approver": {
+                "title": "تم سحب الاستقالة {{number}}",
+                "message": "تم سحب استقالة {{name}} ({{employeeId}}). لا يلزم اتخاذ أي إجراء."
+            },
+            "resignation_completed": {
+                "title": "اكتملت الاستقالة {{number}}",
+                "message": "كان آخر يوم عمل لك {{date}}. ستتولى الموارد البشرية إجراء التسوية النهائية لمستحقاتك."
+            },
+            "resignation_awaiting_approval": {
+                "title": "الاستقالة {{number}} بانتظار موافقتك",
+                "message": "استقالة مقدَّمة من {{name}} ({{employeeId}}، {{department}}). آخر يوم عمل: {{date}}. افتح الاستقالة ← موافقاتي."
+            },
+            "resignation_awaiting_approval_early": {
+                "title": "الاستقالة {{number}} بانتظار موافقتك",
+                "message": "استقالة مقدَّمة من {{name}} ({{employeeId}}، {{department}}). آخر يوم عمل: {{date}}. طلب إعفاء مبكر. افتح الاستقالة ← موافقاتي."
+            },
+            "resignation_accepted_hr": {
+                "title": "تم قبول الاستقالة: {{name}}",
+                "message": "تم قبول الاستقالة {{number}}. {{name}} ({{employeeId}}، {{department}}). آخر يوم عمل: {{date}}. تُجرى التسوية النهائية للمستحقات بعد آخر يوم عمل."
+            },
+            "resignation_end_of_service": {
+                "title": "نهاية خدمة قيد الإجراء: {{name}}",
+                "message": "انتهت خدمة {{name}} ({{employeeId}}، {{department}}) في {{date}}، وحالته الآن: غير نشط."
+            },
+            "mpr_awaiting_approval": {
+                "title": "طلب القوى العاملة {{number}} بانتظار موافقتك",
+                "message": "{{requestTypeLabel}}: {{title}} ({{openings}} × {{department}}). افتح طلبات القوى العاملة ← موافقاتي."
+            },
+            "mpr_awaiting_approval_exception": {
+                "title": "طلب القوى العاملة {{number}} بانتظار موافقتك",
+                "message": "{{requestTypeLabel}}: {{title}} ({{openings}} × {{department}}) (استثناء من الميزانية). افتح طلبات القوى العاملة ← موافقاتي."
+            },
+            "mpr_rejected": {
+                "title": "تم رفض طلب القوى العاملة {{number}}",
+                "message": "تم رفض \"{{title}}\" من قِبل {{roleLabel}}: {{reason}}"
+            },
+            "mpr_sent_back": {
+                "title": "تمت إعادة طلب القوى العاملة {{number}}",
+                "message": "تمت إعادة \"{{title}}\" من قِبل {{roleLabel}}: {{reason}}. عدّله وأعد تقديمه من طلبات القوى العاملة."
+            },
+            "mpr_approved": {
+                "title": "تمت الموافقة على طلب القوى العاملة {{number}}",
+                "message": "تم إنشاء الوظيفة الشاغرة {{jobId}} لـ \"{{title}}\"."
+            },
+            "mpr_assets": {
+                "title": "أصول مطلوبة للوظيفة {{jobId}}",
+                "message": "{{openings}} × {{title}} ({{department}}، {{location}}) تحتاج إلى: {{assets}}. طلب القوى العاملة {{number}}؛ فترة التقديم {{startDate}} – {{endDate}}."
+            },
+            "mpr_accommodation": {
+                "title": "سكن مطلوب للوظيفة {{jobId}}",
+                "message": "يُرجى ترتيب السكن لـ {{openings}} × {{title}} ({{department}}، {{location}}). طلب القوى العاملة {{number}}."
+            },
+            "mpr_recruitment_plan": {
+                "title": "أكمل خطة التوظيف للوظيفة {{jobId}}",
+                "message": "تمت الموافقة الكاملة على طلب القوى العاملة {{number}} وتم إنشاء الوظيفة الشاغرة {{jobId}} ({{title}}). أكمل خطة التوظيف الخاصة بها من التوظيف ← الوظائف الشاغرة."
+            },
+            "job_application": {
+                "title": "طلب توظيف جديد للوظيفة {{jobId}}",
+                "message": "طلب توظيف من {{name}} ({{candidateTypeLabel}}) لوظيفة {{jobTitle}}. رقم الطلب {{applicationNo}}. افتح التوظيف ← طلبات التوظيف."
+            }
+        }
+    },
+    "hrNotifications": {
+        "subtitle": "جميع التحديثات التي تتطلب انتباهك.",
+        "subtitleWithCount_zero": "جميع التحديثات التي تتطلب انتباهك.<c> لا توجد إشعارات غير مقروءة</c>",
+        "subtitleWithCount_one": "جميع التحديثات التي تتطلب انتباهك.<c> إشعار واحد غير مقروء</c>",
+        "subtitleWithCount_two": "جميع التحديثات التي تتطلب انتباهك.<c> إشعاران غير مقروءين</c>",
+        "subtitleWithCount_few": "جميع التحديثات التي تتطلب انتباهك.<c> {{count}} إشعارات غير مقروءة</c>",
+        "subtitleWithCount_many": "جميع التحديثات التي تتطلب انتباهك.<c> {{count}} إشعارًا غير مقروء</c>",
+        "subtitleWithCount_other": "جميع التحديثات التي تتطلب انتباهك.<c> {{count}} إشعار غير مقروء</c>",
+        "loading": "جارٍ تحميل الإشعارات...",
+        "kinds": {
+            "employee_request": {
+                "title": "طلب جديد من {{name}}: {{requestTypeLabel}}",
+                "message": "نوع الطلب: {{requestTypeLabel}}، مقدَّم من {{employeeName}} ({{employeeId}}). افتح طلبات الموظفين لمراجعته."
+            },
+            "document_upload": {
+                "title": "تم تحديث {{docLabelText}} بواسطة {{name}}",
+                "message": "تم رفع ملف جديد \"{{fileName}}\" من بوابة الموظف."
+            },
+            "leave_request": {
+                "title": "طلب إجازة جديد من {{name}}",
+                "message_zero": "طلب {{leaveTypeLabel}} لمدة {{days}} يوم.",
+                "message_one": "طلب {{leaveTypeLabel}} لمدة يوم واحد.",
+                "message_two": "طلب {{leaveTypeLabel}} لمدة يومين.",
+                "message_few": "طلب {{leaveTypeLabel}} لمدة {{days}} أيام.",
+                "message_many": "طلب {{leaveTypeLabel}} لمدة {{days}} يومًا.",
+                "message_other": "طلب {{leaveTypeLabel}} لمدة {{days}} يوم."
+            },
+            "leave_request_from": {
+                "title": "طلب إجازة جديد من {{name}}",
+                "message_zero": "طلب {{leaveTypeLabel}} لمدة {{days}} يوم، اعتبارًا من {{date}}.",
+                "message_one": "طلب {{leaveTypeLabel}} لمدة يوم واحد، اعتبارًا من {{date}}.",
+                "message_two": "طلب {{leaveTypeLabel}} لمدة يومين، اعتبارًا من {{date}}.",
+                "message_few": "طلب {{leaveTypeLabel}} لمدة {{days}} أيام، اعتبارًا من {{date}}.",
+                "message_many": "طلب {{leaveTypeLabel}} لمدة {{days}} يومًا، اعتبارًا من {{date}}.",
+                "message_other": "طلب {{leaveTypeLabel}} لمدة {{days}} يوم، اعتبارًا من {{date}}."
+            }
+        }
+    },
+    "datePicker": {
+        "weekdays": {
+            "su": "أحد",
+            "mo": "إثنين",
+            "tu": "ثلاثاء",
+            "we": "أربعاء",
+            "th": "خميس",
+            "fr": "جمعة",
+            "sa": "سبت"
+        }
+    },
+    "changePassword": {
+        "currentPassword": "كلمة المرور الحالية",
+        "newPassword": "كلمة المرور الجديدة",
+        "repeatPassword": "أعد إدخال كلمة المرور الجديدة",
+        "submit": "تحديث كلمة المرور",
+        "success": "تم تغيير كلمة المرور بنجاح",
+        "errors": {
+            "allRequired": "جميع حقول كلمة المرور مطلوبة",
+            "tooShort": "يجب ألا تقل كلمة المرور الجديدة عن 6 أحرف",
+            "mismatch": "كلمة المرور الجديدة وتأكيدها غير متطابقتين",
+            "currentIncorrect": "كلمة المرور الحالية غير صحيحة",
+            "failed": "فشل تغيير كلمة المرور",
+            "unable": "تعذّر تغيير كلمة المرور"
+        }
+    }
 }

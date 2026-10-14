@@ -7,13 +7,34 @@
     margin-bottom: 25px;
 }
 
-.resignation-summary-card {
-    border: 2px solid transparent;
-    border-left: 4px solid #cbd5e1;
+/* The cards also carry .recruitment-card (shared size, radius, shadow). Its position-coloured ::before
+   bar is switched off here, so each card has ONE stripe: its tone colour on the start edge
+   (left in English, right in Arabic, via border-inline-start), following the rounded corners.
+   Label at the start, number at the end, centred on one row; long labels wrap. */
+.resignations-page .recruitment-card.resignation-summary-card {
+    border: 1px solid #d3e2ee;
+    border-inline-start: 4px solid #cbd5e1;
+    justify-content: space-between;
+    gap: 12px;
     font: inherit;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
     transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resignations-page .recruitment-card.resignation-summary-card::before {
+    content: none;
+}
+
+.resignations-page .resignation-summary-card h3 {
+    min-width: 0;
+    margin: 0;
+}
+
+.resignations-page .resignation-summary-card h2 {
+    flex-shrink: 0;
+    margin: 0;
+    line-height: 1;
 }
 
 .resignation-summary-card:hover {
@@ -26,13 +47,13 @@
     outline-offset: 2px;
 }
 
-.resignation-summary-card.tone-pending-lm,
-.resignation-summary-card.tone-pending-hr { border-left-color: #f59e0b; }
-.resignation-summary-card.tone-serving { border-left-color: #0284c7; }
-.resignation-summary-card.tone-completed { border-left-color: #16a34a; }
-.resignation-summary-card.tone-closed { border-left-color: #94a3b8; }
+.resignations-page .resignation-summary-card.tone-pending-lm,
+.resignations-page .resignation-summary-card.tone-pending-hr { border-inline-start-color: #f59e0b; }
+.resignations-page .resignation-summary-card.tone-serving { border-inline-start-color: #0284c7; }
+.resignations-page .resignation-summary-card.tone-completed { border-inline-start-color: #16a34a; }
+.resignations-page .resignation-summary-card.tone-closed { border-inline-start-color: #94a3b8; }
 
-.resignation-summary-card.active {
+.resignations-page .resignation-summary-card.active {
     border-color: #12304a;
     background: #f8fafc;
 }
@@ -55,6 +76,30 @@
     color: #334155;
     font: inherit;
     font-size: 14px;
+}
+
+/* Month filter (ResignationMonthPicker): the DatePicker look of the Attendance date filter (13px text),
+   at the 40px height of the other filters here, with a fixed width so it doesn't fill the row.
+   The popup lists the 12 months in DatePicker's 3-column grid, without the year list's scroll area. */
+.resignation-filters .resignation-month-picker {
+    flex: 0 0 auto;
+    width: 150px;
+}
+
+.resignation-filters .resignation-month-picker .date-picker-trigger {
+    height: 40px;
+    min-height: 40px;
+    font-size: 13px;
+}
+
+.resignation-month-picker .date-picker-popup {
+    max-width: calc(100vw - 32px);
+}
+
+.resignation-month-picker .date-picker-years.resignation-month-grid {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
 }
 
 .resignation-clear-filters {

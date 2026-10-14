@@ -1754,6 +1754,13 @@
     "searchLabel": "Search by name or employee ID",
     "filterByDepartment": "Filter by department",
     "month": "Resignation month",
+    "monthPicker": {
+      "choose": "Choose month",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "clear": "Clear",
+      "thisMonth": "This month"
+    },
     "dismiss": "Dismiss",
     "cards": {
       "closed": "Rejected / Withdrawn"
@@ -2200,5 +2207,203 @@
       "loadFailed": "Unable to load employee requests",
       "updateFailed": "Unable to update employee request"
     }
-  }
+  },
+    "employeeNotifications": {
+        "openNotifications": "Open notifications",
+        "unreadOf": "<b>{{unread}}</b> unread of {{total}}",
+        "searchPlaceholder": "Search title or message",
+        "searchLabel": "Search notifications",
+        "statusFilterLabel": "Filter by read status",
+        "allMessages": "All messages",
+        "unread": "Unread",
+        "read": "Read",
+        "moduleFilterLabel": "Filter by module",
+        "allModules": "All modules",
+        "fromDate": "From date",
+        "toDate": "To date",
+        "clear": "Clear",
+        "empty": "You are all caught up.",
+        "noMatch": "No notifications match these filters.",
+        "modules": {
+            "leave": "Leave",
+            "general": "General"
+        },
+        "kinds": {
+            "leave_approved": {
+                "title": "Leave {{status}}",
+                "message_one": "{{leaveType}} request ({{days}} day)",
+                "message_other": "{{leaveType}} request ({{days}} days)"
+            },
+            "leave_rejected": {
+                "title": "Leave {{status}}",
+                "message_one": "{{leaveType}} request ({{days}} day)",
+                "message_other": "{{leaveType}} request ({{days}} days)"
+            },
+            "payroll_released": {
+                "title": "Payroll Released",
+                "message": "Your salary details and payslip are available."
+            },
+            "document_expiring": {
+                "title": "Documents Expiring",
+                "message": "Your passport/document is expiring soon.",
+                "time": "Expires {{date}}"
+            },
+            "request_approved": {
+                "title": "{{requestType}} approved – document ready",
+                "message": "HR approved your {{requestType}} and uploaded \"{{fileName}}\". Open Documents → Requests to HR to view it."
+            },
+            "request_rejected": {
+                "title": "{{requestType}} Rejected",
+                "message": "Your {{requestType}} was rejected. Please contact HR for details."
+            },
+            "request_rejected_default": {
+                "title": "{{requestType}} Rejected",
+                "message": "Your request was rejected. Please contact HR for details."
+            },
+            "request_rejected_reason": {
+                "title": "{{requestType}} Rejected",
+                "message": "{{reason}}"
+            },
+            "hr_document_added": {
+                "title": "HR added your {{docLabel}}",
+                "message": "\"{{fileName}}\" is now available in Documents."
+            },
+            "resignation_submitted": {
+                "title": "Resignation {{number}} submitted",
+                "message": "Your resignation is {{status}}. Last working day: {{date}}."
+            },
+            "resignation_step_approved": {
+                "title": "Resignation {{number}}: {{status}}",
+                "message": "{{role}} ({{actor}}) approved your resignation. It is now {{status}}."
+            },
+            "resignation_accepted": {
+                "title": "Resignation {{number}} accepted",
+                "message": "HR accepted your resignation. You are serving notice until {{date}}."
+            },
+            "resignation_accepted_changed": {
+                "title": "Resignation {{number}} accepted",
+                "message": "HR accepted your resignation. You are serving notice until {{date}}. Your last working day was changed from {{previousDate}}."
+            },
+            "resignation_rejected": {
+                "title": "Resignation {{number}} rejected",
+                "message": "{{role}} ({{actor}}) rejected your resignation: {{reason}}"
+            },
+            "resignation_withdrawn": {
+                "title": "Resignation {{number}} withdrawn",
+                "message": "You withdrew your resignation. Your employment continues as normal."
+            },
+            "resignation_withdrawn_approver": {
+                "title": "Resignation {{number}} withdrawn",
+                "message": "{{name}} ({{employeeId}}) withdrew their resignation. No action is needed."
+            },
+            "resignation_completed": {
+                "title": "Resignation {{number}} completed",
+                "message": "Your last working day was {{date}}. HR will process your final settlement."
+            },
+            "resignation_awaiting_approval": {
+                "title": "Resignation {{number}} awaits your approval",
+                "message": "{{name}} ({{employeeId}}, {{department}}) resigned. Last working day {{date}}. Open Resignation → My Approvals."
+            },
+            "resignation_awaiting_approval_early": {
+                "title": "Resignation {{number}} awaits your approval",
+                "message": "{{name}} ({{employeeId}}, {{department}}) resigned. Last working day {{date}}. Early release requested. Open Resignation → My Approvals."
+            },
+            "resignation_accepted_hr": {
+                "title": "Resignation accepted: {{name}}",
+                "message": "{{number}} accepted. {{name}} ({{employeeId}}, {{department}}). Last working day: {{date}}. Final settlement to be processed after the last working day."
+            },
+            "resignation_end_of_service": {
+                "title": "Pending End of Service: {{name}}",
+                "message": "{{name}} ({{employeeId}}, {{department}}) finished on {{date}} and is now Inactive."
+            },
+            "mpr_awaiting_approval": {
+                "title": "MPR {{number}} awaits your approval",
+                "message": "{{requestType}}: {{title}} ({{openings}} × {{department}}). Open Manpower Requests → My Approvals."
+            },
+            "mpr_awaiting_approval_exception": {
+                "title": "MPR {{number}} awaits your approval",
+                "message": "{{requestType}}: {{title}} ({{openings}} × {{department}}) (budget exception). Open Manpower Requests → My Approvals."
+            },
+            "mpr_rejected": {
+                "title": "MPR {{number}} was rejected",
+                "message": "{{role}} rejected \"{{title}}\": {{reason}}"
+            },
+            "mpr_sent_back": {
+                "title": "MPR {{number}} was sent back",
+                "message": "{{role}} sent back \"{{title}}\": {{reason}}. Edit and resubmit it from Manpower Requests."
+            },
+            "mpr_approved": {
+                "title": "MPR {{number}} approved",
+                "message": "Job opening {{jobId}} was created for \"{{title}}\"."
+            },
+            "mpr_assets": {
+                "title": "Assets required for {{jobId}}",
+                "message": "{{openings}} × {{title}} ({{department}}, {{location}}) needs: {{assets}}. MPR {{number}}; applications {{startDate}} – {{endDate}}."
+            },
+            "mpr_accommodation": {
+                "title": "Accommodation required for {{jobId}}",
+                "message": "Arrange accommodation for {{openings}} × {{title}} ({{department}}, {{location}}). MPR {{number}}."
+            },
+            "mpr_recruitment_plan": {
+                "title": "Complete recruitment plan for {{jobId}}",
+                "message": "MPR {{number}} is fully approved and job opening {{jobId}} ({{title}}) was created. Complete its recruitment plan in Recruitment → Job Openings."
+            },
+            "job_application": {
+                "title": "New application for {{jobId}}",
+                "message": "{{name}} ({{candidateType}}) applied for {{jobTitle}}. Application {{applicationNo}}. Open Recruitment → Job Applications."
+            }
+        }
+    },
+    "hrNotifications": {
+        "subtitle": "All updates that need your attention.",
+        "subtitleWithCount_one": "All updates that need your attention.<c> {{count}} unread</c>",
+        "subtitleWithCount_other": "All updates that need your attention.<c> {{count}} unread</c>",
+        "loading": "Loading notifications...",
+        "kinds": {
+            "employee_request": {
+                "title": "{{name}} requested {{requestType}}",
+                "message": "{{requestType}} request from {{employeeName}} ({{employeeId}}). Open Employee Requests to review it."
+            },
+            "document_upload": {
+                "title": "{{name}} updated {{docLabel}}",
+                "message": "New file \"{{fileName}}\" was uploaded from the Employee portal."
+            },
+            "leave_request": {
+                "title": "{{name}} requested leave",
+                "message_one": "{{leaveType}} request for {{days}} day.",
+                "message_other": "{{leaveType}} request for {{days}} days."
+            },
+            "leave_request_from": {
+                "title": "{{name}} requested leave",
+                "message_one": "{{leaveType}} request for {{days}} day, from {{date}}.",
+                "message_other": "{{leaveType}} request for {{days}} days, from {{date}}."
+            }
+        }
+    },
+    "datePicker": {
+        "weekdays": {
+            "su": "Su",
+            "mo": "Mo",
+            "tu": "Tu",
+            "we": "We",
+            "th": "Th",
+            "fr": "Fr",
+            "sa": "Sa"
+        }
+    },
+    "changePassword": {
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "repeatPassword": "Repeat Password",
+        "submit": "Update Password",
+        "success": "Password changed successfully",
+        "errors": {
+            "allRequired": "All password fields are required",
+            "tooShort": "New password must be at least 6 characters",
+            "mismatch": "New password and repeat password do not match",
+            "currentIncorrect": "Current password is incorrect",
+            "failed": "Failed to change password",
+            "unable": "Unable to change password"
+        }
+    }
 }

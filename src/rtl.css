@@ -428,31 +428,7 @@ html[dir="rtl"] .leave-policy-footer span {
 }
 
 /* ---------- Resignations (HR) ---------- */
-/* Summary cards (.recruitment-card .resignation-summary-card): the shared Recruitment rule above already
-   moves the ::before bar to the right; the coloured left border and left text alignment are mirrored here.
-   The label keeps margin-bottom: 12px inside a flex row, which lifts it above the number; in Arabic the
-   label and number sit on one line, centred, with a small gap. */
-html[dir="rtl"] .resignation-summary-card {
-    border-left-width: 2px;
-    border-left-color: transparent;
-    border-right: 4px solid #cbd5e1;
-    text-align: right;
-    gap: 12px;
-}
-
-html[dir="rtl"] .resignation-summary-card h3 {
-    margin-bottom: 0;
-}
-
-html[dir="rtl"] .resignation-summary-card.tone-pending-lm,
-html[dir="rtl"] .resignation-summary-card.tone-pending-hr { border-right-color: #f59e0b; }
-html[dir="rtl"] .resignation-summary-card.tone-serving { border-right-color: #0284c7; }
-html[dir="rtl"] .resignation-summary-card.tone-completed { border-right-color: #16a34a; }
-html[dir="rtl"] .resignation-summary-card.tone-closed { border-right-color: #94a3b8; }
-
-html[dir="rtl"] .resignation-summary-card.active {
-    border-color: #12304a;
-}
+/* Summary cards: one stripe on the start edge via border-inline-start (Resignations.css), no RTL override needed */
 
 /* "Rows per page" sits at the far (left) end of the filter bar, like the right end in English */
 html[dir="rtl"] .resignation-rows-control {
@@ -729,6 +705,12 @@ html[dir="rtl"] .employee-document-upload-icon {
     left: 14px;
 }
 
+/* Employee portal Change Password (page and pop-up): passwords are typed left-to-right (dir="ltr"),
+   kept right-aligned under the Arabic labels like the other left-to-right fields */
+html[dir="rtl"] :is(.employee-password-view, .password-change-modal) input[dir="ltr"] {
+    text-align: right;
+}
+
 /* Password Management: the red accent line moves to the right edge */
 html[dir="rtl"] .password-management-panel {
     border-left: 1px solid #e1e6ec;
@@ -782,6 +764,17 @@ html[dir="rtl"] .date-picker-trigger > span {
     unicode-bidi: isolate;
 }
 
+/* Calendar icon at the field's start edge (right), the date text right next to it */
+html[dir="rtl"] .date-picker-trigger {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+html[dir="rtl"] .date-picker-trigger > svg {
+    order: -1;
+    flex-shrink: 0;
+}
+
 /* Popup opens from the field's right edge (mirror of the left edge in English).
    Floating popups (autoPosition) are placed by JavaScript and stay as they are. */
 html[dir="rtl"] .date-picker-popup:not(.is-floating) {
@@ -816,4 +809,25 @@ html[dir="rtl"] .modal-close {
 html[dir="rtl"] .leave-tracking-close {
     right: auto;
     left: 17px;
+}
+
+/* ---------- Employee Notifications + HR Notifications (same card layout) ---------- */
+/* Card text follows the page direction (the card button is text-align: left for English) */
+html[dir="rtl"] .empnotif-item,
+html[dir="rtl"] .hrnotif-item {
+    text-align: right;
+}
+
+/* "Open" arrow on each card points left in Arabic */
+html[dir="rtl"] .empnotif-arrow,
+html[dir="rtl"] .hrnotif-arrow {
+    transform: scaleX(-1);
+}
+
+/* HR Notifications title: the orange accent (border-left) moves to the right, next to the title */
+html[dir="rtl"] .hrnotif-header {
+    border-left: 0;
+    border-right: 4px solid #f0622d;
+    padding-left: 0;
+    padding-right: 16px;
 }
