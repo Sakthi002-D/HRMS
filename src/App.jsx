@@ -41,7 +41,10 @@ import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
 
 import DialogProvider from "./components/common/dialog/DialogProvider";
+import { installApiAuthorizationFetch } from "./utils/auth";
 import "./App.css";
+
+installApiAuthorizationFetch();
 
 function App() {
   return (

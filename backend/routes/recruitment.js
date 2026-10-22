@@ -79,13 +79,31 @@ async function requireHR(actorId) {
     if (!roles.some((item) => item.role === "HR")) throw new WorkflowError("Only HR can change this setting", 403);
 }
 
-const actorFrom = (req) => req.body?.actor_id || req.query.employee_id || req.query.actor_id;
+const actorFrom = (req) => req.auth?.employeeId;
 
 // =====================================================
 // META (form options + the caller's roles)
 // =====================================================
 
 router.get("/recruitment/meta", handle(async (req, res) => {
+    const employeeId = req.auth.employeeId;
+    const allRoles = (await getRolesFor(pool, employeeId)).roles;
+    const isHR = req.auth.identityType === "hr";
+    const roles = isHR ? allRoles : allRoles.filter((item) => item.role !== "HR");
+    if (!isHR) {
+        const raiseDepartments = roles
+            .filter((item) => item.role === "DEPT_COORDINATOR")
+            .map((item) => item.department);
+        const approverRoles = roles.filter((item) => !NON_MPR_ROLES.includes(item.role));
+        return res.json({
+            roles,
+            isHR: false,
+            canRaise: raiseDepartments.length > 0,
+            raiseDepartments,
+            isApprover: approverRoles.length > 0,
+        });
+    }
+
     const [settings, locations, agencies, departments] = await Promise.all([
         getRecruitmentSettings(),
         pool.query(`SELECT id, name FROM recruitment_locations WHERE active ORDER BY name`),
@@ -93,10 +111,6 @@ router.get("/recruitment/meta", handle(async (req, res) => {
         pool.query(`SELECT DISTINCT TRIM(department) AS name FROM employees WHERE COALESCE(TRIM(department), '') <> '' ORDER BY 1`),
     ]);
 
-    let roles = [];
-    if (req.query.employee_id) roles = (await getRolesFor(pool, req.query.employee_id)).roles;
-
-    const isHR = roles.some((item) => item.role === "HR");
     const departmentNames = [...new Set([...Object.keys(settings.departmentCodes || {}), ...departments.rows.map((row) => row.name)])];
     const raiseDepartments = isHR
         ? departmentNames
@@ -375,12 +389,12 @@ router.get("/mprs/budget-preview", handle(async (req, res) => {
 
 router.get("/mprs", handle(async (req, res) => {
     res.set("Cache-Control", "no-store");
-    res.json(await listMprs(pool, { actorId: req.query.employee_id, scope: req.query.scope || "all" }));
+    res.json(await listMprs(pool, { actorId: actorFrom(req), scope: req.query.scope || "all" }));
 }));
 
 router.get("/mprs/:id", handle(async (req, res) => {
     res.set("Cache-Control", "no-store");
-    res.json(await getMprDetail(pool, { id: req.params.id, actorId: req.query.employee_id }));
+    res.json(await getMprDetail(pool, { id: req.params.id, actorId: actorFrom(req) }));
 }));
 
 router.post("/mprs", handle(async (req, res) => {
@@ -429,7 +443,14 @@ router.get("/notifications/inbox/:employeeId", handle(async (req, res) => {
 }));
 
 router.put("/notifications/inbox/:id/read", handle(async (req, res) => {
-    await pool.query(`UPDATE hr_notifications SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP) WHERE id = $1`, [req.params.id]);
+    const employeeFilter = req.auth?.identityType === "hr" ? "" : " AND employee_id = $2";
+    const values = req.auth?.identityType === "hr" ? [req.params.id] : [req.params.id, req.auth.employeeId];
+    const result = await pool.query(
+        `UPDATE hr_notifications SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+         WHERE id = $1${employeeFilter}`,
+        values
+    );
+    if (!result.rowCount) throw new WorkflowError("Notification not found", 404);
     res.json({ ok: true });
 }));
 

@@ -101,12 +101,10 @@ function Login() {
       // ==================================================
       // GET ROLE
       // ==================================================
-      const role = String(employee.role || "")
+      const role = String(data.role || "")
         .trim()
         .toLowerCase();
-
-      console.log("Logged in user:", employee);
-      console.log("User role:", role);
+      employee.role = role;
 
       // ==================================================
       // HR LOGIN

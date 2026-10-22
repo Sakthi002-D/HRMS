@@ -141,7 +141,7 @@ router.post("/careers/jobs/:jobId/apply", rateLimitApply, acceptCv, handle(async
 // HR
 // =====================================================
 
-const hrIdFrom = (req) => req.get("x-employee-id") || req.query.employee_id || req.body?.actor_id;
+const hrIdFrom = (req) => req.auth?.employeeId;
 
 router.get("/hr/job-applications", handle(async (req, res) => {
     await requireHRActor(pool, hrIdFrom(req));
