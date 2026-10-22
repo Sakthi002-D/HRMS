@@ -138,6 +138,487 @@
     color: #fff;
 }
 
+/* Employee directory source toggle (D365 population vs HRMS demo records) */
+.employee-list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.employee-source-toggle {
+    display: inline-flex;
+    border: 1px solid #dbe5ed;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.employee-source-toggle button {
+    border: 0;
+    background: transparent;
+    padding: 9px 14px;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: #60788d;
+    cursor: pointer;
+}
+
+.employee-source-toggle button.active {
+    background: #03a9f4;
+    color: #fff;
+}
+
+/* Empty / error states are styled in the "PREMIUM D365 DIRECTORY POLISH" section below. */
+
+.d365-page-indicator {
+    color: #60788d;
+    font-size: 13px;
+}
+
+.d365-total-count {
+    margin-left: 8px;
+    color: #90a4b6;
+}
+
+/* =========================================================
+   PREMIUM ENTERPRISE DIRECTORY ADDITIONS
+   (additive: shared card/table/button rules stay untouched)
+   ========================================================= */
+
+.employees-page .employee-list-section {
+  padding: clamp(18px, 2.4vw, 30px);
+}
+
+.employees-page .directory-mono {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #12304a;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.employees-page .directory-mono--muted {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.employees-page .directory-employee {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.employees-page .directory-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e3f2fd, #dbeafe);
+  color: #12304a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.employees-page .directory-name {
+  overflow: hidden;
+  color: #102a43;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employees-page .directory-entity {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef4fb;
+  color: #1d4e79;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.employees-page .employee-table-controls--directory {
+  align-items: center;
+}
+
+.employees-page .directory-page-size {
+  color: #47637d;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.employees-page .directory-page-size-select {
+  height: 40px;
+  min-width: 76px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #12304a;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.employees-page .directory-table-scroll {
+  overflow-x: auto;
+  border: 1px solid #e6edf3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.employees-page .directory-table-scroll .common-table {
+  min-width: 1080px;
+}
+
+.employees-page .directory-table-scroll .common-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 46px;
+  padding: 10px 16px;
+  background: #f3f7fb;
+  color: #4a657c;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.employees-page .directory-table-scroll .common-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf1f5;
+  color: #22384e;
+  font-size: 13.5px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.employees-page .directory-table-scroll .common-table tbody tr:hover {
+  background: #f6fafd;
+}
+
+.employees-page .directory-table-scroll .common-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.employees-page .directory-table-scroll .common-table th:nth-child(1),
+.employees-page .directory-table-scroll .common-table td:nth-child(1),
+.employees-page .directory-table-scroll .common-table th:nth-child(3),
+.employees-page .directory-table-scroll .common-table td:nth-child(3),
+.employees-page .directory-table-scroll .common-table th:nth-child(4),
+.employees-page .directory-table-scroll .common-table td:nth-child(4),
+.employees-page .directory-table-scroll .common-table th:nth-child(5),
+.employees-page .directory-table-scroll .common-table td:nth-child(5) {
+  width: 140px;
+}
+
+.employees-page .directory-table-scroll .common-table th:nth-child(2),
+.employees-page .directory-table-scroll .common-table td:nth-child(2) {
+  text-align: left;
+}
+
+.employees-page .pagination--directory {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid #e6edf3;
+  border-radius: 12px;
+  background: #f8fbfd;
+}
+
+.employees-page .employees-loading--table {
+  align-items: stretch;
+  text-align: left;
+}
+
+.employees-page .employees-loading--table > p {
+  text-align: center;
+}
+
+.employees-page .directory-skeleton {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.employees-page .directory-skeleton-row {
+  display: grid;
+  grid-template-columns: 110px 1.6fr 1fr 110px 110px 70px 90px;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e8eef3;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.employees-page .directory-skeleton-cell {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef2f6 25%, #e0e7ef 45%, #eef2f6 65%);
+  background-size: 200% 100%;
+  animation: directory-skeleton 1.2s ease-in-out infinite;
+}
+
+.employees-page .directory-skeleton-cell--id,
+.employees-page .directory-skeleton-cell--short {
+  max-width: 120px;
+}
+
+.employees-page .directory-skeleton-cell--name {
+  max-width: 300px;
+}
+
+.employees-page .directory-skeleton-cell--action {
+  max-width: 80px;
+}
+
+@keyframes directory-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 900px) {
+  .employees-page .employee-list-section {
+    padding: 16px;
+  }
+
+  .employees-page .employee-table-controls--directory {
+    align-items: stretch;
+  }
+
+  .employees-page .pagination--directory {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .employees-page .pagination--directory button {
+    width: 100%;
+  }
+
+  .employees-page .directory-employee {
+    max-width: 46vw;
+  }
+}
+
+[dir="rtl"] .employees-page .directory-table-scroll .common-table th:nth-child(2),
+[dir="rtl"] .employees-page .directory-table-scroll .common-table td:nth-child(2) {
+  text-align: right;
+}
+
+[dir="rtl"] .employees-page .directory-name {
+  text-align: right;
+}
+
+.employees-page .directory-unavailable {
+  color: #8a9cae;
+  font-size: 12.5px;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.employees-page .directory-table-scroll .common-table .common-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.employees-page .directory-details {
+  display: grid;
+  gap: 10px;
+  min-width: min(420px, 70vw);
+}
+
+.employees-page .directory-details-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid #e8eef3;
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+
+.employees-page .directory-details-row span {
+  color: #5d7488;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.employees-page .directory-details-row strong {
+  color: #12304a;
+  font-size: 13.5px;
+  text-align: right;
+}
+
+.employees-page .directory-details-note {
+  margin: 2px 0 0;
+  color: #7b8fa1;
+  font-size: 12.5px;
+}
+
+[dir="rtl"] .employees-page .directory-details-row strong {
+  text-align: left;
+}
+
+/* =========================================================
+   PREMIUM D365 DIRECTORY POLISH
+   ========================================================= */
+
+/* Data-source indicator badge in the page header */
+.employees-header p {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.employee-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid #b7e3c6;
+    border-radius: 20px;
+    background: #f0faf3;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+
+.employee-source-badge--demo {
+    border-color: #e3d9b7;
+    background: #fdf9ee;
+    color: #8a6d1d;
+}
+
+.employee-source-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22a35b;
+    box-shadow: 0 0 0 3px rgba(34, 163, 91, .15);
+}
+
+.employee-source-badge--demo .employee-source-badge-dot {
+    background: #c9a227;
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, .15);
+}
+
+/* Compact variant of the stat cards for factual D365 counts */
+.employees-page .stat-card.employee-stat-compact {
+    min-height: 74px;
+    height: 74px;
+    padding: 12px 16px !important;
+}
+
+.employees-page .stat-card.employee-stat-compact strong {
+    position: static;
+    transform: none;
+    font-size: 22px;
+    font-weight: 750;
+}
+
+.employees-page .stat-card.employee-stat-compact .stat-card-content {
+    margin-left: 40px;
+}
+
+.employees-page .stat-card.employee-stat-compact .stat-icon {
+    width: 28px;
+    height: 28px;
+    left: 14px;
+}
+
+/* Refresh button in the D365 toolbar */
+.employee-refresh-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid #cbddea;
+    border-radius: 8px;
+    background: #f7fbfe;
+    color: #18354d;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.employee-refresh-button:hover:not(:disabled) {
+    border-color: #2b7ab0;
+    background: #eaf5fb;
+    color: #1e638f;
+}
+
+.employee-refresh-button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.employee-refresh-icon--spinning {
+    animation: employeesSpin .8s linear infinite;
+}
+
+/* Empty / error state polish (shared by both states) */
+.employees-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 30px 18px;
+    text-align: center;
+    color: #71879a;
+    font-size: 13px;
+}
+
+.employees-empty svg {
+    color: #90a4b6;
+}
+
+.employees-empty .button {
+    margin-top: 2px;
+}
+
+.employees-empty.employees-error svg {
+    color: #d97706;
+}
+
+.employees-empty.employees-error p {
+    color: #92400e;
+}
+
+/* RTL: mirror the source toggle and header badge direction in Arabic */
+[dir="rtl"] .employee-source-toggle,
+[dir="rtl"] .employee-source-badge {
+    direction: rtl;
+}
+
+[dir="rtl"] .d365-total-count {
+    margin-left: 0;
+    margin-right: 8px;
+}
+
 /* =========================================================
    ADD EMPLOYEE BUTTON
 ========================================================= */

@@ -207,14 +207,195 @@
     font-weight: 600;
 }
 
+/* =========================================================
+   PREMIUM ENTERPRISE ATTENDANCE ADDITIONS
+   (additive: shared card/table/button rules stay untouched)
+   ========================================================= */
+
+.attendance-page .attendance-header p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attendance-page .attendance-actions--premium {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(300px, 1.4fr);
+  gap: 16px;
+  padding: clamp(18px, 2.4vw, 26px);
+}
+
+.attendance-page .attendance-punch-fields {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.attendance-page .attendance-punch-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.attendance-page .attendance-punch-buttons .punch-btn {
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.attendance-page .attendance-punch-buttons .punch-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(18, 48, 74, 0.14);
+}
+
+.attendance-page .attendance-punch-buttons .punch-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.attendance-page .attendance-punch-buttons .punch-btn:focus-visible,
+.attendance-page .attendance-export-btn:focus-visible,
+.attendance-page .attendance-tools input:focus-visible,
+.attendance-page .attendance-tools select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.attendance-page .employee-id-field input {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.attendance-page .employee-id-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.attendance-page .attendance-identity-card {
+  box-shadow: 0 6px 18px rgba(18, 48, 74, 0.07);
+}
+
+.attendance-page .attendance-table-container .attendance-table {
+  min-width: 1080px;
+}
+
+.attendance-page .attendance-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f3f7fb;
+  color: #4a657c;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.attendance-page .attendance-table tbody td {
+  color: #22384e;
+  font-size: 13.5px;
+}
+
+.attendance-page .attendance-table tbody tr:hover {
+  background: #f6fafd;
+}
+
+.attendance-page .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 92px;
+  justify-content: center;
+}
+
+.attendance-page .status.present::before,
+.attendance-page .status.on-leave::before,
+.attendance-page .status.absent::before,
+.attendance-page .status.late::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.attendance-page .status.on-leave {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.attendance-page .status.late {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.attendance-page .attendance-export-options button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+@media (max-width: 1100px) {
+  .attendance-page .attendance-actions--premium {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .attendance-page .attendance-punch-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-page .attendance-punch-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-page .attendance-punch-buttons .punch-btn {
+    width: 100%;
+  }
+}
+
+[dir="rtl"] .attendance-page .attendance-table-container {
+  direction: rtl;
+}
+
+[dir="rtl"] .attendance-page .attendance-table th,
+[dir="rtl"] .attendance-page .attendance-table td {
+  text-align: center;
+}
+
+[dir="rtl"] .attendance-page .attendance-export-menu {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .attendance-page .attendance-export-options {
+  right: auto;
+  left: 0;
+}
+
 /* Punch In / Punch Out */
 
 .attendance-actions {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
     margin-top: 28px;
     margin-bottom: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
+    box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+}
+
+.attendance-punch-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 300px;
 }
 
 .employee-id-input {
@@ -226,6 +407,103 @@
     font-size: 14px;
     outline: none;
     box-sizing: border-box;
+}
+
+.attendance-punch-fields .employee-id-input {
+    width: 100%;
+    min-width: 280px;
+}
+
+.attendance-selector-label {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.attendance-punch-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-end;
+}
+
+/* Selected employee identity card (D365 personnel/legal-entity/employment triple) */
+.attendance-identity-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    align-self: flex-end;
+    padding: 10px 14px;
+    border: 1px solid #d8e7f2;
+    border-radius: 10px;
+    background: #f7fbfe;
+}
+
+.attendance-identity-avatar {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 50%;
+    background: #16466d;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.attendance-identity-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.attendance-identity-name {
+    color: #12304a;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.attendance-identity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+}
+
+.attendance-identity-meta > span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.attendance-identity-label {
+    color: #7890a3;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.attendance-identity-value {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Punch result message (previously unstyled) */
+.attendance-message {
+    flex-basis: 100%;
+    margin: 0;
+    padding: 9px 13px;
+    border: 1px solid #cfe3f2;
+    border-radius: 8px;
+    background: #f0f8fd;
+    color: #1e5a7a;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .employee-id-input:focus {

@@ -65,13 +65,73 @@ app.get("/", (req, res) => {
     });
 });
 
+// D365 employee directory pagination limits (server-side paging + search).
+const D365_EMPLOYEE_PAGE_SIZE_DEFAULT = 25;
+const D365_EMPLOYEE_PAGE_SIZE_MAX = 100;
+
+// Returns a validated positive integer, `fallback` when absent, or null when invalid.
+const parseD365PageParam = (raw, fallback, max) => {
+    if (raw === undefined || raw === null || String(raw).trim() === "") return fallback;
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 1) return null;
+    return Math.min(value, max);
+};
+
+// Search covers only fields D365 EmployeesV2 actually provides (name, personnel number).
+const matchesD365EmployeeSearch = (employee, term) => {
+    const needle = term.toLowerCase();
+    return employee.name.toLowerCase().includes(needle) ||
+        employee.personnelNumber.toLowerCase().includes(needle);
+};
+
 app.get("/api/d365/employees", async (req, res) => {
-    if (req.query.view !== "attendance") {
+    if (req.query.view !== "attendance" && req.query.view !== "directory") {
         return res.status(400).json({ message: "Unsupported employee view" });
     }
 
+    // Absent is fine; repeated/comma params arrive as an array and are rejected.
+    if (req.query.search !== undefined && typeof req.query.search !== "string") {
+        return res.status(400).json({ message: "search must be a string" });
+    }
+
+    const pageSize = parseD365PageParam(
+        req.query.pageSize,
+        D365_EMPLOYEE_PAGE_SIZE_DEFAULT,
+        D365_EMPLOYEE_PAGE_SIZE_MAX
+    );
+    const page = parseD365PageParam(req.query.page, 1, Number.MAX_SAFE_INTEGER);
+
+    if (pageSize === null || page === null) {
+        return res.status(400).json({ message: "page and pageSize must be positive integers" });
+    }
+
+    // Pagination/search is opt-in so existing callers keep receiving a plain array.
+    const wantsPaging = req.query.page !== undefined
+        || req.query.pageSize !== undefined
+        || req.query.search !== undefined;
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+
     try {
-        res.json(await getD365Employees());
+        const employees = await getD365Employees();
+        const matched = search ? employees.filter((employee) => matchesD365EmployeeSearch(employee, search)) : employees;
+
+        if (!wantsPaging) {
+            return res.json(matched);
+        }
+
+        const total = matched.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const safePage = Math.min(page, totalPages);
+        const start = (safePage - 1) * pageSize;
+
+        res.json({
+            employees: matched.slice(start, start + pageSize),
+            total,
+            page: safePage,
+            pageSize,
+            totalPages,
+            search,
+        });
     } catch (error) {
         if (error instanceof D365Error) {
             console.error(

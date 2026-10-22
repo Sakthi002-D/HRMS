@@ -1595,6 +1595,11 @@
     "status": {
       "on_leave": "On Leave"
     },
+    "loadingEmployees": "Loading employees...",
+    "searchEmployees": "Search employees...",
+    "retry": "Retry",
+    "employeeLoadError": "Unable to load employees. Please try again.",
+    "employeeLoadConfigError": "Unable to load employees. The server is missing its D365 integration settings, so retrying will not help. Please contact the administrator.",
     "table": {
       "employeeName": "Employee Name",
       "shift": "Shift",

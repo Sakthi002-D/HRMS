@@ -39,6 +39,8 @@ function Attendance() {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [employeesLoading, setEmployeesLoading] = useState(true);
     const [employeesLoadError, setEmployeesLoadError] = useState(false);
+    // "config" = backend D365 credentials are missing, so retrying cannot help.
+    const [employeesErrorStage, setEmployeesErrorStage] = useState(null);
     const [employeeLoadAttempt, setEmployeeLoadAttempt] = useState(0);
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
@@ -61,6 +63,7 @@ function Attendance() {
         const loadEmployees = async () => {
             setEmployeesLoading(true);
             setEmployeesLoadError(false);
+            setEmployeesErrorStage(null);
 
             try {
                 const response = await fetch(
@@ -68,7 +71,19 @@ function Attendance() {
                     { signal: controller.signal }
                 );
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch D365 employees: ${response.status}`);
+                    // The backend reports which stage failed (config / authentication /
+                    // employees / server). A "config" failure means the D365 credentials
+                    // are not set on the backend, so a client retry can never succeed.
+                    let stage = "server";
+                    try {
+                        const payload = await response.json();
+                        if (typeof payload?.stage === "string") stage = payload.stage;
+                    } catch {
+                        // Non-JSON error body (proxy/CDN HTML) — keep the generic stage.
+                    }
+                    const error = new Error(`Failed to fetch D365 employees: ${response.status}`);
+                    error.stage = stage;
+                    throw error;
                 }
 
                 const data = await response.json();
@@ -84,6 +99,8 @@ function Attendance() {
                 if (isCurrent) {
                     setD365Employees([]);
                     setEmployeesLoadError(true);
+                    // Abort/timeout has no backend stage; keep it retryable.
+                    setEmployeesErrorStage(error?.name === "AbortError" ? null : error?.stage ?? "server");
                 }
             } finally {
                 window.clearTimeout(timeoutId);
@@ -379,33 +396,47 @@ const fetchAttendance = async () => {
                 <div className="attendance-header">
                     <div>
                         <h1>{t("menu.attendance", { defaultValue: "Attendance" })}</h1>
-                        <p>{t("hrAttendance.subtitle", { defaultValue: "Manage Employee Attendance" })}</p>
+                        <p>
+                            {t("hrAttendance.subtitle", { defaultValue: "Manage Employee Attendance" })}
+                            <span
+                                className="employee-source-badge"
+                                title={t("employeesList.d365.sourceD365Title", { defaultValue: "Live from Dynamics 365 Finance & Operations" })}
+                            >
+                                <span className="employee-source-badge-dot" aria-hidden="true"></span>
+                                {t("employeesList.d365.sourceD365Short", { defaultValue: "D365 · Finance & Operations" })}
+                            </span>
+                        </p>
                     </div>
                 </div>
 
-                {/* Biometric Attendance */}
-                <div className="attendance-actions">
+                {/* Punch In / Punch Out */}
+                <div className="attendance-actions attendance-actions--premium">
 
-                    <input
-                        type="text"
-                        className="employee-id-input"
-                        list="attendance-d365-employees"
-                        placeholder={employeesLoading ? t("hrAttendance.loadingEmployees", { defaultValue: "Loading employees..." }) : t("hrAttendance.searchEmployees", { defaultValue: "Search employees..." })}
-                        aria-label={t("hrAttendance.searchEmployeeAria", { defaultValue: "Search or select an employee" })}
-                        autoComplete="off"
-                        disabled={employeesLoading || employeesLoadError || !d365Employees.length}
-                        value={employeeOption}
-                        onChange={(event) => {
-                            const value = event.target.value;
-                            setEmployeeOption(value);
-                            setSelectedEmployee(
-                                d365Employees.find(
-                                    (employee) => getEmployeeOptionLabel(employee) === value
-                                ) || null
-                            );
-                        }}
-                    />
-                    <datalist id="attendance-d365-employees">
+                    <div className="attendance-punch-fields">
+                        <label className="attendance-selector-label" htmlFor="attendance-employee-input">
+                            {t("hrAttendance.selectorLabel", { defaultValue: "Employee" })}
+                        </label>
+                        <input
+                            id="attendance-employee-input"
+                            type="text"
+                            className="employee-id-input"
+                            list="attendance-d365-employees"
+                            placeholder={employeesLoading ? t("hrAttendance.loadingEmployees", { defaultValue: "Loading employees..." }) : t("hrAttendance.searchEmployees", { defaultValue: "Search employees..." })}
+                            aria-label={t("hrAttendance.searchEmployeeAria", { defaultValue: "Search or select an employee" })}
+                            autoComplete="off"
+                            disabled={employeesLoading || employeesLoadError || !d365Employees.length}
+                            value={employeeOption}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                setEmployeeOption(value);
+                                setSelectedEmployee(
+                                    d365Employees.find(
+                                        (employee) => getEmployeeOptionLabel(employee) === value
+                                    ) || null
+                                );
+                            }}
+                        />
+                        <datalist id="attendance-d365-employees">
                         {d365Employees.map((employee) => (
                             <option
                                 key={`${employee.personnelNumber}-${employee.employmentLegalEntityId}-${employee.employmentId}`}
@@ -415,47 +446,81 @@ const fetchAttendance = async () => {
                     </datalist>
 
                     {selectedEmployee && (
-                        <span className="attendance-selected-employee">
-                            {selectedEmployee.name} - Employee ID: {selectedEmployee.personnelNumber}
-                        </span>
+                        <div className="attendance-identity-card">
+                            <span className="attendance-identity-avatar" aria-hidden="true">
+                                {selectedEmployee.name?.charAt(0)?.toUpperCase()}
+                            </span>
+                            <div className="attendance-identity-info">
+                                <span className="attendance-identity-name">{selectedEmployee.name}</span>
+                                <div className="attendance-identity-meta">
+                                    <span>
+                                        <span className="attendance-identity-label">{t("hrAttendance.identity.personnelNumber", { defaultValue: "Personnel no." })}</span>
+                                        <span className="attendance-identity-value" dir="ltr">{selectedEmployee.personnelNumber}</span>
+                                    </span>
+                                    <span>
+                                        <span className="attendance-identity-label">{t("hrAttendance.identity.legalEntity", { defaultValue: "Legal entity" })}</span>
+                                        <span className="attendance-identity-value" dir="ltr">{selectedEmployee.employmentLegalEntityId}</span>
+                                    </span>
+                                    <span>
+                                        <span className="attendance-identity-label">{t("hrAttendance.identity.employmentId", { defaultValue: "Employment ID" })}</span>
+                                        <span className="attendance-identity-value" dir="ltr">{selectedEmployee.employmentId}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     )}
                     {employeesLoadError && (
                         <span className="attendance-employee-load-error" role="alert">
-                            Unable to load employees. Please try again.{" "}
-                            <button
-                                type="button"
-                                onClick={() => setEmployeeLoadAttempt((attempt) => attempt + 1)}
-                            >
-                                Retry
-                            </button>
+                            {employeesErrorStage === "config"
+                                ? t("hrAttendance.employeeLoadConfigError", {
+                                    defaultValue:
+                                        "Unable to load employees. The server is missing its D365 integration settings, so retrying will not help. Please contact the administrator.",
+                                })
+                                : t("hrAttendance.employeeLoadError", {
+                                    defaultValue: "Unable to load employees. Please try again.",
+                                })}
+                            {employeesErrorStage !== "config" && (
+                                <>
+                                    {" "}
+                                    <button
+                                        type="button"
+                                        onClick={() => setEmployeeLoadAttempt((attempt) => attempt + 1)}
+                                    >
+                                        {t("hrAttendance.retry", { defaultValue: "Retry" })}
+                                    </button>
+                                </>
+                            )}
                         </span>
                     )}
-                    {!employeesLoading && !employeesLoadError && d365Employees.length === 0 && (
-                        <span className="attendance-employee-status">
-                            No employees available.
-                        </span>
-                    )}
+                        {!employeesLoading && !employeesLoadError && d365Employees.length === 0 && (
+                            <span className="attendance-employee-status">
+                                {t("hrAttendance.noEmployees", { defaultValue: "No employees available." })}
+                            </span>
+                        )}
+                    </div>
 
-                   <button
-                        className="punch-btn punch-in-btn"
-                        onClick={handlePunchIn}
-                        disabled={loading}
-                    >
-                        {loading
-                        ? t("hrAttendance.processing", { defaultValue: "Processing..." })
-                        : t("hrAttendance.punchInButton", { defaultValue: "Punch In" })}
-                    </button>
+                    <div className="attendance-punch-buttons">
+                        <button
+                            className="punch-btn punch-in-btn"
+                            onClick={handlePunchIn}
+                            disabled={loading}
+                        >
+                            {loading
+                            ? t("hrAttendance.processing", { defaultValue: "Processing..." })
+                            : t("hrAttendance.punchInButton", { defaultValue: "Punch In" })}
+                        </button>
 
-                    <button
-                        className="punch-btn punch-out-btn"
-                        onClick={handlePunchOut}
-                        disabled={loading}
-                    >
+                        <button
+                            className="punch-btn punch-out-btn"
+                            onClick={handlePunchOut}
+                            disabled={loading}
+                        >
                             {t("hrAttendance.punchOutButton", { defaultValue: "Punch Out" })}
-                    </button>
+                        </button>
+                    </div>
 
-                        {message && (
-                        <p className="attendance-message">
+                    {message && (
+                        <p className="attendance-message" role="status">
                             {message}
                         </p>
                     )}

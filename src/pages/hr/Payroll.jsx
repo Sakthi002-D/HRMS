@@ -3,6 +3,7 @@ import { ChevronDown, Download, Pencil, PlusCircle, Trash2 } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useAlert, useConfirm } from "../../components/common/dialog/dialogContext";
+import API_URL from "../../config/api";
 import "./Payroll.css";
 
 const initialPayrollData = [
@@ -37,7 +38,7 @@ function Payroll() {
     const [editingEmployee, setEditingEmployee] = useState(null);
 
     useEffect(() => {
-        fetch("http://localhost:5000/api/payroll")
+        fetch(`${API_URL}/api/payroll`)
             .then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load payroll")))
             .then(setPayrollData)
             .catch((error) => console.error("Payroll loading error:", error))
@@ -93,7 +94,7 @@ function Payroll() {
         cancelText: t("profileEdit.cancel", { defaultValue: "Cancel" }),
         loadingText: t("hrPayroll.delete.deleting", { defaultValue: "Deleting…" }),
         onConfirm: async () => {
-            const response = await fetch(`http://localhost:5000/api/payroll/${employee.id}`, { method: "DELETE" });
+            const response = await fetch(`${API_URL}/api/payroll/${employee.id}`, { method: "DELETE" });
             if (!response.ok) {
                 const data = await response.json().catch(() => ({}));
                 throw new Error(data.message || t("hrPayroll.errors.deleteFailed", { defaultValue: "Unable to delete salary record" }));
@@ -124,7 +125,7 @@ function Payroll() {
             netSalary: basicSalary + allowances - deductions,
             status: "Pending",
         };
-        const response = await fetch(`http://localhost:5000/api/payroll${editingEmployee?.id ? `/${editingEmployee.id}` : ""}`, {
+        const response = await fetch(`${API_URL}/api/payroll${editingEmployee?.id ? `/${editingEmployee.id}` : ""}`, {
             method: editingEmployee?.id ? "PUT" : "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(employee),

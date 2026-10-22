@@ -14,7 +14,7 @@ import {
 } from "../../components/documents/employeeDocumentApi";
 import "./EmployeeDetails.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
 // [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
