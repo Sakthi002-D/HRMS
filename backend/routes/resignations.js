@@ -94,7 +94,7 @@ async function inTransaction(fn) {
     }
 }
 
-const actorFrom = (req) => req.body?.actor_id || req.query.employee_id || req.query.actor_id;
+const actorFrom = (req) => req.auth?.employeeId;
 
 async function requireHR(actorId) {
     const { roles } = await getRolesFor(pool, actorId);
@@ -126,15 +126,15 @@ router.get("/resignations/employee/:employeeId", handle(async (req, res) => {
         getResignationFormInfo(pool, employeeId),
         getActiveResignationId(pool, employeeId),
         listEmployeeResignations(pool, employeeId),
-        listResignationsForApprover(pool, employeeId),
-        getRolesFor(pool, employeeId),
+        req.auth.identityType === "hr" ? listResignationsForApprover(pool, employeeId) : [],
+        req.auth.identityType === "hr" ? getRolesFor(pool, employeeId) : { roles: [] },
     ]);
     const approverRoles = ["LINE_MANAGER", "DEPT_HEAD", "HR"];
 
     res.set("Cache-Control", "no-store");
     res.json({
         ...form,
-        active: activeId ? await getResignationDetail(pool, activeId, employeeId) : null,
+        active: activeId ? await getResignationDetail(pool, activeId, employeeId, { identityType: req.auth.identityType }) : null,
         history,
         approvals,
         isApprover: approvals.length > 0 || rolesInfo.roles.some((item) => approverRoles.includes(item.role)),
@@ -142,7 +142,7 @@ router.get("/resignations/employee/:employeeId", handle(async (req, res) => {
 }));
 
 router.post("/resignations", acceptLetter, handle(async (req, res) => {
-    const employeeId = req.body?.employee_id;
+    const employeeId = req.auth.identityType === "employee" ? req.auth.employeeId : req.body?.employee_id;
     if (!employeeId) throw new WorkflowError("Sign in again: your employee ID is missing", 401);
     if (req.file && !supabase) throw new WorkflowError("Document storage is not configured, so the letter can't be uploaded", 503);
 
@@ -158,7 +158,7 @@ router.post("/resignations", acceptLetter, handle(async (req, res) => {
         : null;
 
     const { resignation } = await inTransaction((db) => submitResignation(db, { employeeId, body: req.body, uploadLetter }));
-    res.status(201).json(await getResignationDetail(pool, resignation.id, employeeId));
+    res.status(201).json(await getResignationDetail(pool, resignation.id, employeeId, { identityType: req.auth.identityType }));
 }));
 
 // =====================================================
@@ -172,7 +172,7 @@ router.get("/resignations/approvals", handle(async (req, res) => {
 
 router.get("/resignations/:id", handle(async (req, res) => {
     res.set("Cache-Control", "no-store");
-    res.json(await getResignationDetail(pool, req.params.id, actorFrom(req)));
+    res.json(await getResignationDetail(pool, req.params.id, actorFrom(req), { identityType: req.auth.identityType }));
 }));
 
 const ACTIONS = {
@@ -187,10 +187,18 @@ const ACTIONS = {
 };
 
 router.post("/resignations/:id/:action", handle(async (req, res) => {
+    if (req.auth.identityType === "employee") {
+        if (req.params.action !== "withdraw") throw new WorkflowError("HR access required", 403);
+        const owned = await pool.query(
+            "SELECT id FROM resignations WHERE id = $1 AND employee_id = $2",
+            [req.params.id, req.auth.employeeId]
+        );
+        if (!owned.rows.length) throw new WorkflowError("Resignation not found", 404);
+    }
     const run = ACTIONS[req.params.action];
     if (!run) throw new WorkflowError("Unknown action", 404);
     await inTransaction((db) => run(db, req));
-    res.json(await getResignationDetail(pool, req.params.id, actorFrom(req)));
+    res.json(await getResignationDetail(pool, req.params.id, actorFrom(req), { identityType: req.auth.identityType }));
 }));
 
 // =====================================================

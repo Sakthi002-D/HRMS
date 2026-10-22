@@ -9,8 +9,6 @@
 import express from "express";
 import multer from "multer";
 import pool from "../db.js";
-import { requireHRActor } from "../services/careerApplications.js";
-import { WorkflowError } from "../services/manpowerWorkflow.js";
 
 const router = express.Router();
 
@@ -87,7 +85,7 @@ const handle = (fn) => async (req, res, next) => {
     try {
         await fn(req, res, next);
     } catch (error) {
-        if (error instanceof DocumentError || error instanceof WorkflowError) {
+        if (error instanceof DocumentError) {
             return res.status(error.status).json({ message: error.message });
         }
         console.error("Employee documents error:", error);
@@ -97,20 +95,14 @@ const handle = (fn) => async (req, res, next) => {
 
 // Who is asking (actor_id), and are they allowed to see this employee's documents?
 async function getAccess(req) {
-    const actorId = String(req.query.actor_id || "").trim();
+    const actorId = req.auth?.employeeId;
     const employeeId = String(req.params.employeeId || "");
     if (!actorId) throw new DocumentError("Please log in again", 401);
 
     const employee = await pool.query(`SELECT employee_id FROM employees WHERE employee_id = $1`, [employeeId]);
     if (!employee.rows.length) throw new DocumentError("Employee not found", 404);
 
-    let isHR = false;
-    try {
-        await requireHRActor(pool, actorId);
-        isHR = true;
-    } catch (error) {
-        if (!(error instanceof WorkflowError)) throw error;
-    }
+    const isHR = req.auth.identityType === "hr";
 
     const isSelf = actorId === employeeId;
     if (!isHR && !isSelf) throw new DocumentError("You can only access your own documents", 403);
@@ -120,7 +112,7 @@ async function getAccess(req) {
 // Who is asking about an employee REQUEST, and are they allowed?
 // hrOnly = true → only HR (uploading). Otherwise HR or the employee who raised it (viewing).
 async function getRequestAccess(req, { hrOnly = false } = {}) {
-    const actorId = String(req.query.actor_id || "").trim();
+    const actorId = req.auth?.employeeId;
     if (!actorId) throw new DocumentError("Please log in again", 401);
     if (!/^\d+$/.test(String(req.params.requestId))) throw new DocumentError("Request not found", 404);
 
@@ -131,13 +123,7 @@ async function getRequestAccess(req, { hrOnly = false } = {}) {
     const request = rows[0];
     if (!request) throw new DocumentError("Request not found", 404);
 
-    let isHR = false;
-    try {
-        await requireHRActor(pool, actorId);
-        isHR = true;
-    } catch (error) {
-        if (!(error instanceof WorkflowError)) throw error;
-    }
+    const isHR = req.auth.identityType === "hr";
 
     const isOwner = actorId === String(request.employee_id);
     if (hrOnly ? !isHR : !(isHR || isOwner)) {
@@ -290,14 +276,7 @@ router.get("/employee-requests/:requestId/file", handle(async (req, res) => {
 }));
 // HR: recent Visa / Passport uploads made by employees (for HR notifications)
 router.get("/hr/document-uploads", handle(async (req, res) => {
-    const actorId = String(req.query.actor_id || "").trim();
-    if (!actorId) throw new DocumentError("Please log in again", 401);
-    try {
-        await requireHRActor(pool, actorId);
-    } catch (error) {
-        if (error instanceof WorkflowError) throw new DocumentError("Only HR can see document uploads", 403);
-        throw error;
-    }
+    if (req.auth?.identityType !== "hr") throw new DocumentError("Only HR can see document uploads", 403);
 
     const { rows } = await pool.query(`
         SELECT d.employee_id, e.name AS employee_name, d.doc_type, d.original_file_name, d.uploaded_at

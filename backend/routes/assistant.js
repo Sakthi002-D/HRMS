@@ -1,5 +1,4 @@
 import express from "express";
-import pool from "../db.js";
 import { processUnifiedAIMessage } from "../services/aiService.js";
 import { executeApplyLeave, executeCancelLeave, executeSubmitRequest } from "../tools/employeeTools.js";
 import { executeLeaveStatusChange, executeEmployeeRequestStatusChange } from "../tools/hrTools.js";
@@ -7,65 +6,20 @@ import { executeLeaveStatusChange, executeEmployeeRequestStatusChange } from "..
 const router = express.Router();
 
 /**
- * Helper to authenticate user against the database.
- * Derives role strictly from the database, never trusting client input.
- */
-async function authenticateUser(employeeId) {
-    if (!employeeId || typeof employeeId !== "string") {
-        return null;
-    }
-
-    const result = await pool.query(
-        `SELECT id, employee_id, name, department, designation, email, role, status, access_disabled
-         FROM employees 
-         WHERE employee_id = $1`,
-        [employeeId.trim()]
-    );
-
-    if (result.rows.length === 0) {
-        return null;
-    }
-
-    const employee = result.rows[0];
-    if (employee.access_disabled === true || (employee.status && employee.status.toLowerCase() === "inactive")) {
-        return { disabled: true };
-    }
-
-    return {
-        id: employee.id,
-        employee_id: employee.employee_id,
-        name: employee.name,
-        department: employee.department,
-        designation: employee.designation,
-        email: employee.email,
-        role: String(employee.role || "employee").trim().toLowerCase()
-    };
-}
-
-/**
  * POST /api/assistant
  * Main AI Assistant endpoint
  */
 router.post("/", async (req, res) => {
     try {
-        const { message, history, employee_id, actionConfirmation } = req.body;
-
-        // 1. Authenticate user from database
-        const authUser = await authenticateUser(employee_id);
-
-        if (!authUser) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication failed. Please log in again to interact with the Shelter Assistant."
-            });
-        }
-
-        if (authUser.disabled) {
-            return res.status(403).json({
-                success: false,
-                message: "Your account is disabled. Please contact HR."
-            });
-        }
+        const { message, history, actionConfirmation } = req.body;
+        const authUser = {
+            employee_id: req.auth.employeeId,
+            name: req.auth.name,
+            department: req.auth.department,
+            designation: req.auth.designation,
+            email: req.auth.email,
+            role: req.auth.role,
+        };
 
         // 2. Handle Confirmed Action Execution (Write operations)
         if (actionConfirmation) {

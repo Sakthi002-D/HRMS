@@ -49,13 +49,17 @@ function HRLogin() {
         showAlert("User details not found");
         return;
       }
+      const role = String(data.role || "").toLowerCase();
+      if (role !== "hr") {
+        showAlert("This account does not have HR access.");
+        return;
+      }
+      user.role = role;
 
       // Clear previous sessions
       sessionStorage.removeItem("loggedInEmployee");
       sessionStorage.removeItem("loggedInHR");
       storeAuthToken(data.token);
-
-      const role = user.role?.toLowerCase();
 
       // =========================
       // HR LOGIN

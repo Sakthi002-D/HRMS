@@ -52,6 +52,7 @@ function ResetPassword() {
           body: JSON.stringify({
             employee_id: employeeId,
             new_password: newPassword,
+            reset_token: sessionStorage.getItem("passwordResetToken"),
           }),
         }
       );
@@ -68,6 +69,7 @@ function ResetPassword() {
       // Clear reset information
       localStorage.removeItem("resetEmployeeId");
       localStorage.removeItem("otpVerified");
+      sessionStorage.removeItem("passwordResetToken");
 
       navigate("/login");
 

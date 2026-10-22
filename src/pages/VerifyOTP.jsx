@@ -46,6 +46,7 @@ function VerifyOTP() {
       }
 
       localStorage.setItem("otpVerified", "true");
+      sessionStorage.setItem("passwordResetToken", data.reset_token);
 
       navigate("/reset-password");
 

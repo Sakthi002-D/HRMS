@@ -15,7 +15,7 @@ function ForgotPassword() {
     e.preventDefault();
 
     if (!employeeId.trim()) {
-      showAlert("Please enter Employee ID");
+      showAlert("Please enter your username");
       return;
     }
 
@@ -70,17 +70,15 @@ function ForgotPassword() {
 
         <h1>Forgot Password?</h1>
 
-        <p>
-          Enter your Employee ID to reset your password.
-        </p>
+        <p>Enter your HR or employee username to reset your password.</p>
 
         <form onSubmit={handleSendOTP}>
 
-          <label>Employee ID</label>
+          <label>Username</label>
 
           <input
             type="text"
-            placeholder="Enter Employee ID"
+            placeholder="Enter username"
             value={employeeId}
             onChange={(e) =>
               setEmployeeId(e.target.value)

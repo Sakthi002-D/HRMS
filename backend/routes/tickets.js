@@ -68,6 +68,19 @@ const getTicket = async (id) => {
     return result.rows[0];
 };
 
+const ensureTicketAccess = async (req, id) => {
+    if (req.auth?.identityType === "hr") return;
+    const result = await pool.query(
+        `SELECT raised_by FROM tickets WHERE id = $1`,
+        [id]
+    );
+    const ticket = result.rows[0];
+    if (!ticket) throw new TicketError("Ticket not found", 404);
+    if (ticket.raised_by !== req.auth.employeeId) {
+        throw new TicketError("You can only access your own tickets", 403);
+    }
+};
+
 // Active agent for the category (or a general agent) with the fewest open tickets
 const pickAgent = async (categoryId) => {
     const result = await pool.query(
@@ -107,6 +120,10 @@ router.get("/tickets", handle(async (req, res) => {
         values.push(assigned_to);
         conditions.push(`t.assigned_to = $${values.length}`);
     }
+    if (req.auth?.identityType !== "hr") {
+        values.push(req.auth.employeeId);
+        conditions.push(`t.raised_by = $${values.length}`);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const result = await pool.query(`${TICKET_SELECT} ${where} ORDER BY t.updated_at DESC, t.id DESC`, values);
@@ -114,6 +131,7 @@ router.get("/tickets", handle(async (req, res) => {
 }));
 
 router.get("/tickets/:id", handle(async (req, res) => {
+    await ensureTicketAccess(req, req.params.id);
     res.json(await getTicket(req.params.id));
 }));
 
@@ -122,8 +140,8 @@ router.post("/tickets", handle(async (req, res) => {
     const description = clean(req.body.description);
     const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
     const priority = req.body.priority || "Medium";
-    const raisedBy = clean(req.body.raised_by) || clean(req.body.actor_id);
-    let assignedTo = clean(req.body.assigned_to);
+    const raisedBy = req.auth.employeeId;
+    let assignedTo = req.auth.identityType === "hr" ? clean(req.body.assigned_to) : null;
 
     if (!subject) throw new TicketError("Subject is required");
     if (!TICKET_PRIORITIES.includes(priority)) throw new TicketError("Invalid priority");
@@ -144,6 +162,7 @@ router.post("/tickets", handle(async (req, res) => {
 }));
 
 router.patch("/tickets/:id", handle(async (req, res) => {
+    if (req.auth?.identityType !== "hr") throw new TicketError("HR access required", 403);
     const updates = [];
     const values = [];
     const set = (column, value) => {
@@ -187,6 +206,7 @@ router.patch("/tickets/:id", handle(async (req, res) => {
 // =====================================================
 
 router.get("/tickets/:id/comments", handle(async (req, res) => {
+    await ensureTicketAccess(req, req.params.id);
     const result = await pool.query(
         `
         SELECT tc.id, tc.ticket_id, tc.author_employee_id, e.name AS author_name, tc.comment, tc.created_at
@@ -204,10 +224,10 @@ router.post("/tickets/:id/comments", handle(async (req, res) => {
     const comment = clean(req.body.comment);
     if (!comment) throw new TicketError("Comment is required");
 
-    await getTicket(req.params.id);
+    await ensureTicketAccess(req, req.params.id);
     const result = await pool.query(
         `INSERT INTO ticket_comments (ticket_id, author_employee_id, comment) VALUES ($1, $2, $3) RETURNING *`,
-        [req.params.id, clean(req.body.actor_id), comment]
+        [req.params.id, req.auth.employeeId, comment]
     );
     await pool.query(`UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
     res.status(201).json(result.rows[0]);

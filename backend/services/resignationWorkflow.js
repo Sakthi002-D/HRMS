@@ -288,10 +288,10 @@ async function notifyCurrentApprovers(db, resignation) {
 // DETAIL / LISTS
 // =====================================================
 
-export async function getResignationDetail(db, id, actorId, { today = getCompanyToday() } = {}) {
+export async function getResignationDetail(db, id, actorId, { today = getCompanyToday(), identityType } = {}) {
     const resignation = await loadResignation(db, id);
     const { actor, roles } = await getRolesFor(db, actorId);
-    const isHR = roles.some((item) => item.role === "HR");
+    const isHR = identityType !== "employee" && roles.some((item) => item.role === "HR");
 
     const workflow = await Promise.all(resignation.workflow_steps.map(async (role) => {
         const { ids, via } = await approversForStep(db, role, resignation);
@@ -303,9 +303,9 @@ export async function getResignationDetail(db, id, actorId, { today = getCompany
 
     const isPending = resignation.status.startsWith("Pending ");
     const currentStep = isPending ? workflow[resignation.current_step] : null;
-    const isCurrentApprover = Boolean(currentStep?.approvers.some((person) => person.employee_id === actor.employee_id));
+    const isCurrentApprover = identityType !== "employee" && Boolean(currentStep?.approvers.some((person) => person.employee_id === actor.employee_id));
     const isOwner = resignation.employee_id === actor.employee_id;
-    const everApprover = workflow.some((step) => step.approvers.some((person) => person.employee_id === actor.employee_id));
+    const everApprover = identityType !== "employee" && workflow.some((step) => step.approvers.some((person) => person.employee_id === actor.employee_id));
 
     if (!isOwner && !isHR && !everApprover) throw new WorkflowError("You can't view this resignation", 403);
 

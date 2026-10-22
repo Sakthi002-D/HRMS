@@ -354,24 +354,12 @@ function EmployeeDashboard() {
     };
 
     const fetchAttendance = async (employeeId) => {
-        const today = new Date();
-        const dates = Array.from({ length: 30 }, (_, index) => {
-            const date = new Date(today);
-            date.setDate(today.getDate() - index);
-            return date.toISOString().slice(0, 10);
-        });
-
         try {
-            const responses = await Promise.all(
-                dates.map((date) => fetch(`${API_URL}/api/attendance?date=${date}`))
-            );
-            const records = await Promise.all(
-                responses.map((response) => response.ok ? response.json() : [])
-            );
-
-            const employeeRecords = records.flat().filter((record) => String(record.employee_id) === String(employeeId));
-            setAttendance(employeeRecords);
-            setMonthlyAttendance(employeeRecords);
+            const response = await fetch(`${API_URL}/api/attendance/employee/${encodeURIComponent(employeeId)}`);
+            if (!response.ok) throw new Error("Failed to fetch employee attendance");
+            const records = await response.json();
+            setAttendance(records);
+            setMonthlyAttendance(records);
         } catch (error) {
             console.error("Error fetching attendance:", error);
         }
@@ -630,10 +618,10 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || "Unable to change password");
-            showAlert("Password changed successfully", "success");
+            await showAlert("Password changed successfully. Please sign in again.", "success");
             setPasswordForm({ current_password: "", new_password: "", repeat_password: "" });
             setShowChangePassword(false);
-            setActiveSection("settings");
+            logout();
         } catch (error) {
             showAlert(error.message || "Unable to change password");
         } finally {

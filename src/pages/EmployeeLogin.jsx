@@ -43,7 +43,15 @@ function EmployeeLogin() {
                 return;
             }
 
+            if (data.role !== "employee" || !data.employee) {
+                showAlert("This account does not have employee portal access.");
+                return;
+            }
+
+            sessionStorage.removeItem("loggedInHR");
+            sessionStorage.removeItem("loggedInEmployee");
             storeAuthToken(data.token);
+            data.employee.role = data.role;
             sessionStorage.setItem(
                 "loggedInEmployee",
                 JSON.stringify(data.employee)
