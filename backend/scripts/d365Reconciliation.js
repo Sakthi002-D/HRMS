@@ -23,6 +23,7 @@ export async function fetchD365Pages({ base, select, authorization, fetchImpl = 
     if (!Number.isInteger(maxPages) || maxPages < 1) throw new Error("Invalid D365 page limit");
     const rows = [];
     const visited = new Set();
+    let expectedCount = null;
     let next = new URL("/data/EmployeesV2", origin);
     next.searchParams.set("$select", select);
     for (let page = 0; next; page++) {
@@ -44,7 +45,18 @@ export async function fetchD365Pages({ base, select, authorization, fetchImpl = 
             || body.value.some((row) => !row || typeof row !== "object" || Array.isArray(row))) {
             throw new Error("Malformed D365 page");
         }
+        if (Object.hasOwn(body, "@odata.count")) {
+            const count = body["@odata.count"];
+            if (!Number.isSafeInteger(count) || count < 0
+                || (expectedCount !== null && expectedCount !== count)) {
+                throw new Error("Malformed or inconsistent D365 row count");
+            }
+            expectedCount = count;
+        }
         rows.push(...body.value);
+        if (expectedCount !== null && rows.length > expectedCount) {
+            throw new Error("D365 pagination returned more rows than reported");
+        }
         const link = body["@odata.nextLink"];
         if (link !== undefined && link !== null && (typeof link !== "string" || !link.trim())) {
             throw new Error("Malformed D365 next link");
@@ -52,6 +64,9 @@ export async function fetchD365Pages({ base, select, authorization, fetchImpl = 
         next = link == null ? null : new URL(link, next);
     }
     if (!rows.length) throw new Error("D365 returned no records; reconciliation blocked");
+    if (expectedCount !== null && rows.length !== expectedCount) {
+        throw new Error("D365 pagination incomplete: received row count does not match reported count");
+    }
     return rows;
 }
 
@@ -70,7 +85,10 @@ export function reconcileD365(d365, employees, mappings) {
         const [number, legalEntity, employmentId] = identityParts(source);
         const record = { key, personnel_number: number, legal_entity: legalEntity, employment_id: employmentId,
             category: "excluded", employee_id: null, reasons: [] };
-        if (!identityParts(source).every(Boolean)) record.reasons.push("incomplete-identity");
+        if (typeof source.PersonnelNumber !== "string"
+            || typeof source.EmploymentLegalEntityId !== "string"
+            || typeof source.EmploymentId !== "string"
+            || !identityParts(source).every(Boolean)) record.reasons.push("incomplete-identity");
         if (!/^[A-Za-z0-9-]+$/.test(number) || /^EMP/i.test(number)) record.reasons.push("unsupported-personnel-number");
         if (["1610", "2866"].includes(number)) record.reasons.push("designated-manual-review");
         if (!norm(source.Name) && !norm(source.FirstName)) record.reasons.push("missing-name");

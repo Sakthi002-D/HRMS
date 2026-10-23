@@ -38,6 +38,19 @@ test("incomplete pagination fails rather than returning partial records", async 
     await assert.rejects(fetchD365Pages(fetchOptions([
         { value: [source("001")], "@odata.nextLink": "?page=2" },
     ], { maxPages: 1 })), /incomplete/);
+    await assert.rejects(fetchD365Pages(fetchOptions([
+        { value: [source("001")], "@odata.count": 2 },
+    ])), /pagination incomplete/);
+});
+
+test("reported counts are checked across all D365 pages", async () => {
+    await assert.rejects(fetchD365Pages(fetchOptions([
+        { value: [source("001")], "@odata.count": 2, "@odata.nextLink": "?page=2" },
+        { value: [source("002")], "@odata.count": 3 },
+    ])), /inconsistent/);
+    await assert.rejects(fetchD365Pages(fetchOptions([
+        { value: [source("001")], "@odata.count": "2" },
+    ])), /row count/);
 });
 
 test("cycles, foreign hosts, wrong paths and malformed pages fail closed", async () => {

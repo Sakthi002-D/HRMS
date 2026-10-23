@@ -8,15 +8,16 @@
 //   * Console output is counts plus a redacted sample (no names, emails, phones, tokens, secrets).
 //   * --out writes a per-record CSV with identity keys and issue flags only (no personal data).
 //
-// --backup-manifest: JSON written by whoever took the backup, e.g.
-//   { "created_at": "<ISO time>", "method": "supabase-snapshot|pg_dump", "location": "<where>",
-//     "row_counts": { "employees": 56, "attendance": 37, "employee_payroll": 2, "employee_d365_mapping": 0,
-//                     "employee_documents": 5, "resignations": 10 } }
-// The backup is reported as verified only if it is < 24h old and its row counts equal the live counts.
+// --backup-manifest must identify a full backup and contain a passed independent verification:
+//   created_at, method, full_database_backup: true, backup_id, location, created_by,
+//   row_counts for every D365_BACKUP_TABLES entry, and
+//   verification: { independent: true, verified_at, verified_by, method, result: "passed" }.
+// The verifier must be distinct from created_by. All required table counts must match live counts.
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import pool from "../db.js";
+import { D365_BACKUP_TABLES, verifyD365BackupManifest } from "./d365EmployeeApplyCore.js";
 import { fetchD365Pages, reconcileD365 } from "./d365Reconciliation.js";
 
 const SELECT = [
@@ -26,8 +27,7 @@ const SELECT = [
     "ProfessionalTitle", "TitleId", "NationalityCountryRegion",
 ].join(",");
 
-const BACKUP_MAX_AGE_HOURS = 24;
-const BACKUP_TABLES = ["employees", "attendance", "employee_payroll", "employee_d365_mapping", "employee_documents", "resignations"];
+const BACKUP_TABLES = D365_BACKUP_TABLES;
 const REVIEW_PERSONNEL_NUMBERS = ["1610", "2866"];
 
 const norm = (value) => String(value ?? "").trim();
@@ -78,18 +78,12 @@ const checkBackup = (manifestPath, liveCounts) => {
     } catch {
         return { verified: false, reason: "manifest missing or not valid JSON" };
     }
-    const created = new Date(manifest.created_at);
-    if (Number.isNaN(created.getTime())) return { verified: false, reason: "manifest has no valid created_at" };
-    const ageHours = (Date.now() - created.getTime()) / 3_600_000;
-    if (ageHours < 0 || ageHours > BACKUP_MAX_AGE_HOURS) {
-        return { verified: false, reason: `backup is ${ageHours.toFixed(1)}h old (limit ${BACKUP_MAX_AGE_HOURS}h)` };
+    try {
+        const result = verifyD365BackupManifest(manifest, liveCounts);
+        return { verified: true, reason: `${manifest.method}, ${result.ageHours.toFixed(1)}h old, independently verified; row counts match` };
+    } catch (error) {
+        return { verified: false, reason: error.message };
     }
-    if (!["supabase-snapshot", "pg_dump"].includes(manifest.method)) {
-        return { verified: false, reason: "method must be supabase-snapshot or pg_dump (full database backup)" };
-    }
-    const mismatches = BACKUP_TABLES.filter((t) => manifest.row_counts?.[t] !== liveCounts[t]);
-    if (mismatches.length) return { verified: false, reason: `row counts differ from live for: ${mismatches.join(", ")}` };
-    return { verified: true, reason: `${manifest.method}, ${ageHours.toFixed(1)}h old, row counts match` };
 };
 
 const arg = (name) => {
