@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ReportChart from "../../components/layout/common/ReportChart";
+import API_URL from "../../config/api";
 import "./EmployeeReport.css";
 
 function EmployeeReport() {
@@ -12,7 +13,7 @@ function EmployeeReport() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch("http://localhost:5000/api/employees")
+        fetch(`${API_URL}/api/employees`)
             .then((response) => {
                 if (!response.ok) throw new Error("Unable to load employees");
                 return response.json();

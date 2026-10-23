@@ -1,7 +1,8 @@
 // Shared helpers for the Manpower Request (MPR) screens in the HR and Employee portals.
 import i18n from "i18next";
+import API_URL from "../../config/api";
 
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export { API_URL };
 
 export async function api(path, { method = "GET", body } = {}) {
     const response = await fetch(`${API_URL}${path}`, {

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ReportChart from "../../components/layout/common/ReportChart";
+import API_URL from "../../config/api";
 import "./AttendanceReport.css";
 
 // D365 rows are identified by the full D365 identity so they never merge with HRMS employee IDs
@@ -16,7 +17,7 @@ function AttendanceReport() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch("http://localhost:5000/api/attendance")
+        fetch(`${API_URL}/api/attendance`)
             .then((response) => {
                 if (!response.ok) throw new Error("Unable to load attendance");
                 return response.json();

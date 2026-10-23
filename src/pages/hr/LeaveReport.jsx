@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ReportChart from "../../components/layout/common/ReportChart";
+import API_URL from "../../config/api";
 import "./LeaveReport.css";
 
 function LeaveReport() {
@@ -12,7 +13,7 @@ function LeaveReport() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch("http://localhost:5000/api/leaves")
+        fetch(`${API_URL}/api/leaves`)
             .then((response) => {
                 if (!response.ok) throw new Error("Unable to load leaves");
                 return response.json();

@@ -23,6 +23,7 @@ import { purgeAllChatStorage } from "../../components/assistant/HRAssistant";
 import { api, formatDate, isPendingHR } from "../../components/resignation/resignationApi";
 import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import "../../components/recruitment/recruitment.css";
+import API_URL from "../../config/api";
 import "./HRDashboard.css";
 
 const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -103,7 +104,7 @@ function HRDashboard() {
   };
 
   const loadDashboardData = () => {
-    fetch("http://localhost:5000/api/dashboard")
+    fetch(`${API_URL}/api/dashboard`)
       .then((response) => {
         if (!response.ok) throw new Error("Unable to load dashboard data");
         return response.json();
@@ -114,7 +115,7 @@ function HRDashboard() {
 
   const loadNotifications = async () => {
     try {
-      const leaveResponse = await fetch("http://localhost:5000/api/leaves");
+      const leaveResponse = await fetch(`${API_URL}/api/leaves`);
       if (!leaveResponse.ok) throw new Error("Unable to load notifications");
       const leaves = await leaveResponse.json();
       const pendingLeaves = leaves.filter(
@@ -135,7 +136,7 @@ function HRDashboard() {
       // Manpower Request / recruitment notifications for this HR user
       let recruitmentNotifications = [];
       if (hrProfile.employee_id) {
-        const inboxResponse = await fetch(`http://localhost:5000/api/notifications/inbox/${encodeURIComponent(hrProfile.employee_id)}`, { cache: "no-store" });
+        const inboxResponse = await fetch(`${API_URL}/api/notifications/inbox/${encodeURIComponent(hrProfile.employee_id)}`, { cache: "no-store" });
         if (inboxResponse.ok) {
           recruitmentNotifications = (await inboxResponse.json()).map((item) => ({
             id: `inbox-${item.id}`,

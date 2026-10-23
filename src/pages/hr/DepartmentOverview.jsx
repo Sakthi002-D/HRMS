@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Building2, Users, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import API_URL from "../../config/api";
 import "./DepartmentOverview.css";
 
 function DepartmentOverview() {
@@ -10,7 +11,7 @@ function DepartmentOverview() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/dashboard/departments")
+    fetch(`${API_URL}/api/dashboard/departments`)
       .then((response) => {
         if (!response.ok) throw new Error("Unable to load department data");
         return response.json();

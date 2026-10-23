@@ -12,8 +12,8 @@ import {
 import "./LeaveManagement.css";
 import { useAlert } from "../../components/common/dialog/dialogContext";
 import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
+import API_BASE_URL from "../../config/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const API_URL = `${API_BASE_URL}/api/leaves`;
 const POLICY_API_URL = API_URL.replace(/\/leaves$/, "/leave-policies");
 const DEFAULT_LEAVE_TYPES = [

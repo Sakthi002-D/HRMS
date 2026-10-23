@@ -4,10 +4,10 @@ import i18n from "i18next";
 import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useConfirm } from "../../components/common/dialog/dialogContext";
+import API_BASE_URL from "../../config/api";
 import "./LeaveReport.css";
 import "./AnnualLeaveAccrualReport.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const REPORT_URL = `${API_BASE_URL}/api/reports/annual-leave-accrual`;
 const COMPANY_TIMEZONE = "Asia/Qatar";
 

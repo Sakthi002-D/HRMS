@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { CalendarCheck, AlertCircle, ArrowRight } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
+import API_BASE from "../../config/api";
 import "./Notifications.css";
-
-const API_BASE = "http://localhost:5000";
 
 const getHRProfile = () => {
   try {
