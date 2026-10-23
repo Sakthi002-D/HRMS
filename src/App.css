@@ -135,3 +135,31 @@
   color: #52667a;
   line-height: 1.5;
 }
+/* ==================================================
+   NO GLOW / SHADE ON BUTTONS, TOGGLES AND FIELDS (whole app)
+   Removes the blue shadow around buttons, toggle switches, inputs and selects
+   in every page of the HR and Employee portals (English and Arabic).
+================================================== */
+button,
+button:hover,
+button:focus,
+button:focus-visible,
+button:active,
+[role="button"],
+[role="button"]:hover,
+[role="button"]:focus,
+a[class*="btn"],
+a[class*="button"],
+a[class*="action"],
+input,
+input:focus,
+select,
+select:focus,
+textarea,
+textarea:focus,
+[class*="switch"],
+[class*="switch"] *,
+[class*="toggle"],
+[class*="toggle"] * {
+    box-shadow: none !important;
+}
