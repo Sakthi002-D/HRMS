@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test middleware/auth.test.js",
     "test:auth": "node --test middleware/auth.test.js",
+    "test:d365-reconciliation": "node --test scripts/d365Reconciliation.test.js",
     "start": "node server.js",
     "migrate:tickets": "node scripts/migrateTickets.js",
     "test:resignation": "node scripts/testResignation.js",

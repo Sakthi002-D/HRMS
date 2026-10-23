@@ -9,6 +9,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import pool from "../db.js";
+import { fetchD365Pages, reconcileD365 } from "./d365Reconciliation.js";
 
 const SELECT = [
     "PersonnelNumber", "EmploymentLegalEntityId", "EmploymentId", "Name", "FirstName", "MiddleName", "LastName",
@@ -40,25 +41,10 @@ const getToken = async (base) => {
 const fetchAll = async () => {
     const base = new URL(process.env.D365_BASE_URL.trim()).origin;
     const token = await getToken(base);
-    const rows = [];
-    let next = new URL(`${base}/data/EmployeesV2`);
-    next.searchParams.set("$select", SELECT);
-    for (let page = 0; next && page < 200; page++) {
-        if (next.origin !== base) throw new Error("Unexpected pagination host");
-        const response = await fetch(next, {
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-            signal: AbortSignal.timeout(60_000),
-        });
-        if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
-        const body = await response.json();
-        rows.push(...body.value);
-        next = body["@odata.nextLink"] ? new URL(body["@odata.nextLink"], next) : null;
-    }
-    return rows;
+    return fetchD365Pages({ base, select: SELECT, authorization: `Bearer ${token}` });
 };
 
 const norm = (value) => String(value ?? "").trim();
-const normEmail = (value) => norm(value).toLowerCase();
 const countBy = (items, keyFn) => {
     const map = new Map();
     for (const item of items) map.set(keyFn(item), (map.get(keyFn(item)) ?? 0) + 1);
@@ -69,38 +55,22 @@ const csv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 const outIndex = process.argv.indexOf("--out");
 const outDir = outIndex > -1 ? process.argv[outIndex + 1] : null;
 
+const db = await pool.connect();
 try {
+    await db.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     const d365 = await fetchAll();
-    const hrms = (await pool.query("SELECT employee_id, name, email, status FROM employees")).rows;
-    const mapped = (await pool.query("SELECT personnel_number, employment_legal_entity_id, employment_id FROM employee_d365_mapping")).rows;
-
-    const identityKey = (e) => JSON.stringify([norm(e.PersonnelNumber), norm(e.EmploymentLegalEntityId), norm(e.EmploymentId)]);
-    const mappedKeys = new Set(mapped.map((m) => JSON.stringify([norm(m.personnel_number), norm(m.employment_legal_entity_id), norm(m.employment_id)])));
-    const hrmsById = new Map(hrms.map((h) => [norm(h.employee_id), h]));
-    const hrmsByEmail = new Map(hrms.filter((h) => norm(h.email)).map((h) => [normEmail(h.email), h]));
-
-    const identityCounts = countBy(d365, identityKey);
-    const personnelCounts = countBy(d365, (e) => norm(e.PersonnelNumber));
-    const emailCounts = countBy(d365.filter((e) => norm(e.PrimaryContactEmail)), (e) => normEmail(e.PrimaryContactEmail));
-
-    const classify = (e) => {
-        const reasons = [];
-        if (!norm(e.PersonnelNumber) || !norm(e.EmploymentLegalEntityId) || !norm(e.EmploymentId)) reasons.push("incomplete-identity");
-        if (!norm(e.Name)) reasons.push("missing-name");
-        if (identityCounts.get(identityKey(e)) > 1) reasons.push("duplicate-identity-in-d365");
-        if (personnelCounts.get(norm(e.PersonnelNumber)) > 1) reasons.push("personnel-number-in-multiple-employments");
-        if (norm(e.PrimaryContactEmail) && emailCounts.get(normEmail(e.PrimaryContactEmail)) > 1) reasons.push("email-shared-within-d365");
-        if (mappedKeys.has(identityKey(e))) return { action: "already-mapped", reasons };
-
-        const idMatch = hrmsById.get(norm(e.PersonnelNumber));
-        const emailMatch = norm(e.PrimaryContactEmail) ? hrmsByEmail.get(normEmail(e.PrimaryContactEmail)) : null;
-        if (idMatch) return { action: "needs-review", reasons: [...reasons, "hrms-employee-id-equals-personnel-number"], hrms: idMatch };
-        if (emailMatch) return { action: "needs-review", reasons: [...reasons, "email-already-used-by-hrms-employee"], hrms: emailMatch };
-        if (reasons.length) return { action: "needs-review", reasons };
-        return { action: "create", reasons };
-    };
-
-    const plan = d365.map((e) => ({ e, ...classify(e) }));
+    const hrms = (await db.query("SELECT employee_id, name, email, phone, status FROM employees")).rows;
+    const mapped = (await db.query("SELECT employee_id, personnel_number, employment_legal_entity_id, employment_id, link_status FROM employee_d365_mapping")).rows;
+    const reconciliation = reconcileD365(d365, hrms, mapped);
+    const plan = d365.map((e, index) => {
+        const record = reconciliation.records[index];
+        return {
+            e,
+            action: record.category,
+            reasons: record.reasons,
+            hrms: record.employee_id ? { employee_id: record.employee_id } : null,
+        };
+    });
     const tally = countBy(plan, (p) => p.action);
     const reasonTally = countBy(plan.flatMap((p) => p.reasons), (r) => r);
 
@@ -134,11 +104,12 @@ try {
     console.log(`  distinct values:            ${titles.size}${titleLengths.length ? ` (length ${Math.min(...titleLengths)}-${Math.max(...titleLengths)})` : ""}`);
     console.log(`  rows with TitleId:          ${d365.filter((e) => norm(e.TitleId)).length} (distinct ${titleIds.size})`);
     console.log(`  top values: ${[...titles].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t, n]) => `${t} (${n})`).join("; ") || "none"}`);
-    console.log("\nHRMS demo employees whose employee_id equals a D365 personnel number (need manual decision):",
-        plan.filter((p) => p.reasons.includes("hrms-employee-id-equals-personnel-number")).length);
+    console.log("\nExisting-person link candidates (human approval required):",
+        reconciliation.counts["confirmed-link"]);
 
     if (outDir) {
         fs.mkdirSync(outDir, { recursive: true });
+        fs.writeFileSync(path.join(outDir, "d365-reconciliation.json"), JSON.stringify(reconciliation, null, 2));
         const file = path.join(outDir, "d365-import-preview.csv");
         const header = "personnel_number,legal_entity,employment_id,name,professional_title,title_id,email_present,proposed_action,flags,matched_hrms_employee_id";
         const lines = plan.map((p) => [
@@ -153,5 +124,10 @@ try {
     console.error("Preview failed:", error.message);
     process.exitCode = 1;
 } finally {
-    await pool.end();
+    try {
+        await db.query("ROLLBACK");
+    } finally {
+        db.release();
+        await pool.end();
+    }
 }

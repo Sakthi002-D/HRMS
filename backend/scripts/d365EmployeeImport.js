@@ -17,6 +17,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import pool from "../db.js";
+import { fetchD365Pages, reconcileD365 } from "./d365Reconciliation.js";
 
 const SELECT = [
     "PersonnelNumber", "EmploymentLegalEntityId", "EmploymentId", "Name", "FirstName", "MiddleName", "LastName",
@@ -66,22 +67,7 @@ const fetchD365 = async () => {
     if (!tokenResponse.ok) throw new Error(`D365 authentication failed (${tokenResponse.status})`);
     const authorization = ["Bearer", (await tokenResponse.json()).access_token].join(" ");
 
-    const rows = [];
-    let next = new URL(`${base}/data/EmployeesV2`);
-    next.searchParams.set("$select", SELECT);
-    for (let page = 0; next && page < 200; page += 1) {
-        if (next.origin !== base) throw new Error("Unexpected pagination host");
-        const response = await fetch(next, {
-            method: "GET",
-            headers: { Authorization: authorization, Accept: "application/json" },
-            signal: AbortSignal.timeout(60_000),
-        });
-        if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
-        const body = await response.json();
-        rows.push(...body.value);
-        next = body["@odata.nextLink"] ? new URL(body["@odata.nextLink"], next) : null;
-    }
-    return rows;
+    return fetchD365Pages({ base, select: SELECT, authorization });
 };
 
 const checkBackup = (manifestPath, liveCounts) => {
@@ -113,18 +99,17 @@ const arg = (name) => {
 
 const db = await pool.connect();
 try {
-    await db.query("BEGIN READ ONLY");
+    await db.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
 
     const d365 = await fetchD365();
-    const hrms = (await db.query("SELECT employee_id, email FROM employees")).rows;
-    const mappingRows = (await db.query("SELECT personnel_number, employment_legal_entity_id, employment_id FROM employee_d365_mapping")).rows;
+    const hrms = (await db.query("SELECT employee_id, name, email, phone FROM employees")).rows;
+    const mappingRows = (await db.query("SELECT employee_id, personnel_number, employment_legal_entity_id, employment_id, link_status FROM employee_d365_mapping")).rows;
+    const reconciliation = reconcileD365(d365, hrms, mappingRows);
     const liveCounts = {};
     for (const table of BACKUP_TABLES) {
         liveCounts[table] = (await db.query(`SELECT COUNT(*)::int AS n FROM ${table}`)).rows[0].n;
     }
     const demoPasswordless = (await db.query("SELECT COUNT(*)::int AS n FROM employees WHERE password IS NULL")).rows[0].n;
-    const nullPasswordGuard = fs.readFileSync(new URL("../middleware/auth.js", import.meta.url), "utf8")
-        .includes("if (!employee.password)");
 
     const identityKey = (e) => JSON.stringify([norm(e.PersonnelNumber), norm(e.EmploymentLegalEntityId), norm(e.EmploymentId)]);
     const hrmsIds = new Set(hrms.map((h) => norm(h.employee_id)));
@@ -194,22 +179,21 @@ try {
     };
 
     const records = d365.map(build);
-    const BLOCKING = new Set([
-        "incomplete-identity", "duplicate-identity-in-d365", "multi-employment-pending-identity-review",
-        "designated-manual-review-personnel-number", "employee-id-collision", "already-mapped", "missing-name",
-    ]);
-    const classify = (r) => {
-        if (r.issues.includes("already-mapped")) return "skip-already-mapped";
-        if (r.issues.some((i) => BLOCKING.has(i))) return "excluded-manual-review";
-        return "propose-insert";
-    };
-    for (const r of records) {
-        r.action = classify(r);
+    for (const [index, r] of records.entries()) {
+        const reconciled = reconciliation.records[index];
+        r.action = ({
+            "already-mapped": "skip-already-mapped",
+            "confirmed-link": "propose-link-existing",
+            "new-record": "propose-insert",
+            ambiguous: "excluded-manual-review",
+            excluded: "excluded-manual-review",
+        })[reconciled.category];
+        r.issues = [...new Set([...r.issues, ...reconciled.reasons])];
         for (const issue of r.issues) bump(issueTally, issue);
     }
     const actionTally = countBy(records, (r) => r.action);
     const inserts = records.filter((r) => r.action === "propose-insert");
-    const excluded = records.filter((r) => r.action !== "propose-insert");
+    const excluded = records.filter((r) => r.action === "excluded-manual-review");
 
     const insertIdCounts = countBy(inserts, (r) => r.proposed.employee_id);
     const dupInsertIds = [...insertIdCounts].filter(([, n]) => n > 1).length;
@@ -220,6 +204,7 @@ try {
 
     const pad = (s, n = 44) => String(s).padEnd(n);
     console.log("=== D365 -> HRMS employee import DRY RUN (READ-ONLY; nothing was written) ===");
+    console.log("Reconciliation categories:", JSON.stringify(reconciliation.counts));
     console.log(`\nIMPORT STATUS: ${backup.verified ? "backup verified (still needs your explicit approval)" : "BLOCKED - BACKUP NOT VERIFIED"}`);
     console.log(`  backup check: ${backup.reason}`);
 
@@ -250,7 +235,7 @@ try {
     console.log("\nAccount safety");
     console.log(`  ${pad("proposed accounts with a password")}${inserts.filter((r) => r.proposed.password !== null).length} (must be 0)`);
     console.log(`  ${pad("proposed role")}${[...new Set(inserts.map((r) => r.proposed.role))].join(",")} (never hr)`);
-    console.log(`  ${pad("login guard rejects NULL password")}${nullPasswordGuard ? "yes (middleware/auth.js)" : "NOT FOUND"}`);
+    console.log(`  ${pad("login provisioning")}not part of reconciliation; verify auth separately`);
     console.log(`  ${pad("existing HRMS rows with NULL password")}${demoPasswordless} (unchanged by this dry run)`);
 
     console.log("\nFlags (a row can have several)");
@@ -282,6 +267,7 @@ try {
     const outDir = arg("--out");
     if (outDir) {
         fs.mkdirSync(outDir, { recursive: true });
+        fs.writeFileSync(path.join(outDir, "d365-reconciliation.json"), JSON.stringify(reconciliation, null, 2));
         const lines = ["personnel_number,legal_entity,employment_id,action,issues"];
         for (const r of records) {
             lines.push([r.e.PersonnelNumber, r.e.EmploymentLegalEntityId, r.e.EmploymentId, r.action, r.issues.join("|")]
@@ -297,7 +283,10 @@ try {
     console.log(`  transaction was READ ONLY; write transaction id assigned: ${txAssigned === null ? "none (no writes occurred)" : "YES (unexpected)"}`);
     console.log("  D365 requests: GET only. No mapping rows created, no employees imported.");
 } finally {
-    await db.query("ROLLBACK").catch(() => {});
-    db.release();
-    await pool.end();
+    try {
+        await db.query("ROLLBACK");
+    } finally {
+        db.release();
+        await pool.end();
+    }
 }

@@ -13,6 +13,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import pool from "../db.js";
+import { fetchD365Pages, reconcileD365 } from "./d365Reconciliation.js";
 
 const SELECT = [
     "PersonnelNumber", "EmploymentLegalEntityId", "EmploymentId", "Name",
@@ -54,34 +55,23 @@ const fetchD365 = async () => {
     const accessToken = (await tokenResponse.json()).access_token;
     const authorization = ["Bearer", accessToken].join(" ");
 
-    const rows = [];
-    let next = new URL(`${base}/data/EmployeesV2`);
-    next.searchParams.set("$select", SELECT);
-    for (let page = 0; next && page < 200; page += 1) {
-        if (next.origin !== base) throw new Error("Unexpected pagination host");
-        const response = await fetch(next, {
-            headers: { Authorization: authorization, Accept: "application/json" },
-            signal: AbortSignal.timeout(60_000),
-        });
-        if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
-        const body = await response.json();
-        rows.push(...body.value);
-        next = body["@odata.nextLink"] ? new URL(body["@odata.nextLink"], next) : null;
-    }
-    return rows;
+    return fetchD365Pages({ base, select: SELECT, authorization });
 };
 
 const outIndex = process.argv.indexOf("--out");
 const outDir = outIndex > -1 ? process.argv[outIndex + 1] : null;
 
+const db = await pool.connect();
 try {
+    await db.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     const d365 = await fetchD365();
-    const hrms = (await pool.query(
+    const hrms = (await db.query(
         "SELECT employee_id, name, email, phone FROM employees ORDER BY id"
     )).rows;
-    const mapped = (await pool.query("SELECT employee_id FROM employee_d365_mapping")).rows;
+    const mapped = (await db.query("SELECT employee_id, personnel_number, employment_legal_entity_id, employment_id, link_status FROM employee_d365_mapping")).rows;
     const mappedIds = new Set(mapped.map((m) => m.employee_id));
-    const attendanceD365 = (await pool.query(
+    const reconciliation = reconcileD365(d365, hrms, mapped);
+    const attendanceD365 = (await db.query(
         `SELECT DISTINCT personnel_number, employment_legal_entity_id, employment_id
          FROM attendance WHERE employee_id IS NULL AND personnel_number IS NOT NULL`
     )).rows;
@@ -104,14 +94,15 @@ try {
         const name = byName.get(lower(h.name).replace(/\s+/g, " ")) ?? [];
         if (name.length) signals.push({ signal: "name-only", matches: name });
 
-        const strong = signals.filter((s) => s.signal === "employee_id=PersonnelNumber" || s.signal === "email");
-        const strongKeys = new Set(strong.flatMap((s) => s.matches.map(identityKey)));
-
         let action;
         let target = null;
-        if (mappedIds.has(h.employee_id)) action = "already-mapped";
-        else if (strongKeys.size === 1) { action = "propose-link"; target = [...strongKeys][0]; }
-        else if (strongKeys.size > 1) action = "needs-review-ambiguous";
+        const resolved = reconciliation.records.filter((row) => row.employee_id === h.employee_id);
+        if (resolved.length === 1 && resolved[0].category === "already-mapped") action = "already-mapped";
+        else if (resolved.length === 1 && resolved[0].category === "confirmed-link") {
+            action = "propose-link";
+            target = resolved[0].key;
+        }
+        else if (resolved.length || mappedIds.has(h.employee_id)) action = "needs-review-mapping-conflict";
         else if (signals.length) action = "needs-review-weak-signal-only";
         else action = "no-match-keep-hrms-only";
         return { h, signals, action, target };
@@ -134,6 +125,7 @@ try {
         !d365Keys.has(JSON.stringify([norm(a.personnel_number), norm(a.employment_legal_entity_id), norm(a.employment_id)])));
 
     console.log("=== D365 <-> HRMS link preview (READ-ONLY; nothing was written) ===");
+    console.log("Reconciliation categories:", JSON.stringify(reconciliation.counts));
     console.log(`D365 EmployeesV2 rows:           ${d365.length}`);
     console.log(`HRMS employees:                  ${hrms.length}`);
     console.log(`Existing mapping rows:           ${mapped.length}`);
@@ -151,6 +143,7 @@ try {
 
     if (outDir) {
         fs.mkdirSync(outDir, { recursive: true });
+        fs.writeFileSync(path.join(outDir, "d365-reconciliation.json"), JSON.stringify(reconciliation, null, 2));
         const lines = ["employee_id,action,signals,d365_personnel_numbers"];
         for (const r of results) {
             const numbers = [...new Set(r.signals.flatMap((s) => s.matches.map((m) => norm(m.PersonnelNumber))))];
@@ -161,5 +154,10 @@ try {
         console.log(`\nDetailed CSV written to ${file}`);
     }
 } finally {
-    await pool.end();
+    try {
+        await db.query("ROLLBACK");
+    } finally {
+        db.release();
+        await pool.end();
+    }
 }
