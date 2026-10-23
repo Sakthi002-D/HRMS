@@ -73,6 +73,67 @@ test("employee username and HR employee ID authenticate distinct identities", as
     assert.equal(bcrypt.getRounds(employeeHash), 10);
 });
 
+test("HR3391 login and session work before identity migration without querying employee schema", async () => {
+    const password = "Existing-HR-Password";
+    const hash = await bcrypt.hash(password, 4);
+    const queries = [];
+    const db = {
+        async query(sql, [id]) {
+            queries.push(sql);
+            assert.doesNotMatch(sql, /employee_logins|employee_d365_mapping/);
+            assert.match(sql, /to_jsonb\(e\)->>'auth_credential_version'/);
+            return { rows: id === "3391" ? [{
+                employee_id: "3391", role: "hr", status: "Active",
+                password: hash, credential_version: 0,
+            }] : [] };
+        },
+    };
+    const res = response();
+    await createLoginHandler(db)({ body: { employee_id: "3391", password } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.employee.role, "hr");
+    assert.equal(res.body.employee.password, undefined);
+    const req = { get: () => `Bearer ${res.body.token}` };
+    let advanced = false;
+    await requireAuth(db)(req, response(), () => { advanced = true; });
+    assert.equal(advanced, true);
+    assert.equal(req.auth.identityType, "hr");
+    assert.equal(queries.length, 2);
+
+    const wrong = response();
+    await createLoginHandler(db)({ body: { employee_id: "3391", password: "Wrong-HR-Password" } }, wrong);
+    assert.equal(wrong.statusCode, 401);
+    assert.equal(wrong.body.token, undefined);
+});
+
+test("missing employee schema fails explicitly without HR credential fallback", async (t) => {
+    for (const code of ["42P01", "42703"]) {
+        await t.test(code, async () => {
+            let employeeQueries = 0;
+            const db = {
+                async query(sql) {
+                    if (sql.includes("FROM employee_logins")) {
+                        employeeQueries++;
+                        throw Object.assign(new Error("Synthetic missing schema"), { code });
+                    }
+                    return { rows: [] };
+                },
+            };
+            const res = response();
+            await createLoginHandler(db)({ body: { employee_id: "EMP3391", password: "EMP3391" } }, res);
+            assert.equal(res.statusCode, 503);
+            assert.match(res.body.message, /setup is incomplete/);
+            assert.equal(res.body.token, undefined);
+            assert.equal(employeeQueries, 1);
+            const session = response();
+            await requireAuth(db)({
+                get: () => `Bearer ${signToken("3391", { identityType: "employee" })}`,
+            }, session, () => assert.fail("Missing-schema employee authenticated"));
+            assert.equal(session.statusCode, 503);
+        });
+    }
+});
+
 test("wrong passwords fail and legacy employee master passwords cannot bypass identity provisioning", async () => {
     const legacyHash = await bcrypt.hash("legacy-password", 4);
     const employeeHash = await bcrypt.hash("employee-password", 4);

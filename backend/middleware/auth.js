@@ -168,8 +168,8 @@ export const requireAuth = (db) => async (req, res, next) => {
         } else {
             result = await db.query(
                 `SELECT employee_id, name, department, designation, email, role, status, access_disabled,
-                        auth_credential_version AS credential_version
-                 FROM employees WHERE employee_id = $1`,
+                        COALESCE((to_jsonb(e)->>'auth_credential_version')::integer, 0) AS credential_version
+                 FROM employees e WHERE employee_id = $1`,
                 [claims.sub]
             );
         }
@@ -195,6 +195,10 @@ export const requireAuth = (db) => async (req, res, next) => {
         };
         return next();
     } catch (error) {
+        if (["42P01", "42703"].includes(error.code)) {
+            console.error("Authentication schema unavailable:", error.code);
+            return sendError(res, 503, "Authentication database setup is incomplete. Please contact the administrator.");
+        }
         console.error("Auth error:", error.message);
         return sendError(res, 500, "Authentication failed");
     }
@@ -245,6 +249,34 @@ export const createLoginHandler = (db) => async (req, res) => {
             return sendError(res, 400, "Username and password are required");
         }
 
+        // HR sign-in must not depend on the employee portal migration being installed.
+        const result = await db.query(
+            `SELECT employee_id, name, department, designation, email, role, password, status, access_disabled,
+                    COALESCE((to_jsonb(e)->>'auth_credential_version')::integer, 0) AS credential_version
+             FROM employees e WHERE employee_id = $1 AND LOWER(role) = 'hr'`,
+            [username]
+        );
+        const hr = result.rows[0];
+        if (hr && String(hr.role || "").toLowerCase() === "hr") {
+            if (hr.access_disabled === true || String(hr.status || "").toLowerCase() !== "active") {
+                return sendError(res, 403, "Your account has been disabled. Please contact HR.");
+            }
+            if (!hr.password || !(await bcrypt.compare(password, hr.password))) {
+                return sendError(res, 401, "Invalid username or password");
+            }
+            const employee = { ...stripPassword(hr), role: "hr" };
+            delete employee.credential_version;
+            return res.json({
+                message: "Login successful",
+                employee,
+                role: "hr",
+                token: signToken(hr.employee_id, { identityType: "hr", credentialVersion: hr.credential_version }),
+            });
+        }
+        if (!/^EMP[A-Za-z0-9-]+$/i.test(username)) {
+            return sendError(res, 401, "Invalid username or password");
+        }
+
         const employeeLogin = await db.query(
             `SELECT e.employee_id, e.name, e.department, e.designation, e.email, e.status, e.access_disabled,
                     l.password_hash, l.credential_version, l.enabled
@@ -273,33 +305,12 @@ export const createLoginHandler = (db) => async (req, res) => {
             });
         }
 
-        // Legacy HR accounts stay on employees.password; employees with legacy passwords cannot bypass
-        // the separate employee identity table.
-        const result = await db.query(
-            `SELECT employee_id, name, department, designation, email, role, password, status, access_disabled,
-                    auth_credential_version AS credential_version
-             FROM employees WHERE employee_id = $1`,
-            [username]
-        );
-        const identity = result.rows[0];
-        if (!identity || String(identity.role || "").toLowerCase() !== "hr" || !identity.password) {
-            return sendError(res, 401, "Invalid username or password");
-        }
-        if (identity.access_disabled === true || String(identity.status || "").toLowerCase() !== "active") {
-            return sendError(res, 403, "Your account has been disabled. Please contact HR.");
-        }
-        if (!(await bcrypt.compare(password, identity.password))) {
-            return sendError(res, 401, "Invalid username or password");
-        }
-        const employee = { ...stripPassword(identity), role: "hr" };
-        delete employee.credential_version;
-        return res.json({
-            message: "Login successful",
-            employee,
-            role: "hr",
-            token: signToken(identity.employee_id, { identityType: "hr", credentialVersion: identity.credential_version }),
-        });
+        return sendError(res, 401, "Invalid username or password");
     } catch (error) {
+        if (["42P01", "42703"].includes(error.code)) {
+            console.error("Login schema unavailable:", error.code);
+            return sendError(res, 503, "Authentication database setup is incomplete. Please contact the administrator.");
+        }
         console.error("Login error:", error.message);
         return sendError(res, 500, "Login failed");
     }
