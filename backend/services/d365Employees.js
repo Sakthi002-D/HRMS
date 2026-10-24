@@ -1,4 +1,4 @@
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 300_000;
 const MAX_PAGES = 200;
 
 let cachedToken = null;
@@ -40,7 +40,7 @@ const readErrorDetail = async (response, config) => {
     }
 };
 
-const getD365Config = () => {
+export const getD365Config = () => {
     const rawBaseUrl = process.env.D365_BASE_URL?.trim();
     const tenantId = process.env.D365_TENANT_ID?.trim();
     const clientId = process.env.D365_CLIENT_ID?.trim();
@@ -85,7 +85,7 @@ const fetchWithTimeout = async (stage, url, options, config) => {
     }
 };
 
-const getAccessToken = async (config) => {
+export const getAccessToken = async (config) => {
     if (cachedToken && cachedTokenExpiresAt > Date.now()) {
         return cachedToken;
     }

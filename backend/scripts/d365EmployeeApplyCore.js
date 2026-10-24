@@ -137,7 +137,7 @@ const verifyColumns = async (db, table, required) => {
 
 const verifyUniqueConstraints = async (db, table, requiredKeys) => {
     const result = await db.query(
-        `SELECT array_agg(a.attname ORDER BY a.attname) AS columns
+        `SELECT array_agg(a.attname::text ORDER BY a.attname) AS columns
          FROM pg_index index_row
          JOIN LATERAL unnest(index_row.indkey) WITH ORDINALITY AS key(attnum, ordinal)
               ON key.ordinal <= index_row.indnkeyatts

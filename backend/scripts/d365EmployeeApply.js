@@ -52,7 +52,7 @@ const fetchD365 = async () => {
                 client_secret: process.env.D365_CLIENT_SECRET.trim(),
                 scope: `${base}/.default`,
             }),
-            signal: AbortSignal.timeout(60_000),
+            signal: AbortSignal.timeout(300_000),
         }
     );
     if (!response.ok) throw new Error(`D365 authentication failed (${response.status})`);

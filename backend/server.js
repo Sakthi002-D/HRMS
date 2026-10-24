@@ -27,9 +27,11 @@ import {
     runAnnualLeaveAccrual,
     startAnnualLeaveAccrualScheduler,
 } from "./services/annualLeaveAccrual.js";
-import { randomBytes } from "node:crypto";
-import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHandler, requireAuth, requireHR, requireSelfOrHR, signToken, verifyToken, stripPassword } from "./middleware/auth.js";
-import { employeeMappingPredicate, setAccountPassword } from "./services/accountCredentials.js";
+import { randomBytes, randomInt } from "node:crypto";
+import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHandler, requireAuth, requireHR, requireSelfOrHR, signToken, stripPassword } from "./middleware/auth.js";
+import { setAccountPassword } from "./services/accountCredentials.js";
+import { findPasswordIdentity, createResetPasswordHandler } from "./services/passwordRecovery.js";
+import { pullD365Changes, pushEmployeeToD365, startD365SyncScheduler } from "./services/d365EmployeeSync.js";
 
 
 const app = express();
@@ -148,6 +150,24 @@ app.get("/api/d365/employees", async (req, res) => {
 
         console.error("D365 employees route error:", error?.code || error?.name, error?.message);
         res.status(500).json({ message: "Failed to fetch D365 employees", stage: "server" });
+    }
+});
+
+// Manual D365 -> HRMS pull sync for linked employees (HR-only via the global API gate).
+let d365ManualSyncRunning = false;
+app.post("/api/d365/sync", async (req, res) => {
+    if (d365ManualSyncRunning) {
+        return res.status(409).json({ message: "A D365 sync is already running" });
+    }
+    d365ManualSyncRunning = true;
+    try {
+        const summary = await pullD365Changes(pool);
+        res.json({ message: "D365 sync completed", ...summary });
+    } catch (error) {
+        console.error("D365 manual sync failed:", error.message);
+        res.status(502).json({ message: "D365 sync failed" });
+    } finally {
+        d365ManualSyncRunning = false;
     }
 });
 
@@ -939,28 +959,6 @@ app.delete("/api/employees/:employeeId/experience/:experienceId", requireAuth(po
 // FORGOT PASSWORD - SEND OTP
 // ===============================
 
-const findPasswordIdentity = async (username) => {
-    const employeeLogin = await pool.query(
-        `SELECT e.employee_id, e.email, e.name, l.enabled
-         FROM employee_logins l
-         JOIN employees e ON e.employee_id = l.employee_id
-         WHERE l.normalized_username = LOWER(BTRIM($1))
-           AND l.enabled = TRUE AND e.status = 'Active' AND e.access_disabled IS NOT TRUE
-           AND ${employeeMappingPredicate}`,
-        [username]
-    );
-    if (employeeLogin.rows[0]) {
-        return { employee: employeeLogin.rows[0], credentialType: "employee" };
-    }
-    const hr = await pool.query(
-        `SELECT employee_id, email, name
-         FROM employees
-         WHERE employee_id = $1 AND LOWER(role) = 'hr' AND status = 'Active' AND access_disabled IS NOT TRUE`,
-        [username]
-    );
-    return hr.rows[0] ? { employee: hr.rows[0], credentialType: "hr" } : null;
-};
-
 app.post("/api/forgot-password", async (req, res) => {
     try {
         const username = String(req.body?.username ?? req.body?.employee_id ?? "").trim();
@@ -970,7 +968,7 @@ app.post("/api/forgot-password", async (req, res) => {
             });
         }
 
-        const resolved = await findPasswordIdentity(username);
+        const resolved = await findPasswordIdentity(pool, username);
         if (!resolved) {
             return res.status(404).json({
                 message: "Account not found",
@@ -986,9 +984,7 @@ app.post("/api/forgot-password", async (req, res) => {
         }
 
         // Generate 6 digit OTP
-        const otp = Math.floor(
-            100000 + Math.random() * 900000
-        ).toString();
+        const otp = randomInt(100000, 1000000).toString();
 
         // Hash OTP
         const otpHash = await bcrypt.hash(otp, 10);
@@ -1064,13 +1060,13 @@ app.post("/api/verify-otp", async (req, res) => {
         const username = String(req.body?.username ?? req.body?.employee_id ?? "").trim();
         const { otp } = req.body || {};
 
-        if (!username || !otp) {
+        if (!username || typeof otp !== "string" || !/^\d{6}$/.test(otp.trim())) {
             return res.status(400).json({
                 message: "Employee ID and OTP are required",
             });
         }
 
-        const resolved = await findPasswordIdentity(username);
+        const resolved = await findPasswordIdentity(pool, username);
         if (!resolved) {
             return res.status(400).json({ message: "OTP not found or already used" });
         }
@@ -1117,7 +1113,8 @@ app.post("/api/verify-otp", async (req, res) => {
             await pool.query(
                 `UPDATE password_resets
                  SET attempts = attempts + 1
-                 WHERE id = $1`,
+                 WHERE id = $1 AND verified = FALSE AND attempts < 5
+                   AND expires_at >= CURRENT_TIMESTAMP`,
                 [reset.id]
             );
 
@@ -1127,12 +1124,17 @@ app.post("/api/verify-otp", async (req, res) => {
         }
 
         // Mark OTP as verified
-        await pool.query(
+        const verified = await pool.query(
             `UPDATE password_resets
              SET verified = TRUE
-             WHERE id = $1`,
+             WHERE id = $1 AND verified = FALSE AND attempts < 5
+               AND expires_at >= CURRENT_TIMESTAMP
+             RETURNING id`,
             [reset.id]
         );
+        if (verified.rowCount !== 1) {
+            return res.status(400).json({ message: "OTP not found or already used" });
+        }
 
         res.json({
             message: "OTP verified successfully",
@@ -1161,94 +1163,7 @@ app.post("/api/verify-otp", async (req, res) => {
 // RESET PASSWORD
 // ===============================
 
-app.post("/api/reset-password", async (req, res) => {
-    try {
-        const username = String(req.body?.username ?? req.body?.employee_id ?? "").trim();
-        const { new_password } = req.body || {};
-
-        if (!username || !new_password) {
-            return res.status(400).json({
-                message:
-                    "Employee ID and new password are required",
-            });
-        }
-
-        if (new_password.length < 6) {
-            return res.status(400).json({
-                message:
-                    "Password must be at least 6 characters",
-            });
-        }
-
-        const resolved = await findPasswordIdentity(username);
-        if (!resolved) return res.status(400).json({ message: "OTP verification required" });
-        const grant = verifyToken(req.body?.reset_token);
-        if (!grant || grant.purpose !== "password-reset"
-            || grant.sub !== resolved.employee.employee_id || grant.typ !== resolved.credentialType) {
-            return res.status(401).json({ message: "OTP verification required" });
-        }
-        const { employee_id } = resolved.employee;
-        const resetResult = await pool.query(
-            `SELECT *
-             FROM password_resets
-             WHERE employee_id = $1
-               AND credential_type = $2
-               AND verified = TRUE
-               AND expires_at >= CURRENT_TIMESTAMP
-             ORDER BY created_at DESC
-             LIMIT 1`,
-            [employee_id, resolved.credentialType]
-        );
-
-        if (resetResult.rows.length === 0) {
-            return res.status(400).json({
-                message: "OTP verification required",
-            });
-        }
-        if (String(resetResult.rows[0].id) !== String(grant.ver)) {
-            return res.status(401).json({ message: "OTP verification required" });
-        }
-
-        // Hash new password
-        const hashedPassword = await bcrypt.hash(
-            new_password,
-            10
-        );
-
-        const updateResult = await setAccountPassword(pool, {
-            identityType: resolved.credentialType,
-            employeeId: employee_id,
-            passwordHash: hashedPassword,
-        });
-
-        if (updateResult.rows.length === 0) {
-            return res.status(404).json({
-                message: "Employee not found",
-            });
-        }
-
-        // Delete used OTP
-        await pool.query(
-            `DELETE FROM password_resets
-             WHERE employee_id = $1 AND credential_type = $2`,
-            [employee_id, resolved.credentialType]
-        );
-
-        res.json({
-            message: "Password reset successfully",
-        });
-
-    } catch (error) {
-        console.error(
-            "Reset password error:",
-            error
-        );
-
-        res.status(500).json({
-            message: "Failed to reset password",
-        });
-    }
-});
+app.post("/api/reset-password", createResetPasswordHandler(pool));
 
 // Add New Employees
 app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
@@ -1517,6 +1432,14 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
                 message: "Employee not found"
             });
         }
+
+        // Best-effort HRMS -> D365 push for linked employees; never blocks the HRMS update.
+        pushEmployeeToD365(pool, employeeId)
+            .then((push) => {
+                if (push.pushed) console.log(`D365 push for ${employeeId}: ${push.fields.join(", ")}`);
+                else if (push.reason !== "not-linked") console.warn(`D365 push skipped for ${employeeId}: ${push.reason}`);
+            })
+            .catch((error) => console.error(`D365 push failed for ${employeeId}:`, error.message));
 
         res.json(stripPassword(result.rows[0]));
 
@@ -3010,6 +2933,7 @@ ensureEmployeePersonalInfoColumns()
 
         // Daily annual leave accrual (first run backfills from joining dates)
         startAnnualLeaveAccrualScheduler();
+        startD365SyncScheduler(pool);
 
         // Daily: complete resignations the day after the last working day
         startResignationScheduler({ onEmails: sendQueuedEmails });

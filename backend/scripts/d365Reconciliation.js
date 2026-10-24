@@ -37,7 +37,7 @@ export async function fetchD365Pages({ base, select, authorization, fetchImpl = 
             method: "GET",
             redirect: "error",
             headers: { Authorization: authorization, Accept: "application/json" },
-            signal: AbortSignal.timeout(60_000),
+            signal: AbortSignal.timeout(300_000),
         });
         if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
         const body = await response.json();

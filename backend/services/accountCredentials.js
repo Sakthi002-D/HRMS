@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 
 export const employeeMappingPredicate = `
@@ -21,7 +22,9 @@ export async function buildInitialEmployeeCredential(personnelNumber) {
         personnelNumber,
         username,
         normalizedUsername: username.toLowerCase(),
-        passwordHash: await bcrypt.hash(username, 10),
+        // The initial password is random and never disclosed; employees gain access
+        // through the OTP password-recovery flow once HR enables the login.
+        passwordHash: await bcrypt.hash(randomBytes(32).toString("base64url"), 10),
     };
 }
 

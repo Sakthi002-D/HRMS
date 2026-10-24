@@ -28,7 +28,7 @@ const response = () => ({
 test("employee username and HR employee ID authenticate distinct identities", async () => {
     const hrHash = await bcrypt.hash("hr-pass-3391", 4);
     const credential = await buildInitialEmployeeCredential("3391");
-    const employeeHash = credential.passwordHash;
+    const employeeHash = await bcrypt.hash("chosen-employee-password", 4);
     const db = {
         async query(sql, [username]) {
             if (sql.includes("FROM employee_logins")) {
@@ -53,8 +53,8 @@ test("employee username and HR employee ID authenticate distinct identities", as
 
     for (const [username, password, expectedRole, expectedSub, expectedVersion] of [
         ["3391", "hr-pass-3391", "hr", "3391", 7],
-        ["EMP3391", "EMP3391", "employee", "3391", 3],
-        ["emp3391", "EMP3391", "employee", "3391", 3],
+        ["EMP3391", "chosen-employee-password", "employee", "3391", 3],
+        ["emp3391", "chosen-employee-password", "employee", "3391", 3],
     ]) {
         const res = response();
         await createLoginHandler(db)({ body: { username, password } }, res);
@@ -70,7 +70,7 @@ test("employee username and HR employee ID authenticate distinct identities", as
     }
     assert.equal(credential.username, "EMP3391");
     assert.equal(credential.normalizedUsername, "emp3391");
-    assert.equal(bcrypt.getRounds(employeeHash), 10);
+    assert.equal(bcrypt.getRounds(credential.passwordHash), 10);
 });
 
 test("HR3391 login and session work before identity migration without querying employee schema", async () => {
@@ -268,15 +268,17 @@ test("employee identity is denied HR routes and limited to its own records", asy
 test("initial credentials preserve leading zeros and reject invalid personnel numbers", async () => {
     const credential = await buildInitialEmployeeCredential("001013");
     assert.equal(credential.username, "EMP001013");
-    assert.equal(await bcrypt.compare("EMP001013", credential.passwordHash), true);
+    assert.equal(await bcrypt.compare("EMP001013", credential.passwordHash), false);
     assert.equal(await bcrypt.compare("EMP1013", credential.passwordHash), false);
+    assert.deepEqual(Object.keys(credential).sort(), ["normalizedUsername", "passwordHash", "personnelNumber", "username"]);
+    assert.notEqual(credential.passwordHash, (await buildInitialEmployeeCredential("001013")).passwordHash);
     for (const value of ["", " EMP1", "EMP1", "../1", 1013]) {
         await assert.rejects(buildInitialEmployeeCredential(value), TypeError);
     }
 });
 
 test("EMP3391 password change preserves HR3391 hash and revokes employee sessions only", async () => {
-    let employeeHash = (await buildInitialEmployeeCredential("3391")).passwordHash;
+    let employeeHash = await bcrypt.hash("Chosen-Employee-Password", 4);
     const originalHrHash = await bcrypt.hash("Existing-HR-Secret", 4);
     let hrHash = originalHrHash;
     let employeeVersion = 0;
@@ -314,7 +316,7 @@ test("EMP3391 password change preserves HR3391 hash and revokes employee session
     assert.equal(wrong.statusCode, 401);
     assert.equal(employeeVersion, 0);
     const changed = response();
-    await createChangePasswordHandler(db)(change("employee", "EMP3391", "Changed-Employee"), changed);
+    await createChangePasswordHandler(db)(change("employee", "Chosen-Employee-Password", "Changed-Employee"), changed);
     assert.equal(changed.statusCode, 200);
     assert.equal(await bcrypt.compare("Changed-Employee", employeeHash), true);
     assert.equal(await bcrypt.compare("EMP3391", employeeHash), false);
