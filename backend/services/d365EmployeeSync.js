@@ -181,7 +181,7 @@ export async function pushEmployeeToD365(pool, employeeId, previous = null) {
 
 let syncRunning = false;
 export const startD365SyncScheduler = (pool) => {
-    const minutes = Number(process.env.D365_SYNC_INTERVAL_MINUTES) || 30;
+    const minutes = Number(process.env.D365_SYNC_INTERVAL_MINUTES) || 5;
     const run = async () => {
         if (syncRunning) return;
         syncRunning = true;

@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Grid2X2,
   List,
+  RefreshCw,
   UserCheck,
   UserPlus,
   Users,
@@ -179,6 +180,30 @@ useEffect(() => {
   const [viewMode, setViewMode] = useState("list");
 
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const syncNow = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const response = await fetch(`${API_URL}/api/d365/sync`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showAlert(data.message || t("employeesList.sync.failed", { defaultValue: "D365 sync failed" }));
+        return;
+      }
+      await fetchEmployees();
+      showAlert({
+        variant: "success",
+        message: t("employeesList.sync.done", { updated: data.updated ?? 0, defaultValue: "D365 sync completed. {{updated}} employee(s) updated." }),
+      });
+    } catch (error) {
+      console.error("D365 sync error:", error);
+      showAlert(t("leaveDetails.noBackend", { defaultValue: "Unable to connect to backend" }));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
 
   // =========================
@@ -1210,6 +1235,12 @@ const filteredEmployees =
             <button type="button" className={`view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label={t("employeesList.gridView", { defaultValue: "Grid view" })}>
               <Grid2X2 size={15} />
             </button>
+            <Button variant="secondary" onClick={syncNow} disabled={syncing}>
+              <RefreshCw size={14} className={syncing ? "employee-refresh-icon--spinning" : ""} aria-hidden="true" />{" "}
+              {syncing
+                ? t("employeesList.sync.syncing", { defaultValue: "Syncing..." })
+                : t("employeesList.sync.button", { defaultValue: "Sync now" })}
+            </Button>
             <div className="export-menu">
               <Button
                 variant="secondary"
