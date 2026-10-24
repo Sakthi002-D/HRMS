@@ -24,7 +24,7 @@ export const installApiAuthorizationFetch = () => {
   const originalFetch = window.fetch.bind(window);
   const apiOrigin = new URL(API_URL, window.location.href);
 
-  const authenticatedFetch = (input, options = {}) => {
+  const authenticatedFetch = async (input, options = {}) => {
     const requestUrl = new URL(input instanceof Request ? input.url : input, window.location.href);
     if (requestUrl.origin !== apiOrigin.origin || !requestUrl.pathname.startsWith("/api/")) {
       return originalFetch(input, options);
@@ -34,7 +34,20 @@ export const installApiAuthorizationFetch = () => {
     new Headers(options.headers || {}).forEach((value, name) => headers.set(name, value));
     const token = getAuthToken();
     if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
-    return originalFetch(input, { ...options, headers });
+    const response = await originalFetch(input, { ...options, headers });
+
+    // A revoked or expired session returns this exact message on every route:
+    // clear the stale session once and send the user back to sign in.
+    if (response.status === 401 && token) {
+      const data = await response.clone().json().catch(() => ({}));
+      if (data.message === "Invalid or expired token") {
+        storeAuthToken(null);
+        sessionStorage.removeItem("loggedInHR");
+        sessionStorage.removeItem("loggedInEmployee");
+        if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+      }
+    }
+    return response;
   };
   authenticatedFetch.__hrmsAuthFetch = true;
   window.fetch = authenticatedFetch;
