@@ -146,7 +146,7 @@ const fetchEmployees = async () => {
   maritalStatus: employee.marital_status,
   childrenCount: employee.children_count,
   profilePhoto: employee.profile_photo,
-  d365Linked: Boolean(employee.d365_linked),
+  role: employee.role,
 }));
 
     setEmployees(formattedEmployees);
@@ -178,22 +178,8 @@ useEffect(() => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState("list");
 
-  // =========================
-  // DIRECTORY TABS
-  // =========================
-
-  // "d365" = employees imported from / linked to D365 (kept in sync with D365).
-  // "legacy" = the local HRMS demo records. Both tabs share the same UI.
-  const [directoryMode, setDirectoryMode] = useState("d365");
-  const isLegacyDirectory = directoryMode === "legacy";
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  const switchDirectoryMode = (mode) => {
-    if (mode === directoryMode) return;
-    setDirectoryMode(mode);
-    setSearch("");
-    setCurrentPage(1);
-  };
 
   // =========================
   // MODAL
@@ -1095,7 +1081,7 @@ const updateEmployee = async () => {
   // SEARCH FILTER
   // =========================
 const normalizedSearch = search.trim().toLowerCase();
-const tabEmployees = employees.filter((employee) => employee.d365Linked === !isLegacyDirectory);
+const tabEmployees = employees.filter((employee) => String(employee.role ?? "").toLowerCase() !== "hr");
 const designations = [...new Set(tabEmployees.map((employee) => employee.designation).filter(Boolean))].sort();
 const filteredEmployees =
   tabEmployees
@@ -1208,15 +1194,11 @@ const filteredEmployees =
             <p>
               {t("employeesList.subtitle", { defaultValue: "Manage all company employees" })}
               <span
-                className={`employee-source-badge ${isLegacyDirectory ? "employee-source-badge--demo" : ""}`}
-                title={isLegacyDirectory
-                  ? t("employeesList.d365.sourceLegacyTitle", { defaultValue: "Local HRMS demo records (PostgreSQL)" })
-                  : t("employeesList.d365.sourceD365Title", { defaultValue: "Live from Dynamics 365 Finance & Operations" })}
+                className="employee-source-badge"
+                title={t("employeesList.d365.sourceD365Title", { defaultValue: "Live from Dynamics 365 Finance & Operations" })}
               >
                 <span className="employee-source-badge-dot" aria-hidden="true"></span>
-                {isLegacyDirectory
-                  ? t("employeesList.d365.sourceLegacyShort", { defaultValue: "HRMS demo" })
-                  : t("employeesList.d365.sourceD365Short", { defaultValue: "D365 · Finance & Operations" })}
+                {t("employeesList.d365.sourceD365Short", { defaultValue: "D365 · Finance & Operations" })}
               </span>
             </p>
           </div>
@@ -1306,28 +1288,6 @@ const filteredEmployees =
             <h2>{t("employeesList.employeeList", { defaultValue: "Employee List" })}</h2>
           </div>
           <div className="employee-list-header-actions">
-            <div
-              className="employee-source-toggle"
-              role="group"
-              aria-label={t("employeesList.d365.sourceAria", { defaultValue: "Employee directory source" })}
-            >
-              <button
-                type="button"
-                className={!isLegacyDirectory ? "active" : ""}
-                aria-pressed={!isLegacyDirectory}
-                onClick={() => switchDirectoryMode("d365")}
-              >
-                {t("employeesList.d365.sourceD365", { defaultValue: "D365 employees" })}
-              </button>
-              <button
-                type="button"
-                className={isLegacyDirectory ? "active" : ""}
-                aria-pressed={isLegacyDirectory}
-                onClick={() => switchDirectoryMode("legacy")}
-              >
-                {t("employeesList.d365.sourceLegacy", { defaultValue: "HRMS demo records" })}
-              </button>
-            </div>
             <button
               type="button"
               className={`filter-toggle ${showFilters ? "active" : ""}`}

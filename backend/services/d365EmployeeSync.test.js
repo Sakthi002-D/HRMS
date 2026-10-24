@@ -59,3 +59,15 @@ test("buildPushBody sends only safe mapped fields in D365 formats", () => {
     );
     assert.deepEqual(buildPushBody({ gender: "Other", marital_status: null, date_of_birth: null }), {});
 });
+
+test("buildPushBody with previous values pushes only changed contact and date fields", () => {
+    const previous = { email: "a@x.com", phone: "111", gender: "Male", joining_date: "2024-01-01", date_of_birth: null, marital_status: null };
+    const next = { ...previous, email: "b@x.com", phone: "222", joining_date: "2025-02-03" };
+    assert.deepEqual(buildPushBody(next, previous), {
+        PrimaryContactEmail: "b@x.com",
+        PrimaryContactPhone: "222",
+        EmploymentStartDate: "2025-02-03T12:00:00Z",
+    });
+    assert.deepEqual(buildPushBody(previous, previous), {});
+    assert.deepEqual(buildPushBody({ ...previous, phone: "" }, previous), {});
+});

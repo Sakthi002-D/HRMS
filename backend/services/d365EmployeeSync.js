@@ -5,8 +5,9 @@
 // HRMS when D365 differs. HR accounts, unlinked/demo employees, credentials, role and
 // access_disabled are never touched by the pull.
 //
-// Push (HRMS -> D365): after an HRMS employee update, the safe writable subset
-// (Gender, MaritalStatus, BirthDate) is PATCHed to the linked D365 employment.
+// Push (HRMS -> D365): after an HRMS employee update, the fields HR actually changed
+// (email, phone, gender, marital status, birth date, joining date) are PATCHed to the
+// linked D365 employment.
 // Push is best-effort and must never block or fail the HRMS write.
 import { getD365Config, getAccessToken } from "./d365Employees.js";
 import { fetchD365Pages } from "../scripts/d365Reconciliation.js";
@@ -125,20 +126,31 @@ export async function pullD365Changes(pool) {
     return summary;
 }
 
-// Only enums/dates that EmployeesV2 accepts via PATCH; contact info and names are
-// owned by other D365 entities and are not pushed.
-export const buildPushBody = (employee) => {
+// Verified writable on EmployeesV2 via PATCH. Names are not pushed (HRMS keeps one
+// full-name field while D365 splits first/middle/last).
+const PUSH_FIELDS = {
+    email: { d365: "PrimaryContactEmail", value: (v) => norm(v) || null },
+    phone: { d365: "PrimaryContactPhone", value: (v) => norm(v) || null },
+    gender: { d365: "Gender", value: (v) => GENDER_MAP[lower(v)] ?? null },
+    marital_status: { d365: "MaritalStatus", value: (v) => MARITAL_MAP[lower(v)] ?? null },
+    date_of_birth: { d365: "BirthDate", value: (v) => (asDateString(v) ? `${asDateString(v)}T12:00:00Z` : null) },
+    joining_date: { d365: "EmploymentStartDate", value: (v) => (asDateString(v) ? `${asDateString(v)}T12:00:00Z` : null) },
+};
+
+// With `previous`, only fields whose value changed are included, so a stale HRMS value
+// never overwrites a newer D365 one. Empty values are never pushed (no erasing D365).
+export const buildPushBody = (employee, previous = null) => {
     const body = {};
-    const gender = GENDER_MAP[lower(employee.gender)];
-    if (gender) body.Gender = gender;
-    const marital = MARITAL_MAP[lower(employee.marital_status)];
-    if (marital) body.MaritalStatus = marital;
-    const birth = asDateString(employee.date_of_birth);
-    if (birth) body.BirthDate = `${birth}T12:00:00Z`;
+    for (const [field, { d365, value }] of Object.entries(PUSH_FIELDS)) {
+        const next = value(employee[field]);
+        if (next === null) continue;
+        if (previous && value(previous[field]) === next) continue;
+        body[d365] = next;
+    }
     return body;
 };
 
-export async function pushEmployeeToD365(pool, employeeId) {
+export async function pushEmployeeToD365(pool, employeeId, previous = null) {
     const mapping = (await pool.query(
         `SELECT m.employee_id, m.personnel_number, m.employment_legal_entity_id, m.employment_id
          FROM employee_d365_mapping m
@@ -148,11 +160,11 @@ export async function pushEmployeeToD365(pool, employeeId) {
     )).rows[0];
     if (!mapping) return { pushed: false, reason: "not-linked" };
     const employee = (await pool.query(
-        "SELECT gender, marital_status, date_of_birth FROM employees WHERE employee_id = $1",
+        "SELECT email, phone, gender, marital_status, date_of_birth, joining_date FROM employees WHERE employee_id = $1",
         [employeeId]
     )).rows[0];
     if (!employee) return { pushed: false, reason: "missing-employee" };
-    const body = buildPushBody(employee);
+    const body = buildPushBody(employee, previous);
     if (!Object.keys(body).length) return { pushed: false, reason: "no-pushable-fields" };
 
     const config = getD365Config();

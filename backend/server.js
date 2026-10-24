@@ -1359,6 +1359,8 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
         }
         const pick = (field, submitted) => (field in master ? master[field] : submitted);
 
+        const previous = (await pool.query("SELECT * FROM employees WHERE employee_id = $1", [employeeId])).rows[0] || null;
+
         const result = await pool.query(
   `UPDATE employees
    SET
@@ -1440,7 +1442,7 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
         }
 
         // Best-effort HRMS -> D365 push for linked employees; never blocks the HRMS update.
-        pushEmployeeToD365(pool, employeeId)
+        pushEmployeeToD365(pool, employeeId, previous)
             .then((push) => {
                 if (push.pushed) console.log(`D365 push for ${employeeId}: ${push.fields.join(", ")}`);
                 else if (push.reason !== "not-linked") console.warn(`D365 push skipped for ${employeeId}: ${push.reason}`);
