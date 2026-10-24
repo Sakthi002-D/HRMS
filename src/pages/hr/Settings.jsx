@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Bell, Briefcase, Check, ChevronDown, DoorOpen, GitBranch, Globe2, LockKeyhole, Mail, Palette, Save, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Briefcase, Check, ChevronDown, DoorOpen, GitBranch, Globe2, KeyRound, LockKeyhole, Mail, Palette, Save, ShieldCheck, UserRound } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { api, getSessionEmployeeId } from "../../components/recruitment/recruitmentApi";
+import { storeAuthToken } from "../../utils/auth";
 import ApprovalWorkflowSettings from "./settings/ApprovalWorkflowSettings";
 import RecruitmentMastersSettings from "./settings/RecruitmentMastersSettings";
 import { ResignationNoticeSettings } from "./settings/ResignationSettings";
@@ -11,6 +12,7 @@ import { LANGUAGES, changeAppLanguage } from "../../i18n";
 
 const settingGroups = [
     { id: "general", label: "General Settings", icon: Globe2 },
+    { id: "security", label: "Account Security", icon: KeyRound },
     { id: "website", label: "Website Settings", icon: Palette },
     { id: "app", label: "App Settings", icon: Bell },
     { id: "system", label: "System Settings", icon: ShieldCheck },
@@ -22,7 +24,7 @@ const settingGroups = [
 ];
 
 // These groups save through their own buttons (stored on the server)
-const SERVER_GROUPS = ["approval", "recruitment", "resignation"];
+const SERVER_GROUPS = ["approval", "recruitment", "resignation", "security"];
 
 const initialSettings = {
     companyName: "Shelter Group",
@@ -111,6 +113,7 @@ function Settings() {
                             </div>
 
                             {activeGroup === "general" && <GeneralSettings settings={settings} updateSetting={updateSetting} />}
+                            {activeGroup === "security" && <SecuritySettings />}
                             {activeGroup === "website" && <WebsiteSettings settings={settings} updateSetting={updateSetting} />}
                             {activeGroup === "app" && <AppSettings settings={settings} updateSetting={updateSetting} />}
                             {activeGroup === "system" && <SystemSettings settings={settings} updateSetting={updateSetting} />}
@@ -138,8 +141,68 @@ function Field({ label, children, hint }) {
     return <label className="settings-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
 }
 
-function GeneralSettings({ settings, updateSetting }) {
-    const { t, i18n } = useTranslation();
+// Changes the signed-in HR account's password; the server revokes the session afterwards
+function SecuritySettings() {
+    const { t } = useTranslation();
+    const [form, setForm] = useState({ current_password: "", new_password: "", repeat_password: "" });
+    const [status, setStatus] = useState(null); // { variant: "success" | "error", message }
+    const [saving, setSaving] = useState(false);
+
+    const updateField = (field) => (event) => {
+        setForm((current) => ({ ...current, [field]: event.target.value }));
+        setStatus(null);
+    };
+
+    const submit = async (event) => {
+        event.preventDefault();
+        if (form.new_password !== form.repeat_password) {
+            return setStatus({ variant: "error", message: t("settings.security.mismatch", { defaultValue: "New passwords do not match." }) });
+        }
+        try {
+            setSaving(true);
+            const data = await api(`/api/employees/${encodeURIComponent(getSessionEmployeeId())}/change-password`, {
+                method: "POST",
+                body: form,
+            });
+            setStatus({ variant: "success", message: data.message || t("settings.security.changed", { defaultValue: "Password changed successfully. Please sign in again." }) });
+            setForm({ current_password: "", new_password: "", repeat_password: "" });
+            // The old token is revoked by the password change: send the user back to sign in
+            setTimeout(() => {
+                storeAuthToken(null);
+                sessionStorage.removeItem("loggedInHR");
+                window.location.href = "/login";
+            }, 1500);
+        } catch (error) {
+            setStatus({ variant: "error", message: error.message });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return <form className="settings-form-grid" onSubmit={submit}>
+        <Field label={t("settings.security.currentPassword", { defaultValue: "Current Password" })}>
+            <input type="password" dir="ltr" autoComplete="current-password" required value={form.current_password} onChange={updateField("current_password")} />
+        </Field>
+        <Field label={t("settings.security.newPassword", { defaultValue: "New Password" })} hint={t("settings.security.newPasswordHint", { defaultValue: "At least 6 characters." })}>
+            <input type="password" dir="ltr" autoComplete="new-password" required minLength={6} value={form.new_password} onChange={updateField("new_password")} />
+        </Field>
+        <Field label={t("settings.security.repeatPassword", { defaultValue: "Repeat New Password" })}>
+            <input type="password" dir="ltr" autoComplete="new-password" required minLength={6} value={form.repeat_password} onChange={updateField("repeat_password")} />
+        </Field>
+        <div className="settings-card-footer">
+            {status && <span className={status.variant === "success" ? "settings-saved" : "settings-error"} role="status">
+                {status.variant === "success" && <Check size={15} />} {status.message}
+            </span>}
+            <button className="settings-save-button" type="submit" disabled={saving}>
+                <KeyRound size={15} /> {saving
+                    ? t("settings.security.changing", { defaultValue: "Changing…" })
+                    : t("settings.security.changePassword", { defaultValue: "Change Password" })}
+            </button>
+        </div>
+    </form>;
+}
+
+function GeneralSettings({ settings, updateSetting }) {    const { t, i18n } = useTranslation();
     const currentLanguage = i18n.language === "ar" ? "ar" : "en";
 
     return <div className="settings-form-grid">

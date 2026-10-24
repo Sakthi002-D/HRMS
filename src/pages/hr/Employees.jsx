@@ -586,7 +586,7 @@ const resetForm = () => {
   const isEmployeeIdExists = (employeeId, currentId = null) => {
     return employees.some(
       (employee) =>
-        employee.id.toLowerCase() ===
+        (employee.id ?? "").toLowerCase() ===
           employeeId.trim().toLowerCase() &&
         employee.id !== currentId
     );
@@ -841,7 +841,7 @@ const employeeData = {
   // =========================
 
    const viewEmployee = (employee) => {
-    const employeeSlug = employee.name
+    const employeeSlug = (employee.name ?? "")
         .toLowerCase()
         .trim()
         .replace(/\s+/g, "-")
@@ -1274,29 +1274,29 @@ const filteredEmployees =
     .filter((employee) => {
 
     const matchesSearch =
-      employee.name
+      (employee.name ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
+        .includes(normalizedSearch) ||
 
-      employee.id
+      (employee.id ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
+        .includes(normalizedSearch) ||
 
-      employee.department
+      (employee.department ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
+        .includes(normalizedSearch) ||
 
-      employee.designation
+      (employee.designation ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
+        .includes(normalizedSearch) ||
 
-      employee.email
+      (employee.email ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase()) ||
+        .includes(normalizedSearch) ||
 
-      employee.phone
+      (employee.phone ?? "")
         .toLowerCase()
-        .includes(search.toLowerCase());
+        .includes(normalizedSearch);
 
     const matchesStatus =
       statusFilter === "All" ||

@@ -38,5 +38,6 @@
 .settings-switch.on span { transform: translateX(20px); }
 .settings-card-footer { display: flex; align-items: center; justify-content: flex-end; gap: 15px; padding: 16px 24px; border-top: 1px solid #e6edf3; background: #fbfdff; }
 .settings-saved { display: inline-flex; align-items: center; gap: 5px; color: #07804b; font-size: 13px; font-weight: 700; }
+.settings-error { display: inline-flex; align-items: center; gap: 5px; color: #b42318; font-size: 13px; font-weight: 700; }
 @media (max-width: 800px) { .settings-layout { grid-template-columns: 1fr; } .settings-navigation { display: grid; grid-template-columns: repeat(2, 1fr); border-left: 0; border-bottom: 2px solid #e5eaf0; } .settings-navigation button { border-left: 0; border-bottom: 3px solid transparent; } .settings-navigation button.active { border-bottom-color: #03a9f4; } }
 @media (max-width: 560px) { .settings-header { align-items: flex-start; flex-direction: column; } .settings-form-grid { grid-template-columns: 1fr; } .settings-navigation { grid-template-columns: 1fr; } }
