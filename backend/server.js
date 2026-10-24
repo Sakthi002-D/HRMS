@@ -727,7 +727,13 @@ app.post("/api/attendance/punch-out", async (req, res) => {
 app.get("/api/employees", async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT * FROM employees ORDER BY id ASC"
+            `SELECT e.*,
+                EXISTS (
+                    SELECT 1 FROM employee_d365_mapping m
+                    WHERE m.employee_id = e.employee_id AND m.link_status = 'linked'
+                ) AS d365_linked
+             FROM employees e
+             ORDER BY e.id ASC`
         );
 
         res.json(result.rows.map(stripPassword));

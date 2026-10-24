@@ -13,9 +13,6 @@ import {
   SlidersHorizontal,
   Grid2X2,
   List,
-  RefreshCw,
-  SearchX,
-  TriangleAlert,
   UserCheck,
   UserPlus,
   Users,
@@ -149,6 +146,7 @@ const fetchEmployees = async () => {
   maritalStatus: employee.marital_status,
   childrenCount: employee.children_count,
   profilePhoto: employee.profile_photo,
+  d365Linked: Boolean(employee.d365_linked),
 }));
 
     setEmployees(formattedEmployees);
@@ -181,106 +179,20 @@ useEffect(() => {
   const [viewMode, setViewMode] = useState("list");
 
   // =========================
-  // D365 DIRECTORY (default)
+  // DIRECTORY TABS
   // =========================
 
-  // "d365" = the real D365 employee population (server-side paging + search).
-  // "legacy" = the local PostgreSQL demo records, kept for existing HRMS workflows.
+  // "d365" = employees imported from / linked to D365 (kept in sync with D365).
+  // "legacy" = the local HRMS demo records. Both tabs share the same UI.
   const [directoryMode, setDirectoryMode] = useState("d365");
-  const [d365Rows, setD365Rows] = useState([]);
-  const [d365Total, setD365Total] = useState(0);
-  const [d365Page, setD365Page] = useState(1);
-  const [d365TotalPages, setD365TotalPages] = useState(1);
-  const [d365PageSize, setD365PageSize] = useState(25);
-  const [d365Search, setD365Search] = useState("");
-  const [d365Loading, setD365Loading] = useState(true);
-  // { stage, message } — stage mirrors the backend (config / authentication / employees / server / network)
-  const [d365Error, setD365Error] = useState(null);
-  const [d365Attempt, setD365Attempt] = useState(0);
   const isLegacyDirectory = directoryMode === "legacy";
-
-  // Server-side search: debounce the shared search box into the D365 query.
-  useEffect(() => {
-    if (isLegacyDirectory) return undefined;
-    const timer = window.setTimeout(() => {
-      setD365Search(search.trim());
-      setD365Page(1);
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [search, isLegacyDirectory]);
-
-  useEffect(() => {
-    if (isLegacyDirectory) return undefined;
-    const controller = new AbortController();
-    let isCurrent = true;
-
-    const params = new URLSearchParams({
-      view: "directory",
-      page: String(d365Page),
-      pageSize: String(d365PageSize),
-    });
-    if (d365Search) params.set("search", d365Search);
-
-    const loadD365Employees = async () => {
-      setD365Loading(true);
-      setD365Error(null);
-      try {
-        const response = await fetch(
-          `${API_URL}/api/d365/employees?${params.toString()}`,
-          { signal: controller.signal }
-        );
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
-          const failure = new Error(
-            payload?.detail || payload?.message || `HTTP ${response.status}`
-          );
-          failure.stage = typeof payload?.stage === "string" ? payload.stage : "server";
-          throw failure;
-        }
-        if (!Array.isArray(payload?.employees)) {
-          throw new Error("D365 employee directory returned an unexpected response");
-        }
-        if (isCurrent) {
-          setD365Rows(payload.employees);
-          setD365Total(payload.total);
-          setD365Page(payload.page);
-          setD365TotalPages(payload.totalPages);
-        }
-      } catch (error) {
-        if (error?.name === "AbortError" || controller.signal.aborted) return;
-        console.error("Error loading D365 employees:", error);
-        if (isCurrent) {
-          setD365Rows([]);
-          setD365Total(0);
-          setD365Error({
-            stage: error?.stage || "network",
-            message: error?.message || "Request failed",
-          });
-        }
-      } finally {
-        if (isCurrent) setD365Loading(false);
-      }
-    };
-
-    loadD365Employees();
-
-    return () => {
-      isCurrent = false;
-      controller.abort();
-    };
-  }, [isLegacyDirectory, d365Page, d365PageSize, d365Search, d365Attempt]);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const switchDirectoryMode = (mode) => {
     if (mode === directoryMode) return;
     setDirectoryMode(mode);
     setSearch("");
     setCurrentPage(1);
-    setD365Page(1);
-  };
-
-  const retryD365Employees = () => {
-    setD365Error(null);
-    setD365Attempt((attempt) => attempt + 1);
   };
 
   // =========================
@@ -525,8 +437,11 @@ const resetForm = () => {
     }
   };
 
-  const exportEmployeesToCSV = () => {
-  if (employees.length === 0) {
+  const exportEmployeesToCSV = (activeOnly = false) => {
+  setExportMenuOpen(false);
+  const exportRows = tabEmployees.filter((employee) => !activeOnly || employee.status === "Active");
+
+  if (exportRows.length === 0) {
     showAlert({ variant: "info", title: t("employeesList.export.nothingTitle", { defaultValue: "Nothing to export" }), message: t("employeesList.export.nothingMessage", { defaultValue: "No employees to export" }) });
     return;
   }
@@ -541,7 +456,7 @@ const resetForm = () => {
     "Status",
   ];
 
-  const rows = employees.map((employee) => [
+  const rows = exportRows.map((employee) => [
     employee.id,
     employee.name,
     employee.designation,
@@ -551,31 +466,16 @@ const resetForm = () => {
     employee.status,
   ]);
 
-  const csvContent = [
-    headers,
-    ...rows,
-  ]
-    .map((row) =>
-      row
-        .map((value) => `"${value ?? ""}"`)
-        .join(",")
-    )
+  const csvContent = [headers, ...rows]
+    .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
     .join("\n");
 
-  const blob = new Blob(
-    [csvContent],
-    { type: "text/csv;charset=utf-8;" }
-  );
-
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-
   const link = document.createElement("a");
-
   link.href = url;
-  link.download = "employees.csv";
-
+  link.download = activeOnly ? "active-employees.csv" : "employees.csv";
   link.click();
-
   URL.revokeObjectURL(url);
 };
 
@@ -1191,86 +1091,14 @@ const updateEmployee = async () => {
 },
   ]
 
-  // D365 directory rows are read-only. EmployeesV2 here provides only the identity
-  // triple (PersonnelNumber + EmploymentLegalEntityId + EmploymentId) plus Name.
-  // Phone Number / Status are NOT exposed by this endpoint, so those columns
-  // render "Not available" instead of demo or fabricated values. Employee ID maps
-  // to the standard D365 Personnel Number. Archive stays enabled for HRMS demo
-  // records only and is disabled in D365 mode (no verified D365 delete operation).
-  const directoryInitial = (name) => (String(name || "?").trim().charAt(0) || "?").toUpperCase();
-  const [directoryDetailsRow, setDirectoryDetailsRow] = useState(null);
-  const directoryUnavailable = (key, fallback) =>
-    t(`employeesList.d365.unavailable.${key}`, { defaultValue: fallback });
-  const d365RowKey = (row) =>
-    `${row.personnelNumber}|${row.employmentLegalEntityId}|${row.employmentId}`;
-  const d365Columns = [
-    {
-      key: "employeeId",
-      label: t("employeesList.d365.employeeId", { defaultValue: "Employee ID" }),
-      render: (row) => <span className="directory-mono" dir="ltr">{row.personnelNumber}</span>,
-    },
-    {
-      key: "name",
-      label: t("employeesList.d365.columnName", { defaultValue: "Employee Name" }),
-      render: (row) => (
-        <span className="directory-employee">
-          <span className="directory-avatar" aria-hidden="true">{directoryInitial(row.name)}</span>
-          <span className="directory-name">{row.name}</span>
-        </span>
-      ),
-    },
-    {
-      key: "employmentLegalEntityId",
-      label: t("employeesList.d365.legalEntity", { defaultValue: "Legal Entity" }),
-      render: (row) => <span className="directory-entity" dir="ltr">{row.employmentLegalEntityId || directoryUnavailable("legalEntity", "Not available")}</span>,
-    },
-    {
-      key: "phoneNumber",
-      label: t("employeesList.d365.phoneNumber", { defaultValue: "Phone Number" }),
-      render: () => <span className="directory-unavailable" dir="ltr">{directoryUnavailable("phone", "Not available")}</span>,
-    },
-    {
-      key: "status",
-      label: t("employeesList.d365.status", { defaultValue: "Status" }),
-      render: () => <span className="directory-unavailable">{directoryUnavailable("status", "Not available")}</span>,
-    },
-    {
-      key: "view",
-      label: t("employeesList.table.view", { defaultValue: "View" }),
-      render: (row) => (
-        <button
-          type="button"
-          className="employee-view-button"
-          onClick={() => setDirectoryDetailsRow(row)}
-          aria-label={t("employeesList.table.viewEmployee", { name: row.name, defaultValue: "View {{name}}" })}
-          title={t("employeesList.table.viewEmployee", { name: row.name, defaultValue: "View {{name}}" })}
-        >
-          <Eye size={18} strokeWidth={2} aria-hidden="true" />
-        </button>
-      ),
-    },
-    {
-      key: "archive",
-      label: t("employeesList.table.delete", { defaultValue: "Delete / Archive" }),
-      render: () => (
-        <Button
-          variant="danger"
-          disabled
-          title={t("employeesList.d365.archiveDisabled", { defaultValue: "Archiving is available for HRMS demo records only. D365 records are read-only." })}
-        >
-          {t("employeesList.table.archive", { defaultValue: "Archive" })}
-        </Button>
-      ),
-    },
-  ]
-
   // =========================
   // SEARCH FILTER
   // =========================
 const normalizedSearch = search.trim().toLowerCase();
-const designations = [...new Set(employees.map((employee) => employee.designation).filter(Boolean))].sort();
+const tabEmployees = employees.filter((employee) => employee.d365Linked === !isLegacyDirectory);
+const designations = [...new Set(tabEmployees.map((employee) => employee.designation).filter(Boolean))].sort();
 const filteredEmployees =
-  employees
+  tabEmployees
     .filter((employee) => {
 
     const matchesSearch =
@@ -1322,8 +1150,8 @@ const filteredEmployees =
     .sort((first, second) => {
       if (!normalizedSearch) return 0;
 
-      const firstName = first.name.toLowerCase();
-      const secondName = second.name.toLowerCase();
+      const firstName = (first.name ?? "").toLowerCase();
+      const secondName = (second.name ?? "").toLowerCase();
       const firstExact = firstName === normalizedSearch;
       const secondExact = secondName === normalizedSearch;
       if (firstExact !== secondExact) return firstExact ? -1 : 1;
@@ -1355,7 +1183,7 @@ const filteredEmployees =
         startIndex + employeesPerPage
      );
 
-  const newJoiners = employees.filter((employee) => {
+  const newJoiners = tabEmployees.filter((employee) => {
     if (!employee.joiningDate) return false;
     const joiningDate = new Date(employee.joiningDate);
     const daysSinceJoining =
@@ -1394,70 +1222,44 @@ const filteredEmployees =
           </div>
 
          <div className="header-actions">
-            {isLegacyDirectory && (
-              <>
-                <button type="button" className={`view-toggle ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label={t("employeesList.listView", { defaultValue: "List view" })}>
-                  <List size={16} />
-                </button>
-                <button type="button" className={`view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label={t("employeesList.gridView", { defaultValue: "Grid view" })}>
-                  <Grid2X2 size={15} />
-                </button>
-                <Button variant="secondary" onClick={exportEmployeesToCSV}>
-                  {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} />
-                </Button>
-                <Button onClick={openAddEmployee}>⊕ {t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}</Button>
-              </>
-            )}
-
-        </div>
+            <button type="button" className={`view-toggle ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label={t("employeesList.listView", { defaultValue: "List view" })}>
+              <List size={16} />
+            </button>
+            <button type="button" className={`view-toggle ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label={t("employeesList.gridView", { defaultValue: "Grid view" })}>
+              <Grid2X2 size={15} />
+            </button>
+            <div className="export-menu">
+              <Button
+                variant="secondary"
+                onClick={() => setExportMenuOpen((open) => !open)}
+              >
+                {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} />
+              </Button>
+              {exportMenuOpen && (
+                <>
+                  <div className="export-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
+                  <div className="export-menu-list" role="menu">
+                    <button type="button" role="menuitem" onClick={() => exportEmployeesToCSV(false)}>
+                      {t("employeesList.export.download", { defaultValue: "Download" })}
+                    </button>
+                    <button type="button" role="menuitem" onClick={() => exportEmployeesToCSV(true)}>
+                      {t("employeesList.export.activeList", { defaultValue: "Active list" })}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <Button onClick={openAddEmployee}>⊕ {t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}</Button>
+          </div>
 
         </div>
 
         <div className="employee-stats">
 
-  {!isLegacyDirectory ? (
-    <>
-  {/* D365 KPI cards — same premium Demo styling; only the real API total is shown.
-      Active/Inactive/New Joiners need verified D365 status/joining-date fields that
-      EmployeesV2 does not expose, so they show "—" instead of invented numbers. */}
-  <div className="stat-card">
-    <div className="stat-card-content">
-      <span>{t("employeesList.d365.totalEmployees", { defaultValue: "Total Employees" })}</span>
-      <strong>{d365Total}</strong>
-    </div>
-    <Users className="stat-icon total" size={23} />
-  </div>
-
-  <div className="stat-card">
-    <div className="stat-card-content">
-      <span>{valueLabel("status", "Active")}</span>
-      <strong>—</strong>
-    </div>
-    <UserCheck className="stat-icon active" size={23} />
-  </div>
-
-  <div className="stat-card">
-    <div className="stat-card-content">
-      <span>{valueLabel("status", "Inactive")}</span>
-      <strong>—</strong>
-    </div>
-    <UserX className="stat-icon inactive" size={23} />
-  </div>
-
-  <div className="stat-card">
-    <div className="stat-card-content">
-      <span>{t("hrDashboard.stats.newJoiners", { defaultValue: "New Joiners" })}</span>
-      <strong>—</strong>
-    </div>
-    <UserPlus className="stat-icon joiners" size={23} />
-  </div>
-    </>
-  ) : (
-    <>
   <div className="stat-card">
     <div className="stat-card-content">
       <span>{t("hrDashboard.stats.totalEmployees", { defaultValue: "Total Employees" })}</span>
-      <strong>{employees.length}</strong>
+      <strong>{tabEmployees.length}</strong>
     </div>
     <Users className="stat-icon total" size={23} />
   </div>
@@ -1466,7 +1268,7 @@ const filteredEmployees =
     <div className="stat-card-content">
       <span>{valueLabel("status", "Active")}</span>
       <strong>
-        {employees.filter(
+        {tabEmployees.filter(
           (employee) => employee.status === "Active"
         ).length}
       </strong>
@@ -1478,7 +1280,7 @@ const filteredEmployees =
     <div className="stat-card-content">
       <span>{valueLabel("status", "Inactive")}</span>
       <strong>
-        {employees.filter(
+        {tabEmployees.filter(
           (employee) => employee.status === "Inactive"
         ).length}
       </strong>
@@ -1493,8 +1295,6 @@ const filteredEmployees =
     </div>
     <UserPlus className="stat-icon joiners" size={23} />
   </div>
-    </>
-  )}
 
 </div>
 
@@ -1528,23 +1328,21 @@ const filteredEmployees =
                 {t("employeesList.d365.sourceLegacy", { defaultValue: "HRMS demo records" })}
               </button>
             </div>
-            {isLegacyDirectory && (
-              <button
-                type="button"
-                className={`filter-toggle ${showFilters ? "active" : ""}`}
-                onClick={() => setShowFilters((visible) => !visible)}
-                aria-expanded={showFilters}
-              >
-                <SlidersHorizontal size={16} />
-                {t("employeesList.filters.button", { defaultValue: "Filters" })}
-                <span className="filter-count">3</span>
-              </button>
-            )}
+            <button
+              type="button"
+              className={`filter-toggle ${showFilters ? "active" : ""}`}
+              onClick={() => setShowFilters((visible) => !visible)}
+              aria-expanded={showFilters}
+            >
+              <SlidersHorizontal size={16} />
+              {t("employeesList.filters.button", { defaultValue: "Filters" })}
+              <span className="filter-count">3</span>
+            </button>
           </div>
         </div>
 
         <div className="employee-table-container">
-          {isLegacyDirectory && showFilters && (
+          {showFilters && (
             <div className="employee-list-filters" aria-label={t("employeesList.filters.ariaLabel", { defaultValue: "Employee filters" })}>
               <button
                 type="button"
@@ -1577,160 +1375,7 @@ const filteredEmployees =
             </div>
           )}
 
-          {!isLegacyDirectory ? (
-            <>
-              {/* ============ D365 DIRECTORY (server-side search + paging) ============ */}
-              {d365Loading ? (
-                <div className="employees-loading employees-loading--table" role="status" aria-live="polite">
-                  <span className="employees-loading-spinner" aria-hidden="true"></span>
-                  <p>{t("employeesList.d365.loading", { defaultValue: "Loading D365 employees..." })}</p>
-                  <div className="directory-skeleton" aria-hidden="true">
-                    {Array.from({ length: 8 }).map((_, index) => (
-                      <span key={index} className="directory-skeleton-row">
-                        <span className="directory-skeleton-cell directory-skeleton-cell--id" />
-                        <span className="directory-skeleton-cell directory-skeleton-cell--name" />
-                        <span className="directory-skeleton-cell" />
-                        <span className="directory-skeleton-cell directory-skeleton-cell--short" />
-                        <span className="directory-skeleton-cell directory-skeleton-cell--short" />
-                        <span className="directory-skeleton-cell directory-skeleton-cell--action" />
-                        <span className="directory-skeleton-cell directory-skeleton-cell--action" />
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : d365Error ? (
-                <div className="employees-empty employees-error" role="alert">
-                  <TriangleAlert size={34} strokeWidth={1.6} aria-hidden="true" />
-                  <p>
-                    {d365Error.stage === "config"
-                      ? t("employeesList.d365.errorConfig", { defaultValue: "D365 is not configured on the backend. Set the D365_* environment variables and try again." })
-                      : d365Error.stage === "authentication"
-                        ? t("employeesList.d365.errorAuth", { defaultValue: "D365 authentication failed. Ask your administrator to check the app registration and admin consent." })
-                        : t("employeesList.d365.errorGeneric", { defaultValue: "Unable to load D365 employees. Please try again." })}
-                  </p>
-                  <Button variant="secondary" onClick={retryD365Employees}>
-                    <RefreshCw size={14} aria-hidden="true" />{" "}
-                    {t("employeesList.d365.retry", { defaultValue: "Try again" })}
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="employee-table-controls employee-table-controls--directory">
-                    <div className="table-search">
-                      <SearchBar
-                        id="employee-search"
-                        value={search}
-                        onChange={setSearch}
-                        placeholder={t("employeesList.d365.searchPlaceholder", { defaultValue: "Search by name or personnel number" })}
-                      />
-                    </div>
-                    <div className="table-controls-spacer" />
-                    <label className="directory-page-size" htmlFor="d365-employees-per-page">{t("employeeAttendance.rowsPerPage", { defaultValue: "Rows per page" })}</label>
-                    <select
-                      id="d365-employees-per-page"
-                      className="directory-page-size-select"
-                      value={d365PageSize}
-                      onChange={(e) => {
-                        setD365PageSize(Number(e.target.value));
-                        setD365Page(1);
-                      }}
-                    >
-                      <option value="25">25</option>
-                      <option value="50">50</option>
-                      <option value="100">100</option>
-                    </select>
-                    <button
-                      type="button"
-                      className="employee-refresh-button"
-                      onClick={retryD365Employees}
-                      disabled={d365Loading}
-                      aria-label={t("employeesList.d365.refreshAria", { defaultValue: "Refresh D365 employees" })}
-                    >
-                      <RefreshCw size={15} className={d365Loading ? "employee-refresh-icon--spinning" : ""} aria-hidden="true" />
-                      {t("employeesList.d365.refresh", { defaultValue: "Refresh" })}
-                    </button>
-                  </div>
-                  {d365Rows.length === 0 ? (
-                    <div className="employees-empty">
-                      <SearchX size={34} strokeWidth={1.6} aria-hidden="true" />
-                      <p>{t("employeesList.d365.empty", { defaultValue: "No D365 employees match the current search." })}</p>
-                      {search && (
-                        <Button variant="secondary" onClick={() => setSearch("")}>
-                          {t("employeesList.d365.clearSearch", { defaultValue: "Clear search" })}
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="directory-table-scroll">
-                      <Table
-                        columns={d365Columns}
-                        data={d365Rows.map((row) => ({ ...row, id: d365RowKey(row) }))}
-                      />
-                    </div>
-                  )}
-                  <div className="pagination pagination--directory" role="navigation" aria-label={t("employeesList.d365.paginationAria", { defaultValue: "D365 employee pages" })}>
-                    <button
-                      type="button"
-                      disabled={d365Page <= 1}
-                      onClick={() => setD365Page((prev) => Math.max(1, prev - 1))}
-                    >
-                      {t("employeesList.pagination.previous", { defaultValue: "← Previous" })}
-                    </button>
-                    <span className="d365-page-indicator">
-                      {t("employeesList.d365.pageOf", { page: d365Page, pages: d365TotalPages, defaultValue: "Page {{page}} of {{pages}}" })}
-                      <span className="d365-total-count">
-                        {t("employeesList.d365.totalCount", { total: d365Total, defaultValue: "({{total}} employees)" })}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={d365Page >= d365TotalPages}
-                      onClick={() => setD365Page((prev) => Math.min(d365TotalPages, prev + 1))}
-                    >
-                      {t("employeesList.pagination.next", { defaultValue: "Next →" })}
-                    </button>
-                  </div>
-                  <Modal
-                    isOpen={Boolean(directoryDetailsRow)}
-                    onClose={() => setDirectoryDetailsRow(null)}
-                    title={directoryDetailsRow?.name || t("employeesList.d365.detailsTitle", { defaultValue: "Employee details" })}
-                  >
-                    {directoryDetailsRow && (
-                      <div className="directory-details">
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.employeeId", { defaultValue: "Employee ID" })}</span>
-                          <strong dir="ltr">{directoryDetailsRow.personnelNumber}</strong>
-                        </div>
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.columnName", { defaultValue: "Employee Name" })}</span>
-                          <strong>{directoryDetailsRow.name}</strong>
-                        </div>
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.legalEntity", { defaultValue: "Legal Entity" })}</span>
-                          <strong dir="ltr">{directoryDetailsRow.employmentLegalEntityId || directoryUnavailable("legalEntity", "Not available")}</strong>
-                        </div>
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.employmentId", { defaultValue: "Employment ID" })}</span>
-                          <strong dir="ltr">{directoryDetailsRow.employmentId || directoryUnavailable("employment", "Not available")}</strong>
-                        </div>
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.phoneNumber", { defaultValue: "Phone Number" })}</span>
-                          <strong dir="ltr">{directoryUnavailable("phone", "Not available")}</strong>
-                        </div>
-                        <div className="directory-details-row">
-                          <span>{t("employeesList.d365.status", { defaultValue: "Status" })}</span>
-                          <strong>{directoryUnavailable("status", "Not available")}</strong>
-                        </div>
-                        <p className="directory-details-note">
-                          {t("employeesList.d365.detailsNote", { defaultValue: "Read-only D365 record. Archiving is available for HRMS demo records only." })}
-                        </p>
-                      </div>
-                    )}
-                  </Modal>
-                </>
-              )}
-            </>
-          ) : loading ? (
+          {loading ? (
             <div className="employees-loading" role="status" aria-live="polite">
               <span className="employees-loading-spinner" aria-hidden="true"></span>
               <p>{t("employeesList.loading", { defaultValue: "Loading employees..." })}</p>
