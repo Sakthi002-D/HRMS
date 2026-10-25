@@ -1056,7 +1056,7 @@
 }
 
 .leave-page .request-detail .requested-days {
-    color: #ff6333 !important;
+    color: #2564eb !important;
 }
 
 /* =========================================================
@@ -1393,8 +1393,8 @@
 }
 
 .leave-add-btn {
-    border-color: #ff6333 !important;
-    background: #ff6333 !important;
+    border-color: #2564eb !important;
+    background: #2564eb !important;
     color: #ffffff !important;
     font-weight: 600;
 }

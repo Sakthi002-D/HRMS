@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ResignationDetail from "../../components/resignation/ResignationDetail";
+import { Pagination } from "../../components/common/TablePagination";
 import {
     api,
     daysLabel,
@@ -231,20 +232,7 @@ function Resignations() {
                     </div>
 
                     {filtered.length > rowsPerPage && (
-                        <div className="pagination">
-                            <button type="button" disabled={page === 1} onClick={() => setCurrentPage(page - 1)}>{t("employeesList.pagination.previous", { defaultValue: "← Previous" })}</button>
-                            {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => (
-                                <button
-                                    key={number}
-                                    type="button"
-                                    className={number === page ? "active-page" : ""}
-                                    onClick={() => setCurrentPage(number)}
-                                >
-                                    {number}
-                                </button>
-                            ))}
-                            <button type="button" disabled={page === totalPages} onClick={() => setCurrentPage(page + 1)}>{t("employeesList.pagination.next", { defaultValue: "Next →" })}</button>
-                        </div>
+                        <Pagination page={page} pageCount={totalPages} onChange={setCurrentPage} />
                     )}
                 </div>
 

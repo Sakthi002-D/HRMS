@@ -1297,9 +1297,9 @@ body {
 .welcome-actions .primary-action,
 .dashboard-content :is(.add-employee-btn, .punch-in-btn, .resolve-btn, .progress-btn,
   .report-item button, .modal-actions button:last-child) {
-  border-color: #e26d3f;
-  background: #e26d3f;
-  box-shadow: 0 5px 13px rgba(226, 109, 63, .2);
+  border-color: #2564eb;
+  background: #2564eb;
+  box-shadow: 0 5px 13px rgba(37, 100, 235, .2);
 }
 
 .stats-grid {
@@ -1332,7 +1332,7 @@ body {
 }
 
 .employee-icon {
-  background: #e26d3f;
+  background: #2564eb;
 }
 
 .attendance-icon {
@@ -1483,7 +1483,7 @@ body {
   left: 0;
   width: 4px;
   border-radius: 4px;
-  background: #e26d3f;
+  background: #2564eb;
   content: "";
 }
 
@@ -1497,6 +1497,6 @@ body {
   height: 3px;
   margin-top: 7px;
   border-radius: 3px;
-  background: #e26d3f;
+  background: #2564eb;
   content: "";
 }

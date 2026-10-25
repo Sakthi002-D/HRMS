@@ -149,35 +149,35 @@ function Recruitment() {
                 <div className="recruitment-cards four">
 
                     <div className="recruitment-card">
+                        <Clock3 className="recruitment-stat-icon pending" size={20} aria-hidden="true" />
                         <div className="recruitment-card-content">
                             <span>{t("recruitment.page.pendingMprApprovals", { defaultValue: "Pending MPR Approvals" })}</span>
                             <strong>{summary?.pending_mpr_approvals ?? "—"}</strong>
                         </div>
-                        <Clock3 className="recruitment-stat-icon pending" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
+                        <Briefcase className="recruitment-stat-icon jobs" size={20} aria-hidden="true" />
                         <div className="recruitment-card-content">
                             <span>{t("recruitment.page.openJobs", { defaultValue: "Open Jobs" })}</span>
                             <strong>{summary?.open_jobs ?? "—"}</strong>
                         </div>
-                        <Briefcase className="recruitment-stat-icon jobs" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
+                        <UserPlus className="recruitment-stat-icon positions" size={20} aria-hidden="true" />
                         <div className="recruitment-card-content">
                             <span>{t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" })}</span>
                             <strong>{summary?.open_positions ?? "—"}</strong>
                         </div>
-                        <UserPlus className="recruitment-stat-icon positions" size={20} aria-hidden="true" />
                     </div>
 
                     <div className="recruitment-card">
+                        <Building2 className="recruitment-stat-icon departments" size={20} aria-hidden="true" />
                         <div className="recruitment-card-content">
                             <span>{t("recruitment.page.departments", { defaultValue: "Departments" })}</span>
                             <strong>{summary?.departments ?? "—"}</strong>
                         </div>
-                        <Building2 className="recruitment-stat-icon departments" size={20} aria-hidden="true" />
                     </div>
 
                 </div>

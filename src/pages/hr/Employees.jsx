@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./Employees.css";
+import "./EmployeesModern.css";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import SearchBar from "../../components/layout/common/SearchBar";
 import Button from "../../components/layout/common/Button";
@@ -21,32 +22,46 @@ import {
   Eye,
 } from "lucide-react";
 import { useAlert } from "../../components/common/dialog/dialogContext";
+import { Pagination } from "../../components/common/TablePagination";
 
 import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
 
+const PHONE_COUNTRIES = [
+  { code: "+974", groupSize: 4, length: 8 },
+  { code: "+971", groupSize: 4, length: 9 },
+  { code: "+91", groupSize: 5, length: 10 },
+  { code: "+61", groupSize: 3, length: 9 },
+  { code: "+44", groupSize: 4, length: 10 },
+  { code: "+1", groupSize: 3, length: 10 },
+];
+
+// D365 stores bare local numbers (e.g. "70365422"); company is Qatar-based, so no explicit code means +974
 const formatPhoneNumber = (phone) => {
   const value = String(phone || "").trim();
-  const matchedCountry = [
-    { code: "+974", groupSize: 4 },
-    { code: "+91", groupSize: 5 },
-    { code: "+1", groupSize: 3 },
-    { code: "+44", groupSize: 4 },
-  ].find((country) => value.startsWith(country.code));
-  const countryCode = matchedCountry?.code || "+91";
-  const groupSize = matchedCountry?.groupSize || 5;
-  const digits = value.replace(/\D/g, "").slice(-15);
+  const allDigits = value.replace(/\D/g, "");
 
-  if (!digits) {
+  if (!allDigits) {
     return value;
   }
 
-  const number = digits.slice(-10);
+  const international = value.startsWith("+") || value.startsWith("00");
+  const withoutPrefix = value.startsWith("00") ? allDigits.slice(2) : allDigits;
+  const explicit = PHONE_COUNTRIES.find((country) => withoutPrefix.startsWith(country.code.slice(1)));
+  const matched =
+    (international || withoutPrefix.length > 8) && explicit
+      ? explicit
+      : PHONE_COUNTRIES[0];
+  const national = matched === explicit && (international || withoutPrefix.length > 8)
+    ? withoutPrefix.slice(matched.code.length - 1)
+    : withoutPrefix;
+
+  const number = national.slice(-matched.length);
   const groups = [];
-  for (let index = 0; index < number.length; index += groupSize) {
-    groups.push(number.slice(index, index + groupSize));
+  for (let index = 0; index < number.length; index += matched.groupSize) {
+    groups.push(number.slice(index, index + matched.groupSize));
   }
-  return `${countryCode} ${groups.join(" ")}`;
+  return `${matched.code} ${groups.join(" ")}`;
 };
 
 const formatPhoneInput = (value, countryCode) => {
@@ -231,10 +246,10 @@ useEffect(() => {
     dateOfBirth: "",
     gender: "",
 
-    country: "India",
+    country: "Qatar",
 
     phone: "",
-    phoneCountryCode: "+91",
+    phoneCountryCode: "+974",
     email: "",
     address: "",
 
@@ -322,7 +337,7 @@ const resetForm = () => {
     gender: "",
 
     phone: "",
-    phoneCountryCode: "+91",
+    phoneCountryCode: "+974",
 
     email: "",
     address: "",
@@ -365,7 +380,7 @@ const resetForm = () => {
     childrenCount: "",
     profilePhoto: null,
 
-    country: "India",
+    country: "Qatar",
   });
 };
 
@@ -770,8 +785,8 @@ const employeeData = {
 
     let phoneNumber = employee.phone || "";
 
-    let countryCode = "+91";
-    let country = "India";
+    let countryCode = "+974";
+    let country = "Qatar";
     let emergencyContact = employee.emergencyContact || "";
     let emergencyContactCountryCode = "+974";
     let emergencyContactCountry = "Qatar";
@@ -1024,34 +1039,41 @@ const updateEmployee = async () => {
       key: "id",
       label: t("employeeSettings.employeeId", { defaultValue: "Employee ID" }),
       // IDs, emails and phones always read left-to-right, also on the Arabic (RTL) page
-      render: (employee) => <span dir="ltr">{employee.id}</span>,
+      render: (employee) => <span className="emp-id-chip" dir="ltr">{employee.id}</span>,
     },
 
     {
       key: "name",
       label: t("employeesList.table.name", { defaultValue: "Name" }),
+      render: (employee) => (
+        <span className="emp-person">
+          <span className="emp-person-name">{employee.name}</span>
+        </span>
+      ),
     },
 
     {
       key: "designation",
       label: t("employeesList.table.designation", { defaultValue: "Designation" }),
+      render: (employee) => employee.designation || <span className="emp-muted">-</span>,
     },
 
     {
       key: "department",
       label: t("profileEdit.fields.department", { defaultValue: "Department" }),
+      render: (employee) => employee.department || <span className="emp-muted">-</span>,
     },
 
     {
       key: "email",
       label: t("profileEdit.fields.email", { defaultValue: "Email" }),
-      render: (employee) => <span dir="ltr">{employee.email}</span>,
+      render: (employee) => employee.email ? <span className="emp-email" dir="ltr">{employee.email}</span> : <span className="emp-muted">-</span>,
     },
 
     {
       key: "phone",
       label: t("profileEdit.fields.phone", { defaultValue: "Phone" }),
-      render: (employee) => <span dir="ltr">{employee.phone}</span>,
+      render: (employee) => employee.phone ? <span className="emp-phone" dir="ltr">{employee.phone}</span> : <span className="emp-muted">-</span>,
     },
 
     {
@@ -1159,18 +1181,18 @@ const filteredEmployees =
     return matchesSearch && matchesStatus && matchesDesignation && matchesDateRange;
     })
     .sort((first, second) => {
-      if (!normalizedSearch) return 0;
+      const firstName = (first.name ?? "").trim().toLowerCase();
+      const secondName = (second.name ?? "").trim().toLowerCase();
+      if (normalizedSearch) {
+        const firstExact = firstName === normalizedSearch;
+        const secondExact = secondName === normalizedSearch;
+        if (firstExact !== secondExact) return firstExact ? -1 : 1;
 
-      const firstName = (first.name ?? "").toLowerCase();
-      const secondName = (second.name ?? "").toLowerCase();
-      const firstExact = firstName === normalizedSearch;
-      const secondExact = secondName === normalizedSearch;
-      if (firstExact !== secondExact) return firstExact ? -1 : 1;
-
-      const firstStartsWith = firstName.startsWith(normalizedSearch);
-      const secondStartsWith = secondName.startsWith(normalizedSearch);
-      if (firstStartsWith !== secondStartsWith) {
-        return firstStartsWith ? -1 : 1;
+        const firstStartsWith = firstName.startsWith(normalizedSearch);
+        const secondStartsWith = secondName.startsWith(normalizedSearch);
+        if (firstStartsWith !== secondStartsWith) {
+          return firstStartsWith ? -1 : 1;
+        }
       }
 
       if (firstName !== secondName) return firstName.localeCompare(secondName);
@@ -1432,46 +1454,7 @@ const filteredEmployees =
               ) : (
                 <Table columns={columns} data={currentEmployees} />
               )}
-              <div className="pagination">
-
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() =>
-                    setCurrentPage((prev) => prev - 1)
-                  }
-                >
-                  {t("employeesList.pagination.previous", { defaultValue: "← Previous" })}
-                </button>
-
-                {Array.from(
-                  { length: totalPages },
-                  (_, index) => (
-                    <button
-                      key={index + 1}
-                      className={
-                        currentPage === index + 1
-                          ? "active-page"
-                          : ""
-                      }
-                      onClick={() =>
-                        setCurrentPage(index + 1)
-                      }
-                    >
-                      {index + 1}
-                    </button>
-                  )
-                )}
-
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setCurrentPage((prev) => prev + 1)
-                  }
-                >
-                  {t("employeesList.pagination.next", { defaultValue: "Next →" })}
-                </button>
-
-              </div>
+              <Pagination page={currentPage} pageCount={totalPages} onChange={setCurrentPage} />
             </>
           )}
 

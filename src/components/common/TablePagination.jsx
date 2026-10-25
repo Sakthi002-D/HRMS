@@ -49,46 +49,46 @@ export function RowsPerPage({ value, onChange, options = [10, 25, 50], inline = 
     );
 }
 
-// "← Previous  1  2  3  …  Next →"
+// "<  1  2  3  >" - shows at most 3 page numbers around the current page
 export function Pagination({ page, pageCount, onChange }) {
     const { t } = useTranslation();
     if (pageCount <= 1) return null;
 
+    const first = Math.max(1, Math.min(page - 1, pageCount - 2));
+    const last = Math.min(pageCount, first + 2);
     const pages = [];
-    if (pageCount <= 7) {
-        for (let i = 1; i <= pageCount; i += 1) pages.push(i);
-    } else {
-        pages.push(1);
-        const start = Math.max(2, page - 1);
-        const end = Math.min(pageCount - 1, page + 1);
-        if (start > 2) pages.push("start-gap");
-        for (let i = start; i <= end; i += 1) pages.push(i);
-        if (end < pageCount - 1) pages.push("end-gap");
-        pages.push(pageCount);
-    }
+    for (let i = first; i <= last; i += 1) pages.push(i);
 
     return (
         <nav className="tp-pagination" aria-label={t("recruitment.pagination.tablePages", { defaultValue: "Table pages" })}>
-            <button type="button" className="tp-nav" disabled={page === 1} onClick={() => onChange(page - 1)}>
-                {t("employeesList.pagination.previous", { defaultValue: "← Previous" })}
+            <button
+                type="button"
+                className="tp-nav"
+                disabled={page === 1}
+                aria-label={t("employeesList.pagination.previousLabel", { defaultValue: "Previous page" })}
+                onClick={() => onChange(page - 1)}
+            >
+                &lt;
             </button>
-            {pages.map((item) =>
-                typeof item === "number" ? (
-                    <button
-                        key={item}
-                        type="button"
-                        className={`tp-page${item === page ? " active" : ""}`}
-                        aria-current={item === page ? "page" : undefined}
-                        onClick={() => onChange(item)}
-                    >
-                        {item}
-                    </button>
-                ) : (
-                    <span key={item} className="tp-gap">…</span>
-                )
-            )}
-            <button type="button" className="tp-nav" disabled={page === pageCount} onClick={() => onChange(page + 1)}>
-                {t("employeesList.pagination.next", { defaultValue: "Next →" })}
+            {pages.map((item) => (
+                <button
+                    key={item}
+                    type="button"
+                    className={`tp-page${item === page ? " active" : ""}`}
+                    aria-current={item === page ? "page" : undefined}
+                    onClick={() => onChange(item)}
+                >
+                    {item}
+                </button>
+            ))}
+            <button
+                type="button"
+                className="tp-nav"
+                disabled={page === pageCount}
+                aria-label={t("employeesList.pagination.nextLabel", { defaultValue: "Next page" })}
+                onClick={() => onChange(page + 1)}
+            >
+                &gt;
             </button>
         </nav>
     );

@@ -126,7 +126,7 @@
     .report-item button, .modal-actions button:last-child) {
   border: 0;
   border-radius: 8px;
-  background: linear-gradient(135deg, #03a9f4, #0288d1);
+  background: #2564eb;
   box-shadow: 0 5px 13px rgba(3, 169, 244, .2);
 }
 

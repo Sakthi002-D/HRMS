@@ -24,8 +24,8 @@
 }
 
 .recruitment-tabs button.active {
-    border-bottom-color: #12304a;
-    color: #12304a;
+    border-bottom-color: #2564eb;
+    color: #2564eb;
 }
 
 .recruitment-cards.four {
@@ -35,81 +35,60 @@
 
 .recruitment-page .recruitment-card {
     position: relative;
-    overflow: hidden;
-    min-height: 88px;
-    height: 88px;
-    padding: 16px 18px;
     display: flex;
     align-items: center;
+    gap: 14px;
+    min-height: 84px;
+    padding: 16px 18px;
     background: #ffffff;
     border: 1px solid #d3e2ee;
-    border-radius: 10px;
-    box-shadow: 0 7px 20px rgba(35, 91, 130, .07);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+    box-shadow: none;
+    text-align: start;
+    font: inherit;
+    transition: border-color 0.18s ease, background 0.18s ease;
 }
-
-.recruitment-page .recruitment-card::before {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 4px;
-    background: #f0a33a;
-    content: "";
-}
-
-.recruitment-page .recruitment-card:nth-child(2)::before { background: #2b7ab0; }
-.recruitment-page .recruitment-card:nth-child(3)::before { background: #29a36a; }
-.recruitment-page .recruitment-card:nth-child(4)::before { background: #7c5ce5; }
 
 .recruitment-page .recruitment-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(35, 91, 130, .11);
-}
-
-.recruitment-card-content {
-    position: relative;
-    z-index: 1;
-    flex: 1;
-    min-width: 0;
-    margin-left: 42px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.recruitment-card-content span {
-    color: #18354d;
-    font-size: 15px;
-    font-weight: 650;
-}
-
-.recruitment-card-content strong {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #102a43;
-    font-size: 34px;
-    font-weight: 750;
-    line-height: 1;
+    border-color: #2564eb;
 }
 
 .recruitment-stat-icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    width: 30px;
-    height: 30px;
-    padding: 5px;
-    transform: translateY(-50%);
-    border-radius: 50%;
-    color: #ffffff;
-    z-index: 2;
+    display: grid;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    padding: 11px;
+    place-items: center;
+    border-radius: 12px;
+    background: #eaf1fe;
+    color: #2564eb;
 }
 
-.recruitment-stat-icon.pending { background: #f0a33a; }
-.recruitment-stat-icon.jobs { background: #2b7ab0; }
-.recruitment-stat-icon.positions { background: #29a36a; }
-.recruitment-stat-icon.departments { background: #7c5ce5; }
+.recruitment-stat-icon.rejected { background: #fdecee; color: #dc2626; }
+.recruitment-stat-icon.shortlisted { background: #e8f8ee; color: #16a34a; }
+
+.recruitment-card-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.recruitment-card-content span {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.recruitment-card-content strong {
+    color: #12304a;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+}
 
 .employee-view-button {
     display: inline-grid;
@@ -238,8 +217,8 @@
 }
 
 .mpr-subtabs button.active {
-    border-color: #12304a;
-    background: #12304a;
+    border-color: #2564eb;
+    background: #2564eb;
     color: #ffffff;
 }
 
@@ -247,7 +226,7 @@
     min-width: 20px;
     padding: 1px 6px;
     border-radius: 10px;
-    background: #ff6333;
+    background: #2564eb;
     color: #ffffff;
     font-size: 11px;
     text-align: center;
@@ -301,7 +280,7 @@
 }
 
 .mpr-form .form-group textarea:focus {
-    border-color: #12304a;
+    border-color: #2564eb;
 }
 
 .mpr-full {
@@ -358,9 +337,9 @@
 
 .mpr-checklist label.checked,
 .mpr-panel-list label.checked {
-    border-color: #12304a;
-    background: #f1f5f9;
-    color: #12304a;
+    border-color: #2564eb;
+    background: #eaf1fe;
+    color: #1d4ed8;
 }
 
 .mpr-checklist input,
@@ -598,7 +577,7 @@
     padding: 0 6px;
     box-sizing: border-box;
     border-radius: 10px;
-    background: #ff7043;
+    background: #2564eb;
     color: #ffffff;
     font-size: 11px;
     font-style: normal;
@@ -609,7 +588,7 @@
 
 .mpr-status.info { background: #e0f2fe; color: #0369a1; }
 
-.job-badge.new { margin: 0 0 0 6px; background: #fff3d8; color: #b45309; }
+.job-badge.new { margin: 0 0 0 6px; background: #eaf1fe; color: #1d4ed8; }
 
 .job-apps-link {
     display: inline-flex;
@@ -626,8 +605,9 @@
 }
 
 .job-apps-link:hover {
-    border-color: #12304a;
-    background: #f8fafc;
+    border-color: #2564eb;
+    background: #f4f8ff;
+    color: #2564eb;
 }
 
 .app-cards {
@@ -635,18 +615,12 @@
 }
 
 .app-card {
-    border: 2px solid transparent;
-    text-align: left;
-    font: inherit;
     cursor: pointer;
 }
 
-.app-card:hover {
-    border-color: #e2e8f0;
-}
-
 .app-card.active {
-    border-color: #12304a;
+    border-color: #2564eb;
+    background: #f4f8ff;
 }
 
 .app-search {
@@ -659,6 +633,12 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 18px;
+}
+
+.app-filters select:focus {
+    border-color: #2564eb;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, 0.14);
 }
 
 .app-filters select {
@@ -687,7 +667,7 @@
 }
 
 .app-row-new td:first-child {
-    box-shadow: inset 3px 0 0 #ff7043;
+    box-shadow: inset 3px 0 0 #2564eb;
 }
 
 .app-type {

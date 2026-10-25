@@ -1,0 +1,206 @@
+/* Modern layer for the HR Employees list (loaded after Employees.css). */
+
+.employees-page {
+  --emp-ink: #12304a;
+  --emp-muted: #6b8196;
+  --emp-line: #d3e2ee;
+}
+
+/* Stat cards */
+.employees-page .stat-card {
+  border-radius: 14px;
+}
+
+.employees-page .stat-card span {
+  font-weight: 500;
+}
+
+.employees-page .stat-card strong {
+  font-weight: 600;
+}
+
+/* Directory header + toolbar */
+.employees-page .employee-list-header {
+  border-radius: 14px 14px 0 0;
+}
+
+.employees-page .employee-list-kicker {
+  font-weight: 600;
+}
+
+.employees-page .employee-list-header h2 {
+  font-weight: 600;
+}
+
+.employees-page .employee-table-container {
+  border-radius: 0 0 14px 14px;
+}
+
+.employees-page .employee-table-controls {
+  padding: 14px 18px;
+}
+
+/* Table */
+.employees-page .employee-table-container .common-table {
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.employees-page .employee-table-container .common-table th {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.employees-page .employee-table-container .common-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #edf3f8;
+  color: var(--emp-ink);
+  font-size: 13.5px;
+  font-weight: 400;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.employees-page .employee-table-container .common-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.employees-page .employee-table-container .common-table tbody tr:hover {
+  background: #f1f8fe;
+}
+
+/* Every column, including Name and Email, is centred under its header */
+.employees-page .employee-table-container .common-table th,
+.employees-page .employee-table-container .common-table td {
+  text-align: center;
+}
+
+.employees-page .employee-table-container .common-table th:nth-child(1),
+.employees-page .employee-table-container .common-table td:nth-child(1) {
+  width: 110px;
+}
+
+.employees-page .employee-table-container .common-table th:nth-child(2) {
+  min-width: 240px;
+}
+
+.employees-page .employee-table-container .common-table th:nth-child(7),
+.employees-page .employee-table-container .common-table td:nth-child(7),
+.employees-page .employee-table-container .common-table th:nth-child(8),
+.employees-page .employee-table-container .common-table td:nth-child(8),
+.employees-page .employee-table-container .common-table th:nth-child(9),
+.employees-page .employee-table-container .common-table td:nth-child(9) {
+  width: 1%;
+}
+
+.emp-id-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #eef4fa;
+  color: #35546f;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.emp-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-align: start;
+}
+
+.emp-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16466d, #03a9f4);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.emp-person-name {
+  color: var(--emp-ink);
+  font-weight: 500;
+}
+
+.emp-muted {
+  color: #a3b4c3;
+}
+
+.emp-email {
+  color: #35546f;
+}
+
+.emp-phone {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f1f8fe;
+  color: var(--emp-ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status pill */
+.employees-page .employee-table-container .common-table .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.employees-page .employee-table-container .common-table .status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+/* Row actions */
+.employees-page .employee-table-container .employee-view-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #e5f3fc;
+  color: #0288d1;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.employees-page .employee-table-container .employee-view-button:hover {
+  background: #d3ebfa;
+  transform: translateY(-1px);
+}
+
+.employees-page .employee-table-container .common-table .common-btn {
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* Grid view cards */
+.employees-page .employee-grid-card {
+  border-radius: 14px;
+}
+
+.employees-page .employee-grid-card h3 {
+  font-weight: 600;
+}

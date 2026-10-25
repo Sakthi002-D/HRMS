@@ -3,34 +3,40 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
+    margin-bottom: 22px;
 }
 
 .recruitment-header h1 {
     margin: 0 0 5px;
     color: #12304a;
-    font-size: 30px;
+    font-size: 24px;
+    font-weight: 700;
 }
 
 .recruitment-header p {
     margin: 0;
     color: #64748b;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .create-job-btn {
-    background: #12304a;
+    background: #2564eb;
     color: white;
     border: none;
-    padding: 12px 20px;
-    border-radius: 6px;
+    padding: 11px 18px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
 }
 
-.create-job-btn:hover {
-    background: #0d263b;
+.create-job-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.create-job-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .recruitment-cards {
@@ -166,20 +172,31 @@
 .jobs-section-header h2 {
     margin: 0;
     color: #12304a;
-    font-size: 20px;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 .job-search {
-    width: 250px;
+    width: 260px;
     height: 40px;
-    padding: 0 12px;
+    padding: 0 13px;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 13.5px;
     outline: none;
+}
+
+.job-search:focus {
+    border-color: #2564eb;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, 0.14);
 }
 
 .jobs-table-container {
     overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
 }
 
 .jobs-table {
@@ -190,20 +207,24 @@
 .jobs-table th {
     background: #12304a;
     color: white;
-    padding: 14px;
-    text-align: left;
-    font-size: 14px;
+    padding: 12px 16px;
+    text-align: center;
 }
 
 .jobs-table td {
-    padding: 14px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 13px 16px;
+    border-bottom: 1px solid #edf3f8;
     color: #334155;
     font-size: 14px;
+    text-align: center;
 }
 
-.jobs-table tr:hover {
-    background: #f8fafc;
+.jobs-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.jobs-table tbody tr:hover {
+    background: #f1f8fe;
 }
 
 .job-status {

@@ -42,7 +42,7 @@
     background: #16834a;
 }
 
-.leave-tracker-status.tone-current::before { background: #ff6333; }
+.leave-tracker-status.tone-current::before { background: #2564eb; }
 .leave-tracker-status.tone-overdue::before { background: #d97706; }
 .leave-tracker-status.tone-rejected::before { background: #d43b3b; }
 .leave-tracker-status.tone-cancelled::before { background: #b07a7a; }
@@ -145,8 +145,8 @@
 }
 
 .leave-tracker-step.is-current .leave-tracker-node {
-    border-color: #ff6333;
-    background: #ff6333;
+    border-color: #2564eb;
+    background: #2564eb;
     animation: leaveTrackerPulse 1.6s ease-out infinite;
 }
 
@@ -164,7 +164,7 @@
 }
 
 .leave-tracker-step.is-current .leave-tracker-caption {
-    color: #ff6333;
+    color: #2564eb;
     font-weight: 700;
 }
 
@@ -204,15 +204,15 @@
 }
 
 @keyframes leaveTrackerPulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 99, 51, 0.45); }
-    70% { box-shadow: 0 0 0 9px rgba(255, 99, 51, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 99, 51, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(37, 100, 235, 0.45); }
+    70% { box-shadow: 0 0 0 9px rgba(37, 100, 235, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 100, 235, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .leave-tracker-step.is-current .leave-tracker-node {
         animation: none;
-        box-shadow: 0 0 0 4px rgba(255, 99, 51, 0.2);
+        box-shadow: 0 0 0 4px rgba(37, 100, 235, 0.2);
     }
 }
 

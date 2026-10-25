@@ -372,7 +372,7 @@
 
 .employees-page .directory-table-scroll .common-table th:nth-child(2),
 .employees-page .directory-table-scroll .common-table td:nth-child(2) {
-  text-align: left;
+  text-align: center;
 }
 
 .employees-page .pagination--directory {
@@ -464,7 +464,7 @@
 
 [dir="rtl"] .employees-page .directory-table-scroll .common-table th:nth-child(2),
 [dir="rtl"] .employees-page .directory-table-scroll .common-table td:nth-child(2) {
-  text-align: right;
+  text-align: center;
 }
 
 [dir="rtl"] .employees-page .directory-name {
@@ -671,7 +671,7 @@
 
 .add-employee-btn {
     border: none;
-    background: linear-gradient(135deg, #03a9f4, #0288d1);
+    background: #2564eb;
     color: #ffffff;
     padding: 10px 16px;
     border-radius: 8px;
@@ -682,7 +682,7 @@
 }
 
 .add-employee-btn:hover {
-    background: #e95427;
+    background: #1d4ed8;
     transform: translateY(-1px);
 }
 

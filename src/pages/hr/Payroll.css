@@ -111,14 +111,14 @@
 }
 
 .add-salary-btn {
-    border-color: #ff6333;
-    background: #ff6333;
+    border-color: #2564eb;
+    background: #2564eb;
     color: #ffffff;
     font-weight: 700;
 }
 
 .add-salary-btn:hover {
-    background: #e95427;
+    background: #1d4ed8;
 }
 
 .payroll-collapse-btn {
@@ -271,7 +271,7 @@
 }
 
 .payroll-actions button:hover {
-    color: #ff6333;
+    color: #2564eb;
 }
 
 .payroll-empty {
@@ -372,8 +372,8 @@
 }
 
 .salary-modal-actions button[type="submit"] {
-    border-color: #ff6333;
-    background: #ff6333;
+    border-color: #2564eb;
+    background: #2564eb;
     color: #ffffff;
 }
 

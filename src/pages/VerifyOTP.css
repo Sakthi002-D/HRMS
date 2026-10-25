@@ -173,16 +173,16 @@
 .verify-otp-card form button {
   height: 50px;
   border-radius: 7px;
-  background: #e26d3f;
-  box-shadow: 0 8px 16px rgba(226, 109, 63, .2);
+  background: #2564eb;
+  box-shadow: 0 8px 16px rgba(37, 100, 235, .2);
 }
 
 .verify-otp-card form button:hover {
-  background: #c9572f;
+  background: #1d4ed8;
 }
 
 .verify-otp-card .back-login-btn {
-  color: #c9572f;
+  color: #1d4ed8;
   font-weight: 700;
 }
 

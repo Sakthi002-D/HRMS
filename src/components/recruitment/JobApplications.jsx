@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DatePicker from "../layout/common/DatePicker";
 import ApplicationDetail from "./ApplicationDetail";
-import { Eye } from "lucide-react";
+import { Eye, FileText, Inbox, UserCheck, UserX } from "lucide-react";
 import { usePagination, RowsPerPage, Pagination } from "../common/TablePagination";
 import { APPLICATION_STATUSES, CANDIDATE_TYPES, SOURCE_OPTIONS, experienceText, salaryText, sourceText } from "./applicationFormat";
 import { applicationStatusLabel, applicationTone, formatDate, recruitmentValueLabel } from "./recruitmentApi";
@@ -72,11 +72,11 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
         <div className="jobs-section app-section">
             <div className="recruitment-cards four app-cards">
                 {[
-                    [t("recruitment.applications.total", { defaultValue: "Total Applications" }), counts.total, ""],
-                    [applicationStatusLabel("New"), counts.New, "New"],
-                    [applicationStatusLabel("Shortlisted"), counts.Shortlisted, "Shortlisted"],
-                    [applicationStatusLabel("Rejected"), counts.Rejected, "Rejected"],
-                ].map(([label, value, status]) => (
+                    [t("recruitment.applications.total", { defaultValue: "Total Applications" }), counts.total, "", FileText, ""],
+                    [applicationStatusLabel("New"), counts.New, "New", Inbox, ""],
+                    [applicationStatusLabel("Shortlisted"), counts.Shortlisted, "Shortlisted", UserCheck, "shortlisted"],
+                    [applicationStatusLabel("Rejected"), counts.Rejected, "Rejected", UserX, "rejected"],
+                ].map(([label, value, status, Icon, tone]) => (
                     <button
                         key={label}
                         type="button"
@@ -84,8 +84,11 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                         onClick={() => setFilter("status")(activeFilters.status === status ? "" : status)}
                         aria-pressed={Boolean(status) && activeFilters.status === status}
                     >
-                        <h3>{label}</h3>
-                        <h2>{loading && !applications.length ? "—" : value}</h2>
+                        <Icon className={`recruitment-stat-icon ${tone}`} size={46} strokeWidth={2} aria-hidden="true" />
+                        <div className="recruitment-card-content">
+                            <span>{label}</span>
+                            <strong>{loading && !applications.length ? "—" : value}</strong>
+                        </div>
                     </button>
                 ))}
             </div>
@@ -147,7 +150,6 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                             <th>{t("recruitment.applications.applicationNo", { defaultValue: "Application No" })}</th>
                             <th>{t("recruitment.applications.candidate", { defaultValue: "Candidate" })}</th>
                             <th>{t("recruitment.applications.job", { defaultValue: "Job" })}</th>
-                            <th>{t("recruitment.fields.type", { defaultValue: "Type" })}</th>
                             <th>{t("recruitment.fields.experience", { defaultValue: "Experience" })}</th>
                             <th>{t("recruitment.applications.expectedSalary", { defaultValue: "Expected Salary" })}</th>
                             <th>{t("recruitment.applications.noticePeriod", { defaultValue: "Notice Period" })}</th>
@@ -159,10 +161,10 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                     </thead>
                     <tbody>
                         {loading && !applications.length && (
-                            <tr><td colSpan="11">{t("recruitment.applications.loading", { defaultValue: "Loading applications..." })}</td></tr>
+                            <tr><td colSpan="10">{t("recruitment.applications.loading", { defaultValue: "Loading applications..." })}</td></tr>
                         )}
                         {!loading && visible.length === 0 && (
-                            <tr><td colSpan="11">{applications.length
+                            <tr><td colSpan="10">{applications.length
                                 ? t("recruitment.applications.noMatch", { defaultValue: "No applications match these filters." })
                                 : t("recruitment.applications.none", { defaultValue: "No applications yet." })}</td></tr>
                         )}
@@ -176,11 +178,6 @@ function JobApplications({ actorId, applications, loading, error, jobs, jobFilte
                                 <td>
                                     <strong dir="ltr" className="ltr-text">{row.job_id}</strong>
                                     <small className="app-sub">{row.job_title || "—"}</small>
-                                </td>
-                                <td>
-                                    {row.candidate_type
-                                        ? <span className={`app-type ${row.candidate_type === "Fresher" ? "fresher" : "experienced"}`}>{recruitmentValueLabel("candidateType", row.candidate_type)}</span>
-                                        : "—"}
                                 </td>
                                 <td>{experienceText(row)}</td>
                                 <td><span dir="ltr">{salaryText(row.expected_salary, row.salary_currency, row.expected_ctc)}</span></td>
