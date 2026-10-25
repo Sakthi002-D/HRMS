@@ -6,16 +6,19 @@
 // access_disabled are never touched by the pull.
 //
 // Push (HRMS -> D365): after an HRMS employee update, the fields HR actually changed
-// (email, phone, gender, marital status, birth date, joining date) are PATCHed to the
-// linked D365 employment.
-// Push is best-effort and must never block or fail the HRMS write.
+// (email, phone, gender, marital status, birth date, joining date, designation) are
+// PATCHed to the linked D365 employment. Name and status are pull-only: pushing status
+// would end the D365 employment (payroll, leave) and HRMS keeps one full-name field
+// while D365 splits first/middle/last.
+// Push is best-effort and must never block or fail the HRMS write. Set
+// D365_PUSH_ENABLED=false to turn the push off entirely (pull keeps running).
 import { getD365Config, getAccessToken } from "./d365Employees.js";
 import { fetchD365Pages } from "../scripts/d365Reconciliation.js";
 
 const SELECT = [
     "PersonnelNumber", "EmploymentLegalEntityId", "EmploymentId", "Name", "FirstName", "MiddleName", "LastName",
     "PrimaryContactEmail", "PrimaryContactPhone", "Gender", "MaritalStatus", "BirthDate", "EmploymentStartDate",
-    "EmploymentEndDate", "TerminationDate", "LastDateWorked",
+    "EmploymentEndDate", "TerminationDate", "LastDateWorked", "ProfessionalTitle",
 ].join(",");
 
 const norm = (value) => String(value ?? "").trim();
@@ -49,6 +52,7 @@ export const buildPullTarget = (source) => {
         employment_end_date: isOpenEnded(source.EmploymentEndDate) ? "Never" : toDate(source.EmploymentEndDate),
         last_date_worked: toDate(source.LastDateWorked),
         status: hasEnded || terminated ? "Inactive" : "Active",
+        designation: norm(source.ProfessionalTitle) || null,
     };
 };
 
@@ -126,9 +130,9 @@ export async function pullD365Changes(pool) {
     return summary;
 }
 
-// Verified writable on EmployeesV2 via PATCH. Names are not pushed (HRMS keeps one
-// full-name field while D365 splits first/middle/last).
+// Writable on EmployeesV2 via PATCH.
 const PUSH_FIELDS = {
+    designation: { d365: "ProfessionalTitle", value: (v) => norm(v) || null },
     email: { d365: "PrimaryContactEmail", value: (v) => norm(v) || null },
     phone: { d365: "PrimaryContactPhone", value: (v) => norm(v) || null },
     gender: { d365: "Gender", value: (v) => GENDER_MAP[lower(v)] ?? null },
@@ -136,6 +140,8 @@ const PUSH_FIELDS = {
     date_of_birth: { d365: "BirthDate", value: (v) => (asDateString(v) ? `${asDateString(v)}T12:00:00Z` : null) },
     joining_date: { d365: "EmploymentStartDate", value: (v) => (asDateString(v) ? `${asDateString(v)}T12:00:00Z` : null) },
 };
+
+export const isPushEnabled = (env = process.env) => !["false", "0", "off", "no"].includes(lower(env.D365_PUSH_ENABLED));
 
 // With `previous`, only fields whose value changed are included, so a stale HRMS value
 // never overwrites a newer D365 one. Empty values are never pushed (no erasing D365).
@@ -151,6 +157,7 @@ export const buildPushBody = (employee, previous = null) => {
 };
 
 export async function pushEmployeeToD365(pool, employeeId, previous = null) {
+    if (!isPushEnabled()) return { pushed: false, reason: "push-disabled" };
     const mapping = (await pool.query(
         `SELECT m.employee_id, m.personnel_number, m.employment_legal_entity_id, m.employment_id
          FROM employee_d365_mapping m
@@ -160,7 +167,7 @@ export async function pushEmployeeToD365(pool, employeeId, previous = null) {
     )).rows[0];
     if (!mapping) return { pushed: false, reason: "not-linked" };
     const employee = (await pool.query(
-        "SELECT email, phone, gender, marital_status, date_of_birth, joining_date FROM employees WHERE employee_id = $1",
+        "SELECT email, phone, gender, marital_status, date_of_birth, joining_date, designation FROM employees WHERE employee_id = $1",
         [employeeId]
     )).rows[0];
     if (!employee) return { pushed: false, reason: "missing-employee" };

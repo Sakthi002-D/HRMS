@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPullTarget, diffPullTarget, buildPushBody } from "./d365EmployeeSync.js";
+import { buildPullTarget, diffPullTarget, buildPushBody, isPushEnabled, pushEmployeeToD365 } from "./d365EmployeeSync.js";
 
 const d365Row = (overrides = {}) => ({
     PersonnelNumber: "3544",
@@ -70,4 +70,44 @@ test("buildPushBody with previous values pushes only changed contact and date fi
     });
     assert.deepEqual(buildPushBody(previous, previous), {});
     assert.deepEqual(buildPushBody({ ...previous, phone: "" }, previous), {});
+});
+
+test("designation is pulled from ProfessionalTitle and pushed back", () => {
+    assert.equal(buildPullTarget(d365Row({ ProfessionalTitle: " Site Engineer " })).designation, "Site Engineer");
+    assert.equal(buildPullTarget(d365Row()).designation, null);
+    assert.deepEqual(buildPushBody({ designation: "Lead" }, { designation: "Engineer" }), { ProfessionalTitle: "Lead" });
+});
+
+test("name is pull-only: a name change is never pushed to D365", () => {
+    assert.deepEqual(buildPushBody({ name: "Anna Maria Lopez" }, { name: "Anna Lopez" }), {});
+    assert.deepEqual(buildPushBody({ name: "Gopal Kumar Yadav" }), {});
+    assert.equal(buildPullTarget(d365Row({ Name: "Gopal Kumar Yadav" })).name, "Gopal Kumar Yadav");
+});
+
+test("status and employment end date are never pushed to D365", () => {
+    const body = buildPushBody(
+        { status: "Inactive", employment_end_date: "2025-01-01", last_date_worked: "2025-01-01" },
+        { status: "Active", employment_end_date: "Never", last_date_worked: null }
+    );
+    assert.deepEqual(body, {});
+    assert.equal("EmploymentEndDate" in body, false);
+});
+
+test("D365_PUSH_ENABLED kill switch", () => {
+    assert.equal(isPushEnabled({}), true);
+    assert.equal(isPushEnabled({ D365_PUSH_ENABLED: "true" }), true);
+    for (const off of ["false", "FALSE", " false ", "0", "off", "no"]) {
+        assert.equal(isPushEnabled({ D365_PUSH_ENABLED: off }), false, off);
+    }
+});
+
+test("pushEmployeeToD365 does nothing, not even a DB query, when the kill switch is off", async () => {
+    const saved = process.env.D365_PUSH_ENABLED;
+    process.env.D365_PUSH_ENABLED = "false";
+    try {
+        const pool = { query: async () => { throw new Error("DB must not be touched"); } };
+        assert.deepEqual(await pushEmployeeToD365(pool, "E1", { email: "a@x.com" }), { pushed: false, reason: "push-disabled" });
+    } finally {
+        if (saved === undefined) delete process.env.D365_PUSH_ENABLED; else process.env.D365_PUSH_ENABLED = saved;
+    }
 });

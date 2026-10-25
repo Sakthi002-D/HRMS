@@ -1445,7 +1445,7 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
         pushEmployeeToD365(pool, employeeId, previous)
             .then((push) => {
                 if (push.pushed) console.log(`D365 push for ${employeeId}: ${push.fields.join(", ")}`);
-                else if (push.reason !== "not-linked") console.warn(`D365 push skipped for ${employeeId}: ${push.reason}`);
+                else if (push.reason !== "not-linked" && push.reason !== "push-disabled") console.warn(`D365 push skipped for ${employeeId}: ${push.reason}`);
             })
             .catch((error) => console.error(`D365 push failed for ${employeeId}:`, error.message));
 
