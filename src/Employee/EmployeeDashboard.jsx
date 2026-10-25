@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { clearPortalLanguage, usePortalLanguage } from "../i18n";
@@ -69,6 +69,20 @@ const attendanceStatusLabel = (t, value) => {
     const key = String(value).trim().toLowerCase().replace(/\s+/g, "_");
     return t(`employeeAttendance.status.${key}`, { defaultValue: String(value) });
 };
+// Change Password: English messages from the backend route (and the frontend fallback) → translation key.
+// Any other message is shown as it arrives.
+const PASSWORD_MESSAGE_KEYS = {
+    "All password fields are required": "allRequired",
+    "New password must be at least 6 characters": "tooShort",
+    "New password and repeat password do not match": "mismatch",
+    "Current password is incorrect": "currentIncorrect",
+    "Failed to change password": "failed",
+    "Unable to change password": "unable",
+};
+const passwordErrorLabel = (t, message) => (PASSWORD_MESSAGE_KEYS[message]
+    ? t(`changePassword.errors.${PASSWORD_MESSAGE_KEYS[message]}`, { defaultValue: message })
+    : message || t("changePassword.errors.unable", { defaultValue: "Unable to change password" }));
+
 const formatAttendanceTime = (time) => {
     if (!time || time === "-") return "-";
     const match = String(time).match(/^(\d{1,2}):(\d{2})/);
@@ -137,6 +151,7 @@ function EmployeeDashboard() {
     });
     const [profileWorkTab, setProfileWorkTab] = useState("projects");
     const [activeSection, setActiveSection] = useState("dashboard");
+    const activeSectionRef = useRef("dashboard");
     const [requestsVersion, setRequestsVersion] = useState(0);
 
     const submitEmployeeRequest = (request) => {
@@ -218,25 +233,77 @@ function EmployeeDashboard() {
             // Basic session details remain available if the optional profile request fails.
         });
 
-    // Prevent browser Back from reopening dashboard
-    window.history.pushState(null, "", window.location.href);
-
-    const handleBackButton = () => {
-        clearPortalLanguage("employee");
-        purgeAllChatStorage();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        sessionStorage.removeItem("loggedInEmployee");
-
-        navigate("/login", { replace: true });
-    };
-
-    window.addEventListener("popstate", handleBackButton);
-
-    return () => {
-        window.removeEventListener("popstate", handleBackButton);
-    };
-
 }, [navigate]);
+
+    // Browser Back stays on the employee Dashboard (no logout, no pop-up):
+    // - Back moves between portal sections and ends on the Dashboard.
+    // - Behind the Dashboard there is a stack of Dashboard entries, so Back keeps showing the Dashboard.
+    // - Chrome only respects history entries added during a click/keypress, so the stack is
+    //   refilled (to GUARD_DEPTH entries) on every click or keypress while on the Dashboard.
+    useEffect(() => {
+        if (!sessionStorage.getItem("loggedInEmployee")) return undefined;
+        const portalUrl = window.location.href;
+        const GUARD_DEPTH = 50; // browsers keep at most 50 history entries per tab
+
+        const depthOf = (state) => (state?.employeePortal ? Number(state.employeeDepth || 0) : -1);
+        const pushDashboard = (depth) => window.history.pushState(
+            { ...window.history.state, employeeSection: "dashboard", employeePortal: true, employeeDepth: depth, employeeBase: false },
+            "",
+            portalUrl
+        );
+
+        // First time: the current entry becomes the "base", with one Dashboard entry on top
+        // (skipped if already set up, e.g. React StrictMode re-run or F5)
+        if (!window.history.state?.employeePortal) {
+            window.history.replaceState({ ...window.history.state, employeeSection: undefined, employeePortal: true, employeeDepth: 0, employeeBase: true }, "", portalUrl);
+            pushDashboard(1);
+        }
+
+        // Refill the Dashboard stack during a click/keypress (only while on the Dashboard)
+        const refillStack = () => {
+            if (activeSectionRef.current !== "dashboard") return;
+            let depth = depthOf(window.history.state);
+            if (depth < 0) return;
+            while (depth < GUARD_DEPTH) {
+                depth += 1;
+                pushDashboard(depth);
+            }
+        };
+        // Fill it now too: with 50 entries the browser drops the oldest ones (other websites) from this tab
+        refillStack();
+
+        const handlePopState = (event) => {
+            const state = event.state;
+            if (state?.employeeSection && !state.employeeBase) {
+                // Back/Forward between portal sections (Dashboard entries show the Dashboard)
+                activeSectionRef.current = state.employeeSection;
+                setActiveSection(state.employeeSection);
+                return;
+            }
+            // Reached the base: stay on the Dashboard and add one Dashboard entry again
+            activeSectionRef.current = "dashboard";
+            setActiveSection("dashboard");
+            refillStack();
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        document.addEventListener("pointerdown", refillStack, true);
+        document.addEventListener("keydown", refillStack, true);
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+            document.removeEventListener("pointerdown", refillStack, true);
+            document.removeEventListener("keydown", refillStack, true);
+        };
+    }, []);
+
+    // Each section change made in the portal adds a history entry (not when it came from Back/Forward).
+    // A Dashboard entry is pushed as the guard.
+    useEffect(() => {
+        activeSectionRef.current = activeSection;
+        if (!sessionStorage.getItem("loggedInEmployee")) return;
+        if (window.history.state?.employeeSection === activeSection && !window.history.state?.employeeBase) return;
+        window.history.pushState({ ...window.history.state, employeeSection: activeSection, employeeGuard: activeSection === "dashboard", employeeBase: false }, "", window.location.href);
+    }, [activeSection]);
 
     const fetchEmployeeNotifications = async (employeeId) => {
         try {
@@ -618,12 +685,12 @@ function EmployeeDashboard() {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || "Unable to change password");
-            await showAlert("Password changed successfully. Please sign in again.", "success");
+            await showAlert(t("changePassword.success", { defaultValue: "Password changed successfully. Please sign in again." }), "success");
             setPasswordForm({ current_password: "", new_password: "", repeat_password: "" });
             setShowChangePassword(false);
             logout();
         } catch (error) {
-            showAlert(error.message || "Unable to change password");
+            showAlert(passwordErrorLabel(t, error.message));
         } finally {
             setLoading(false);
         }
@@ -971,7 +1038,7 @@ function EmployeeDashboard() {
                         <p>{t(`employeeHeader.${activeSection}.subtitle`, { name: employee.name })}</p>
                     </div>
                     {activeSection === "dashboard" && <div className="employee-notification-wrapper">
-                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label="Open notifications">
+                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
                             <Bell size={19} />
                             {notifications.filter((notification) => !notification.read).length > 0 && <span className="employee-notification-count">{notifications.filter((notification) => !notification.read).length}</span>}
                         </button>

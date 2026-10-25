@@ -494,3 +494,283 @@
     padding: 35px 25px;
   }
 }
+/* ==================================================
+   HERO: dark city skyline background (like shelter.co) with white text
+   Image file: public/images/home-hero.jpg
+================================================== */
+.home .hero {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(5, 15, 25, 0.55) 0%,
+      rgba(5, 15, 25, 0.62) 65%,
+      rgb(11, 22, 32) 100%
+    ),
+    url("/images/home-hero.jpeg") center / cover no-repeat !important;
+  background-color: #0b1620 !important;
+}
+
+.hero .welcome-text {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.hero h1 {
+  color: #ffffff !important;
+}
+
+.hero .hero-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+/* ==================================================
+   CTA ("Manage Your Workforce Smarter"): photo background
+   with a dark navy layer so the white text stays readable
+   Image file: public/images/home-cta.jpg
+================================================== */
+/* Middle section (feature cards): photo background with a dark layer */
+.home .features {
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(11, 22, 32) 0%,
+      rgba(5, 15, 25, 0.6) 22%,
+      rgba(5, 15, 25, 0.6) 78%,
+      rgb(11, 22, 32) 100%
+    ),
+    url("/images/home-cta.jpg") center / cover no-repeat !important;
+  background-color: #0b1620 !important;
+}
+
+
+/* Bottom band around the CTA box: photo background, blends into the section above and the footer below */
+.home .cta-band {
+  min-height: 520px;
+  padding: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(11, 22, 32) 0%,
+      rgba(5, 15, 25, 0.6) 25%,
+      rgba(5, 15, 25, 0.6) 88%,
+      rgb(5, 5, 5) 100%
+    ),
+    url("/images/home-band.jpg") center / cover no-repeat;
+  background-color: #0b1620;
+}
+
+
+/* Middle section now shows only the photo: give it a fixed height so the photo is visible */
+.home .features {
+  min-height: 520px;
+  padding: 0 !important;
+}
+/* Footer logo: bigger */
+.home .footer-logo img {
+  width: 320px !important;
+  max-width: 80%;
+  height: auto;
+}
+/* Footer: less empty space above and below the logo */
+.home .footer {
+  min-height: 0 !important;
+  padding: 14px 20px 22px !important;
+}
+
+.home .footer-logo img {
+  margin-bottom: 10px !important;
+}
+
+.home .footer p {
+  margin: 4px 0 !important;
+}
+
+/* Phones: shorter photo strips */
+@media (max-width: 650px) {
+  .home .features {
+    min-height: 450px;
+  }
+
+  .home .cta-band {
+    min-height: 450px;
+  }
+}
+/* ==================================================
+   OUR PORTALS + WHAT YOU CAN MANAGE (shelter.co style)
+================================================== */
+
+/* Both photo strips: content centred on the photo */
+.home .features,
+.home .cta-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 70px 30px !important;
+}
+
+.home .cta-band {
+  padding-bottom: 90px !important;
+}
+
+/* Title with thin lines on both sides (like "—— COMPANIES ——") */
+.home .home-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 40px;
+}
+
+.home .title-line {
+  width: 120px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.home .home-section-title h2 {
+  margin: 0;
+  color: #ffffff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* Portal cards */
+.home .portal-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 340px));
+  gap: 32px;
+  justify-content: center;
+}
+
+.home .portal-col {
+  text-align: center;
+}
+
+.home .portal-circle {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+}
+
+.home .portal-box {
+  min-height: 200px;
+  padding: 30px 28px;
+  background: rgba(240, 242, 245, 0.94);
+}
+
+.home .portal-box h3 {
+  margin: 0 0 16px;
+  color: #2b2f33;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: 1px;
+}
+
+.home .portal-box p {
+  margin: 0;
+  color: #3d4248;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* Module icons row */
+.home .module-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 34px 46px;
+  max-width: 1000px;
+}
+
+.home .module-item {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+}
+
+.home .module-circle {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+}
+
+.home .module-item span {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+/* Phones */
+@media (max-width: 650px) {
+  .home .portal-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .home .home-section-title {
+    gap: 14px;
+  }
+
+  .home .title-line {
+    width: 40px;
+  }
+
+  .home .home-section-title h2 {
+    font-size: 26px;
+  }
+}
+/* ==================================================
+   HERO BACKGROUND VIDEO
+================================================== */
+.home .hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.home .hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.home .hero-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 15, 25, 0.55) 0%,
+    rgba(5, 15, 25, 0.62) 65%,
+    rgb(11, 22, 32) 100%
+  );
+}
+
+.home .hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home .hero-video {
+    display: none;
+  }
+}

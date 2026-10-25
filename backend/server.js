@@ -12,7 +12,7 @@ import careersRouter from "./routes/careers.js";
 import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/employeeDocuments.js";
 import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
-import { ensureNotificationSchema, getInbox, sendQueuedEmails } from "./services/notificationService.js";
+import { ensureNotificationSchema, getInbox, inboxKind, sendQueuedEmails } from "./services/notificationService.js";
 import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
 import { getCompanyToday } from "./services/leaveDateRules.js";
 import { ensureCareerSchema } from "./services/careerApplications.js";
@@ -1693,6 +1693,8 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 time: "Leave request updated",
                 section: "leave",
                 created_at: leave.reviewed_at || leave.created_at,
+                kind: `leave_${String(leave.status).toLowerCase()}`,
+                params: { status: leave.status, leaveType: leave.leave_type, days: String(leave.days || 1) },
             })),
             ...payrollResult.rows.map((payroll) => ({
                 id: `payroll-${payroll.id}`,
@@ -1702,6 +1704,8 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 time: payroll.salary_month ? new Date(payroll.salary_month).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "Payroll updated",
                 section: "payroll",
                 created_at: payroll.updated_at,
+                kind: "payroll_released",
+                params: {},
             })),
             ...documentResult.rows.map((document) => ({
                 id: `document-${req.params.employeeId}-${document.passport_exp_date}`,
@@ -1710,6 +1714,8 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 message: "Your passport/document is expiring soon.",
                 time: `Expires ${new Date(document.passport_exp_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`,
                 section: "documents",
+                kind: "document_expiring",
+                params: { date: new Date(document.passport_exp_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) },
             })),
             ...requestResult.rows.map((request) => {
                 const approved = request.status === "Approved";
@@ -1725,6 +1731,11 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                     time: new Date(when).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
                     created_at: when,
                     section: "documents",
+                    kind: approved
+                        ? "request_approved"
+                        : !request.hr_response ? "request_rejected"
+                            : request.hr_response === "Your request was rejected. Please contact HR for details." ? "request_rejected_default" : "request_rejected_reason",
+                    params: { requestType: request.request_type, fileName: request.file_name, reason: request.hr_response || "" },
                 };
             }),
             ...hrDocumentResult.rows.map((document) => {
@@ -1738,6 +1749,8 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                     time: new Date(document.uploaded_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
                     created_at: document.uploaded_at,
                     section: "documents",
+                    kind: "hr_document_added",
+                    params: { docType: document.doc_type, docLabel: label, fileName: document.original_file_name },
                 };
             }),
             // Manpower Request / resignation notifications (hr_notifications inbox)
@@ -1749,6 +1762,7 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
                 time: new Date(item.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
                 section: String(item.link || "").startsWith("resignation:") ? "resignation" : "manpower",
                 created_at: item.created_at,        
+                ...inboxKind(item),
             })),
         ]);
     } catch (error) {

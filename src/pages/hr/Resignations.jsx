@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ResignationDetail from "../../components/resignation/ResignationDetail";
 import { Pagination } from "../../components/common/TablePagination";
+import ResignationMonthPicker from "../../components/resignation/ResignationMonthPicker";
 import {
     api,
     daysLabel,
@@ -145,12 +146,10 @@ function Resignations() {
                             <option value="">{t("recruitment.applications.allDepartments", { defaultValue: "All departments" })}</option>
                             {departments.map((department) => <option key={department} value={department}>{department}</option>)}
                         </select>
-                        <input
-                            type="month"
+                        <ResignationMonthPicker
                             value={filters.month}
-                            onChange={(event) => updateFilter({ month: event.target.value })}
-                            aria-label={t("hrResignations.month", { defaultValue: "Resignation month" })}
-                            title={t("hrResignations.month", { defaultValue: "Resignation month" })}
+                            onChange={(month) => updateFilter({ month })}
+                            label={t("hrResignations.month", { defaultValue: "Resignation month" })}
                         />
                         {hasFilters && (
                             <button type="button" className="resignation-clear-filters" onClick={() => updateFilter(EMPTY_FILTERS)}>

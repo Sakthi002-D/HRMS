@@ -9,7 +9,7 @@
 
 import express from "express";
 import pool from "../db.js";
-import { getInbox, sendQueuedEmails } from "../services/notificationService.js";
+import { getInbox, inboxKind, sendQueuedEmails } from "../services/notificationService.js";
 import {
     ASSET_OPTIONS,
     ASSIGNABLE_ROLES,
@@ -439,7 +439,8 @@ router.put("/jobs/:id/recruitment-plan", handle(async (req, res) => {
 
 router.get("/notifications/inbox/:employeeId", handle(async (req, res) => {
     res.set("Cache-Control", "no-store");
-    res.json(await getInbox(req.params.employeeId));
+    // kind + params let the HR Notifications page show the text translated (title/message unchanged)
+    res.json((await getInbox(req.params.employeeId)).map((item) => ({ ...item, ...inboxKind(item) })));
 }));
 
 router.put("/notifications/inbox/:id/read", handle(async (req, res) => {

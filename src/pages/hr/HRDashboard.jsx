@@ -19,7 +19,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import { purgeAllChatStorage } from "../../components/assistant/HRAssistant";
 import { api, formatDate, isPendingHR } from "../../components/resignation/resignationApi";
 import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import "../../components/recruitment/recruitment.css";
@@ -164,27 +163,63 @@ function HRDashboard() {
     }
   };
 
+  // Browser Back stays on the HR Dashboard (no logout, no pop-up), the same as the employee portal:
+  // - Behind the Dashboard there is a stack of Dashboard entries, so Back keeps showing the Dashboard.
+  // - Chrome only respects history entries added during a click/keypress, so the stack is
+  //   refilled (to GUARD_DEPTH entries) on every click or keypress on this page.
+  // Other HR pages keep normal Back (e.g. Employees → Back → Dashboard).
   useEffect(() => {
     const hrSession = sessionStorage.getItem("loggedInHR");
 
     if (!hrSession) {
       navigate("/login", { replace: true });
-      return;
+      return undefined;
     }
 
-    window.history.pushState(null, "", window.location.href);
+    const dashboardUrl = window.location.href;
+    const GUARD_DEPTH = 50; // browsers keep at most 50 history entries per tab
 
-    const handleBackButton = () => {
-      purgeAllChatStorage();
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      sessionStorage.removeItem("loggedInHR");
-      navigate("/login", { replace: true });
+    const depthOf = (state) => (state?.hrPortal ? Number(state.hrDepth || 0) : -1);
+    const pushDashboard = (depth) => window.history.pushState(
+      { ...window.history.state, hrPortal: true, hrDepth: depth, hrBase: false },
+      "",
+      dashboardUrl
+    );
+
+    // First time: the current entry becomes the "base", with one Dashboard entry on top
+    // (skipped if already set up, e.g. React StrictMode re-run, F5, or coming Back from another HR page)
+    if (!window.history.state?.hrPortal) {
+      window.history.replaceState({ ...window.history.state, hrPortal: true, hrDepth: 0, hrBase: true }, "", dashboardUrl);
+      pushDashboard(1);
+    }
+
+    // Refill the Dashboard stack during a click/keypress
+    const refillStack = () => {
+      let depth = depthOf(window.history.state);
+      if (depth < 0) return;
+      while (depth < GUARD_DEPTH) {
+        depth += 1;
+        pushDashboard(depth);
+      }
+    };
+    // Fill it now too: with 50 entries the browser drops the oldest ones (other websites) from this tab
+    refillStack();
+
+    const handlePopState = (event) => {
+      // A Dashboard entry: nothing to do, the Dashboard is already shown
+      if (event.state?.hrPortal && !event.state?.hrBase) return;
+      // Reached the base: stay on the Dashboard and fill the stack again
+      refillStack();
     };
 
-    window.addEventListener("popstate", handleBackButton);
+    window.addEventListener("popstate", handlePopState);
+    document.addEventListener("pointerdown", refillStack, true);
+    document.addEventListener("keydown", refillStack, true);
 
     return () => {
-      window.removeEventListener("popstate", handleBackButton);
+      window.removeEventListener("popstate", handlePopState);
+      document.removeEventListener("pointerdown", refillStack, true);
+      document.removeEventListener("keydown", refillStack, true);
     };
   }, [navigate]);
 

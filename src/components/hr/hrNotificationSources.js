@@ -48,6 +48,9 @@ export async function loadEmployeeActivityNotifications(hrId) {
             date: request.created_at,
             time: shortDate(request.created_at),
             path: `/hr/employee-requests?request=${request.id}`,
+            // Values for the translated text (the Notifications page builds it with t at render time)
+            kind: "employee_request",
+            params: { name: request.employee_name || request.employee_id, employeeName: request.employee_name || "", employeeId: request.employee_id, requestType: request.request_type },
         }));
 
     const uploadNotifications = (Array.isArray(uploads) ? uploads : []).map((upload) => {
@@ -62,6 +65,8 @@ export async function loadEmployeeActivityNotifications(hrId) {
             date: upload.uploaded_at,
             time: shortDate(upload.uploaded_at),
             path: `/employees/employeedetails/${employeeSlug(upload.employee_name)}#employee-documents`,
+            kind: "document_upload",
+            params: { name: upload.employee_name, docType: upload.doc_type, docLabel: label, fileName: upload.original_file_name },
         };
     });
 

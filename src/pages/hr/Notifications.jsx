@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { CalendarCheck, AlertCircle, ArrowRight } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import API_BASE from "../../config/api";
+import { ltrText, resignationStatusLabel } from "../../components/resignation/resignationApi";
+import DatePicker from "../../components/layout/common/DatePicker";
 import "./Notifications.css";
 
 const getHRProfile = () => {
@@ -45,7 +48,75 @@ const dateKey = (value) => {
   }).format(date);
 };
 
+// Displayed module name; the English name stays the filter value
+const MODULE_KEYS = {
+  "Employee Requests": "hrEmployeeRequests.title",
+  Documents: "menu.documents",
+  Leave: "employeeNotifications.modules.leave",
+  Resignation: "menu.resignation",
+  Recruitment: "menu.recruitment",
+};
+
+// Kinds built on this page / in hrNotificationSources.js. Inbox kinds (resignation, MPR, job applications)
+// come from the backend and reuse the Employee portal texts (employeeNotifications.kinds.*).
+const HR_KINDS = ["employee_request", "document_upload", "leave_request", "leave_request_from"];
+
+// Saved request type (English) → the key the Documents page already uses for its title
+const REQUEST_KEYS = {
+  "Salary Certificate": "salaryCertificate",
+  "NOC Request": "nocRequest",
+  "Letter Request": "letterRequest",
+  "Expense Reimbursement": "expenseReimbursement",
+};
+
+// Role label in the backend sentence → the key recruitment.roles already translates
+const ROLE_KEYS = {
+  "Department Coordinator": "DEPT_COORDINATOR",
+  "Department Head": "DEPT_HEAD",
+  "Line Manager": "LINE_MANAGER",
+  HR: "HR",
+  "COO/CTO": "EXEC",
+  COO: "COO",
+  CTO: "CTO",
+  Finance: "FINANCE",
+  CEO: "CEO",
+  Procurement: "PROCUREMENT",
+  IT: "IT",
+  Payroll: "PAYROLL",
+};
+
+const valueKey = (value) => String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+// Numbers, dates, IDs and file names read left-to-right inside an Arabic sentence;
+// names, titles and free text keep their own direction (first-strong isolate)
+const LTR_PARAMS = ["number", "date", "previousDate", "startDate", "endDate", "fileName", "employeeId", "jobId", "applicationNo"];
+const AUTO_PARAMS = ["actor", "name", "employeeName", "reason", "title", "jobTitle", "department", "location", "assets"];
+const autoText = (value) => (value ? `\u2068${value}\u2069` : value);
+
+// English values → the labels used inside the translated sentences.
+// en.json uses the original values, so English reads exactly as before.
+const sentenceParams = (item, t, rtl) => {
+  const params = { ...(item.params || {}) };
+  const labels = {
+    statusLabel: resignationStatusLabel(params.status),
+    leaveTypeLabel: params.leaveType && t(`leaveTypes.${params.leaveType}`, { defaultValue: params.leaveType }),
+    docLabelText: params.docType && t(`employeeDocuments.items.${params.docType}.title`, { defaultValue: params.docLabel }),
+    roleLabel: params.role && (ROLE_KEYS[params.role] ? t(`recruitment.roles.${ROLE_KEYS[params.role]}`, { defaultValue: params.role }) : params.role),
+    candidateTypeLabel: params.candidateType && t(`recruitment.values.candidateType.${valueKey(params.candidateType)}`, { defaultValue: params.candidateType }),
+    requestTypeLabel: !params.requestType ? params.requestType
+      : String(item.kind).startsWith("mpr_") ? t(`recruitment.values.requestType.${valueKey(params.requestType)}`, { defaultValue: params.requestType })
+        : REQUEST_KEYS[params.requestType] ? t(`employeeDocuments.requests.${REQUEST_KEYS[params.requestType]}.title`, { defaultValue: params.requestType }) : params.requestType,
+  };
+  if (rtl) {
+    LTR_PARAMS.forEach((key) => { if (params[key]) params[key] = ltrText(params[key]); });
+    AUTO_PARAMS.forEach((key) => { if (params[key]) params[key] = autoText(params[key]); });
+  }
+  return { ...params, ...labels };
+};
+
 function Notifications() {
+  const { t, i18n } = useTranslation();
+  const rtl = i18n.dir() === "rtl";
   const navigate = useNavigate();
   const hrProfile = getHRProfile();
   const readKey = `hrms-hr-read-notifications-${hrProfile.employee_id || getHRName(hrProfile)}`;
@@ -90,6 +161,9 @@ function Notifications() {
               message: `${leave.leave_type} request for ${leave.days || 1} day${Number(leave.days) === 1 ? "" : "s"}${leave.from_date ? `, from ${formatDate(leave.from_date)}` : ""}.`,
               date: leave.created_at || leave.from_date || null,
               path: "/leave-management",
+              kind: leave.from_date ? "leave_request_from" : "leave_request",
+              // count = Number(leave.days), the same value the English "day"/"days" check uses
+              params: { name: leave.employee_name || leave.employee_id, leaveType: leave.leave_type, days: String(leave.days || 1), count: Number(leave.days), date: leave.from_date ? formatDate(leave.from_date) : "" },
             }));
         }
 
@@ -111,6 +185,8 @@ function Notifications() {
                 message: item.message,
                 date: item.created_at,
                 path: isResignation ? "/resignations" : "/recruitment",
+                kind: item.kind,
+                params: item.params,
               };
             });
           }
@@ -143,10 +219,21 @@ function Notifications() {
 
   const unreadCount = notifications.filter((item) => !item.read).length;
 
+  // Translated title / message, built at render time so it follows a language change.
+  // Any kind without a key (or old data) shows the original English text.
+  const textOf = (item, field) => {
+    if (!item.kind) return item[field];
+    const block = HR_KINDS.includes(item.kind) ? "hrNotifications" : "employeeNotifications";
+    return t(`${block}.kinds.${item.kind}.${field}`, { ...sentenceParams(item, t, rtl), defaultValue: item[field] });
+  };
+
+  const moduleLabel = (module) => (MODULE_KEYS[module] ? t(MODULE_KEYS[module], { defaultValue: module }) : module);
+
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     return notifications.filter((item) => {
-      if (query && !`${item.title} ${item.message}`.toLowerCase().includes(query)) return false;
+      // English text as before, plus the text shown in the current language
+      if (query && !`${item.title} ${item.message} ${textOf(item, "title")} ${textOf(item, "message")}`.toLowerCase().includes(query)) return false;
       if (statusFilter === "unread" && item.read) return false;
       if (statusFilter === "read" && !item.read) return false;
       if (moduleFilter !== "all" && item.module !== moduleFilter) return false;
@@ -155,7 +242,8 @@ function Notifications() {
       if (toDate && (!key || key > toDate)) return false;
       return true;
     });
-  }, [notifications, search, statusFilter, moduleFilter, fromDate, toDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications, search, statusFilter, moduleFilter, fromDate, toDate, i18n.language]);
 
   const openNotification = (item) => {
     const readIds = getReadIds();
@@ -177,10 +265,11 @@ function Notifications() {
     <DashboardLayout>
       <div className="hrnotif-page">
         <header className="hrnotif-header">
-          <h1>Notifications</h1>
+          <h1>{t("employeeHeader.notifications.title", { defaultValue: "Notifications" })}</h1>
           <p>
-            All updates that need your attention.
-            {!loading && <span className="hrnotif-unread-count"> {unreadCount} unread</span>}
+            {loading
+              ? t("hrNotifications.subtitle", { defaultValue: "All updates that need your attention." })
+              : <Trans i18nKey="hrNotifications.subtitleWithCount" count={unreadCount} values={{ count: unreadCount }} components={{ c: <span className="hrnotif-unread-count" /> }} defaults="All updates that need your attention.<c> {{count}} unread</c>" />}
           </p>
         </header>
 
@@ -188,31 +277,37 @@ function Notifications() {
           <div className="hrnotif-filters">
             <input
               type="search"
-              placeholder="Search title or message"
+              placeholder={t("employeeNotifications.searchPlaceholder", { defaultValue: "Search title or message" })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search notifications"
+              aria-label={t("employeeNotifications.searchLabel", { defaultValue: "Search notifications" })}
             />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by read status">
-              <option value="all">All messages</option>
-              <option value="unread">Unread</option>
-              <option value="read">Read</option>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={t("employeeNotifications.statusFilterLabel", { defaultValue: "Filter by read status" })}>
+              <option value="all">{t("employeeNotifications.allMessages", { defaultValue: "All messages" })}</option>
+              <option value="unread">{t("employeeNotifications.unread", { defaultValue: "Unread" })}</option>
+              <option value="read">{t("employeeNotifications.read", { defaultValue: "Read" })}</option>
             </select>
-            <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} aria-label="Filter by module">
-              <option value="all">All modules</option>
-              {modules.map((m) => <option key={m} value={m}>{m}</option>)}
+            <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)} aria-label={t("employeeNotifications.moduleFilterLabel", { defaultValue: "Filter by module" })}>
+              <option value="all">{t("employeeNotifications.allModules", { defaultValue: "All modules" })}</option>
+              {modules.map((m) => <option key={m} value={m}>{moduleLabel(m)}</option>)}
             </select>
-            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label="From date" title="From date" />
-            <input type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} aria-label="To date" title="To date" />
-            <button type="button" className="hrnotif-clear" onClick={clearFilters}>Clear</button>
+            <div className="hrnotif-date" role="group" aria-label={t("employeeNotifications.fromDate", { defaultValue: "From date" })} title={t("employeeNotifications.fromDate", { defaultValue: "From date" })}>
+              <DatePicker value={fromDate} onChange={setFromDate} autoPosition />
+            </div>
+            <div className="hrnotif-date" role="group" aria-label={t("employeeNotifications.toDate", { defaultValue: "To date" })} title={t("employeeNotifications.toDate", { defaultValue: "To date" })}>
+              <DatePicker value={toDate} onChange={setToDate} minDate={fromDate || undefined} autoPosition />
+            </div>
+            <button type="button" className="hrnotif-clear" onClick={clearFilters}>{t("employeeNotifications.clear", { defaultValue: "Clear" })}</button>
           </div>
 
           <div className="hrnotif-list">
             {loading ? (
-              <div className="hrnotif-empty">Loading notifications...</div>
+              <div className="hrnotif-empty">{t("hrNotifications.loading", { defaultValue: "Loading notifications..." })}</div>
             ) : visible.length === 0 ? (
               <div className="hrnotif-empty">
-                {notifications.length === 0 ? "You are all caught up." : "No notifications match these filters."}
+                {notifications.length === 0
+                  ? t("employeeNotifications.empty", { defaultValue: "You are all caught up." })
+                  : t("employeeNotifications.noMatch", { defaultValue: "No notifications match these filters." })}
               </div>
             ) : (
               visible.map((item) => (
@@ -227,13 +322,13 @@ function Notifications() {
                   </span>
                   <span className="hrnotif-copy">
                     <span className="hrnotif-title-row">
-                      <strong>{item.title}</strong>
+                      <strong>{textOf(item, "title")}</strong>
                       <span className={`hrnotif-badge ${item.read ? "read" : "unread"}`}>
-                        {item.read ? "Read" : "Unread"}
+                        {item.read ? t("employeeNotifications.read", { defaultValue: "Read" }) : t("employeeNotifications.unread", { defaultValue: "Unread" })}
                       </span>
                     </span>
-                    <span className="hrnotif-message">{item.message}</span>
-                    <small>{item.module} · {formatDate(item.date)}</small>
+                    <span className="hrnotif-message">{textOf(item, "message")}</span>
+                    <small>{moduleLabel(item.module)} · <bdi dir="ltr">{formatDate(item.date)}</bdi></small>
                   </span>
                   <ArrowRight className="hrnotif-arrow" size={16} />
                 </button>

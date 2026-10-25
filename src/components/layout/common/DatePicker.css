@@ -98,6 +98,29 @@
     border-radius: 7px;
 }
 
+/* The arrows keep their 30px square and never shrink; the "<month> <year>" between them may
+   shrink its spacing but its text never wraps or overflows */
+.date-picker-nav > button {
+    flex-shrink: 0;
+}
+
+.date-picker-nav .date-picker-heading {
+    min-width: 0;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+/* The year button sits inside .date-picker-nav, so the 30px arrow size above also applied to it and
+   "2026" spilled out of its box. It sizes to its number instead (same font, colours and radius). */
+.date-picker-nav .date-picker-year {
+    width: auto;
+    min-width: max-content;
+    height: auto;
+    padding: 3px 7px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
 .date-picker-nav button:hover {
     background: transparent;
 }

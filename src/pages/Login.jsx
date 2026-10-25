@@ -132,6 +132,7 @@ function Login() {
           JSON.stringify(employee)
         );
 
+        // IMPORTANT: replace login history (same as HR)
         navigate("/employee-dashboard", {
           replace: true,
         });

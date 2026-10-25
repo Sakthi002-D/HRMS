@@ -91,3 +91,39 @@ export async function getInbox(employeeId, db = pool) {
     );
     return result.rows;
 }
+
+// Inbox rows are saved as finished English text. These patterns mirror the sentences built in
+// resignationWorkflow.js, manpowerWorkflow.js and careerApplications.js, so the employee portal can
+// show them translated ("kind" + "params"). No match → no kind, and the portal shows the English text.
+const INBOX_KINDS = [
+    ["resignation_submitted", /^Resignation (?<number>.+) submitted$/, /^Your resignation is (?<status>.+)\. Last working day: (?<date>[^.]+)\.$/],
+    ["resignation_step_approved", /^Resignation (?<number>[^:]+): (?<status>.+)$/, /^(?<role>.+?) \((?<actor>.+)\) approved your resignation\. It is now .+\.$/],
+    ["resignation_accepted_changed", /^Resignation (?<number>.+) accepted$/, /^HR accepted your resignation\. You are serving notice until (?<date>[^.]+)\. Your last working day was changed from (?<previousDate>[^.]+)\.$/],
+    ["resignation_accepted", /^Resignation (?<number>.+) accepted$/, /^HR accepted your resignation\. You are serving notice until (?<date>[^.]+)\.$/],
+    ["resignation_rejected", /^Resignation (?<number>.+) rejected$/, /^(?<role>.+?) \((?<actor>.+?)\) rejected your resignation: (?<reason>[\s\S]*)$/],
+    ["resignation_withdrawn", /^Resignation (?<number>.+) withdrawn$/, /^You withdrew your resignation\. Your employment continues as normal\.$/],
+    ["resignation_withdrawn_approver", /^Resignation (?<number>.+) withdrawn$/, /^(?<name>.+) \((?<employeeId>[^()]+)\) withdrew their resignation\. No action is needed\.$/],
+    ["resignation_completed", /^Resignation (?<number>.+) completed$/, /^Your last working day was (?<date>[^.]+)\. HR will process your final settlement\.$/],
+    ["resignation_awaiting_approval_early", /^Resignation (?<number>.+) awaits your approval$/, /^(?<name>.+) \((?<employeeId>[^,()]+), (?<department>.+)\) resigned\. Last working day (?<date>[^.]+)\. Early release requested\. Open Resignation → My Approvals\.$/],
+    ["resignation_awaiting_approval", /^Resignation (?<number>.+) awaits your approval$/, /^(?<name>.+) \((?<employeeId>[^,()]+), (?<department>.+)\) resigned\. Last working day (?<date>[^.]+)\. Open Resignation → My Approvals\.$/],
+    ["resignation_accepted_hr", /^Resignation accepted: (?<name>.+)$/, /^(?<number>\S+) accepted\. .+ \((?<employeeId>[^,()]+), (?<department>.+)\)\. Last working day: (?<date>[^.]+)\. Final settlement to be processed after the last working day\.$/],
+    ["resignation_end_of_service", /^Pending End of Service: (?<name>.+)$/, /^.+ \((?<employeeId>[^,()]+), (?<department>.+)\) finished on (?<date>[^.]+) and is now Inactive\.$/],
+    ["mpr_awaiting_approval_exception", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\) \(budget exception\)\. Open Manpower Requests → My Approvals\.$/],
+    ["mpr_awaiting_approval", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\)\. Open Manpower Requests → My Approvals\.$/],
+    ["mpr_rejected", /^MPR (?<number>\S+) was rejected$/, /^(?<role>.+?) rejected "(?<title>.+)": (?<reason>[\s\S]*)$/],
+    ["mpr_sent_back", /^MPR (?<number>\S+) was sent back$/, /^(?<role>.+?) sent back "(?<title>.+)": (?<reason>[\s\S]*)\. Edit and resubmit it from Manpower Requests\.$/],
+    ["mpr_approved", /^MPR (?<number>\S+) approved$/, /^Job opening (?<jobId>\S+) was created for "(?<title>.+)"\.$/],
+    ["mpr_assets", /^Assets required for (?<jobId>\S+)$/, /^(?<openings>\d+) × (?<title>.+) \((?<department>.+), (?<location>.+)\) needs: (?<assets>.+)\. MPR (?<number>\S+); applications (?<startDate>.+) – (?<endDate>.+)\.$/],
+    ["mpr_accommodation", /^Accommodation required for (?<jobId>\S+)$/, /^Arrange accommodation for (?<openings>\d+) × (?<title>.+) \((?<department>.+), (?<location>.+)\)\. MPR (?<number>\S+)\.$/],
+    ["mpr_recruitment_plan", /^Complete recruitment plan for (?<jobId>\S+)$/, /^MPR (?<number>\S+) is fully approved and job opening \S+ \((?<title>.+)\) was created\. Complete its recruitment plan in Recruitment → Job Openings\.$/],
+    ["job_application", /^New application for (?<jobId>\S+)$/, /^(?<name>.+) \((?<candidateType>Fresher|Experienced)\) applied for (?<jobTitle>.+)\. Application (?<applicationNo>\S+)\. Open Recruitment → Job Applications\.$/],
+];
+
+export const inboxKind = (item) => {
+    for (const [kind, titlePattern, messagePattern] of INBOX_KINDS) {
+        const title = titlePattern.exec(item.title || "");
+        const message = title && messagePattern.exec(item.message || "");
+        if (message) return { kind, params: { ...title.groups, ...message.groups } };
+    }
+    return {};
+};

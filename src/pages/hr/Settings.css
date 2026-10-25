@@ -41,3 +41,45 @@
 .settings-error { display: inline-flex; align-items: center; gap: 5px; color: #b42318; font-size: 13px; font-weight: 700; }
 @media (max-width: 800px) { .settings-layout { grid-template-columns: 1fr; } .settings-navigation { display: grid; grid-template-columns: repeat(2, 1fr); border-left: 0; border-bottom: 2px solid #e5eaf0; } .settings-navigation button { border-left: 0; border-bottom: 3px solid transparent; } .settings-navigation button.active { border-bottom-color: #03a9f4; } }
 @media (max-width: 560px) { .settings-header { align-items: flex-start; flex-direction: column; } .settings-form-grid { grid-template-columns: 1fr; } .settings-navigation { grid-template-columns: 1fr; } }
+
+/* Settings menu: no shadow / glow (overrides the shared button shadow), clean flat items */
+.settings-navigation,
+.settings-navigation button,
+.settings-navigation button:hover,
+.settings-navigation button:focus,
+.settings-navigation button:focus-visible,
+.settings-navigation button:active,
+.settings-navigation button.active {
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+/* Settings menu (desktop): one rounded card like .settings-card, thin lines only BETWEEN items */
+@media (min-width: 801px) {
+    .settings-navigation {
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid #d3e2ee !important;
+        border-radius: 10px;
+        background: #fff;
+    }
+    .settings-navigation button {
+        min-height: 48px;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border-top: 0 !important;
+        border-bottom: 1px solid #e6edf3 !important;
+    }
+    /* No line under the last item (the card's own border closes the menu) */
+    .settings-navigation button:last-child {
+        border-bottom: 0 !important;
+    }
+    /* No dark outline after clicking; keyboard users still get a soft focus ring */
+    .settings-navigation button:focus {
+        outline: none;
+    }
+    .settings-navigation button:focus-visible {
+        outline: 2px solid #91b9d3;
+        outline-offset: -2px;
+    }
+}
