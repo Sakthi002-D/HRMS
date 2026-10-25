@@ -15,7 +15,7 @@ import {
 import "./EmployeeDetails.css";
 
 import API_URL from "../../config/api";
-import { authHeaders } from "../../utils/auth";
+import { authHeaders, getAuthRole } from "../../utils/auth";
 // [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
     ["employment_contract", "Employment Contract", "HR"],
@@ -64,6 +64,7 @@ function EmployeeDetails() {
     const [uploadingDocument, setUploadingDocument] = useState("");
     const [employeeDocuments, setEmployeeDocuments] = useState({});
     const [documentToast, setDocumentToast] = useState(null);
+    const [d365Syncing, setD365Syncing] = useState(false);
     const [previewDocument, setPreviewDocument] = useState(null);
     const [openPanels, setOpenPanels] = useState({
         about: true,
@@ -152,6 +153,35 @@ function EmployeeDetails() {
             setError(t("employeeDetails.errors.connection", { defaultValue: "Unable to connect to backend" }));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const syncThisEmployee = async () => {
+        if (d365Syncing || !employee?.employee_id) return;
+        setD365Syncing(true);
+        try {
+            const response = await fetch(`${API_URL}/api/d365/sync/${encodeURIComponent(employee.employee_id)}`, { method: "POST" });
+            const data = await readApiResponse(response);
+            if (!response.ok) {
+                throw new Error(data.message || t("employeeDetails.d365Sync.failed", { defaultValue: "D365 sync failed" }));
+            }
+            setDocumentToast({
+                type: "success",
+                message: data.updated
+                    ? t("employeeDetails.d365Sync.updated", { defaultValue: "Synced from D365. Updated: {{fields}}", fields: data.fields.join(", ") })
+                    : t("employeeDetails.d365Sync.upToDate", { defaultValue: "Already up to date with D365" }),
+            });
+            const newSlug = createSlug(data.name);
+            if (data.updated && newSlug && newSlug !== employeeSlug) {
+                navigate(`/employees/employeedetails/${newSlug}`, { replace: true });
+            } else {
+                await fetchEmployee();
+            }
+        } catch (syncError) {
+            console.error("D365 single sync error:", syncError);
+            setDocumentToast({ type: "error", message: syncError.message || t("employeeDetails.d365Sync.failed", { defaultValue: "D365 sync failed" }) });
+        } finally {
+            setD365Syncing(false);
         }
     };
 
@@ -563,6 +593,13 @@ function EmployeeDetails() {
                         <div className="summary-actions">
                             <button type="button" onClick={openEditor}>✎ {t("employeeProfile.editInfo", { defaultValue: "Edit Info" })}</button>
                             <a href={`mailto:${employee.email}`}>▣ {t("employeeProfile.message", { defaultValue: "Message" })}</a>
+                            {getAuthRole() === "hr" && (
+                                <button type="button" className="d365-sync-button" onClick={syncThisEmployee} disabled={d365Syncing}>
+                                    {d365Syncing
+                                        ? t("employeeDetails.d365Sync.syncing", { defaultValue: "Syncing..." })
+                                        : t("employeeDetails.d365Sync.button", { defaultValue: "Sync this employee" })}
+                                </button>
+                            )}
                         </div>
                         <InfoSection title={t("employeeProfile.basic.title", { defaultValue: "Basic information" })} rows={detailRows} />
                         <InfoSection

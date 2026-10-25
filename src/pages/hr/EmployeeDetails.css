@@ -1239,3 +1239,14 @@
     border-color: #087df5;
     background: #d8efff;
 }
+
+.summary-actions .d365-sync-button {
+    grid-column: 1 / -1;
+    background: #e8f2ff;
+    color: #16466d;
+}
+
+.summary-actions .d365-sync-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}

@@ -31,7 +31,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHandler, requireAuth, requireHR, requireSelfOrHR, signToken, stripPassword } from "./middleware/auth.js";
 import { setAccountPassword } from "./services/accountCredentials.js";
 import { findPasswordIdentity, createResetPasswordHandler } from "./services/passwordRecovery.js";
-import { pullD365Changes, pushEmployeeToD365, startD365SyncScheduler } from "./services/d365EmployeeSync.js";
+import { runFullSync, syncSingleEmployee, pushEmployeeToD365, startD365SyncScheduler } from "./services/d365EmployeeSync.js";
 
 
 const app = express();
@@ -153,21 +153,35 @@ app.get("/api/d365/employees", async (req, res) => {
     }
 });
 
-// Manual D365 -> HRMS pull sync for linked employees (HR-only via the global API gate).
-let d365ManualSyncRunning = false;
-app.post("/api/d365/sync", async (req, res) => {
-    if (d365ManualSyncRunning) {
-        return res.status(409).json({ message: "A D365 sync is already running" });
-    }
-    d365ManualSyncRunning = true;
+// Manual D365 -> HRMS pull sync for linked employees (HR-only). Shares one lock with the scheduler.
+app.post("/api/d365/sync", requireAuth(pool), requireHR, async (req, res) => {
     try {
-        const summary = await pullD365Changes(pool);
+        const { alreadyRunning, summary } = await runFullSync(pool);
+        if (alreadyRunning) return res.status(409).json({ message: "Sync already running", alreadyRunning: true });
         res.json({ message: "D365 sync completed", ...summary });
     } catch (error) {
         console.error("D365 manual sync failed:", error.message);
         res.status(502).json({ message: "D365 sync failed" });
-    } finally {
-        d365ManualSyncRunning = false;
+    }
+});
+
+// Single-employee D365 -> HRMS pull (HR-only). No lock: it reads and writes one row only.
+const SINGLE_SYNC_ERRORS = {
+    "not-linked": [404, "This employee is not linked to D365"],
+    "missing-in-d365": [404, "Employee was not found in D365"],
+    "identity-mismatch": [502, "D365 returned a different employee record"],
+};
+app.post("/api/d365/sync/:employeeId", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await syncSingleEmployee(pool, req.params.employeeId);
+        if (!result.synced) {
+            const [status, message] = SINGLE_SYNC_ERRORS[result.reason] || [502, "D365 sync failed"];
+            return res.status(status).json({ message, reason: result.reason });
+        }
+        res.json({ message: "Employee synced from D365", ...result });
+    } catch (error) {
+        console.error(`D365 single sync failed for ${req.params.employeeId}:`, error.message);
+        res.status(502).json({ message: "D365 sync failed" });
     }
 });
 
