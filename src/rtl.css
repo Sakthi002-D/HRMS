@@ -454,17 +454,6 @@ html[dir="rtl"] .resignation-toast {
 }
 
 /* ---------- Tickets (HR) ---------- */
-/* Stat cards: the gap after the icon was margin-left, so in Arabic the label ran into the icon.
-   Mirror it: icon on the right, label next to it with the same gap, number at the far (left) end. */
-html[dir="rtl"] .summary-copy {
-    margin-left: 0;
-    margin-right: 16px;
-}
-
-html[dir="rtl"] .ticket-summary-card .summary-copy > strong {
-    margin-left: 0;
-    margin-right: auto;
-}
 
 /* Ticket Categories / Support Agents sidebar on the right in Arabic (requested), ticket list on the left.
    In RTL the first grid column is the right-hand one, so the sidebar takes column 1. */
@@ -507,30 +496,12 @@ html[dir="rtl"] .ticket-filters {
     }
 }
 
-/* Put On Hold / Resolve / Reopen button: bottom-LEFT corner of the ticket card */
-html[dir="rtl"] .ticket-action-button {
-    right: auto;
-    left: 18px;
-}
-
 /* Ticket number (TKT-0001) stays on one line */
 html[dir="rtl"] .ticket-number {
     white-space: nowrap;
 }
 
 /* ---------- Employee Salary / Payroll (HR) ---------- */
-
-/* Header: the 14px indent before the title moves to the right side */
-html[dir="rtl"] .payroll-header {
-    padding-left: 0;
-    padding-right: 14px;
-}
-
-/* Export menu opens from the button's left edge (mirror of right: 0) */
-html[dir="rtl"] .payroll-export-options {
-    right: auto;
-    left: 0;
-}
 
 /* Actions column: the cell was display: flex, so it stopped being a table cell and its
    bottom border / row background did not line up with the rest of the row.
@@ -549,107 +520,9 @@ html[dir="rtl"] .payroll-actions button + button {
     margin-right: 10px;
 }
 
-/* Add/Edit Salary form: Emp ID, email, phone and amounts are typed and shown left-to-right,
+/* Add/Edit Salary form: the month and amounts are typed and shown left-to-right,
    kept right-aligned like the other fields (same as the Add Employee form) */
-html[dir="rtl"] .salary-form-grid input[name="employeeID"],
-html[dir="rtl"] .salary-form-grid input[name="email"],
-html[dir="rtl"] .salary-form-grid input[name="phone"],
-html[dir="rtl"] .salary-form-grid input[name="basicSalary"],
-html[dir="rtl"] .salary-form-grid input[name="allowances"],
-html[dir="rtl"] .salary-form-grid input[name="deductions"] {
-    direction: ltr;
-    text-align: right;
-}
-
-/* ---------- Reports (hub + Employee / Attendance / Leave / Payroll / Annual Leave Accrual) ---------- */
-
-/* Page title: the blue accent bar (::before, left: 0) and the 14px gap next to it move to the right */
-html[dir="rtl"] .dashboard-content :is(.reports-header, .report-header, .payroll-report-header, .leave-report-header) > div:first-child {
-    padding-left: 0;
-    padding-right: 14px;
-}
-
-html[dir="rtl"] .dashboard-content :is(.reports-header, .report-header, .payroll-report-header, .leave-report-header) > div:first-child::before {
-    left: auto;
-    right: 0;
-}
-
-/* Report tables: headers are forced to text-align: left; align them right like the cells */
-html[dir="rtl"] .employee-report-table th,
-html[dir="rtl"] .report-table th,
-html[dir="rtl"] .leave-report-table th,
-html[dir="rtl"] .payroll-report-table th {
-    text-align: right;
-}
-
-/* Accrual toolbar: Export buttons sit at the far (left) end, mirror of the right end in English */
-html[dir="rtl"] .accrual-report-actions {
-    margin-left: 0;
-    margin-right: auto;
-}
-
-@media (max-width: 700px) {
-    html[dir="rtl"] .accrual-report-actions {
-        margin-right: 0;
-    }
-}
-
-/* ---------- Settings (HR) ---------- */
-
-/* Settings menu: the side line and the active item's coloured bar move to the right edge,
-   text aligned right, and the chevron goes to the far (left) end */
-html[dir="rtl"] .settings-navigation {
-    border-left: 0;
-    border-right: 2px solid #e5eaf0;
-}
-
-html[dir="rtl"] .settings-navigation button {
-    border-left: 0;
-    border-right: 3px solid transparent;
-    text-align: right;
-}
-
-html[dir="rtl"] .settings-navigation button.active {
-    border-right-color: #03a9f4;
-}
-
-html[dir="rtl"] .settings-navigation button svg:last-child {
-    margin-left: 0;
-    margin-right: auto;
-}
-
-/* Narrow screens: the menu becomes a grid with a bottom line, same as English */
-@media (max-width: 800px) {
-    html[dir="rtl"] .settings-navigation,
-    html[dir="rtl"] .settings-navigation button {
-        border-right: 0;
-    }
-}
-
-/* "CONFIGURATION" eyebrow: letter-spacing pulls Arabic letters apart and breaks their joining */
-html[dir="rtl"] .settings-eyebrow {
-    letter-spacing: 0;
-}
-
-/* On/off switches: the knob starts on the right and slides left when switched on */
-html[dir="rtl"] .settings-switch span {
-    left: auto;
-    right: 3px;
-}
-
-html[dir="rtl"] .settings-switch.on span {
-    transform: translateX(-20px);
-}
-
-/* Emails, colour code, currency symbol, timezone, date format and agency phone are typed left-to-right,
-   kept right-aligned like the other fields (same as the Add Employee form) */
-html[dir="rtl"] .settings-page input[dir="ltr"],
-html[dir="rtl"] .settings-page select[dir="ltr"] {
-    text-align: right;
-}
-
-/* Approval Workflows / Recruitment Masters / Resignation tables: headers align right like the cells */
-html[dir="rtl"] .rs-table th {
+html[dir="rtl"] .salary-modal input[dir="ltr"] {
     text-align: right;
 }
 

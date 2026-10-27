@@ -1,6 +1,7 @@
 // Shared helpers for the Manpower Request (MPR) screens in the HR and Employee portals.
 import i18n from "i18next";
 import API_URL from "../../config/api";
+import { formatAppDate, formatAppDateTime } from "../../utils/appSettings";
 
 export { API_URL };
 
@@ -58,23 +59,13 @@ export const formatMoney = (value) =>
         ? "—"
         : Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-export const formatDate = (value) => {
-    if (!value) return "—";
-    const date = new Date(String(value).length === 10 ? `${value}T00:00:00` : value);
-    return Number.isNaN(date.getTime())
-        ? value
-        : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-};
+// Follows the date format chosen in HR Settings
+export const formatDate = (value) => formatAppDate(value);
 
-// "01 Oct 2026 – 15 Oct 2026"; "—" when either date is missing (MPRs from before the application period)
+// "01-10-2026 – 15-10-2026"; "—" when either date is missing (MPRs from before the application period)
 export const formatDateRange = (start, end) => (start && end ? `${formatDate(start)} – ${formatDate(end)}` : "—");
 
-export const formatDateTime = (value) => {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-        ? "—"
-        : date.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-};
+export const formatDateTime = (value) => formatAppDateTime(value);
 
 // Budget check result that needs a justification (exceeded, or no budget for the department + year)
 export const isBudgetException = (budget) => ["exceeded", "no_budget"].includes(budget?.status);

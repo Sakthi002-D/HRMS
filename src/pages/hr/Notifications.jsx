@@ -8,6 +8,7 @@ import API_BASE from "../../config/api";
 import { ltrText, resignationStatusLabel } from "../../components/resignation/resignationApi";
 import DatePicker from "../../components/layout/common/DatePicker";
 import "./Notifications.css";
+import { formatAppDate, getAppSettings } from "../../utils/appSettings";
 
 const getHRProfile = () => {
   try {
@@ -29,14 +30,7 @@ const getHRName = (profile) => {
 };
 
 // Display date: 01 Oct 2026 (Qatar time)
-const formatDate = (value) => {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Qatar",
-  }).format(date);
-};
+const formatDate = (value) => formatAppDate(value, { timeZone: "Asia/Qatar" });
 
 // Date key for filtering: 2026-10-01 (Qatar time)
 const dateKey = (value) => {
@@ -149,7 +143,7 @@ function Notifications() {
         // Pending leave requests (same source as the dashboard bell)
         let leaveItems = [];
         const leaveResponse = await fetch(`${API_BASE}/api/leaves`);
-        if (leaveResponse.ok) {
+        if (leaveResponse.ok && getAppSettings().leaveNotifications !== false) {
           const leaves = await leaveResponse.json();
           leaveItems = leaves
             .filter((leave) => leave.status?.toLowerCase() === "pending")

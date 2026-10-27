@@ -23,6 +23,7 @@ import { api, formatDate, isPendingHR } from "../../components/resignation/resig
 import { loadEmployeeActivityNotifications } from "../../components/hr/hrNotificationSources";
 import "../../components/recruitment/recruitment.css";
 import API_URL from "../../config/api";
+import { formatAppDate, getAppSettings } from "../../utils/appSettings";
 import "./HRDashboard.css";
 
 const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -117,9 +118,10 @@ function HRDashboard() {
       const leaveResponse = await fetch(`${API_URL}/api/leaves`);
       if (!leaveResponse.ok) throw new Error("Unable to load notifications");
       const leaves = await leaveResponse.json();
-      const pendingLeaves = leaves.filter(
-        (leave) => leave.status?.toLowerCase() === "pending"
-      );
+      // HR Settings → Leave Notifications can switch these off
+      const pendingLeaves = getAppSettings().leaveNotifications === false
+        ? []
+        : leaves.filter((leave) => leave.status?.toLowerCase() === "pending");
 
       const leaveNotifications = pendingLeaves.map((leave) => ({
         id: `leave-${leave.id}`,
@@ -127,7 +129,7 @@ function HRDashboard() {
         title: `${leave.employee_name || leave.employee_id} requested leave`,
         message: `${leave.leave_type} request for ${leave.days || 1} day${Number(leave.days) === 1 ? "" : "s"}.`,
         time: leave.from_date
-          ? `From ${new Date(leave.from_date).toLocaleDateString()}`
+          ? `From ${formatAppDate(leave.from_date)}`
           : "Pending review",
         path: "/leave-management",
       }));
@@ -142,7 +144,7 @@ function HRDashboard() {
             type: "request",
             title: item.title,
             message: item.message,
-            time: new Date(item.created_at).toLocaleDateString(),
+            time: formatAppDate(item.created_at),
             path: String(item.link || "").startsWith("resignation:") ? "/resignations" : "/recruitment",
           }));
         }

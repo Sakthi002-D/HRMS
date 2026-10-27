@@ -7,6 +7,7 @@
 
 import nodemailer from "nodemailer";
 import pool from "../db.js";
+import { getAppSettingsSafe } from "./appSettings.js";
 
 export async function ensureNotificationSchema(db = pool) {
     await db.query(`
@@ -64,17 +65,27 @@ export async function createNotifications(db, recipientIds, { type = "general", 
 // Fire-and-forget: email failures never break the workflow.
 // Optional per mail: plainSubject (no "HRMS:" prefix) and signature (default "HRMS"),
 // for emails to people outside the company such as job applicants.
-export function sendQueuedEmails(queue) {
+// HR Settings apply: "Email Notifications" off skips emails to staff (applicant emails
+// are replies to a form they submitted, so they still go out), the company name appears
+// in the sender / signature and the support email becomes the Reply-To address.
+export async function sendQueuedEmails(queue) {
     const mailer = getTransporter();
     if (!mailer || !queue?.length) return;
 
+    const settings = await getAppSettingsSafe();
+    const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
+
     queue.forEach((mail) => {
+        if (!mail.plainSubject && settings.emailNotifications === false) return;
+
+        const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
         mailer
             .sendMail({
-                from: `"${mail.plainSubject ? "Shelter Group Careers" : "HRMS"}" <${process.env.EMAIL_USER}>`,
+                from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
+                ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
                 to: mail.to,
                 subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
-                text: `Hello ${mail.name || ""},\n\n${mail.text}\n\nRegards,\n${mail.signature || "HRMS"}`,
+                text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${mail.signature || `${company} HRMS`}`,
             })
             .catch((error) => console.error("Notification email failed:", error.message));
     });

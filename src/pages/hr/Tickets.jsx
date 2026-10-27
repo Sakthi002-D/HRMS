@@ -60,7 +60,7 @@ const valueKey = (value) => String(value).trim().toLowerCase().replace(/[\s&-]+/
 function Tickets() {
     const { t } = useTranslation();
     const valueLabel = (group, value) => t(`tickets.values.${group}.${valueKey(value)}`, { defaultValue: String(value) });
-    const currentUserId = useMemo(getCurrentUserId, []);
+    const currentUserId = useMemo(() => getCurrentUserId(), []);
     const [search, setSearch] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
     const [tickets, setTickets] = useState([]);
@@ -83,24 +83,20 @@ function Tickets() {
         setAgents(agentRows);
     }, []);
 
-    const loadAll = useCallback(async () => {
-        setLoading(true);
-        setError("");
-        try {
-            const [ticketRows, employeeRows] = await Promise.all([request("/tickets"), request("/employees")]);
-            setTickets(ticketRows);
-            setEmployees(employeeRows);
-            await loadSidebar();
-        } catch (loadError) {
-            setError(loadError.message || i18n.t("tickets.errors.loadFailed", { defaultValue: "Unable to load tickets" }));
-        } finally {
-            setLoading(false);
-        }
-    }, [loadSidebar]);
-
     useEffect(() => {
-        loadAll();
-    }, [loadAll]);
+        let cancelled = false;
+        Promise.all([request("/tickets"), request("/employees"), request("/ticket-categories"), request("/support-agents")])
+            .then(([ticketRows, employeeRows, categoryRows, agentRows]) => {
+                if (cancelled) return;
+                setTickets(ticketRows);
+                setEmployees(employeeRows);
+                setCategories(categoryRows);
+                setAgents(agentRows);
+            })
+            .catch((loadError) => { if (!cancelled) setError(loadError.message || i18n.t("tickets.errors.loadFailed", { defaultValue: "Unable to load tickets" })); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, []);
 
     const filteredTickets = useMemo(() => {
         const query = search.toLowerCase();
@@ -170,6 +166,17 @@ function Tickets() {
         try {
             await request("/support-agents", { method: "POST", body: JSON.stringify(agentForm) });
             setAgentForm({ employee_id: "", category_id: "" });
+            loadSidebar();
+        } catch (agentError) {
+            setError(agentError.message);
+        }
+    };
+
+    const removeAgent = async (agent) => {
+        try {
+            await request(`/support-agents/${agent.id}`, { method: "DELETE" });
+            // Their open tickets were sent back to the pool, so refresh the list too
+            setTickets(await request("/tickets"));
             loadSidebar();
         } catch (agentError) {
             setError(agentError.message);
@@ -256,7 +263,7 @@ function Tickets() {
                 <div className={`tickets-content ${isCompact ? "compact-tickets" : ""}`}>
                     <section className="ticket-list">
                         {filteredTickets.map((ticket) => (
-                            <article className="ticket-row" key={ticket.id}>
+                            <article className={`ticket-row prio-${ticket.priority.toLowerCase()}`} key={ticket.id}>
                                 <div className="ticket-row-header"><span className="ticket-category-label">{ticket.category_name ? valueLabel("category", ticket.category_name) : t("tickets.general", { defaultValue: "General" })}</span><span className={`priority-badge ${ticket.priority.toLowerCase()}`}>• {valueLabel("priority", ticket.priority)}</span></div>
                                 <div className="ticket-row-body"><span className="ticket-number" dir="ltr">{ticket.ticket_code}</span><div className="ticket-title-line"><h3>{ticket.subject}</h3><span className={`status-badge ${ticket.status.toLowerCase().replace(" ", "-")}`}>• {valueLabel("status", ticket.status)}</span></div>
                                     {ticket.description && <p className="ticket-description">{ticket.description}</p>}
@@ -298,7 +305,10 @@ function Tickets() {
                                 ? agents.map((agent) => (
                                     <div className="ticket-side-row" key={agent.id}>
                                         <span className="agent-name"><span className="agent-dot" />{agent.name}{agent.category_name ? ` · ${valueLabel("category", agent.category_name)}` : ""}</span>
-                                        <strong>{agent.open_count}</strong>
+                                        <span className="agent-side-actions">
+                                            <strong>{agent.open_count}</strong>
+                                            <button type="button" className="agent-remove" aria-label={t("tickets.sidebar.removeAgent", { defaultValue: "Remove agent" })} title={t("tickets.sidebar.removeAgent", { defaultValue: "Remove agent" })} onClick={() => removeAgent(agent)}><X size={13} /></button>
+                                        </span>
                                     </div>
                                 ))
                                 : <p className="ticket-side-empty">{t("tickets.sidebar.noAgents", { defaultValue: "No support agent data available." })}</p>}
@@ -322,41 +332,57 @@ function Tickets() {
                 {showForm && (
                     <div className="ticket-modal-overlay" onClick={() => !saving && setShowForm(false)}>
                         <form className="ticket-modal" onClick={(event) => event.stopPropagation()} onSubmit={createTicket}>
-                            <div className="ticket-modal-header">
-                                <h2>{t("tickets.addTicket", { defaultValue: "Add Ticket" })}</h2>
-                                <button type="button" className="ticket-icon-button" aria-label={t("recruitment.common.close", { defaultValue: "Close" })} onClick={() => setShowForm(false)}><X size={16} /></button>
+                            <div className="ticket-modal-head">
+                                <span className="ticket-modal-icon"><TicketIcon size={20} /></span>
+                                <div>
+                                    <h2>{t("tickets.addTicket", { defaultValue: "Add Ticket" })}</h2>
+                                    <p>{t("tickets.form.subtitle", { defaultValue: "Leaving Assign To empty picks the free agent for the category automatically." })}</p>
+                                </div>
+                                <button type="button" className="ticket-modal-close" aria-label={t("recruitment.common.close", { defaultValue: "Close" })} onClick={() => setShowForm(false)} disabled={saving}><X size={16} /></button>
                             </div>
-                            <label>{t("tickets.form.subject", { defaultValue: "Subject" })}<input value={form.subject} onChange={setField("subject")} placeholder={t("tickets.form.subjectPlaceholder", { defaultValue: "Short summary of the issue" })} autoFocus /></label>
-                            <label>{t("tickets.form.description", { defaultValue: "Description" })}<textarea value={form.description} onChange={setField("description")} rows={4} placeholder={t("tickets.form.descriptionPlaceholder", { defaultValue: "Details (optional)" })} /></label>
-                            <div className="ticket-modal-grid">
-                                <label>{t("tickets.form.category", { defaultValue: "Category" })}
-                                    <select value={form.category_id} onChange={setField("category_id")}>
-                                        <option value="">{t("tickets.general", { defaultValue: "General" })}</option>
-                                        {categories.map((category) => <option key={category.id} value={category.id}>{valueLabel("category", category.name)}</option>)}
-                                    </select>
+                            <div className="ticket-modal-body">
+                                <label className="ticket-field">
+                                    <span>{t("tickets.form.subject", { defaultValue: "Subject" })}</span>
+                                    <input value={form.subject} onChange={setField("subject")} placeholder={t("tickets.form.subjectPlaceholder", { defaultValue: "Short summary of the issue" })} autoFocus />
                                 </label>
-                                <label>{t("tickets.form.priority", { defaultValue: "Priority" })}
-                                    <select value={form.priority} onChange={setField("priority")}>
-                                        {PRIORITIES.map((priority) => <option key={priority} value={priority}>{valueLabel("priority", priority)}</option>)}
-                                    </select>
+                                <label className="ticket-field">
+                                    <span>{t("tickets.form.description", { defaultValue: "Description" })}</span>
+                                    <textarea value={form.description} onChange={setField("description")} rows={4} placeholder={t("tickets.form.descriptionPlaceholder", { defaultValue: "Details (optional)" })} />
                                 </label>
-                                <label>{t("tickets.form.raisedBy", { defaultValue: "Raised By" })}
-                                    <select value={form.raised_by} onChange={setField("raised_by")}>
-                                        <option value="">{t("tickets.form.selectEmployee", { defaultValue: "Select employee" })}</option>
-                                        {employees.map((employee) => <option key={employee.employee_id} value={employee.employee_id}>{employee.name} ({employee.employee_id})</option>)}
-                                    </select>
-                                </label>
-                                <label>{t("tickets.form.assignTo", { defaultValue: "Assign To" })}
-                                    <select value={form.assigned_to} onChange={setField("assigned_to")}>
-                                        <option value="">{t("tickets.form.autoAssign", { defaultValue: "Auto-assign" })}</option>
-                                        {agents.map((agent) => <option key={agent.employee_id} value={agent.employee_id}>{agent.name}</option>)}
-                                    </select>
-                                </label>
+                                <div className="ticket-modal-grid">
+                                    <label className="ticket-field">
+                                        <span>{t("tickets.form.category", { defaultValue: "Category" })}</span>
+                                        <select value={form.category_id} onChange={setField("category_id")}>
+                                            <option value="">{t("tickets.general", { defaultValue: "General" })}</option>
+                                            {categories.map((category) => <option key={category.id} value={category.id}>{valueLabel("category", category.name)}</option>)}
+                                        </select>
+                                    </label>
+                                    <label className="ticket-field">
+                                        <span>{t("tickets.form.priority", { defaultValue: "Priority" })}</span>
+                                        <select value={form.priority} onChange={setField("priority")}>
+                                            {PRIORITIES.map((priority) => <option key={priority} value={priority}>{valueLabel("priority", priority)}</option>)}
+                                        </select>
+                                    </label>
+                                    <label className="ticket-field">
+                                        <span>{t("tickets.form.raisedBy", { defaultValue: "Raised By" })}</span>
+                                        <select value={form.raised_by} onChange={setField("raised_by")}>
+                                            <option value="">{t("tickets.form.selectEmployee", { defaultValue: "Select employee" })}</option>
+                                            {employees.map((employee) => <option key={employee.employee_id} value={employee.employee_id}>{employee.name} ({employee.employee_id})</option>)}
+                                        </select>
+                                    </label>
+                                    <label className="ticket-field">
+                                        <span>{t("tickets.form.assignTo", { defaultValue: "Assign To" })}</span>
+                                        <select value={form.assigned_to} onChange={setField("assigned_to")}>
+                                            <option value="">{t("tickets.form.autoAssign", { defaultValue: "Auto-assign" })}</option>
+                                            {agents.map((agent) => <option key={agent.employee_id} value={agent.employee_id}>{agent.name}</option>)}
+                                        </select>
+                                    </label>
+                                </div>
+                                {formError && <p className="ticket-form-error" role="alert">{formError}</p>}
                             </div>
-                            {formError && <p className="ticket-form-error">{formError}</p>}
                             <div className="ticket-modal-actions">
-                                <button type="button" className="ticket-export-button" onClick={() => setShowForm(false)} disabled={saving}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
-                                <button type="submit" className="add-ticket-button" disabled={saving}>{saving
+                                <button type="button" className="ticket-btn-ghost" onClick={() => setShowForm(false)} disabled={saving}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
+                                <button type="submit" className="ticket-btn-primary" disabled={saving}>{saving
                                     ? t("tickets.form.creating", { defaultValue: "Creating..." })
                                     : t("tickets.form.create", { defaultValue: "Create Ticket" })}</button>
                             </div>

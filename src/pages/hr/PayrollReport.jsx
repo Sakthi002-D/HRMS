@@ -1,113 +1,93 @@
-import { Link } from "react-router-dom";
+import { Banknote, CircleCheck, Hourglass, Users, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import ReportChart from "../../components/layout/common/ReportChart";
-import "./PayrollReport.css";
+import {
+    ReportChart,
+    ReportHero,
+    ReportPage,
+    ReportTable,
+    StatCard,
+    StatGrid,
+} from "../../components/reports/ReportKit";
+
+const payrollData = [];
 
 function PayrollReport() {
     const { t } = useTranslation();
 
-    const payrollData = [];
+    const noData = t("reports.payroll.noPayrollData", { defaultValue: "No payroll data" });
+
+    const columns = [
+        {
+            key: "employeeID",
+            header: t("reports.common.employeeId", { defaultValue: "Employee ID" }),
+            render: (employee) => <span dir="ltr" className="rp-cell-id">{employee.employeeID}</span>,
+        },
+        {
+            key: "employeeName",
+            header: t("reports.common.employeeName", { defaultValue: "Employee Name" }),
+            render: (employee) => <span className="rp-cell-main">{employee.employeeName}</span>,
+        },
+        { key: "department", header: t("reports.common.department", { defaultValue: "Department" }) },
+        {
+            key: "basicSalary",
+            header: t("employeePayroll.basicSalary", { defaultValue: "Basic Salary" }),
+            align: "end",
+            render: (employee) => <span dir="ltr" className="rp-cell-num">{employee.basicSalary}</span>,
+        },
+        {
+            key: "allowances",
+            header: t("employeePayroll.allowances", { defaultValue: "Allowances" }),
+            align: "end",
+            render: (employee) => <span dir="ltr" className="rp-cell-num">{employee.allowances}</span>,
+        },
+        {
+            key: "deductions",
+            header: t("employeePayroll.deductions", { defaultValue: "Deductions" }),
+            align: "end",
+            render: (employee) => <span dir="ltr" className="rp-cell-num">{employee.deductions}</span>,
+        },
+        {
+            key: "netSalary",
+            header: t("employeePayroll.netSalary", { defaultValue: "Net Salary" }),
+            align: "end",
+            render: (employee) => <span dir="ltr" className="rp-cell-num">{employee.netSalary}</span>,
+        },
+    ];
 
     return (
         <DashboardLayout>
+            <ReportPage tone="amber">
 
-            <div className="payroll-report-page">
+                <ReportHero
+                    icon={Wallet}
+                    title={t("reports.hub.cards.payroll.title", { defaultValue: "Payroll Report" })}
+                    subtitle={t("reports.hub.cards.payroll.description", { defaultValue: "View salary, deductions and payroll information." })}
+                />
 
-                <div className="payroll-report-header">
-                    <div>
-                        <h1>{t("reports.hub.cards.payroll.title", { defaultValue: "Payroll Report" })}</h1>
-                        <p>{t("reports.hub.cards.payroll.description", { defaultValue: "View salary, deductions and payroll information." })}</p>
-                    </div>
-                    <Link className="report-back-button" to="/reports">{t("reports.common.backToReports", { defaultValue: "Back to Reports" })}</Link>
-                </div>
-
-                <div className="payroll-report-summary">
-
-                    <div className="payroll-report-card">
-                        <h3>{t("reports.payroll.totalPayroll", { defaultValue: "Total Payroll" })}</h3>
-                        <h2>—</h2>
-                        <p>{t("reports.payroll.noPayrollData", { defaultValue: "No payroll data" })}</p>
-                    </div>
-
-                    <div className="payroll-report-card">
-                        <h3>{t("reports.payroll.processed", { defaultValue: "Processed" })}</h3>
-                        <h2>—</h2>
-                        <p>{t("reports.payroll.noPayrollData", { defaultValue: "No payroll data" })}</p>
-                    </div>
-
-                    <div className="payroll-report-card">
-                        <h3>{t("leaveDetails.status.pending", { defaultValue: "Pending" })}</h3>
-                        <h2>—</h2>
-                        <p>{t("reports.payroll.noPayrollData", { defaultValue: "No payroll data" })}</p>
-                    </div>
-
-                    <div className="payroll-report-card">
-                        <h3>{t("reports.common.employees", { defaultValue: "Employees" })}</h3>
-                        <h2>—</h2>
-                        <p>{t("reports.payroll.noPayrollData", { defaultValue: "No payroll data" })}</p>
-                    </div>
-
-                </div>
+                <StatGrid>
+                    <StatCard icon={Banknote} tone="amber" label={t("reports.payroll.totalPayroll", { defaultValue: "Total Payroll" })} value="—" hint={noData} />
+                    <StatCard icon={CircleCheck} tone="green" label={t("reports.payroll.processed", { defaultValue: "Processed" })} value="—" hint={noData} />
+                    <StatCard icon={Hourglass} tone="violet" label={t("leaveDetails.status.pending", { defaultValue: "Pending" })} value="—" hint={noData} />
+                    <StatCard icon={Users} tone="blue" label={t("reports.common.employees", { defaultValue: "Employees" })} value="—" hint={noData} />
+                </StatGrid>
 
                 <ReportChart
                     title={t("reports.payroll.chartTitle", { defaultValue: "Payroll Trend" })}
-                    labels={[t("reports.common.noData", { defaultValue: "No data" })]}
-                    series={[{ name: t("reports.payroll.netPayroll", { defaultValue: "Net Payroll" }), color: "#ff7055", values: [0] }]}
+                    labels={[]}
+                    series={[{ name: t("reports.payroll.netPayroll", { defaultValue: "Net Payroll" }), color: "#d18a12", values: [] }]}
                 />
 
-                <div className="payroll-report-table-container">
+                <ReportTable
+                    title={t("reports.payroll.tableTitle", { defaultValue: "Employee Payroll" })}
+                    columns={columns}
+                    rows={payrollData}
+                    rowKey={(employee) => employee.employeeID}
+                    emptyText={t("reports.payroll.empty", { defaultValue: "No payroll data available." })}
+                    minWidth={860}
+                />
 
-                    <h2>{t("reports.payroll.tableTitle", { defaultValue: "Employee Payroll" })}</h2>
-
-                    <table className="payroll-report-table">
-
-                        <thead>
-                            <tr>
-                                <th>{t("reports.common.employeeId", { defaultValue: "Employee ID" })}</th>
-                                <th>{t("reports.common.employeeName", { defaultValue: "Employee Name" })}</th>
-                                <th>{t("reports.common.department", { defaultValue: "Department" })}</th>
-                                <th>{t("employeePayroll.basicSalary", { defaultValue: "Basic Salary" })}</th>
-                                <th>{t("employeePayroll.allowances", { defaultValue: "Allowances" })}</th>
-                                <th>{t("employeePayroll.deductions", { defaultValue: "Deductions" })}</th>
-                                <th>{t("employeePayroll.netSalary", { defaultValue: "Net Salary" })}</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            {payrollData.length === 0 ? (
-                                <tr><td colSpan="7">{t("reports.payroll.empty", { defaultValue: "No payroll data available." })}</td></tr>
-                            ) : payrollData.map((employee) => (
-                                <tr key={employee.employeeID}>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.employeeID}</span></td>
-
-                                    <td>{employee.employeeName}</td>
-
-                                    <td>{employee.department}</td>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.basicSalary}</span></td>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.allowances}</span></td>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.deductions}</span></td>
-
-                                    <td>
-                                        <strong><span dir="ltr" className="ltr-text">{employee.netSalary}</span></strong>
-                                    </td>
-
-                                </tr>
-                            ))}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
+            </ReportPage>
         </DashboardLayout>
     );
 }

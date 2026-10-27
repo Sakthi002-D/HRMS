@@ -16,6 +16,7 @@ import "./EmployeeDetails.css";
 
 import API_URL from "../../config/api";
 import { authHeaders, getAuthRole } from "../../utils/auth";
+import { formatAppDate } from "../../utils/appSettings";
 // [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
     ["employment_contract", "Employment Contract", "HR"],
@@ -194,11 +195,7 @@ function EmployeeDetails() {
             return date;
         }
 
-        return parsedDate.toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        });
+        return formatAppDate(parsedDate);
     };
 
     const formatQid = (employeeId) => {

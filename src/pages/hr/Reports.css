@@ -1,209 +1,265 @@
-* {
-    box-sizing: border-box;
+/* Reports hub — shared look comes from components/reports/ReportKit.css */
+
+.hub-hero {
+    padding-block: 32px;
 }
 
-.reports-page {
-    min-height: 100vh;
-    background: transparent;
-    font-family: inherit;
+.hub-kicker {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
-.reports-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-    min-height: 78px;
-    margin-bottom: 22px;
-    background: transparent;
-    box-shadow: none;
-}
-
-.reports-header-actions {
+.hub-search {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.report-view-toggle {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    border: 1px solid #dce5ee;
-    border-radius: 8px;
-    background: #fff;
-    color: #173b5f;
-    cursor: pointer;
-}
-
-.report-view-toggle.active {
-    border-color: #03a9f4;
-    background: #03a9f4;
-    color: #fff;
-}
-
-.reports-header h1 {
-    margin: 0 0 5px;
-    color: #12304a;
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-}
-
-.reports-header p {
-    margin: 0;
-    color: #64748b;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-/* Summary */
-
-.reports-summary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-}
-
-.report-card {
-    background: white;
-    padding: 25px;
+    width: 250px;
+    max-width: 100%;
+    height: 40px;
+    padding: 0 13px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.report-card h3 {
-    margin: 0 0 15px;
-    color: #64748b;
-    font-size: 16px;
+.hub-search:focus-within {
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.2);
 }
 
-.report-card h2 {
-    margin: 0 0 8px;
-    color: #12304a;
-    font-size: 28px;
-}
-
-.report-card p {
-    margin: 0;
-    color: #64748b;
-    font-size: 14px;
-}
-
-/* Reports */
-
-.reports-container {
-    margin-top: 30px;
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.reports-container h2 {
-    margin: 0 0 20px;
-    color: #12304a;
-    font-size: 22px;
-}
-
-.report-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-}
-
-.report-item {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    min-height: 78px;
-    padding: 16px 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-}
-
-.report-item h3 {
-    min-width: 190px;
-    margin: 0;
-    color: #12304a;
-}
-
-.report-item p {
+.hub-search input {
     flex: 1;
-    margin: 0;
-    color: #64748b;
-    font-size: 14px;
-}
-
-.report-item button {
-    border: none;
-    padding: 9px 15px;
-    border-radius: 5px;
-    background: #12304a;
-    color: white;
-    cursor: pointer;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
     font-size: 13px;
 }
 
-.report-item button:hover {
-    background: #1e496b;
+.hub-search input::placeholder {
+    color: rgba(255, 255, 255, 0.65);
 }
 
-.report-grid-view {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.hub-toggle {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.1);
 }
 
-.report-grid-view .report-item {
-    align-items: flex-start;
+.hub-toggle button {
+    display: grid;
+    width: 34px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.hub-toggle button:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.hub-toggle button.active {
+    background: #fff;
+    color: #0b2946;
+}
+
+/* Cards */
+
+.hub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+}
+
+.hub-card {
+    position: relative;
+    display: flex;
     flex-direction: column;
-    min-height: 150px;
+    gap: 16px;
+    overflow: hidden;
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid var(--rp-line);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 100% 0, var(--tone-soft) 0, transparent 55%),
+        #fff;
+    box-shadow: var(--rp-shadow);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.report-grid-view .report-item h3 {
+.hub-card::before {
+    position: absolute;
+    top: 0;
+    inset-inline: 0;
+    height: 4px;
+    background: var(--tone);
+    content: "";
+    opacity: 0.85;
+}
+
+.hub-card:hover,
+.hub-card:focus-visible {
+    border-color: var(--tone-border);
+    box-shadow: 0 18px 38px rgba(11, 41, 70, 0.14);
+    transform: translateY(-4px);
+}
+
+.hub-card:focus-visible {
+    outline: 2px solid var(--tone);
+    outline-offset: 3px;
+}
+
+.hub-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.hub-card-icon {
+    display: grid;
+    width: 50px;
+    height: 50px;
+    place-items: center;
+    border-radius: 15px;
+    background: var(--tone);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--tone) 35%, transparent);
+    color: #fff;
+    transition: transform 0.2s ease;
+}
+
+.hub-card:hover .hub-card-icon {
+    transform: scale(1.06) rotate(-4deg);
+}
+
+.hub-card-tag {
+    padding: 4px 10px;
+    border: 1px solid var(--tone-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--tone-ink);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.03em;
+}
+
+.hub-card-body {
+    flex: 1;
     min-width: 0;
 }
 
-.report-grid-view .report-item button {
-    margin-top: auto;
+.hub-card h3 {
+    margin: 0 0 6px;
+    color: var(--rp-ink);
+    font-size: 17px;
+    font-weight: 740;
+    letter-spacing: -0.01em;
+}
+
+.hub-card-desc {
+    display: block;
+    color: var(--rp-muted);
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+
+.hub-card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    color: var(--tone-ink);
+    font-size: 13px;
+    font-weight: 700;
+    transition: gap 0.2s ease;
+}
+
+.hub-card:hover .hub-card-cta {
+    gap: 11px;
+}
+
+/* List view */
+
+.hub-grid-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.hub-grid-list .hub-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 22px;
+}
+
+.hub-grid-list .hub-card::before {
+    top: 0;
+    bottom: 0;
+    inset-inline: 0 auto;
+    width: 4px;
+    height: auto;
+}
+
+.hub-grid-list .hub-card-top {
+    flex-shrink: 0;
+}
+
+.hub-grid-list .hub-card-tag {
+    display: none;
+}
+
+.hub-grid-list .hub-card-cta {
+    flex-shrink: 0;
+    align-self: center;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: var(--tone-soft);
+    white-space: nowrap;
+}
+
+.hub-grid-list .hub-card:hover .hub-card-cta {
+    background: var(--tone);
+    color: #fff;
 }
 
 @media (max-width: 700px) {
-    .reports-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .report-item {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .report-item h3 {
-        min-width: 0;
-    }
-
-    .report-item button {
+    .hub-search {
         width: 100%;
     }
 
-    .report-grid-view {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Responsive */
-
-@media (max-width: 1000px) {
-    .reports-summary {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 700px) {
-    .reports-summary {
+    .hub-grid {
         grid-template-columns: 1fr;
     }
 
+    .hub-grid-list .hub-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .hub-grid-list .hub-card-cta {
+        align-self: stretch;
+        justify-content: center;
+    }
 }

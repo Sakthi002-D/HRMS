@@ -33,7 +33,7 @@
 .rs-add-row input, .rs-add-row select { flex: 1 1 160px; min-width: 0; }
 
 .rs-table { width: 100%; border-collapse: collapse; }
-.rs-table th { padding: 10px; background: #f7fafc; color: #536b82; font-size: 12px; text-align: left; }
+.rs-table th { padding: 10px; background: #f7fafc; color: #536b82; font-size: 12px; text-align: start; }
 .rs-table td { padding: 10px; border-bottom: 1px solid #edf0f4; font-size: 13px; }
 
 .rs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -56,8 +56,8 @@
 
 .rs-chips .rs-chip .rs-chip-remove {
     position: absolute;
-    top: -7px;
-    right: -7px;
+    inset-block-start: -7px;
+    inset-inline-end: -7px;
     display: inline-grid;
     place-items: center;
     width: 20px;

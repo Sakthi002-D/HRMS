@@ -1,4 +1,5 @@
 import API_URL from "../../config/api";
+import { formatAppDate } from "../../utils/appSettings";
 
 // HR notifications built from employee activity:
 //   - Employee requests (Salary Certificate, NOC, Letter, Expense) → opens that request
@@ -21,7 +22,7 @@ const employeeSlug = (name) =>
 
 const shortDate = (value) => {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+    return Number.isNaN(date.getTime()) ? "" : formatAppDate(date);
 };
 
 const fetchJson = (url) =>

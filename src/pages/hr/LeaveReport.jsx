@@ -1,10 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { CalendarRange, CircleCheck, CircleX, FileText, Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import ReportChart from "../../components/layout/common/ReportChart";
+import {
+    Avatar,
+    ReportChart,
+    ReportHero,
+    ReportPage,
+    ReportTable,
+    StatCard,
+    StatGrid,
+    StatusPill,
+} from "../../components/reports/ReportKit";
 import API_URL from "../../config/api";
-import "./LeaveReport.css";
+
+const STATUS_TONE = { approved: "green", pending: "amber", rejected: "rose", cancelled: "slate" };
 
 function LeaveReport() {
     const { t } = useTranslation();
@@ -24,112 +34,132 @@ function LeaveReport() {
     }, []);
 
     const leaveTypes = useMemo(() => [...new Set(leaveData.map((leave) => leave.leave_type).filter(Boolean))].slice(0, 8), [leaveData]);
-    const leaveStatusLabel = (status) => t(`leaveDetails.status.${String(status).toLowerCase()}`, { defaultValue: String(status) });
-    const statusCount = (status) => leaveData.filter((leave) => String(leave.status).toLowerCase() === status.toLowerCase()).length;
+    const statusOf = (leave) => String(leave.status).toLowerCase();
+    const statusLabel = (status) => t(`leaveDetails.status.${status}`, { defaultValue: status.charAt(0).toUpperCase() + status.slice(1) });
+    const typeLabel = (type) => t(`leaveTypes.${type}`, { defaultValue: type });
+    const statusCount = (status) => leaveData.filter((leave) => statusOf(leave) === status).length;
+    const typeCount = (type, status) => leaveData.filter((leave) => leave.leave_type === type && statusOf(leave) === status).length;
+
+    const columns = [
+        {
+            key: "employee_id",
+            header: t("reports.common.employeeId", { defaultValue: "Employee ID" }),
+            render: (leave) => <span dir="ltr" className="rp-cell-id">{leave.employee_id}</span>,
+            nowrap: true,
+        },
+        {
+            key: "employee_name",
+            header: t("reports.common.employeeName", { defaultValue: "Employee Name" }),
+            render: (leave) => (
+                <div className="rp-person">
+                    <Avatar name={leave.employee_name} />
+                    <span className="rp-cell-main">{leave.employee_name}</span>
+                </div>
+            ),
+        },
+        {
+            key: "leave_type",
+            header: t("reports.leave.type", { defaultValue: "Leave Type" }),
+            render: (leave) => typeLabel(leave.leave_type),
+        },
+        {
+            key: "period",
+            header: t("reports.leave.period", { defaultValue: "Period" }),
+            render: (leave) => (
+                <span dir="ltr" className="rp-cell-muted">
+                    {leave.from_day || "-"}{leave.to_day && leave.to_day !== leave.from_day ? ` → ${leave.to_day}` : ""}
+                </span>
+            ),
+            nowrap: true,
+        },
+        {
+            key: "days",
+            header: t("reports.leave.days", { defaultValue: "Days" }),
+            align: "center",
+            render: (leave) => <span className="rp-cell-num">{leave.days}</span>,
+        },
+        {
+            key: "reason",
+            header: t("reports.leave.reason", { defaultValue: "Reason" }),
+            render: (leave) => <span className="rp-cell-muted">{leave.reason || "-"}</span>,
+        },
+        {
+            key: "status",
+            header: t("reports.common.status", { defaultValue: "Status" }),
+            render: (leave) => <StatusPill tone={STATUS_TONE[statusOf(leave)] || "slate"}>{statusLabel(statusOf(leave))}</StatusPill>,
+        },
+    ];
 
     return (
         <DashboardLayout>
+            <ReportPage tone="violet">
 
-            <div className="leave-report-page">
+                <ReportHero
+                    icon={CalendarRange}
+                    title={t("reports.hub.cards.leave.title", { defaultValue: "Leave Report" })}
+                    subtitle={t("reports.hub.cards.leave.description", { defaultValue: "View leave requests, approvals and leave usage." })}
+                />
 
-                <div className="leave-report-header">
-                    <div>
-                        <h1>{t("reports.hub.cards.leave.title", { defaultValue: "Leave Report" })}</h1>
-                        <p>{t("reports.hub.cards.leave.description", { defaultValue: "View leave requests, approvals and leave usage." })}</p>
-                    </div>
-                    <Link className="report-back-button" to="/reports">{t("reports.common.backToReports", { defaultValue: "Back to Reports" })}</Link>
-                </div>
-
-                <div className="leave-report-summary">
-
-                    <div className="leave-report-card">
-                        <h3>{t("reports.leave.totalRequests", { defaultValue: "Total Leave Requests" })}</h3>
-                        <h2>{loading ? "—" : leaveData.length}</h2>
-                        <p>{t("reports.leave.thisMonth", { defaultValue: "This month" })}</p>
-                    </div>
-
-                    <div className="leave-report-card">
-                        <h3>{t("leaveDetails.status.approved", { defaultValue: "Approved" })}</h3>
-                        <h2>{statusCount("Approved")}</h2>
-                        <p>{t("reports.leave.approvedRequests", { defaultValue: "Approved requests" })}</p>
-                    </div>
-
-                    <div className="leave-report-card">
-                        <h3>{t("leaveDetails.status.pending", { defaultValue: "Pending" })}</h3>
-                        <h2>{statusCount("Pending")}</h2>
-                        <p>{t("reports.leave.waitingApproval", { defaultValue: "Waiting for approval" })}</p>
-                    </div>
-
-                    <div className="leave-report-card">
-                        <h3>{t("leaveDetails.status.rejected", { defaultValue: "Rejected" })}</h3>
-                        <h2>{statusCount("Rejected")}</h2>
-                        <p>{t("reports.leave.rejectedRequests", { defaultValue: "Rejected requests" })}</p>
-                    </div>
-
-                </div>
+                <StatGrid>
+                    <StatCard
+                        icon={FileText}
+                        tone="violet"
+                        loading={loading}
+                        label={t("reports.leave.totalRequests", { defaultValue: "Total Leave Requests" })}
+                        value={leaveData.length}
+                        hint={t("reports.leave.allRequests", { defaultValue: "All requests" })}
+                    />
+                    <StatCard
+                        icon={CircleCheck}
+                        tone="green"
+                        loading={loading}
+                        label={t("leaveDetails.status.approved", { defaultValue: "Approved" })}
+                        value={statusCount("approved")}
+                        progress={leaveData.length ? (statusCount("approved") / leaveData.length) * 100 : 0}
+                        hint={t("reports.leave.approvedRequests", { defaultValue: "Approved requests" })}
+                    />
+                    <StatCard
+                        icon={Hourglass}
+                        tone="amber"
+                        loading={loading}
+                        label={t("leaveDetails.status.pending", { defaultValue: "Pending" })}
+                        value={statusCount("pending")}
+                        hint={t("reports.leave.waitingApproval", { defaultValue: "Waiting for approval" })}
+                    />
+                    <StatCard
+                        icon={CircleX}
+                        tone="rose"
+                        loading={loading}
+                        label={t("leaveDetails.status.rejected", { defaultValue: "Rejected" })}
+                        value={statusCount("rejected")}
+                        hint={t("reports.leave.rejectedRequests", { defaultValue: "Rejected requests" })}
+                    />
+                </StatGrid>
 
                 <ReportChart
                     title={t("reports.leave.chartTitle", { defaultValue: "Leave Usage" })}
-                    labels={leaveTypes.length ? leaveTypes.map((type) => t(`leaveTypes.${type}`, { defaultValue: type })) : [t("reports.common.noData", { defaultValue: "No data" })]}
-                    series={[{ name: t("leaveDetails.status.approved", { defaultValue: "Approved" }), color: "#00bf65", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "approved").length) }, { name: t("leaveDetails.status.pending", { defaultValue: "Pending" }), color: "#ffbd12", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "pending").length) }, { name: t("leaveDetails.status.rejected", { defaultValue: "Rejected" }), color: "#202b36", values: leaveTypes.map((type) => leaveData.filter((leave) => leave.leave_type === type && String(leave.status).toLowerCase() === "rejected").length) }]}
+                    subtitle={t("reports.leave.chartSubtitle", { defaultValue: "Requests by leave type and status" })}
+                    labels={leaveTypes.map(typeLabel)}
+                    series={[
+                        { name: statusLabel("approved"), color: "#2f9e52", values: leaveTypes.map((type) => typeCount(type, "approved")) },
+                        { name: statusLabel("pending"), color: "#e3a21a", values: leaveTypes.map((type) => typeCount(type, "pending")) },
+                        { name: statusLabel("rejected"), color: "#e0476f", values: leaveTypes.map((type) => typeCount(type, "rejected")) },
+                    ]}
                 />
 
-                <div className="leave-report-table-container">
+                <ReportTable
+                    title={t("reports.leave.tableTitle", { defaultValue: "Leave Requests" })}
+                    columns={columns}
+                    rows={leaveData}
+                    rowKey={(leave) => leave.id}
+                    loading={loading}
+                    loadingText={t("reports.leave.loading", { defaultValue: "Loading leave data..." })}
+                    emptyText={t("reports.leave.empty", { defaultValue: "No leave data available." })}
+                    searchText={(leave) => `${leave.employee_id} ${leave.employee_name} ${leave.leave_type} ${leave.reason ?? ""} ${leave.status}`}
+                    minWidth={900}
+                />
 
-                    <h2>{t("reports.leave.tableTitle", { defaultValue: "Employee Leave Balance" })}</h2>
-
-                    <table className="leave-report-table">
-
-                        <thead>
-                            <tr>
-                                <th>{t("reports.common.employeeId", { defaultValue: "Employee ID" })}</th>
-                                <th>{t("reports.common.employeeName", { defaultValue: "Employee Name" })}</th>
-                                <th>{t("reports.common.department", { defaultValue: "Department" })}</th>
-                                <th>{t("reports.leave.days", { defaultValue: "Days" })}</th>
-                                <th>{t("reports.common.status", { defaultValue: "Status" })}</th>
-                                <th>{t("reports.leave.reason", { defaultValue: "Reason" })}</th>
-                                <th>{t("reports.common.status", { defaultValue: "Status" })}</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            {loading ? (
-                                <tr><td colSpan="7">{t("reports.leave.loading", { defaultValue: "Loading leave data..." })}</td></tr>
-                            ) : leaveData.length === 0 ? (
-                                <tr><td colSpan="7">{t("reports.leave.empty", { defaultValue: "No leave data available." })}</td></tr>
-                            ) : leaveData.map((employee) => (
-                                <tr key={employee.employeeID}>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.employee_id}</span></td>
-
-                                    <td>{employee.employee_name}</td>
-
-                                    <td>{employee.department}</td>
-
-                                    <td>{employee.days}</td>
-
-                                    <td>{leaveStatusLabel(employee.status)}</td>
-
-                                    <td>{employee.reason || "-"}</td>
-
-                                    <td>
-                                        <span className={`leave-report-status ${String(employee.status).toLowerCase()}`}>
-                                            {leaveStatusLabel(employee.status)}
-                                        </span>
-                                    </td>
-
-                                </tr>
-                            ))}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
+            </ReportPage>
         </DashboardLayout>
     );
 }

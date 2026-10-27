@@ -13,6 +13,7 @@ import "./LeaveManagement.css";
 import { useAlert } from "../../components/common/dialog/dialogContext";
 import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
 import API_BASE_URL from "../../config/api";
+import { formatAppDate } from "../../utils/appSettings";
 
 const API_URL = `${API_BASE_URL}/api/leaves`;
 const POLICY_API_URL = API_URL.replace(/\/leaves$/, "/leave-policies");
@@ -143,11 +144,7 @@ function LeaveManagement() {
             return date;
         }
 
-        return parsedDate.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        });
+        return formatAppDate(parsedDate);
     };
 
     // =========================================================

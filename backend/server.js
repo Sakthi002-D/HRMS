@@ -9,6 +9,8 @@ import recruitmentRouter from "./routes/recruitment.js";
 import ticketsRouter from "./routes/tickets.js";
 import resignationsRouter from "./routes/resignations.js";
 import careersRouter from "./routes/careers.js";
+import appSettingsRouter from "./routes/appSettings.js";
+import { ensureAppSettingsSchema } from "./services/appSettings.js";
 import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/employeeDocuments.js";
 import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
@@ -59,6 +61,8 @@ app.use("/api", ticketsRouter);
 app.use("/api", resignationsRouter);
 // Public Careers page + HR Recruitment → Job Applications
 app.use("/api", careersRouter);
+// Workspace settings (company name, date format, session timeout, notification switches)
+app.use("/api", appSettingsRouter);
 // Employee documents: HR uploads Contract / Offer Letter / QID, employee uploads Visa / Passport
 app.use("/api", employeeDocumentsRouter);
 
@@ -1524,28 +1528,69 @@ app.post("/api/employees/:employeeId/change-password", requireAuth(pool), requir
 // EMPLOYEE SALARY APIs
 // =========================
 
+const PAYROLL_SELECT = `
+    SELECT
+        s.payroll_id AS id,
+        s.employee_id AS "employeeID",
+        e.name AS "employeeName",
+        e.department,
+        e.designation,
+        e.email,
+        e.phone,
+        e.joining_date AS "joiningDate",
+        to_char(s.salary_month, 'YYYY-MM-DD') AS "salaryMonth",
+        s.basic_salary AS "basicSalary",
+        s.allowances,
+        s.deductions,
+        s.net_salary AS "netSalary",
+        s.status,
+        s.updated_at AS "updatedAt"
+    FROM employee_payroll s
+    JOIN employees e ON e.employee_id = s.employee_id
+`;
+
+const PAYROLL_STATUSES = ["Pending", "Processed"];
+
+// Validates the salary form and normalises the month to its first day; returns { error } or { values }
+const parsePayrollBody = async (body) => {
+    const employeeID = String(body.employeeID || "").trim().toUpperCase();
+    const month = String(body.salaryMonth || "").slice(0, 7);
+    if (!employeeID) return { error: "Select an employee" };
+    if (!/^\d{4}-\d{2}$/.test(month)) return { error: "Select a salary month" };
+    const amounts = {};
+    for (const field of ["basicSalary", "allowances", "deductions"]) {
+        const value = Number(body[field] ?? 0);
+        if (!Number.isFinite(value) || value < 0) return { error: "Amounts must be zero or more" };
+        amounts[field] = Math.round(value * 100) / 100;
+    }
+    if (amounts.basicSalary <= 0) return { error: "Basic salary is required" };
+    const status = PAYROLL_STATUSES.includes(body.status) ? body.status : "Pending";
+    const employee = await pool.query("SELECT 1 FROM employees WHERE employee_id = $1", [employeeID]);
+    if (!employee.rows.length) return { error: "Employee not found" };
+    return {
+        values: {
+            employeeID,
+            salaryMonth: `${month}-01`,
+            ...amounts,
+            netSalary: Math.round((amounts.basicSalary + amounts.allowances - amounts.deductions) * 100) / 100,
+            status,
+        },
+    };
+};
+
+const payrollMonthExists = async (employeeID, salaryMonth, excludeId = null) => {
+    const result = await pool.query(
+        `SELECT 1 FROM employee_payroll
+         WHERE employee_id = $1 AND date_trunc('month', salary_month) = date_trunc('month', $2::date)
+           AND ($3::int IS NULL OR payroll_id <> $3::int)`,
+        [employeeID, salaryMonth, excludeId]
+    );
+    return result.rows.length > 0;
+};
+
 app.get("/api/payroll", async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT
-                s.payroll_id AS id,
-                s.employee_id AS "employeeID",
-                e.name AS "employeeName",
-                e.department,
-                e.designation,
-                e.email,
-                e.phone,
-                e.joining_date AS "joiningDate",
-                s.salary_month AS "salaryMonth",
-                s.basic_salary AS "basicSalary",
-                s.allowances,
-                s.deductions,
-                s.net_salary AS "netSalary",
-                s.status
-            FROM employee_payroll s
-            JOIN employees e ON e.employee_id = s.employee_id
-            ORDER BY s.salary_month DESC, s.employee_id ASC
-        `);
+        const result = await pool.query(`${PAYROLL_SELECT} ORDER BY s.salary_month DESC, s.employee_id ASC`);
         res.json(result.rows);
     } catch (error) {
         console.error("Error fetching payroll:", error);
@@ -1773,16 +1818,18 @@ app.get("/api/notifications/employee/:employeeId", async (req, res) => {
 
 app.post("/api/payroll", async (req, res) => {
     try {
-        const { employeeID, salaryMonth, basicSalary, allowances, deductions, status } = req.body;
-        if (!employeeID || !salaryMonth) {
-            return res.status(400).json({ message: "Employee ID and salary month are required" });
+        const { error, values } = await parsePayrollBody(req.body);
+        if (error) return res.status(400).json({ message: error });
+        if (await payrollMonthExists(values.employeeID, values.salaryMonth)) {
+            return res.status(409).json({ message: "A salary record already exists for this employee and month" });
         }
-        const result = await pool.query(`
+        const inserted = await pool.query(`
             INSERT INTO employee_payroll
                 (employee_id, salary_month, basic_salary, allowances, deductions, status)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-        `, [employeeID, salaryMonth, Number(basicSalary) || 0, Number(allowances) || 0, Number(deductions) || 0, status || "Pending"]);
+            RETURNING payroll_id
+        `, [values.employeeID, values.salaryMonth, values.basicSalary, values.allowances, values.deductions, values.status]);
+        const result = await pool.query(`${PAYROLL_SELECT} WHERE s.payroll_id = $1`, [inserted.rows[0].payroll_id]);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error("Error creating payroll:", error);
@@ -1792,20 +1839,61 @@ app.post("/api/payroll", async (req, res) => {
 
 app.put("/api/payroll/:id", async (req, res) => {
     try {
-        const { employeeID, salaryMonth, basicSalary, allowances, deductions, status } = req.body;
-        const result = await pool.query(`
+        const { error, values } = await parsePayrollBody(req.body);
+        if (error) return res.status(400).json({ message: error });
+        if (await payrollMonthExists(values.employeeID, values.salaryMonth, Number(req.params.id))) {
+            return res.status(409).json({ message: "A salary record already exists for this employee and month" });
+        }
+        const updated = await pool.query(`
             UPDATE employee_payroll
             SET employee_id = $1, salary_month = $2, basic_salary = $3,
                 allowances = $4, deductions = $5, status = $6,
                 updated_at = CURRENT_TIMESTAMP
             WHERE payroll_id = $7
-            RETURNING *
-        `, [employeeID, salaryMonth, Number(basicSalary) || 0, Number(allowances) || 0, Number(deductions) || 0, status || "Pending", req.params.id]);
-        if (!result.rows.length) return res.status(404).json({ message: "Salary record not found" });
+            RETURNING payroll_id
+        `, [values.employeeID, values.salaryMonth, values.basicSalary, values.allowances, values.deductions, values.status, req.params.id]);
+        if (!updated.rows.length) return res.status(404).json({ message: "Salary record not found" });
+        const result = await pool.query(`${PAYROLL_SELECT} WHERE s.payroll_id = $1`, [req.params.id]);
         res.json(result.rows[0]);
     } catch (error) {
         console.error("Error updating payroll:", error);
         res.status(500).json({ message: "Failed to update salary record" });
+    }
+});
+
+// Pending -> Processed (the employee portal shows it as "Transferred") and back
+app.patch("/api/payroll/:id/status", async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!PAYROLL_STATUSES.includes(status)) return res.status(400).json({ message: "Invalid status" });
+        const updated = await pool.query(
+            "UPDATE employee_payroll SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE payroll_id = $2 RETURNING payroll_id",
+            [status, req.params.id]
+        );
+        if (!updated.rows.length) return res.status(404).json({ message: "Salary record not found" });
+        const result = await pool.query(`${PAYROLL_SELECT} WHERE s.payroll_id = $1`, [req.params.id]);
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating payroll status:", error);
+        res.status(500).json({ message: "Failed to update salary status" });
+    }
+});
+
+// Marks every pending salary of a month as processed in one go
+app.post("/api/payroll/process", async (req, res) => {
+    try {
+        const month = String(req.body.salaryMonth || "").slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ message: "Select a salary month" });
+        const updated = await pool.query(
+            `UPDATE employee_payroll SET status = 'Processed', updated_at = CURRENT_TIMESTAMP
+             WHERE status <> 'Processed' AND date_trunc('month', salary_month) = date_trunc('month', $1::date)
+             RETURNING payroll_id`,
+            [`${month}-01`]
+        );
+        res.json({ updated: updated.rows.length });
+    } catch (error) {
+        console.error("Error processing payroll month:", error);
+        res.status(500).json({ message: "Failed to process salaries" });
     }
 });
 
@@ -2958,6 +3046,7 @@ ensureEmployeePersonalInfoColumns()
     .then(() => ensureAnnualLeaveAccrualSchema())
     .then(() => ensureNotificationSchema())
     .then(() => ensureManpowerSchema())
+    .then(() => ensureAppSettingsSchema())
     .then(() => ensureTicketSchema())
     .then(() => ensureResignationSchema())
     .then(() => ensureCareerSchema())

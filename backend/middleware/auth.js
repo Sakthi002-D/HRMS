@@ -87,12 +87,13 @@ const EMPLOYEE_SELF_PATHS = [
     /^\/ticket-categories$/,
     /^\/leave-policies$/,
     /^\/recruitment\/meta$/,
+    /^\/settings\/app$/,
 ];
 
 const isEmployeeSelfPath = (path) => EMPLOYEE_SELF_PATHS.some((pattern) => pattern.test(path));
 
 const employeeMethodAllowed = (path, method) => {
-    if (/^\/(?:leave-policies|ticket-categories|recruitment\/meta)$/.test(path)) return method === "GET";
+    if (/^\/(?:leave-policies|ticket-categories|recruitment\/meta|settings\/app)$/.test(path)) return method === "GET";
     if (/^\/(?:attendance|payroll|notifications\/employee|leaves\/employee)\//.test(path)) return method === "GET";
     if (path === "/leaves" || path === "/employee-requests" || path === "/resignations" || path === "/assistant") return method === "POST";
     if (/^\/leaves\/[^/]+\/cancel$/.test(path)) return method === "PUT";

@@ -1,15 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { CalendarCheck, CalendarClock, CalendarX, Percent, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import ReportChart from "../../components/layout/common/ReportChart";
+import {
+    Avatar,
+    ReportChart,
+    ReportHero,
+    ReportPage,
+    ReportTable,
+    StatCard,
+    StatGrid,
+    StatusPill,
+} from "../../components/reports/ReportKit";
 import API_URL from "../../config/api";
-import "./AttendanceReport.css";
 
 // D365 rows are identified by the full D365 identity so they never merge with HRMS employee IDs
 const getPersonKey = (item) => item.source === "D365"
     ? `D365|${item.personnel_number}|${item.employment_legal_entity_id}|${item.employment_id}`
     : `HRMS|${item.employee_id}`;
+
+const statusOf = (item) => String(item.status).toLowerCase();
+const isPresent = (item) => ["present", "late"].includes(statusOf(item));
+
+const formatTime = (value) => {
+    const match = /(\d{1,2}:\d{2})/.exec(String(value ?? ""));
+    return match ? match[1] : "-";
+};
+
+const formatHours = (minutes) => {
+    if (minutes === null || minutes === undefined || Number.isNaN(Number(minutes))) return "-";
+    const total = Number(minutes);
+    return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, "0")}m`;
+};
+
+const STATUS_TONE = { present: "green", late: "amber", absent: "rose" };
 
 function AttendanceReport() {
     const { t } = useTranslation();
@@ -27,109 +51,147 @@ function AttendanceReport() {
             .finally(() => setLoading(false));
     }, []);
 
-    const presentCount = attendanceData.filter((item) => ["present", "late"].includes(String(item.status).toLowerCase())).length;
-    const absentCount = attendanceData.filter((item) => String(item.status).toLowerCase() === "absent").length;
+    const presentCount = attendanceData.filter(isPresent).length;
+    const absentCount = attendanceData.filter((item) => statusOf(item) === "absent").length;
     const attendancePercentage = attendanceData.length ? Math.round((presentCount / attendanceData.length) * 100) : 0;
-    const departments = useMemo(() => [...new Set(attendanceData.map((item) => item.department).filter(Boolean))].slice(0, 8), [attendanceData]);
-    const totalPeople = new Set(attendanceData.map(getPersonKey)).size;
+    const totalPeople = useMemo(() => new Set(attendanceData.map(getPersonKey)).size, [attendanceData]);
+
+    const departmentStats = useMemo(() => {
+        const stats = new Map();
+        attendanceData.forEach((item) => {
+            if (!item.department) return;
+            const entry = stats.get(item.department) || { present: 0, late: 0, absent: 0, total: 0 };
+            const status = statusOf(item);
+            if (status === "present") entry.present += 1;
+            else if (status === "late") entry.late += 1;
+            else if (status === "absent") entry.absent += 1;
+            entry.total += 1;
+            stats.set(item.department, entry);
+        });
+        return [...stats.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+    }, [attendanceData]);
+
+    const statusLabel = (status) => t(`employeeAttendance.status.${status}`, { defaultValue: status.charAt(0).toUpperCase() + status.slice(1) });
+
+    const columns = [
+        {
+            key: "employee_id",
+            header: t("reports.common.employeeId", { defaultValue: "Employee ID" }),
+            render: (item) => <span dir="ltr" className="rp-cell-id">{item.employee_id}</span>,
+            nowrap: true,
+        },
+        {
+            key: "employee_name",
+            header: t("reports.common.employeeName", { defaultValue: "Employee Name" }),
+            render: (item) => (
+                <div className="rp-person">
+                    <Avatar name={item.employee_name} />
+                    <span className="rp-cell-main">
+                        {item.employee_name}
+                        {item.source === "D365" && <span className="rp-tag">D365</span>}
+                    </span>
+                </div>
+            ),
+        },
+        { key: "department", header: t("reports.common.department", { defaultValue: "Department" }), render: (item) => item.department || "-" },
+        {
+            key: "punch_in",
+            header: t("reports.attendance.punchIn", { defaultValue: "Punch In" }),
+            render: (item) => <span dir="ltr" className="rp-cell-num">{formatTime(item.punch_in)}</span>,
+            nowrap: true,
+        },
+        {
+            key: "punch_out",
+            header: t("reports.attendance.punchOut", { defaultValue: "Punch Out" }),
+            render: (item) => <span dir="ltr" className="rp-cell-num">{formatTime(item.punch_out)}</span>,
+            nowrap: true,
+        },
+        {
+            key: "working_minutes",
+            header: t("reports.attendance.hours", { defaultValue: "Hours" }),
+            render: (item) => <span dir="ltr" className="rp-cell-muted">{formatHours(item.working_minutes)}</span>,
+            nowrap: true,
+        },
+        {
+            key: "status",
+            header: t("reports.common.status", { defaultValue: "Status" }),
+            render: (item) => {
+                const status = statusOf(item);
+                return <StatusPill tone={STATUS_TONE[status] || "slate"}>{statusLabel(status)}</StatusPill>;
+            },
+        },
+    ];
 
     return (
         <DashboardLayout>
-            <div className="report-page">
+            <ReportPage tone="teal">
 
-                <div className="report-header">
-                    <div>
-                        <h1>{t("reports.hub.cards.attendance.title", { defaultValue: "Attendance Report" })}</h1>
-                        <p>{t("reports.hub.cards.attendance.description", { defaultValue: "View employee attendance and working hours." })}</p>
-                    </div>
-                    <Link className="report-back-button" to="/reports">{t("reports.common.backToReports", { defaultValue: "Back to Reports" })}</Link>
-                </div>
-
-                <div className="report-summary">
-
-                    <div className="report-card">
-                        <h3>{t("reports.common.totalEmployees", { defaultValue: "Total Employees" })}</h3>
-                        <h2>{loading ? "—" : totalPeople}</h2>
-                        <p>{t("reports.attendance.activeEmployees", { defaultValue: "Active employees" })}</p>
-                    </div>
-
-                    <div className="report-card">
-                        <h3>{t("reports.attendance.averageAttendance", { defaultValue: "Average Attendance" })}</h3>
-                        <h2>{loading ? "—" : <span dir="ltr" className="ltr-text">{`${attendancePercentage}%`}</span>}</h2>
-                        <p>{t("reports.attendance.currentMonth", { defaultValue: "Current month" })}</p>
-                    </div>
-
-                    <div className="report-card">
-                        <h3>{t("reports.attendance.totalPresent", { defaultValue: "Total Present" })}</h3>
-                        <h2>{loading ? "—" : presentCount}</h2>
-                        <p>{t("reports.attendance.recordedAttendance", { defaultValue: "Recorded attendance" })}</p>
-                    </div>
-
-                    <div className="report-card">
-                        <h3>{t("reports.attendance.totalAbsent", { defaultValue: "Total Absent" })}</h3>
-                        <h2>{loading ? "—" : absentCount}</h2>
-                        <p>{t("reports.attendance.currentMonth", { defaultValue: "Current month" })}</p>
-                    </div>
-
-                </div>
-
-                <ReportChart
-                    title={t("reports.attendance.chartTitle", { defaultValue: "Attendance" })}
-                    labels={departments.length ? departments : [t("reports.common.noData", { defaultValue: "No data" })]}
-                    series={[{ name: t("employeeAttendance.status.present", { defaultValue: "Present" }), color: "#42ad61", values: departments.map((department) => attendanceData.filter((item) => item.department === department && ["present", "late"].includes(String(item.status).toLowerCase())).length) }, { name: t("employeeAttendance.status.absent", { defaultValue: "Absent" }), color: "#f36ca5", values: departments.map((department) => attendanceData.filter((item) => item.department === department && String(item.status).toLowerCase() === "absent").length) }]}
+                <ReportHero
+                    icon={CalendarClock}
+                    title={t("reports.hub.cards.attendance.title", { defaultValue: "Attendance Report" })}
+                    subtitle={t("reports.hub.cards.attendance.description", { defaultValue: "View employee attendance and working hours." })}
                 />
 
-                <div className="report-table-container">
+                <StatGrid>
+                    <StatCard
+                        icon={Users}
+                        tone="blue"
+                        loading={loading}
+                        label={t("reports.common.totalEmployees", { defaultValue: "Total Employees" })}
+                        value={totalPeople}
+                        hint={t("reports.attendance.activeEmployees", { defaultValue: "Active employees" })}
+                    />
+                    <StatCard
+                        icon={Percent}
+                        tone="teal"
+                        loading={loading}
+                        label={t("reports.attendance.averageAttendance", { defaultValue: "Average Attendance" })}
+                        value={<span dir="ltr">{`${attendancePercentage}%`}</span>}
+                        progress={attendancePercentage}
+                        hint={t("reports.attendance.today", { defaultValue: "Today" })}
+                    />
+                    <StatCard
+                        icon={CalendarCheck}
+                        tone="green"
+                        loading={loading}
+                        label={t("reports.attendance.totalPresent", { defaultValue: "Total Present" })}
+                        value={presentCount}
+                        hint={t("reports.attendance.recordedAttendance", { defaultValue: "Recorded attendance" })}
+                    />
+                    <StatCard
+                        icon={CalendarX}
+                        tone="rose"
+                        loading={loading}
+                        label={t("reports.attendance.totalAbsent", { defaultValue: "Total Absent" })}
+                        value={absentCount}
+                        hint={t("reports.attendance.today", { defaultValue: "Today" })}
+                    />
+                </StatGrid>
 
-                    <h2>{t("reports.attendance.tableTitle", { defaultValue: "Employee Attendance" })}</h2>
+                <ReportChart
+                    title={t("reports.attendance.chartTitle", { defaultValue: "Attendance by Department" })}
+                    subtitle={t("reports.attendance.chartSubtitle", { defaultValue: "Today's status across departments" })}
+                    labels={departmentStats.map(([department]) => department)}
+                    series={[
+                        { name: statusLabel("present"), color: "#2f9e52", values: departmentStats.map(([, entry]) => entry.present) },
+                        { name: statusLabel("late"), color: "#e3a21a", values: departmentStats.map(([, entry]) => entry.late) },
+                        { name: statusLabel("absent"), color: "#e0476f", values: departmentStats.map(([, entry]) => entry.absent) },
+                    ]}
+                />
 
-                    <table className="report-table">
+                <ReportTable
+                    title={t("reports.attendance.tableTitle", { defaultValue: "Employee Attendance" })}
+                    columns={columns}
+                    rows={attendanceData}
+                    rowKey={(item) => item.id ?? getPersonKey(item)}
+                    loading={loading}
+                    loadingText={t("reports.attendance.loading", { defaultValue: "Loading attendance data..." })}
+                    emptyText={t("reports.attendance.empty", { defaultValue: "No attendance data available." })}
+                    searchText={(item) => `${item.employee_id} ${item.employee_name} ${item.department} ${item.status}`}
+                    minWidth={860}
+                />
 
-                        <thead>
-                            <tr>
-                                <th>{t("reports.common.employeeId", { defaultValue: "Employee ID" })}</th>
-                                <th>{t("reports.common.employeeName", { defaultValue: "Employee Name" })}</th>
-                                <th>{t("reports.common.department", { defaultValue: "Department" })}</th>
-                                <th>{t("reports.attendance.workingDays", { defaultValue: "Working Days" })}</th>
-                                <th>{t("employeeAttendance.status.present", { defaultValue: "Present" })}</th>
-                                <th>{t("employeeAttendance.status.absent", { defaultValue: "Absent" })}</th>
-                                <th>{t("reports.attendance.chartTitle", { defaultValue: "Attendance" })}</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="7">{t("reports.attendance.loading", { defaultValue: "Loading attendance data..." })}</td></tr>
-                            ) : attendanceData.length === 0 ? (
-                                <tr><td colSpan="7">{t("reports.attendance.empty", { defaultValue: "No attendance data available." })}</td></tr>
-                            ) : attendanceData.map((employee) => {
-                                const isPresent = ["present", "late"].includes(String(employee.status).toLowerCase());
-                                const attendance = isPresent ? 100 : 0;
-                                return (
-                                <tr key={employee.id ?? getPersonKey(employee)}>
-
-                                    <td><span dir="ltr" className="ltr-text">{employee.employee_id}</span></td>
-                                    <td>{employee.employee_name}{employee.source === "D365" && <small> (D365)</small>}</td>
-                                    <td>{employee.department}</td>
-                                    <td>1</td>
-                                    <td>{isPresent ? 1 : 0}</td>
-                                    <td>{isPresent ? 0 : 1}</td>
-
-                                    <td>
-                                        <span className="attendance-badge" dir="ltr">
-                                            {attendance}%
-                                        </span>
-                                    </td>
-                                </tr>
-                                );
-                            })}
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
+            </ReportPage>
         </DashboardLayout>
     );
 }

@@ -104,6 +104,98 @@
     "subtitle": "Manage your HRMS preferences and application configuration.",
     "configuration": "CONFIGURATION",
     "cardSubtitle": "Update the settings used across your HRMS workspace.",
+    "page": {
+      "sectionWorkspace": "Workspace",
+      "sectionOperations": "Workflows and masters",
+      "nav": {
+        "general": {
+          "title": "General",
+          "desc": "Company name, support email, language"
+        },
+        "regional": {
+          "title": "Regional",
+          "desc": "Timezone, date format, currency"
+        },
+        "notifications": {
+          "title": "Notifications",
+          "desc": "Emails and leave alerts"
+        },
+        "security": {
+          "title": "Security",
+          "desc": "Session timeout and password"
+        },
+        "approval": {
+          "title": "Approval Workflows",
+          "desc": "Manpower request approval steps"
+        },
+        "recruitment": {
+          "title": "Recruitment Masters",
+          "desc": "Locations, agencies, budgets"
+        },
+        "resignation": {
+          "title": "Resignation",
+          "desc": "Notice periods and approval steps"
+        }
+      },
+      "groupDesc": {
+        "general": "How your company appears in the HRMS and in emails sent from it.",
+        "regional": "Controls how dates, times and money are shown across every HR and employee page.",
+        "notifications": "Choose which alerts and emails the HRMS sends.",
+        "security": "Protect HR accounts with an inactivity timeout and a strong password.",
+        "approval": "Set who approves manpower requests and in which order.",
+        "recruitment": "Maintain the lists used in manpower requests.",
+        "resignation": "Define notice periods and the resignation approval chain."
+      },
+      "companyNameHint": "Shown in the browser tab title and in the sender name of emails.",
+      "supportEmail": "Support Email",
+      "supportEmailHint": "Added to emails as the reply address and a \"Need help?\" line. Leave empty to hide it.",
+      "languageHintShort": "Applies to this HR portal immediately. Employees choose their own language.",
+      "timezoneHint": "Used for \"today\" in manpower requests and for dates shown in Qatar time.",
+      "dateFormatHint": "Applied to every date shown in HR pages, reports and notifications.",
+      "currencyHint": "Used for budgets and salaries in manpower requests.",
+      "preview": "Live preview",
+      "previewTime": "Current time",
+      "previewDate": "Date",
+      "previewMoney": "Amount",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsHint": "Send system emails for approvals, requests and status updates. Emails to job applicants are always sent.",
+      "leaveNotifications": "Leave Notifications",
+      "leaveNotificationsHint": "Show pending leave requests in the HR notification bell, dashboard and Notifications page.",
+      "sessionTimeoutHint": "Signed-in users are logged out automatically after this much inactivity.",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "passwordTitle": "Change password",
+      "passwordHint": "You will be signed out after the password is changed.",
+      "show": "Show password",
+      "hide": "Hide password",
+      "match": "Passwords match",
+      "noMatch": "Passwords do not match",
+      "loading": "Loading settings…",
+      "loadError": "Could not load settings: {{message}}",
+      "retry": "Try again",
+      "unsaved": "You have unsaved changes",
+      "allSaved": "All changes saved",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "discard": "Discard",
+      "saved": "Settings saved. They now apply across the HRMS.",
+      "errors": {
+        "companyRequired": "Company name is required.",
+        "companyTooLong": "Company name must be 80 characters or fewer.",
+        "emailInvalid": "Enter a valid email address.",
+        "symbolRequired": "Currency symbol is required."
+      }
+    },
+    "security": {
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "newPasswordHint": "At least 6 characters.",
+      "repeatPassword": "Repeat New Password",
+      "mismatch": "New passwords do not match.",
+      "changed": "Password changed successfully. Please sign in again.",
+      "changing": "Changing…",
+      "changePassword": "Change Password"
+    },
     "menu": {
       "general": "General Settings",
       "website": "Website Settings",
@@ -1874,7 +1966,8 @@
       "assignTo": "Assign To",
       "autoAssign": "Auto-assign",
       "creating": "Creating...",
-      "create": "Create Ticket"
+      "create": "Create Ticket",
+      "subtitle": "Leaving Assign To empty picks the free agent for the category automatically."
     },
     "errors": {
       "loadFailed": "Unable to load tickets",
@@ -1908,7 +2001,9 @@
       "joiningDate": "Joining Date",
       "salary": "Salary",
       "payslip": "Payslip",
-      "actions": "Actions"
+      "actions": "Actions",
+      "month": "Month",
+      "status": "Status"
     },
     "loading": "Loading salary records...",
     "empty": "No salary records found",
@@ -1934,7 +2029,20 @@
       "basicSalary": "Basic Salary",
       "allowances": "Allowances",
       "deductions": "Deductions",
-      "save": "Save Salary"
+      "save": "Save Salary",
+      "subtitle": "Employee details fill in automatically from the employee record.",
+      "employee": "Employee",
+      "selectEmployee": "Select employee…",
+      "netSalary": "Net Salary",
+      "saving": "Saving…",
+      "duplicateFlag": "Already has this month",
+      "errors": {
+        "employee": "Select an employee.",
+        "month": "Select a salary month.",
+        "basic": "Basic salary is required.",
+        "net": "Deductions cannot be larger than basic salary plus allowances.",
+        "duplicate": "This employee already has a salary record for this month."
+      }
     },
     "delete": {
       "title": "Delete salary record?",
@@ -1944,7 +2052,28 @@
     },
     "errors": {
       "deleteFailed": "Unable to delete salary record",
-      "saveFailed": "Unable to save salary"
+      "saveFailed": "Unable to save salary",
+      "statusFailed": "Unable to update status",
+      "processFailed": "Unable to process salaries"
+    },
+    "allMonths": "All months",
+    "stats": {
+      "total": "Total Net Salary",
+      "employees": "Employees Paid",
+      "processed": "Processed",
+      "pending": "Pending"
+    },
+    "status": {
+      "pending": "Pending",
+      "processed": "Processed",
+      "toggleHint": "Click to switch between Pending and Processed"
+    },
+    "process": {
+      "button": "Process Month",
+      "title": "Process this month's salaries?",
+      "message": "<strong>{{count}}</strong> pending salary record(s) for <strong>{{month}}</strong> will be marked as Processed. Employees will see them as Transferred.",
+      "confirm": "Process",
+      "processing": "Processing…"
     }
   },
   "reports": {
@@ -1973,6 +2102,15 @@
           "title": "Annual Leave Accrual",
           "description": "Monthly annual leave days and liability amount per employee, for Finance."
         }
+      },
+      "kicker": "Analytics",
+      "search": "Search reports...",
+      "noMatch": "No reports match your search",
+      "tags": {
+        "live": "Live data",
+        "daily": "Today",
+        "preview": "Preview",
+        "finance": "Finance"
       }
     },
     "common": {
@@ -1988,7 +2126,16 @@
       "department": "Department",
       "designation": "Designation",
       "joiningDate": "Joining Date",
-      "status": "Status"
+      "status": "Status",
+      "search": "Search...",
+      "noResults": "No matching records",
+      "noResultsHint": "Try a different search term.",
+      "records": "{{count}} records",
+      "showing": "Showing {{from}}-{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next",
+      "chartEmpty": "Nothing to chart yet",
+      "chartEmptyHint": "The chart appears as soon as there is data."
     },
     "employee": {
       "allEmployees": "All employees",
@@ -1999,10 +2146,11 @@
       "inactive": "Inactive",
       "inactiveEmployees": "Inactive employees",
       "inactiveSeries": "Inactive Employees",
-      "chartTitle": "Employee Growth",
+      "chartTitle": "Employees by Department",
       "tableTitle": "Employee Details",
       "loading": "Loading employee data...",
-      "empty": "No employee data available."
+      "empty": "No employee data available.",
+      "chartSubtitle": "Top departments by headcount"
     },
     "attendance": {
       "activeEmployees": "Active employees",
@@ -2011,11 +2159,16 @@
       "totalPresent": "Total Present",
       "recordedAttendance": "Recorded attendance",
       "totalAbsent": "Total Absent",
-      "chartTitle": "Attendance",
+      "chartTitle": "Attendance by Department",
       "tableTitle": "Employee Attendance",
       "workingDays": "Working Days",
       "loading": "Loading attendance data...",
-      "empty": "No attendance data available."
+      "empty": "No attendance data available.",
+      "chartSubtitle": "Today's status across departments",
+      "today": "Today",
+      "punchIn": "Punch In",
+      "punchOut": "Punch Out",
+      "hours": "Hours"
     },
     "leave": {
       "totalRequests": "Total Leave Requests",
@@ -2024,11 +2177,15 @@
       "waitingApproval": "Waiting for approval",
       "rejectedRequests": "Rejected requests",
       "chartTitle": "Leave Usage",
-      "tableTitle": "Employee Leave Balance",
+      "tableTitle": "Leave Requests",
       "days": "Days",
       "reason": "Reason",
       "loading": "Loading leave data...",
-      "empty": "No leave data available."
+      "empty": "No leave data available.",
+      "chartSubtitle": "Requests by leave type and status",
+      "allRequests": "All requests",
+      "type": "Leave Type",
+      "period": "Period"
     },
     "payroll": {
       "totalPayroll": "Total Payroll",

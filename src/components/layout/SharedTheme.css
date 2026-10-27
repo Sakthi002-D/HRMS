@@ -4,31 +4,27 @@
 
 .dashboard-content
   :is(.employees-page, .attendance-page, .leave-page, .recruitment-page,
-    .payroll-page, .tickets-page, .reports-page, .report-page,
-    .employee-report, .payroll-report-page) {
+    .payroll-page, .tickets-page) {
   min-height: calc(100vh - 80px);
   color: #102a43;
 }
 
 .dashboard-content
   :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
-    .payroll-header, .tickets-header, .reports-header, .report-header,
-    .payroll-report-header) {
+    .payroll-header, .tickets-header) {
   margin-bottom: 24px;
 }
 
 .dashboard-content
   :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
-    .payroll-header, .tickets-header, .reports-header, .report-header,
-    .payroll-report-header, .leave-report-header) > div:first-child {
+    .payroll-header, .tickets-header) > div:first-child {
   position: relative;
   padding-left: 14px;
 }
 
 .dashboard-content
   :is(.employees-header, .attendance-header, .leave-header, .recruitment-header,
-    .payroll-header, .tickets-header, .reports-header, .report-header,
-    .payroll-report-header, .leave-report-header) > div:first-child::before {
+    .payroll-header, .tickets-header) > div:first-child::before {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -41,9 +37,7 @@
 
 .dashboard-content
   :is(.employees-header h1, .attendance-header h1, .leave-header h1,
-    .recruitment-header h1, .payroll-header h1, .tickets-header h1,
-    .reports-header h1, .report-header h1, .payroll-report-header h1,
-    .leave-report-header h1) {
+    .recruitment-header h1, .payroll-header h1, .tickets-header h1) {
   color: #0b2946;
   font-size: 24px;
   font-weight: 700;
@@ -54,9 +48,7 @@
 
 .dashboard-content
   :is(.employees-header p, .attendance-header p, .leave-header p,
-    .recruitment-header p, .payroll-header p, .tickets-header p,
-    .reports-header p, .report-header p, .payroll-report-header p,
-    .leave-report-header p) {
+    .recruitment-header p, .payroll-header p, .tickets-header p) {
   color: #718096;
   font-size: 14px;
   font-weight: 500;
@@ -65,12 +57,10 @@
 
 .dashboard-content
   :is(.employee-tools, .attendance-tools, .leave-tools, .payroll-tools,
-    .tickets-tools, .reports-container, .recruitment-card,
+    .tickets-tools, .recruitment-card,
     .employee-table-container, .attendance-table-container,
     .table-wrapper, .jobs-table-container, .tickets-table-container,
-    .leave-table-container, .payroll-table-container,
-    .payroll-report-table-container, .report-table-container,
-    .leave-report-table-container, .employee-report-table) {
+    .leave-table-container, .payroll-table-container) {
   border: 1px solid #d3e2ee;
   border-radius: 12px;
   background: #fff;
@@ -85,14 +75,12 @@
 
 .dashboard-content
   :is(.employee-stats, .attendance-summary, .leave-summary,
-    .payroll-summary, .reports-summary, .report-summary,
-    .payroll-report-summary, .leave-report-summary) {
+    .payroll-summary) {
   gap: 14px;
 }
 
 .dashboard-content
-  :is(.stat-card, .ticket-card, .report-card, .payroll-card,
-    .payroll-report-card) {
+  :is(.stat-card, .ticket-card, .payroll-card) {
   border: 1px solid #d3e2ee;
   border-radius: 10px;
   background: #fff;
@@ -132,15 +120,14 @@
 
 .dashboard-content
   :is(.employee-table th, .attendance-table th, .leave-table th,
-    .payroll-table th, .tickets-table th, .report-table th,
-    .payroll-report-table th) {
+    .payroll-table th, .tickets-table th) {
   background: #16466d;
 }
 
 .dashboard-content
   :is(.employee-table tbody tr:hover, .attendance-table tbody tr:hover,
     .leave-table tbody tr:hover, .payroll-table tbody tr:hover,
-    .tickets-table tbody tr:hover, .report-table tbody tr:hover) {
+    .tickets-table tbody tr:hover) {
   background: #f2f8fc;
 }
 
@@ -155,248 +142,197 @@
   }
 }
 
-.report-chart {
-  min-height: 286px;
-  margin: 20px 0;
-  padding: 20px 22px 16px;
-  border: 1px solid #d3e2ee;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
-}
+/* =========================================================
+   HRMS FORM KIT - the shared modal + form look for HR pages
+   (Payroll, Tickets, and any future modal form)
+========================================================= */
 
-.dashboard-content :is(.employee-report, .report-page, .leave-report-page, .payroll-report-page) {
-  min-height: calc(100vh - 80px);
-  color: #102a43;
-}
-
-.dashboard-content :is(.employee-report .report-header, .report-page .report-header,
-  .leave-report-header, .payroll-report-header) {
+.hrms-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  position: relative;
-  margin-bottom: 22px;
-}
-
-.report-back-button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid #cfe3f1;
-  border-radius: 8px;
-  background: #e5f3fc;
-  color: #006cae;
-  font-size: 12px;
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.report-back-button:hover {
-  border-color: #03a9f4;
-  background: #fff4ef;
-  color: #e85d31;
-}
-
-.dashboard-content :is(.employee-report .report-header h1, .report-page .report-header h1,
-  .leave-report-header h1, .payroll-report-header h1) {
-  margin: 0 0 6px;
-  color: #0b2946;
-  font-size: 28px;
-  font-weight: 750;
-}
-
-.dashboard-content :is(.employee-report .report-header p, .report-page .report-header p,
-  .leave-report-header p, .payroll-report-header p) {
-  margin: 0;
-  color: #718096;
-  font-size: 13px;
-}
-
-.dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.dashboard-content :is(.report-summary .report-card, .leave-report-summary .leave-report-card,
-  .payroll-report-summary .payroll-report-card) {
-  min-height: 122px;
-  padding: 18px 20px;
-  border: 1px solid #d3e2ee;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 7px 20px rgba(35, 91, 130, .07);
-}
-
-.dashboard-content :is(.report-summary .report-card h3, .leave-report-summary .leave-report-card h3,
-  .payroll-report-summary .payroll-report-card h3) {
-  margin: 0 0 12px;
-  color: #536b82;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.dashboard-content :is(.report-summary .report-card h2, .leave-report-summary .leave-report-card h2,
-  .payroll-report-summary .payroll-report-card h2) {
-  margin: 0 0 6px;
-  color: #102a43;
-  font-size: 28px;
-  font-weight: 750;
-}
-
-.dashboard-content :is(.report-summary .report-card p, .leave-report-summary .leave-report-card p,
-  .payroll-report-summary .payroll-report-card p) {
-  margin: 0;
-  color: #0ca99a;
-  font-size: 12px;
-}
-
-.dashboard-content :is(.employee-report-table, .report-table-container,
-  .leave-report-table-container, .payroll-report-table-container) {
-  overflow-x: auto;
-  margin-top: 20px;
+  justify-content: center;
   padding: 20px;
+  background: rgba(4, 35, 48, .55);
+  backdrop-filter: blur(4px);
+}
+
+.hrms-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
   border: 1px solid #d3e2ee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 38, 60, .3);
+  animation: hrmsModalIn .22s ease-out both;
+}
+
+.hrms-modal.wide { width: min(760px, 100%); }
+
+@keyframes hrmsModalIn {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hrms-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e3ebf2;
+  background: linear-gradient(180deg, #fbfdff, #fff);
+}
+
+.hrms-modal-head-icon {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
   border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 7px 22px rgba(35, 91, 130, .07);
+  background: #e8f4fd;
+  color: #0288d1;
 }
 
-@media (max-width: 900px) {
-  .dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.hrms-modal-head > div { flex: 1; min-width: 0; }
+.hrms-modal-head h2 { margin: 0; color: #102a43; font-size: 18px; }
+.dashboard-content .hrms-modal-head p { margin: 3px 0 0; color: #536b82 !important; font-size: 12.5px; }
+
+.hrms-modal-close {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #dce5ee;
+  border-radius: 50%;
+  background: #f7fbfe;
+  color: #334155;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
 }
 
-@media (max-width: 600px) {
-  .dashboard-content :is(.employee-report .report-header, .report-page .report-header,
-    .leave-report-header, .payroll-report-header) {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+.hrms-modal-close:hover { border-color: #03a9f4; background: #eaf7ff; transform: rotate(90deg); }
 
-  .dashboard-content :is(.report-summary, .leave-report-summary, .payroll-report-summary) {
-    grid-template-columns: 1fr;
-  }
+.hrms-modal-body { overflow-y: auto; padding: 20px 22px; }
+
+.hrms-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 18px;
 }
 
-.report-chart-heading,
-.report-chart-legend {
-  display: flex;
-  align-items: center;
-}
+.hrms-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hrms-field.full { grid-column: 1 / -1; }
+.dashboard-content .hrms-field > span,
+.dashboard-content .hrms-field > label { color: #334155 !important; font-size: 12.5px; font-weight: 700; }
 
-.report-chart-heading {
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.report-chart-heading h2 {
-  margin: 0;
-  color: #102a43;
-  font-size: 18px;
-}
-
-.report-chart-heading select {
-  height: 38px;
-  padding: 0 10px;
-  border: 1px solid #d3e2ee;
-  border-radius: 8px;
-  background: #fff;
-  color: #173b5f;
-}
-
-.report-chart-legend {
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 14px;
-  color: #718096;
-  font-size: 12px;
-}
-
-.report-chart-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.report-chart-legend i {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
-.report-chart-area {
-  position: relative;
-  height: 190px;
-  margin-top: 14px;
-  padding: 0 8px 28px;
-}
-
-.report-chart-grid {
-  position: absolute;
-  inset: 0 8px 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.report-chart-grid i {
-  display: block;
+.hrms-field input,
+.hrms-field select,
+.hrms-field textarea {
   width: 100%;
-  border-top: 1px solid #e6edf2;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #cfd9e2;
+  border-radius: 9px;
+  background: #fbfdff;
+  color: #1e293b;
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-.report-chart-bars {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-around;
-  height: 100%;
+.hrms-field textarea { resize: vertical; }
+
+.hrms-field input:focus,
+.hrms-field select:focus,
+.hrms-field textarea:focus {
+  border-color: #03a9f4;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, .14);
 }
 
-.report-chart-column {
+.dashboard-content .hrms-field small { color: #6b8196 !important; font-size: 11.5px; }
+.dashboard-content .hrms-field .hrms-field-error { color: #b42318 !important; font-weight: 600; }
+
+/* Read-only context card inside a form (e.g. the selected employee's details) */
+.hrms-form-card {
   display: flex;
-  flex: 1;
-  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+  grid-column: 1 / -1;
+  padding: 13px 15px;
+  border: 1px dashed #bcd6e8;
+  border-radius: 12px;
+  background: #f6fbff;
+}
+
+.hrms-form-card-icon {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1f5fe;
+  color: #0288d1;
+}
+
+.hrms-form-card strong { display: block; color: #102a43; font-size: 14px; }
+.dashboard-content .hrms-form-card small { color: #536b82 !important; font-size: 12px; }
+
+.hrms-form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 8px;
+  background: #fdecec;
+  color: #b42318;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hrms-modal-foot {
+  display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  color: #536b82;
-  font-size: 11px;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid #e3ebf2;
+  background: #fbfdff;
 }
 
-.report-chart-values {
-  display: flex;
-  align-items: flex-end;
+.hrms-modal-foot .spacer { margin-inline-end: auto; }
+
+.hrms-btn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap: 4px;
-  width: 44px;
-  height: 150px;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, opacity .15s ease;
 }
 
-.report-chart-values b {
-  display: block;
-  width: 13px;
-  min-height: 2px;
-  border-radius: 2px 2px 0 0;
-}
+.hrms-btn:disabled { opacity: .55; cursor: not-allowed; }
+.hrms-btn-primary { background: #03a9f4; color: #fff; }
+.hrms-btn-primary:hover:not(:disabled) { background: #0288d1; }
+.hrms-btn-ghost { border-color: #cfd9e2; background: #fff; color: #334155; }
+.hrms-btn-ghost:hover:not(:disabled) { background: #f4f8fb; }
 
-@media (max-width: 700px) {
-  .report-chart {
-    padding: 16px;
-  }
-
-  .report-chart-values {
-    width: 30px;
-  }
-
-  .report-chart-values b {
-    width: 9px;
-  }
+@media (max-width: 640px) {
+  .hrms-form-grid { grid-template-columns: 1fr; }
+  .hrms-modal-foot { flex-wrap: wrap; }
 }

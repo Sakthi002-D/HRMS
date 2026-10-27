@@ -140,7 +140,8 @@ router.post("/tickets", handle(async (req, res) => {
     const description = clean(req.body.description);
     const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
     const priority = req.body.priority || "Medium";
-    const raisedBy = req.auth.employeeId;
+    // HR can log a ticket on an employee's behalf; employees always raise their own
+    const raisedBy = req.auth.identityType === "hr" ? (clean(req.body.raised_by) || req.auth.employeeId) : req.auth.employeeId;
     let assignedTo = req.auth.identityType === "hr" ? clean(req.body.assigned_to) : null;
 
     if (!subject) throw new TicketError("Subject is required");
@@ -292,8 +293,14 @@ router.post("/support-agents", handle(async (req, res) => {
 }));
 
 router.delete("/support-agents/:id", handle(async (req, res) => {
-    const result = await pool.query(`UPDATE support_agents SET is_active = FALSE WHERE id = $1 RETURNING id`, [req.params.id]);
+    const result = await pool.query(`UPDATE support_agents SET is_active = FALSE WHERE id = $1 RETURNING id, employee_id`, [req.params.id]);
     if (!result.rows[0]) throw new TicketError("Support agent not found", 404);
+    // Their unfinished tickets go back to the pool so they can be picked up again
+    await pool.query(
+        `UPDATE tickets SET assigned_to = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE assigned_to = $1 AND status IN ('Open', 'On Hold', 'Reopened')`,
+        [result.rows[0].employee_id]
+    );
     res.json({ id: result.rows[0].id });
 }));
 

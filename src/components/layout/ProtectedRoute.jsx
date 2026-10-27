@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import HRAssistant from "../assistant/HRAssistant";
+import SessionGuard from "./SessionGuard";
 import { clearStaleSession, getAuthRole } from "../../utils/auth";
 
 function ProtectedRoute({ role }) {
@@ -48,6 +49,7 @@ function ProtectedRoute({ role }) {
 
     return (
       <>
+        <SessionGuard />
         <Outlet />
         <HRAssistant
           key={`assistant-employee-${employeeId}`}
@@ -92,6 +94,7 @@ function ProtectedRoute({ role }) {
 
     return (
       <>
+        <SessionGuard />
         <Outlet />
         <HRAssistant
           key={`assistant-hr-${hrId}`}
