@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import {
   Users,
   Clock3,
-  IndianRupee,
+  Wallet,
   Ticket,
   Bell,
   UserPlus,
@@ -459,7 +459,7 @@ function HRDashboard() {
 
               <div className="stat-top">
                 <div className="stat-icon payroll-icon">
-                  <IndianRupee size={21} />
+                  <Wallet size={21} />
                 </div>
 
                 <span className="stat-growth">
@@ -568,7 +568,7 @@ function HRDashboard() {
               className="action-card leave-action"
             >
               <div className="action-icon">
-                <IndianRupee size={21} />
+                <Wallet size={21} />
               </div>
               <h3>{t("hrDashboard.quickActions.runPayroll", { defaultValue: "Run Payroll" })}</h3>
             </Link>

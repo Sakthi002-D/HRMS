@@ -7,7 +7,7 @@ import {
   Clock3,
   CalendarDays,
   DoorOpen,
-  IndianRupee,
+  Wallet,
   Ticket,
   FileText,
   Settings,
@@ -86,7 +86,7 @@ function Sidebar({ collapsed, onToggle }) {
     ["/attendance", t("menu.attendance"), Clock3],
     ["/leave-management", t("menu.leaveManagement"), CalendarDays],
     ["/resignations", t("menu.resignation"), DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
-    ["/payroll", t("menu.payroll"), IndianRupee],
+    ["/payroll", t("menu.payroll"), Wallet],
     ["/tickets", t("menu.ticketing"), Ticket],
     // Any URL containing "report" or "accrual" (each report page) keeps Reports highlighted
     ["/reports", t("menu.reports"), FileText, 0, "", [/report/i, /accrual/i]],
