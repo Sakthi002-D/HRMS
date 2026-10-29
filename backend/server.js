@@ -16,10 +16,11 @@ import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
 import { ensureNotificationSchema, getInbox, inboxKind, sendQueuedEmails } from "./services/notificationService.js";
 import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
-import { getCompanyToday } from "./services/leaveDateRules.js";
+import { getCompanyToday, validateLeaveDates, getAttendanceTimezone } from "./services/leaveDateRules.js";
 import { ensureCareerSchema } from "./services/careerApplications.js";
-import { validateLeaveDates } from "./services/leaveDateRules.js";
+
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
+import { OVERLAPPING_LEAVE_MESSAGE, calculateLeaveDays, findOverlappingLeave } from "./services/leaveDayCount.js";
 import { D365Error, findD365Employee, getD365Employees } from "./services/d365Employees.js";
 import { getAttendanceCounts } from "./services/attendanceCounts.js";
 import {
@@ -2042,10 +2043,40 @@ app.put("/api/leaves/:id/status", async (req, res) => {
             });
         }
 
+        // Approval recounts working days with the current holiday calendar
+        let approvedDays = null;
+
+        if (status === "Approved") {
+            const leaveResult = await pool.query(
+                `SELECT TO_CHAR(from_date, 'YYYY-MM-DD') AS from_day,
+                        TO_CHAR(to_date, 'YYYY-MM-DD') AS to_day
+                 FROM leaves
+                 WHERE id = $1`,
+                [id]
+            );
+
+            if (leaveResult.rows.length === 0) {
+                return res.status(404).json({
+                    message: "Leave not found"
+                });
+            }
+
+            const leaveDays = await calculateLeaveDays(leaveResult.rows[0].from_day, leaveResult.rows[0].to_day);
+
+            if (leaveDays.error) {
+                return res.status(400).json({
+                    message: leaveDays.error
+                });
+            }
+
+            approvedDays = leaveDays.days;
+        }
+
         const result = await pool.query(
             `
             UPDATE leaves
             SET status = $1,
+                days = COALESCE($4::numeric, days),
                 reviewed_at = CASE
                     WHEN $3::boolean THEN CURRENT_TIMESTAMP
                     ELSE reviewed_at
@@ -2053,7 +2084,7 @@ app.put("/api/leaves/:id/status", async (req, res) => {
             WHERE id = $2
             RETURNING *
             `,
-            [status, id, status === "Approved" || status === "Rejected"]
+            [status, id, status === "Approved" || status === "Rejected", approvedDays]
         );
 
         if (result.rows.length === 0) {
@@ -2402,12 +2433,26 @@ app.post("/api/leaves", async (req, res) => {
         }
 
 
-        // Calculate leave days
-        const difference =
-            Math.floor(
-                (to.getTime() - from.getTime()) /
-                (1000 * 60 * 60 * 24)
-            ) + 1;
+        // Working days only: Fri/Sat weekend and Qatar public holidays are excluded
+        const leaveDays = await calculateLeaveDays(from_date, to_date);
+
+        if (leaveDays.error) {
+            return res.status(400).json({
+                message: leaveDays.error
+            });
+        }
+
+        const difference = leaveDays.days;
+
+        // No second Approved/Pending leave on the same working days
+        const overlappingLeave = await findOverlappingLeave(employee_id, from_date, to_date);
+
+        if (overlappingLeave) {
+            return res.status(400).json({
+                message: OVERLAPPING_LEAVE_MESSAGE,
+                overlapping_leave_id: overlappingLeave.id
+            });
+        }
 
         const approvedTakenResult = await pool.query(
             `SELECT COALESCE(SUM(days), 0)::numeric AS total_days

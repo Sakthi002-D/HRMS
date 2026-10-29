@@ -47,8 +47,8 @@ export const DEFAULT_RECRUITMENT_SETTINGS = {
     execByDepartment: { IT: "CTO" },
     defaultExec: "COO",
     departmentCodes: { IT: "IT", Finance: "FIN", HR: "HR" },
-    currency: "INR",
-    currencySymbol: "₹",
+    currency: "QAR",
+    currencySymbol: "QR",
 };
 
 const FINAL_STATUSES = ["Approved", "Rejected", "Cancelled"];

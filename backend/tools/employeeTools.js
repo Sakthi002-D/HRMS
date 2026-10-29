@@ -1,5 +1,6 @@
 import pool from "../db.js";
 import { validateLeaveDates } from "../services/leaveDateRules.js";
+import { calculateLeaveDays } from "../services/leaveDayCount.js";
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "../services/annualLeaveBalance.js";
 
 /**
@@ -492,9 +493,11 @@ export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave"
         return { error: dateError };
     }
 
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
-    const days = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    const leaveDays = await calculateLeaveDays(fromDate, toDate);
+    if (leaveDays.error) {
+        return { error: leaveDays.error };
+    }
+    const { days } = leaveDays;
 
     if (leaveType === ANNUAL_LEAVE_TYPE) {
         const annualError = await checkAnnualLeaveRequest(employeeId, days);
@@ -520,22 +523,25 @@ export async function prepareApplyLeave({ employeeId, leaveType = "Casual Leave"
 }
 
 // 13. Execute Confirmed Apply Leave
-export async function executeApplyLeave({ employeeId, leaveType, fromDate, toDate, days, reason }) {
-    // Re-check: the confirmed payload comes back from the client
+export async function executeApplyLeave({ employeeId, leaveType, fromDate, toDate, reason }) {
+    // Re-check: the confirmed payload comes back from the client, so its day count is never trusted
     const dateError = validateLeaveDates(fromDate, toDate);
     if (dateError) {
         return { success: false, message: dateError };
     }
 
+    const leaveDays = await calculateLeaveDays(fromDate, toDate);
+    if (leaveDays.error) {
+        return { success: false, message: leaveDays.error };
+    }
+    const calculatedDays = leaveDays.days;
+
     if (leaveType === ANNUAL_LEAVE_TYPE) {
-        const requestedDays = Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1;
-        const annualError = await checkAnnualLeaveRequest(employeeId, requestedDays);
+        const annualError = await checkAnnualLeaveRequest(employeeId, calculatedDays);
         if (annualError) {
             return { success: false, message: annualError };
         }
     }
-
-    const calculatedDays = days || Math.max(1, Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1);
 
     const insertQuery = `
         INSERT INTO leaves (

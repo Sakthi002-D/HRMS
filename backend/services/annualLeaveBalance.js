@@ -133,14 +133,16 @@ export async function getAnnualLeaveBalance(employeeId, { asOf, db = pool, polic
     };
 }
 
-// Submit rule: requestedDays ≤ balance − pending. Returns an error message or null.
+export const INSUFFICIENT_BALANCE_MESSAGE = "Insufficient leave balance including pending requests";
+
+// Submit rule: requestedDays ≤ accrued − used (Approved) − pending (Pending). Returns an error message or null.
 export async function checkAnnualLeaveRequest(employeeId, requestedDays, options) {
     const balance = await getAnnualLeaveBalance(employeeId, options);
 
     if (!balance) return "Employee not found";
 
     if (requestedDays > balance.available) {
-        return `Available to apply: ${balance.available} day(s)`;
+        return `${INSUFFICIENT_BALANCE_MESSAGE}. Available to apply: ${balance.available} day(s)`;
     }
 
     return null;

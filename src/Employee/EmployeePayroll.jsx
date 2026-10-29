@@ -3,7 +3,7 @@ import { Download, WalletCards } from "lucide-react";
 import { jsPDF } from "jspdf";
 import "./EmployeePayroll.css";
 
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const formatCurrency = (value) => `QAR${Number(value || 0).toLocaleString("en-IN")}`;
 const dateInputValue = (value) => value ? String(value).slice(0, 10) : "";
 const formatMonth = (value) => value ? new Date(value).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "-";
 
