@@ -8,6 +8,8 @@ import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
 import CustomOptionSelect, { OTHER_OPTION } from "./CustomOptionSelect";
+import EmployeeSearchSelect from "./EmployeeSearchSelect";
+import { BUILT_IN_DEPARTMENTS, CUSTOM_DEPARTMENTS_KEY, readCustomDepartments } from "./departments";
 import { api, getCompanyCurrency, isBudgetException } from "./recruitmentApi";
 
 const JOB_CATEGORIES = ["Site Engineering", "Civil", "Electrical", "Mechanical", "Plumbing", "HVAC", "HSE / Safety", "Surveying", "Equipment Operator", "General Labour"];
@@ -69,13 +71,7 @@ const fromMpr = (mpr) => ({
 function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const { t } = useTranslation();
     const [form, setForm] = useState(() => (mpr ? fromMpr(mpr) : emptyForm(meta.raiseDepartments.length === 1 ? meta.raiseDepartments[0] : "")));
-    const [customDepartments, setCustomDepartments] = useState(() => {
-    try {
-        return JSON.parse(localStorage.getItem("mprCustomDepartments") || "[]");
-    } catch {
-        return [];
-    }
-});
+    const [customDepartments, setCustomDepartments] = useState(readCustomDepartments);
 
     const [newDepartment, setNewDepartment] = useState("");
     const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
@@ -85,7 +81,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
     useEffect(() => {
         localStorage.setItem(
-            "mprCustomDepartments",
+            CUSTOM_DEPARTMENTS_KEY,
             JSON.stringify(customDepartments)
         );
     }, [customDepartments]);
@@ -168,7 +164,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     };
     const [saving, setSaving] = useState("");
     const [error, setError] = useState("");
-    const [employees, setEmployees] = useState({ department: null, list: [] });
+    const [employees, setEmployees] = useState({ loaded: false, list: [], error: "" });
     // Last budget check: values it was run for, the result, and whether the user chose to continue
     const [budget, setBudget] = useState({ key: null, data: null, acknowledged: false });
     const confirm = useConfirm();
@@ -183,15 +179,15 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const isReplacement = form.request_type === "Replacement";
     const lockedDepartment = mpr?.status === "Sent Back";
 
-    // Employees of the department (employee being replaced)
+    // All active employees (employee being replaced): loaded once, the first time it's a Replacement
     useEffect(() => {
-        if (!isReplacement || !form.department) return undefined;
+        if (!isReplacement || employees.loaded) return undefined;
         let ignore = false;
-        api(`/api/recruitment/employees?department=${encodeURIComponent(form.department)}`)
-            .then((list) => !ignore && setEmployees({ department: form.department, list }))
-            .catch(() => !ignore && setEmployees({ department: form.department, list: [] }));
+        api("/api/recruitment/employees")
+            .then((list) => !ignore && setEmployees({ loaded: true, list, error: "" }))
+            .catch((err) => !ignore && setEmployees({ loaded: true, list: [], error: err.message }));
         return () => { ignore = true; };
-    }, [isReplacement, form.department]);
+    }, [isReplacement, employees.loaded]);
 
     // Budget check (New Position only): on leaving No. of Openings / Maximum Salary,
     // on Department change and on Submit. Never on each keystroke.
@@ -281,8 +277,6 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
     const checkBudgetOnBlur = () => runBudgetCheck(form);
 
-    const employeeOptions = employees.department === form.department ? employees.list : [];
-
     const set = (name, value) => setForm((current) => ({ ...current, [name]: value }));
     const setBenefit = (name, value) => setForm((current) => ({ ...current, benefits: { ...current.benefits, [name]: value } }));
     const handleChange = (event) => set(event.target.name, event.target.value);
@@ -326,15 +320,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         }
 
         const existingDepartments = [
-            "Projects / Construction",
-            "Civil Engineering",
-            "Electrical / MEP",
-            "Safety / HSE",
-            "Plant & Equipment",
-            "Procurement / Stores",
-            "HR & Administration",
-            "Finance / Accounts",
-            "Commercial / Quantity Surveying",
+            ...BUILT_IN_DEPARTMENTS,
             ...customDepartments,
         ];
 
@@ -390,6 +376,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         // Custom dropdowns aren't covered by the browser's "required" check
         for (const [name, label, section] of [
             ["department", "Department", "request"],
+            ...(isReplacement ? [["replaced_employee_id", "Employee Being Replaced", "request"]] : []),
             ["job_category", "Job Category", "position"],
             ["employee_category", "Employee Category", "position"],
             ["qualification", "Required Qualification", "position"],
@@ -502,17 +489,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                             className="mpr-dept-menu"
                                             style={departmentMenuStyle}
                                         >
-                                            {[
-                                                "Projects / Construction",
-                                                "Civil Engineering",
-                                                "Electrical / MEP",
-                                                "Safety / HSE",
-                                                "Plant & Equipment",
-                                                "Procurement / Stores",
-                                                "HR & Administration",
-                                                "Finance / Accounts",
-                                                "Commercial / Quantity Surveying",
-                                            ].map((department) => (
+                                            {BUILT_IN_DEPARTMENTS.map((department) => (
                                                 <button
                                                     key={department}
                                                     type="button"
@@ -616,10 +593,15 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                             {isReplacement && <>
                                 <div className="form-group">
                                     <label>{t("recruitment.form.employeeBeingReplaced", { defaultValue: "Employee Being Replaced" })} *</label>
-                                    <select name="replaced_employee_id" value={form.replaced_employee_id} onChange={handleChange} required>
-                                        <option value="">{form.department ? "Select employee" : "Select a department first"}</option>
-                                        {employeeOptions.map((employee) => <option key={employee.employee_id} value={employee.employee_id}>{employee.name} ({employee.employee_id}){employee.designation ? ` – ${employee.designation}` : ""}</option>)}
-                                    </select>
+                                    <EmployeeSearchSelect
+                                        value={form.replaced_employee_id}
+                                        onChange={(employeeId) => set("replaced_employee_id", employeeId)}
+                                        employees={employees.list}
+                                        loading={!employees.loaded}
+                                        loadError={employees.error}
+                                        savedName={mpr?.replaced_employee_name}
+                                        placeholder="Select employee"
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label>{t("recruitment.fields.replacementReason", { defaultValue: "Replacement Reason" })} *</label>

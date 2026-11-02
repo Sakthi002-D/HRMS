@@ -68,27 +68,70 @@ export async function createNotifications(db, recipientIds, { type = "general", 
 // HR Settings apply: "Email Notifications" off skips emails to staff (applicant emails
 // are replies to a form they submitted, so they still go out), the company name appears
 // in the sender / signature and the support email becomes the Reply-To address.
+const buildMail = (mail, settings) => {
+    const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
+    const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
+    return {
+        from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
+        ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
+        to: mail.to,
+        subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
+        text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${mail.signature || `${company} HRMS`}`,
+    };
+};
+
 export async function sendQueuedEmails(queue) {
     const mailer = getTransporter();
     if (!mailer || !queue?.length) return;
 
     const settings = await getAppSettingsSafe();
-    const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
 
     queue.forEach((mail) => {
         if (!mail.plainSubject && settings.emailNotifications === false) return;
 
-        const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
         mailer
-            .sendMail({
-                from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
-                ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
-                to: mail.to,
-                subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
-                text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${mail.signature || `${company} HRMS`}`,
-            })
+            .sendMail(buildMail(mail, settings))
             .catch((error) => console.error("Notification email failed:", error.message));
     });
+}
+
+const SEND_TIMEOUT_MS = 30 * 1000;
+
+// SMTP_* from .env (never in code). Port 465 uses TLS from the start; other ports upgrade with STARTTLS.
+let smtpTransporter = null;
+const getSmtpTransporter = () => {
+    if (!process.env.SMTP_HOST) return null;
+    const port = Number(process.env.SMTP_PORT) || 587;
+    smtpTransporter ||= nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: port === 465,
+        ...(process.env.SMTP_USER ? { auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } } : {}),
+    });
+    return smtpTransporter;
+};
+
+// Same mail as sendQueuedEmails, for when the caller must know the result: throws if it can't be sent.
+// Uses SMTP_* when set, otherwise the Gmail settings above.
+export async function sendEmailNow(mail) {
+    const smtp = getSmtpTransporter();
+    const mailer = smtp || getTransporter();
+    if (!mailer) throw new Error("email is not set up on the server (add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM to .env)");
+    if (smtp && process.env.SMTP_USER && !process.env.SMTP_PASS) throw new Error("SMTP_PASS is missing in .env");
+    if (!mail.to) throw new Error("this application has no email address");
+
+    const settings = await getAppSettingsSafe();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("the mail server did not respond in time")), SEND_TIMEOUT_MS);
+    });
+    try {
+        const message = buildMail(mail, settings);
+        if (smtp) message.from = process.env.SMTP_FROM || process.env.SMTP_USER;
+        await Promise.race([mailer.sendMail(message), timeout]);
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 export async function getInbox(employeeId, db = pool) {

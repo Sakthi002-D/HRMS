@@ -1046,3 +1046,62 @@
         width: 100%;
     }
 }
+
+/* Highest qualification (CustomOptionSelect): same look as the other Careers inputs */
+.career-qualification {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    min-width: 0;
+}
+
+.career-form .mpr-dept-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0b3154;
+    font: inherit;
+    font-size: 14px;
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+}
+
+.career-form .mpr-dept-field:focus,
+.career-form .mpr-dept-field.is-open {
+    border-color: #0f8b83;
+    box-shadow: 0 0 0 3px rgba(15, 139, 131, 0.12) !important;
+}
+
+.career-field.has-error .mpr-dept-field {
+    border-color: #f1a1a1 !important;
+    background: #fffafa;
+}
+
+.career-form .career-qualification .save-job-btn {
+    flex-shrink: 0;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #0f8b83;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mpr-dept-menu.career-option-menu { font-size: 14px; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option { color: #0b3154; font-size: 14px; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option:hover { background: #f0faf9; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option.is-selected { background: #e6f5f4; color: #0f8b83; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option.is-other { color: #0f8b83; }

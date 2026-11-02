@@ -5,6 +5,9 @@ import { Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "../../../components/common/dialog/dialogContext";
 import { api, formatMoney, getCompanyCurrency, getSessionEmployeeId } from "../../../components/recruitment/recruitmentApi";
+import { BUILT_IN_DEPARTMENTS, CUSTOM_DEPARTMENTS_KEY } from "../../../components/recruitment/departments";
+import CustomOptionSelect, { OTHER_OPTION } from "../../../components/recruitment/CustomOptionSelect";
+import "../../../components/recruitment/recruitment.css";
 import "./RecruitmentSettings.css";
 
 const emptyAgency = { name: "", contact_person: "", email: "", phone: "" };
@@ -24,7 +27,6 @@ function RecruitmentMastersSettings() {
     const [locations, setLocations] = useState([]);
     const [agencies, setAgencies] = useState([]);
     const [budgets, setBudgets] = useState([]);
-    const [departments, setDepartments] = useState([]);
     const [currency, setCurrency] = useState("");
     const [newLocation, setNewLocation] = useState("");
     const [newAgency, setNewAgency] = useState(emptyAgency);
@@ -35,7 +37,6 @@ function RecruitmentMastersSettings() {
         setLocations(data.locations);
         setAgencies(data.agencies);
         setBudgets(data.budgets);
-        setDepartments(data.meta.departments);
         setCurrency(getCompanyCurrency(data.meta.currency));
     };
 
@@ -49,7 +50,6 @@ function RecruitmentMastersSettings() {
                 setLocations(data.locations);
                 setAgencies(data.agencies);
                 setBudgets(data.budgets);
-                setDepartments(data.meta.departments);
                 setCurrency(getCompanyCurrency(data.meta.currency));
             })
             .catch((err) => !ignore && setMessage({ text: err.message, error: true }));
@@ -125,6 +125,11 @@ function RecruitmentMastersSettings() {
     };
 
     const saveBudget = async () => {
+        // "+ Other" chosen but the new department was never added
+        if (newBudget.department === OTHER_OPTION) {
+            setMessage({ text: t("settings.recruitmentMasters.departmentNotAdded", { defaultValue: "Type the new Department and click Add, or choose one from the list." }), error: true });
+            return;
+        }
         if (await run(() => api("/api/recruitment/budgets", { method: "POST", body: { ...newBudget, actor_id: actorId } }), t("settings.recruitmentMasters.budgetSaved", { defaultValue: "Budget saved" }))) {
             setNewBudget((current) => ({ ...current, budgeted_positions: "", salary_budget: "" }));
         }
@@ -217,10 +222,18 @@ function RecruitmentMastersSettings() {
                     {t("settings.recruitmentMasters.budgetHint", { currency, defaultValue: "Budgeted Positions is the number of NEW people HR approves for the department and year; the Annual Salary Budget ({{currency}}) is the total yearly amount for them. New Position MPRs are checked against it (existing employees aren't counted). Saving an existing department + year updates it." })}
                 </p>
                 <div className="rs-add-row">
-                    <select value={newBudget.department} onChange={(event) => setNewBudget({ ...newBudget, department: event.target.value })}>
-                        <option value="">{t("settings.recruitmentMasters.departmentRequired", { defaultValue: "Department *" })}</option>
-                        {departments.map((department) => <option key={department} value={department}>{department}</option>)}
-                    </select>
+                    <div className="rs-dept-select">
+                        <CustomOptionSelect
+                            value={newBudget.department}
+                            onChange={(department) => setNewBudget((current) => ({ ...current, department }))}
+                            options={BUILT_IN_DEPARTMENTS}
+                            storageKey={CUSTOM_DEPARTMENTS_KEY}
+                            placeholder={t("settings.recruitmentMasters.departmentRequired", { defaultValue: "Department *" })}
+                            otherPlaceholder="Enter department name"
+                            itemLabel="department"
+                            onError={(text) => setMessage({ text, error: Boolean(text) })}
+                        />
+                    </div>
                     <input type="number" min="2000" value={newBudget.year} onChange={(event) => setNewBudget({ ...newBudget, year: event.target.value })} placeholder={t("settings.recruitmentMasters.year", { defaultValue: "Year" })} />
                     <input type="number" min="0" step="1" value={newBudget.budgeted_positions} onChange={(event) => setNewBudget({ ...newBudget, budgeted_positions: event.target.value })} placeholder={t("settings.recruitmentMasters.budgetedPositionsRequired", { defaultValue: "Budgeted Positions *" })} aria-label={t("settings.recruitmentMasters.budgetedPositions", { defaultValue: "Budgeted Positions" })} />
                     <input type="number" min="0" step="0.01" value={newBudget.salary_budget} onChange={(event) => setNewBudget({ ...newBudget, salary_budget: event.target.value })} placeholder={t("settings.recruitmentMasters.salaryBudgetRequired", { currency, defaultValue: "Annual Salary Budget ({{currency}}) *" })} aria-label={t("settings.recruitmentMasters.salaryBudget", { defaultValue: "Annual Salary Budget" })} />

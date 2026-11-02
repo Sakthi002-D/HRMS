@@ -13,7 +13,11 @@ export async function api(path, { method = "GET", body } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || i18n.t("recruitment.errors.requestFailed", { defaultValue: "Request failed" }));
+    if (!response.ok) {
+        const error = new Error(data.message || i18n.t("recruitment.errors.requestFailed", { defaultValue: "Request failed" }));
+        error.fields = data.fields || null;
+        throw error;
+    }
     return data;
 }
 
@@ -93,7 +97,7 @@ export const notifyApplicationsChanged = () => window.dispatchEvent(new Event(AP
 
 // CSS modifier for a job application status pill (mpr-status classes)
 export const applicationTone = (status = "") =>
-    ({ New: "info", Shortlisted: "done", "On Hold": "warning", Rejected: "danger" })[status] || "muted";
+    ({ New: "info", Shortlisted: "done", "Interview Scheduled": "pending", "On Hold": "warning", Rejected: "danger" })[status] || "muted";
 
 // Candidate's CV (HR only; there is no public URL) as an object URL
 export async function fetchApplicationCv(applicationId, actorId) {

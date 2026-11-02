@@ -1159,3 +1159,313 @@
 
 .mpr-dept-menu .mpr-dept-delete:hover { background: #fee2e2; }
 
+/* Schedule Interview (application detail) */
+.candidate-modal.app-interview-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(680px, 100%);
+    overflow: hidden;
+}
+
+.app-interview-modal .candidate-modal-header {
+    position: static;
+    flex-shrink: 0;
+}
+
+.app-interview-modal .candidate-modal-header h2 {
+    margin: 0 0 3px;
+    font-size: 20px;
+}
+
+.app-iv-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.app-iv-title-icon {
+    display: grid;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 10px;
+    background: #e8f0fe;
+    color: #2564eb;
+}
+
+.app-iv-form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.app-iv-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 28px 24px;
+}
+
+.app-iv-candidate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    margin-bottom: 18px;
+    padding: 11px 14px;
+    border: 1px solid #dbe6f3;
+    border-radius: 8px;
+    background: #f5f9ff;
+    color: #536b82;
+    font-size: 13px;
+}
+
+.app-iv-candidate strong {
+    color: #102f4a;
+    font-size: 14px;
+}
+
+.app-iv-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.app-iv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.app-iv-field.full {
+    grid-column: 1 / -1;
+}
+
+.app-iv-field > label {
+    color: #334b61;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.app-iv-error {
+    color: #d43b3b;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.dashboard-content .app-iv-error {
+    color: #d43b3b !important;
+}
+
+.app-interview-modal .app-iv-control,
+.app-interview-modal .date-picker-trigger {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    border: 1px solid #cbd8e6 !important;
+    border-radius: 8px;
+    background: #ffffff !important;
+    color: #243b50;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.app-interview-modal input.app-iv-control {
+    height: 44px;
+    padding-block: 0;
+    padding-inline: 38px 12px;
+}
+
+.app-interview-modal textarea.app-iv-control {
+    display: block;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.app-interview-modal .app-iv-control:disabled {
+    background: #f1f5f9 !important;
+    cursor: not-allowed;
+}
+
+.app-interview-modal .app-iv-control:focus,
+.app-interview-modal .app-iv-control.is-open,
+.app-interview-modal .date-picker-trigger:focus-visible,
+.app-interview-modal .date-picker-trigger.is-open {
+    border-color: #2564eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, .12) !important;
+}
+
+.app-interview-modal .has-error .app-iv-control,
+.app-interview-modal .has-error .date-picker-trigger {
+    border-color: #f1a1a1 !important;
+}
+
+.app-iv-input {
+    position: relative;
+}
+
+.app-iv-input svg {
+    position: absolute;
+    inset-block-start: 14px;
+    inset-inline-start: 12px;
+    color: #60758a;
+    pointer-events: none;
+}
+
+.app-iv-time {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    text-align: start;
+    cursor: pointer;
+}
+
+.app-iv-time svg,
+.app-iv-chevron {
+    flex-shrink: 0;
+    color: #60758a;
+}
+
+.app-iv-time.is-placeholder span:first-of-type {
+    color: #64748b;
+}
+
+.app-iv-chevron {
+    margin-inline-start: auto;
+}
+
+.app-iv-modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.app-iv-mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 10px;
+    border: 1px solid #cbd8e6;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334b61;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.app-iv-mode:hover {
+    border-color: #8fb1f8;
+}
+
+.app-iv-mode.selected {
+    border-color: #2564eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.app-iv-footer {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 28px;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.app-iv-footer .save-job-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.app-iv-footer button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .app-iv-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-iv-body {
+        padding: 16px 18px 18px;
+    }
+
+    .app-iv-footer {
+        padding: 12px 18px;
+    }
+
+    .app-iv-footer button {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+.app-interview-notice {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.app-interview-notice.success {
+    background: #e7f7ee;
+    color: #07804b;
+}
+
+.app-interview-notice.warning {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+/* Search box at the top of the Employee Being Replaced menu */
+.mpr-dept-menu .mpr-dept-search {
+    position: sticky;
+    top: -4px;
+    z-index: 1;
+    margin: -4px -4px 4px;
+    padding: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.mpr-dept-menu .mpr-dept-search input {
+    width: 100%;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid #cbd8e6;
+    border-radius: 6px;
+    color: #243b50;
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.mpr-dept-menu .mpr-dept-search input:focus {
+    border-color: #2564eb;
+}
+
+.mpr-dept-menu .mpr-dept-empty {
+    margin: 0;
+    padding: 12px 10px;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+}

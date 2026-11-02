@@ -29,7 +29,7 @@
 .rs-actions { display: flex; justify-content: flex-end; padding: 16px 0; border-bottom: 1px solid #edf0f4; }
 .rs-panel .settings-save-button:disabled { opacity: .6; cursor: not-allowed; }
 
-.rs-add-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.rs-add-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
 .rs-add-row input, .rs-add-row select { flex: 1 1 160px; min-width: 0; }
 
 .rs-table { width: 100%; border-collapse: collapse; }
@@ -110,3 +110,11 @@
 .rs-panel button:not(.rs-chip-remove):active {
     box-shadow: none !important;
 }
+/* Budget Department dropdown (CustomOptionSelect): same size, border and font as the inputs beside it */
+.rs-add-row .rs-dept-select { flex: 1 1 160px; min-width: 0; }
+.rs-panel .rs-dept-select .mpr-dept-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 40px; box-sizing: border-box; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 7px; background: #fff; color: #334155; font: inherit; font-size: 14px; text-align: start; cursor: pointer; outline: none; }
+.rs-panel .rs-dept-select .mpr-dept-field.is-placeholder { color: #64748b; }
+.rs-panel .rs-dept-select .mpr-dept-field:focus-visible,
+.rs-panel .rs-dept-select .mpr-dept-field.is-open { border-color: #91b9d3; }
+.rs-panel .rs-dept-select .save-job-btn { flex-shrink: 0; height: 40px; padding: 0 14px; border: 0; border-radius: 7px; background: var(--st-accent); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.rs-panel .rs-dept-select .save-job-btn:disabled { opacity: .6; cursor: not-allowed; }

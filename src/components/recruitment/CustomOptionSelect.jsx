@@ -17,7 +17,7 @@ const readSavedOptions = (storageKey) => {
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-function CustomOptionSelect({ value, onChange, options, storageKey, placeholder, otherPlaceholder, itemLabel, onError, disabled = false }) {
+function CustomOptionSelect({ id, menuClassName = "", value, onChange, options, storageKey, placeholder, otherPlaceholder, itemLabel, onError, disabled = false }) {
     const [customOptions, setCustomOptions] = useState(() => readSavedOptions(storageKey));
     const [newOption, setNewOption] = useState("");
     const [open, setOpen] = useState(false);
@@ -158,6 +158,7 @@ function CustomOptionSelect({ value, onChange, options, storageKey, placeholder,
             <div className="mpr-dept-picker">
                 <button
                     ref={buttonRef}
+                    id={id}
                     type="button"
                     className={`mpr-dept-field${hasValue ? "" : " is-placeholder"}${open ? " is-open" : ""}`}
                     onClick={() => setOpen((current) => !current)}
@@ -169,7 +170,7 @@ function CustomOptionSelect({ value, onChange, options, storageKey, placeholder,
                 </button>
 
                 {open && menuStyle && createPortal(
-                    <div ref={menuRef} className="mpr-dept-menu" style={menuStyle}>
+                    <div ref={menuRef} className={`mpr-dept-menu ${menuClassName}`.trim()} style={menuStyle}>
                         {options.map((option) => <div key={option}>{optionButton(option)}</div>)}
 
                         {unknownValue && <div>{optionButton(unknownValue)}</div>}

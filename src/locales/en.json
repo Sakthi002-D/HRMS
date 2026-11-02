@@ -1258,6 +1258,8 @@
       "approved": "Approved",
       "cancelled": "Cancelled",
       "created": "Created",
+      "interview_scheduled": "Interview Scheduled",
+
       "job_opening_created": "Job opening created",
       "notified": "Notified",
       "put_on_hold": "Put on hold",
@@ -1319,14 +1321,64 @@
       "lastRemark": "Last remark:",
       "legacyResume": "Resume (uploaded before the Careers page)",
       "linkedin": "LinkedIn",
-      "nextPhaseNote": "Interview scheduling (FRD 1.2) comes in the next phase.",
-      "nextPhaseTitle": "Coming in the next phase (FRD 1.2)",
       "noCv": "No CV was uploaded with this application.",
       "noFurtherActions": "No further review actions: this application is {{status}}.",
       "noSkills": "No skills listed.",
       "percentageCgpa": "Percentage / CGPA",
       "preview": "Preview",
       "remarkPlaceholder": "Remarks (required to reject)",
+      "interview": {
+        "sending": "Sending...",
+        "selectTime": "Select time",
+        "chooseModeFirst": "Choose a mode first",
+        "locationPlaceholder": "e.g. Shelter Group Head Office, Doha",
+        "notesPlaceholder": "e.g. Bring QID copy and original certificates",
+        "errorDate": "Choose the interview date",
+        "errorDatePast": "Interview date can't be in the past",
+        "errorTime": "Choose the interview time",
+        "errorMode": "Choose the interview mode",
+        "errorPlace": "{{label}} is required",
+        "errorLink": "Enter a meeting link starting with https://",
+        "errorInterviewer": "Enter the interviewer's name",
+
+        "title": "Interview",
+
+        "date": "Interview Date",
+
+        "time": "Time",
+
+        "mode": "Mode",
+
+
+        "location": "Interview Location",
+
+        "meetingLink": "Meeting Link",
+
+        "phoneNumber": "Phone Number",
+
+        "locationOrLink": "Location or Meeting Link",
+
+        "interviewer": "Interviewer Name",
+
+        "notes": "Notes",
+
+        "save": "Save & Send Invitation",
+
+
+        "emailSent": "Interview scheduled and invitation sent to {{email}}",
+
+        "emailFailed": "Interview saved, but the email could not be sent: {{reason}}",
+
+        "emailStatus": "Invitation Email",
+
+        "sentOn": "Sent {{date}}",
+
+        "notSent": "Not sent: {{reason}}",
+
+        "shortlistedOnly": "Available when the application is Shortlisted"
+
+      },
+
       "scheduleInterview": "Schedule Interview",
       "skillsCover": "Skills & Cover Letter",
       "submittedVia": "Submitted via",
@@ -1340,6 +1392,7 @@
       "yearOfPassing": "Year of Passing"
     },
     "applicationStatuses": {
+      "interview_scheduled": "Interview Scheduled",
       "new": "New",
       "on_hold": "On Hold",
       "rejected": "Rejected",
@@ -1628,6 +1681,16 @@
         "90_days": "90 days",
         "immediate": "Immediate"
       },
+      "interviewMode": {
+
+        "in_person": "In-person",
+
+        "online": "Online",
+
+        "phone": "Phone"
+
+      },
+
       "qualification": {
         "bachelor_s_degree": "Bachelor's Degree",
         "diploma": "Diploma",

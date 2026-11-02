@@ -2,7 +2,27 @@
 import i18n from "i18next";
 import { formatMoney, recruitmentValueLabel } from "./recruitmentApi";
 
-export const APPLICATION_STATUSES = ["New", "Shortlisted", "On Hold", "Rejected"];
+export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected"];
+export const INTERVIEW_MODES = ["In-person", "Online", "Phone"];
+
+// Mode → [t("recruitment.applicationDetail.interview.<key>"), English label]
+export const INTERVIEW_PLACE_LABELS = {
+    "In-person": ["location", "Interview Location"],
+    Online: ["meetingLink", "Meeting Link"],
+    Phone: ["phoneNumber", "Phone Number"],
+};
+
+// "HH:MM" every 30 minutes, 07:00 to 19:00
+export const INTERVIEW_TIME_SLOTS = Array.from({ length: 25 }, (_, index) =>
+    `${String(7 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}`
+);
+
+// "14:30" → "02:30 PM"
+export const formatInterviewTime = (value) => {
+    const [hour, minute] = String(value || "").split(":").map(Number);
+    if (!Number.isInteger(hour) || !Number.isInteger(minute)) return value || "";
+    return `${String(hour % 12 || 12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+};
 export const CANDIDATE_TYPES = ["Fresher", "Experienced"];
 export const SOURCE_OPTIONS = ["Company website", "LinkedIn", "NaukriGulf", "Recruitment agency", "Employee referral", "Other"];
 
