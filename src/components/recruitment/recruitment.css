@@ -832,3 +832,330 @@
 .app-detail .mpr-detail-status {
     padding: 18px 28px 0;
 }
+/* Frontend-only construction MPR accordion layout. Append to recruitment.css. */
+.mpr-accordion-form {
+    width: min(100%, 1180px);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 24px;
+    border: 1px solid #d9e3ed;
+    border-radius: 14px;
+    background: #fff;
+    color: #16344d;
+    box-shadow: 0 18px 55px rgba(15, 38, 59, .16);
+}
+.mpr-accordion-form .mpr-modern-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e7edf4;
+}
+.mpr-accordion-form .mpr-modern-header h2 {
+    margin: 0 0 6px;
+    color: #12304a;
+    font-size: 23px;
+    font-weight: 750;
+    letter-spacing: -.3px;
+}
+.mpr-accordion-form .mpr-modern-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+.mpr-accordion-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+.mpr-accordion-form .mpr-expand-all {
+    border: 1px solid #cbd8e6;
+    border-radius: 8px;
+    padding: 7px 12px;
+    background: #fff;
+    color: #245fe8;
+    font: inherit;
+    cursor: pointer;
+}
+.mpr-accordion-form .mpr-expand-all:hover { background: #f3f7ff; border-color: #8fb1f8; }
+.mpr-accordion-card {
+    margin: 0 0 12px;
+    overflow: hidden;
+    border: 1px solid #d8e3ee;
+    border-radius: 11px;
+    background: #fff;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+.mpr-accordion-card.expanded {
+    border-color: #b8cdef;
+    box-shadow: 0 4px 14px rgba(18, 48, 74, .045);
+}
+.mpr-accordion-trigger {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 13px;
+    min-height: 76px;
+    padding: 14px 16px;
+    border: 0;
+    background: #fff;
+    color: #12304a;
+    text-align: left;
+    cursor: pointer;
+}
+.mpr-accordion-trigger:hover { background: #f8fbff; }
+.mpr-accordion-trigger.is-open { background: #fbfdff; }
+.mpr-accordion-number {
+    display: grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+    background: #eaf1fe;
+    color: #245fe8;
+    font-size: 14px;
+    font-weight: 750;
+}
+.mpr-accordion-heading {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+.mpr-accordion-heading strong { color: #12304a; font-size: 15px; font-weight: 750; }
+.mpr-accordion-heading small { color: #64748b; font-size: 12.5px; font-weight: 400; line-height: 1.4; }
+.mpr-accordion-chevron { flex: 0 0 auto; color: #60758a; font-size: 22px; line-height: 1; }
+.mpr-accordion-content {
+    padding: 4px 18px 20px;
+    border-top: 1px solid #edf1f6;
+}
+.mpr-accordion-content .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px 18px;
+}
+.mpr-accordion-content .form-group { min-width: 0; margin: 0; }
+.mpr-accordion-content .form-group label:not(.mpr-switch-line) {
+    display: block;
+    margin: 0 0 6px;
+    color: #334b61;
+    font-size: 12.5px;
+    font-weight: 650;
+}
+.mpr-accordion-content .form-group input:not([type="checkbox"]),
+.mpr-accordion-content .form-group select,
+.mpr-accordion-content .form-group textarea {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    border: 1px solid #cbd8e6;
+    border-radius: 7px;
+    background: #fff;
+    color: #243b50;
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.mpr-accordion-content .form-group textarea { min-height: 86px; resize: vertical; }
+.mpr-accordion-content .form-group input:focus,
+.mpr-accordion-content .form-group select:focus,
+.mpr-accordion-content .form-group textarea:focus {
+    border-color: #2564eb;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, .11);
+}
+.mpr-accordion-content .mpr-full { grid-column: 1 / -1; }
+.mpr-accordion-content .mpr-checklist { margin-top: 4px; }
+.mpr-switch-line {
+    display: flex !important;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    margin: 0 !important;
+    padding: 9px 11px;
+    border: 1px solid #d5e0eb;
+    border-radius: 7px;
+    background: #f8fbff;
+    color: #334b61;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+.mpr-switch-line input { width: 16px; height: 16px; accent-color: #2564eb; }
+.mpr-approval-preview {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #dbe6f3;
+    border-radius: 9px;
+    background: #f7faff;
+}
+.mpr-approval-preview > strong { color: #12304a; font-size: 13px; }
+.mpr-approval-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0 8px; }
+.mpr-approval-steps span { padding: 8px 11px; border: 1px solid #cbdcf5; border-radius: 7px; background: #fff; color: #244b77; font-size: 12px; font-weight: 650; }
+.mpr-approval-steps i { color: #2564eb; font-style: normal; }
+.mpr-approval-preview small { color: #64748b; font-size: 11.5px; }
+.mpr-summary-card { margin-top: 14px; }
+.mpr-summary-trigger { min-height: 62px; }
+.mpr-summary-icon { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; color: #245fe8; font-size: 22px; }
+.mpr-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding-top: 14px; }
+.mpr-summary-item { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 11px 12px; border: 1px solid #e2eaf2; border-radius: 8px; background: #fbfdff; }
+.mpr-summary-item span { color: #64748b; font-size: 11.5px; }
+.mpr-summary-item strong { overflow-wrap: anywhere; color: #12304a; font-size: 13px; font-weight: 700; }
+.mpr-accordion-form .mpr-modern-actions {
+    position: sticky;
+    bottom: -24px;
+    z-index: 2;
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin: 18px -24px -24px;
+    padding: 14px 24px;
+    border-top: 1px solid #e5ebf2;
+    background: rgba(255, 255, 255, .97);
+}
+.mpr-accordion-form .mpr-modern-actions button { min-height: 40px; padding: 9px 15px; border-radius: 7px; font-size: 13px; font-weight: 650; }
+@media (max-width: 760px) {
+    .mpr-accordion-form { padding: 16px; max-height: calc(100vh - 24px); }
+    .mpr-accordion-content .form-grid { grid-template-columns: 1fr; }
+    .mpr-accordion-content .mpr-full { grid-column: auto; }
+    .mpr-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mpr-accordion-form .mpr-modern-actions { bottom: -16px; margin: 16px -16px -16px; padding: 12px 16px; flex-wrap: wrap; }
+}
+@media (max-width: 460px) {
+    .mpr-summary-grid { grid-template-columns: 1fr; }
+    .mpr-accordion-trigger { gap: 10px; padding: 12px; }
+    .mpr-accordion-number { flex-basis: 36px; width: 36px; height: 36px; }
+    .mpr-accordion-form .mpr-modern-actions button { flex: 1; }
+}
+
+/* ---------- MPR Department dropdown (custom, so custom options can have a red ×) ----------
+   The field matches the other MPR dropdowns. The menu is rendered in document.body
+   with position: fixed (see MprForm.jsx), so no accordion card or scroll box can clip it. */
+
+.mpr-accordion-form .mpr-dept-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    border: 1px solid #cbd8e6;
+    border-radius: 7px;
+    background: #fff;
+    color: #243b50;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.mpr-accordion-form .mpr-dept-field.is-placeholder { color: #64748b; }
+
+.mpr-accordion-form .mpr-dept-field:focus-visible,
+.mpr-accordion-form .mpr-dept-field.is-open {
+    border-color: #2564eb;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, .11);
+}
+
+.mpr-accordion-form .mpr-dept-field:disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+}
+
+.mpr-dept-field-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpr-dept-field-chevron {
+    flex-shrink: 0;
+    color: #60758a;
+}
+
+.mpr-dept-menu {
+    position: fixed;
+    z-index: 100000;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid #cbd8e6;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(15, 38, 59, .16);
+    font-size: 13px;
+}
+
+.mpr-dept-option-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mpr-dept-menu .mpr-dept-option {
+    display: block;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 5px;
+    background: #fff;
+    color: #17365d;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.mpr-dept-menu .mpr-dept-option:hover { background: #f3f7ff; }
+
+.mpr-dept-menu .mpr-dept-option.is-selected {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.mpr-dept-menu .mpr-dept-option.is-other {
+    margin-top: 4px;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.mpr-dept-menu .mpr-dept-delete {
+    display: grid;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 5px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mpr-dept-menu .mpr-dept-delete:hover { background: #fee2e2; }
+

@@ -1,17 +1,37 @@
 // Manpower Request form (replaces the old "Create Job" form; keeps its fields and styling).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "../common/dialog/dialogContext";
 import DatePicker from "../layout/common/DatePicker";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
-import { api, getCompanyCurrency, isBudgetException, recruitmentValueLabel } from "./recruitmentApi";
+import CustomOptionSelect, { OTHER_OPTION } from "./CustomOptionSelect";
+import { api, getCompanyCurrency, isBudgetException } from "./recruitmentApi";
+
+const JOB_CATEGORIES = ["Site Engineering", "Civil", "Electrical", "Mechanical", "Plumbing", "HVAC", "HSE / Safety", "Surveying", "Equipment Operator", "General Labour"];
+const QUALIFICATIONS = ["School Certificate", "ITI / Trade Certificate", "Diploma", "Bachelor's Degree", "Master's Degree", "Professional Certification"];
+const EMPLOYEE_CATEGORIES = ["Management", "Staff", "Supervisor / Foreman", "Skilled Worker", "Semi-skilled Worker", "Unskilled Worker"];
+// Placeholder grades: replace with the final grade structure from Karthick
+const GRADES = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8"];
 
 const emptyForm = (department) => ({
     request_type: "",
     title: "",
     department: department || "",
+    project_name: "",
+    project_code: "",
+    job_category: "",
+    employee_category: "",
+    grade: "",
+    qualification: "",
+    required_joining_date: "",
+    project_start_date: "",
+    deployment_timeline: "",
+    shift_schedule: "",
+    pay_basis: "Monthly",
+    ppe_required: false,
     openings: "",
     experience: "",
     location: "",
@@ -49,6 +69,103 @@ const fromMpr = (mpr) => ({
 function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const { t } = useTranslation();
     const [form, setForm] = useState(() => (mpr ? fromMpr(mpr) : emptyForm(meta.raiseDepartments.length === 1 ? meta.raiseDepartments[0] : "")));
+    const [customDepartments, setCustomDepartments] = useState(() => {
+    try {
+        return JSON.parse(localStorage.getItem("mprCustomDepartments") || "[]");
+    } catch {
+        return [];
+    }
+});
+
+    const [newDepartment, setNewDepartment] = useState("");
+    const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
+    const [departmentMenuStyle, setDepartmentMenuStyle] = useState(null);
+    const departmentButtonRef = useRef(null);
+    const departmentMenuRef = useRef(null);
+
+    useEffect(() => {
+        localStorage.setItem(
+            "mprCustomDepartments",
+            JSON.stringify(customDepartments)
+        );
+    }, [customDepartments]);
+
+    // The Department menu is drawn in document.body (a portal) with position: fixed,
+    // so the form's scroll box and the accordion cards can never clip it.
+    // This keeps the menu lined up with the Department field while it is open.
+    useLayoutEffect(() => {
+        if (!departmentDropdownOpen) {
+            setDepartmentMenuStyle(null);
+            return undefined;
+        }
+
+        const placeMenu = () => {
+            const button = departmentButtonRef.current;
+            if (!button) {
+                setDepartmentDropdownOpen(false);
+                return;
+            }
+
+            const rect = button.getBoundingClientRect();
+
+            // Field scrolled out of the form's visible area: close the menu
+            const scrollBox = button.closest(".mpr-accordion-form");
+            if (scrollBox) {
+                const box = scrollBox.getBoundingClientRect();
+                if (rect.bottom < box.top || rect.top > box.bottom) {
+                    setDepartmentDropdownOpen(false);
+                    return;
+                }
+            }
+
+            const gap = 4;
+            const edge = 8;
+            const preferredHeight = 240;
+            const spaceBelow = window.innerHeight - rect.bottom - gap - edge;
+            const spaceAbove = rect.top - gap - edge;
+            const openUp = spaceBelow < Math.min(preferredHeight, 160) && spaceAbove > spaceBelow;
+            const maxHeight = Math.max(120, Math.min(preferredHeight, openUp ? spaceAbove : spaceBelow));
+
+            setDepartmentMenuStyle({
+                left: rect.left,
+                width: rect.width,
+                maxHeight,
+                ...(openUp
+                    ? { bottom: window.innerHeight - rect.top + gap }
+                    : { top: rect.bottom + gap }),
+            });
+        };
+
+        const closeOnOutsideClick = (event) => {
+            if (departmentButtonRef.current?.contains(event.target)) return;
+            if (departmentMenuRef.current?.contains(event.target)) return;
+            setDepartmentDropdownOpen(false);
+        };
+
+        const closeOnEscape = (event) => {
+            if (event.key === "Escape") setDepartmentDropdownOpen(false);
+        };
+
+        placeMenu();
+        window.addEventListener("scroll", placeMenu, true);
+        window.addEventListener("resize", placeMenu);
+        document.addEventListener("pointerdown", closeOnOutsideClick);
+        document.addEventListener("keydown", closeOnEscape);
+
+        return () => {
+            window.removeEventListener("scroll", placeMenu, true);
+            window.removeEventListener("resize", placeMenu);
+            document.removeEventListener("pointerdown", closeOnOutsideClick);
+            document.removeEventListener("keydown", closeOnEscape);
+        };
+    }, [departmentDropdownOpen]);
+    const [expandedSections, setExpandedSections] = useState({ request: false, position: false, site: false, compensation: false, summary: false });
+    const toggleSection = (name) => setExpandedSections((current) => ({ ...current, [name]: !current[name] }));
+    const allSectionsOpen = ["request", "position", "site", "compensation", "summary"].every((key) => expandedSections[key]);
+    const toggleAllSections = () => {
+        const next = !allSectionsOpen;
+        setExpandedSections({ request: next, position: next, site: next, compensation: next, summary: next });
+    };
     const [saving, setSaving] = useState("");
     const [error, setError] = useState("");
     const [employees, setEmployees] = useState({ department: null, list: [] });
@@ -62,7 +179,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     // "Today" in the company timezone from HR Settings (computed by the server)
     const today = meta.today;
 
-    const isNewPosition = form.request_type === "New Position";
+    const isNewPosition = ["New Position", "Project Expansion", "Temporary / Contract"].includes(form.request_type);
     const isReplacement = form.request_type === "Replacement";
     const lockedDepartment = mpr?.status === "Sent Back";
 
@@ -169,11 +286,6 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const set = (name, value) => setForm((current) => ({ ...current, [name]: value }));
     const setBenefit = (name, value) => setForm((current) => ({ ...current, benefits: { ...current.benefits, [name]: value } }));
     const handleChange = (event) => set(event.target.name, event.target.value);
-    const toggleAsset = (asset) =>
-        setForm((current) => ({
-            ...current,
-            assets: current.assets.includes(asset) ? current.assets.filter((item) => item !== asset) : [...current.assets, asset],
-        }));
 
     // Start Date moved past the End Date: clear the End Date
     const handleStartDateChange = (value) =>
@@ -193,10 +305,67 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         return "";
     };
 
-    const handleDepartmentChange = (event) => {
-        const next = { ...form, department: event.target.value };
+    const handleDepartmentChange = (department) => {
+        const next = { ...form, department };
+
         setForm(next);
-        runBudgetCheck(next);
+        setError("");
+        setDepartmentDropdownOpen(false);
+
+        if (department && department !== "Other") {
+            runBudgetCheck(next);
+        }
+    };
+
+    const addCustomDepartment = () => {
+        const name = newDepartment.trim();
+
+        if (!name || name.toLowerCase() === "other") {
+            setError("Enter a valid department name.");
+            return;
+        }
+
+        const existingDepartments = [
+            "Projects / Construction",
+            "Civil Engineering",
+            "Electrical / MEP",
+            "Safety / HSE",
+            "Plant & Equipment",
+            "Procurement / Stores",
+            "HR & Administration",
+            "Finance / Accounts",
+            "Commercial / Quantity Surveying",
+            ...customDepartments,
+        ];
+
+        const alreadyExists = existingDepartments.some(
+            (department) => department.toLowerCase() === name.toLowerCase()
+        );
+
+        if (alreadyExists) {
+            setError("This department already exists.");
+            return;
+        }
+
+        setCustomDepartments((current) => [...current, name]);
+        setForm((current) => ({ ...current, department: name }));
+        setNewDepartment("");
+        setError("");
+        setDepartmentDropdownOpen(false);
+    };
+
+    const deleteCustomDepartment = (department) => {
+        setCustomDepartments((current) =>
+            current.filter((item) => item !== department)
+        );
+
+        setForm((current) => ({
+            ...current,
+            department:
+                current.department === department ? "" : current.department,
+        }));
+
+        setError("");
     };
 
     const save = async (action, values = form) => {
@@ -218,6 +387,26 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (saving) return;
+        // Custom dropdowns aren't covered by the browser's "required" check
+        for (const [name, label, section] of [
+            ["department", "Department", "request"],
+            ["job_category", "Job Category", "position"],
+            ["employee_category", "Employee Category", "position"],
+            ["qualification", "Required Qualification", "position"],
+        ]) {
+            if (!form[name] || form[name] === OTHER_OPTION) {
+                setExpandedSections((current) => ({ ...current, [section]: true }));
+                setError(form[name] === OTHER_OPTION
+                    ? `Type the new ${label} and click Add, or choose one from the list.`
+                    : `Choose the ${label}.`);
+                return;
+            }
+        }
+        if (!form.required_joining_date) {
+            setExpandedSections((current) => ({ ...current, position: true }));
+            setError("Choose the Required Joining Date.");
+            return;
+        }
         const periodError = applicationPeriodError(form);
         if (periodError) {
             setError(periodError);
@@ -235,201 +424,405 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         save("submit", values);
     };
 
+    const accordionHeader = (number, title, subtitle, name) => (
+        <button type="button" className={`mpr-accordion-trigger ${expandedSections[name] ? "is-open" : ""}`} onClick={() => toggleSection(name)} aria-expanded={Boolean(expandedSections[name])}>
+            <span className="mpr-accordion-number">{number}</span>
+            <span className="mpr-accordion-heading"><strong>{title}</strong><small>{subtitle}</small></span>
+            <span className="mpr-accordion-chevron" aria-hidden="true">{expandedSections[name] ? "⌃" : "⌄"}</span>
+        </button>
+    );
+
     return (
-        <div className="job-form-container mpr-form">
-            <div className="job-form-header">
-                <h2>{mpr ? t("recruitment.form.editTitle", { number: mpr.mpr_no, defaultValue: "Edit {{number}}" }) : t("recruitment.form.newTitle", { defaultValue: "New Manpower Request" })}</h2>
-                <button type="button" className="close-btn" onClick={onClose}>×</button>
+        <div className="job-form-container mpr-form mpr-accordion-form">
+            <div className="job-form-header mpr-modern-header">
+                <div>
+                    <h2>{mpr ? t("recruitment.form.editTitle", { number: mpr.mpr_no, defaultValue: `Edit ${mpr.mpr_no}` }) : "New Manpower Request"}</h2>
+                    <p>Complete the construction manpower request. Required fields are marked *</p>
+                </div>
+                <button type="button" className="close-btn" onClick={onClose} aria-label="Close form">×</button>
             </div>
 
             {mpr?.status === "Sent Back" && (
-                <p className="mpr-form-note">
-                    {t("recruitment.form.sentBackNote", { defaultValue: "Sent back for changes. Resubmitting continues the approval from the step that sent it back." })}
-                </p>
+                <p className="mpr-form-note">{t("recruitment.form.sentBackNote", { defaultValue: "Sent back for changes. Resubmitting continues the approval from the step that sent it back." })}</p>
             )}
 
+            <div className="mpr-accordion-toolbar">
+                <span>Request information</span>
+                <button type="button" className="mpr-expand-all" onClick={toggleAllSections}>{allSectionsOpen ? "Collapse all" : "Expand all"}</button>
+            </div>
+
             <form onSubmit={handleSubmit}>
-                <h3 className="mpr-form-section">{t("recruitment.form.sectionRequest", { defaultValue: "Request" })}</h3>
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.requestType", { defaultValue: "Request Type" })} *</label>
-                        <select name="request_type" value={form.request_type} onChange={handleChange} required disabled={lockedDepartment}>
-                            <option value="">{t("recruitment.form.selectRequestType", { defaultValue: "Select Request Type" })}</option>
-                            {meta.requestTypes.map((type) => <option key={type} value={type}>{recruitmentValueLabel("requestType", type)}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("profileEdit.fields.department", { defaultValue: "Department" })} *</label>
-                        <select name="department" value={form.department} onChange={handleDepartmentChange} required disabled={lockedDepartment}>
-                            <option value="">{t("recruitment.form.selectDepartment", { defaultValue: "Select Department" })}</option>
-                            {meta.raiseDepartments.map((department) => <option key={department} value={department}>{department}</option>)}
-                        </select>
-                    </div>
-
-                    {isReplacement && (
-                        <>
+                <section className={`mpr-accordion-card ${expandedSections.request ? "expanded" : ""}`}>
+                    {accordionHeader("01", "Request & Project", "Request type, department and project details", "request")}
+                    {expandedSections.request && <div className="mpr-accordion-content">
+                        <div className="form-grid">
                             <div className="form-group">
-                                <label>{t("recruitment.form.employeeBeingReplaced", { defaultValue: "Employee Being Replaced" })} *</label>
-                                <select name="replaced_employee_id" value={form.replaced_employee_id} onChange={handleChange} required>
-                                    <option value="">{form.department
-                                        ? t("recruitment.form.selectEmployee", { defaultValue: "Select Employee" })
-                                        : t("recruitment.form.selectDepartmentFirst", { defaultValue: "Select a department first" })}</option>
-                                    {employeeOptions.map((employee) => (
-                                        <option key={employee.employee_id} value={employee.employee_id}>
-                                            {employee.name} ({employee.employee_id}){employee.designation ? ` – ${employee.designation}` : ""}
-                                        </option>
-                                    ))}
+                                <label>{t("recruitment.fields.requestType", { defaultValue: "Request Type" })} *</label>
+                                <select name="request_type" value={form.request_type} onChange={handleChange} required disabled={lockedDepartment}>
+                                    <option value="">Select request type</option>
+                                    {[
+                                        "New Position",
+                                        "Replacement",
+                                        "Project Expansion",
+                                        "Temporary / Contract",
+                                    ].map((type) => <option key={type} value={type}>{type}</option>)}
+                                </select>
+                            </div>
+                                                      <div className="form-group">
+                                <label>
+                                    {t("profileEdit.fields.department", {
+                                        defaultValue: "Department",
+                                    })} *
+                                </label>
+
+                                <div className="mpr-dept-picker">
+                                    <button
+                                        ref={departmentButtonRef}
+                                        type="button"
+                                        className={`mpr-dept-field${form.department && form.department !== "Other" ? "" : " is-placeholder"}${departmentDropdownOpen ? " is-open" : ""}`}
+                                        onClick={() =>
+                                            setDepartmentDropdownOpen((open) => !open)
+                                        }
+                                        disabled={lockedDepartment}
+                                        aria-expanded={departmentDropdownOpen}
+                                    >
+                                        <span className="mpr-dept-field-value">
+                                            {form.department && form.department !== "Other"
+                                                ? form.department
+                                                : "Select department"}
+                                        </span>
+                                        <span className="mpr-dept-field-chevron" aria-hidden="true">
+                                            {departmentDropdownOpen ? "⌃" : "⌄"}
+                                        </span>
+                                    </button>
+
+                                    {departmentDropdownOpen && departmentMenuStyle && createPortal(
+                                        <div
+                                            ref={departmentMenuRef}
+                                            className="mpr-dept-menu"
+                                            style={departmentMenuStyle}
+                                        >
+                                            {[
+                                                "Projects / Construction",
+                                                "Civil Engineering",
+                                                "Electrical / MEP",
+                                                "Safety / HSE",
+                                                "Plant & Equipment",
+                                                "Procurement / Stores",
+                                                "HR & Administration",
+                                                "Finance / Accounts",
+                                                "Commercial / Quantity Surveying",
+                                            ].map((department) => (
+                                                <button
+                                                    key={department}
+                                                    type="button"
+                                                    className={`mpr-dept-option${form.department === department ? " is-selected" : ""}`}
+                                                    onClick={() =>
+                                                        handleDepartmentChange(department)
+                                                    }
+                                                >
+                                                    {department}
+                                                </button>
+                                            ))}
+
+                                            {customDepartments.map((department) => (
+                                                <div key={department} className="mpr-dept-option-row">
+                                                    <button
+                                                        type="button"
+                                                        className={`mpr-dept-option${form.department === department ? " is-selected" : ""}`}
+                                                        onClick={() =>
+                                                            handleDepartmentChange(department)
+                                                        }
+                                                    >
+                                                        {department}
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className="mpr-dept-delete"
+                                                        onClick={() =>
+                                                            deleteCustomDepartment(department)
+                                                        }
+                                                        title={`Delete ${department}`}
+                                                        aria-label={`Delete ${department}`}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            <button
+                                                type="button"
+                                                className="mpr-dept-option is-other"
+                                                onClick={() => {
+                                                    setNewDepartment("");
+                                                    setError("");
+                                                    setDepartmentDropdownOpen(false);
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        department: "Other",
+                                                    }));
+                                                }}
+                                            >
+                                                + Other
+                                            </button>
+                                        </div>,
+                                        document.body
+                                    )}
+                                </div>
+
+                                {form.department === "Other" && (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            gap: "8px",
+                                            marginTop: "8px",
+                                        }}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={newDepartment}
+                                            onChange={(event) =>
+                                                setNewDepartment(event.target.value)
+                                            }
+                                            placeholder="Enter department name"
+                                            maxLength={100}
+                                            aria-label="New department name"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            className="save-job-btn"
+                                            onClick={addCustomDepartment}
+                                            disabled={!newDepartment.trim()}
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                           
+
+                           
+                            <div className="form-group">
+                                <label>Project Name *</label>
+                                <input name="project_name" value={form.project_name || ""} onChange={handleChange} placeholder="e.g. Doha Commercial Tower" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Project Code</label>
+                                <input name="project_code" value={form.project_code || ""} onChange={handleChange} placeholder="e.g. DCT-2026" />
+                            </div>
+                            {isReplacement && <>
+                                <div className="form-group">
+                                    <label>{t("recruitment.form.employeeBeingReplaced", { defaultValue: "Employee Being Replaced" })} *</label>
+                                    <select name="replaced_employee_id" value={form.replaced_employee_id} onChange={handleChange} required>
+                                        <option value="">{form.department ? "Select employee" : "Select a department first"}</option>
+                                        {employeeOptions.map((employee) => <option key={employee.employee_id} value={employee.employee_id}>{employee.name} ({employee.employee_id}){employee.designation ? ` – ${employee.designation}` : ""}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>{t("recruitment.fields.replacementReason", { defaultValue: "Replacement Reason" })} *</label>
+                                    <input name="replacement_reason" value={form.replacement_reason} onChange={handleChange} placeholder="e.g. Resignation, end of contract" required />
+                                </div>
+                            </>}
+                        </div>
+                        {isNewPosition && <BudgetBadge budget={budgetResult?.data} acknowledged={budgetResult?.acknowledged} />}
+                    </div>}
+                </section>
+
+                <section className={`mpr-accordion-card ${expandedSections.position ? "expanded" : ""}`}>
+                    {accordionHeader("02", "Position Requirements", "Job role, qualification, skills and joining date", "position")}
+                    {expandedSections.position && <div className="mpr-accordion-content">
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Job Category *</label>
+                                <CustomOptionSelect
+                                    value={form.job_category || ""}
+                                    onChange={(value) => set("job_category", value)}
+                                    options={JOB_CATEGORIES}
+                                    storageKey="mprCustomJobCategories"
+                                    placeholder="Select job category"
+                                    otherPlaceholder="Enter job category"
+                                    itemLabel="job category"
+                                    onError={setError}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title / Trade" })} *</label>
+                                <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Civil Site Engineer, Mason, Electrician" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Employee Category *</label>
+                                <select name="employee_category" value={form.employee_category || ""} onChange={handleChange} required>
+                                    <option value="">Select employee category</option>
+                                    {EMPLOYEE_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>{t("recruitment.fields.replacementReason", { defaultValue: "Replacement Reason" })} *</label>
-                                <input name="replacement_reason" value={form.replacement_reason} onChange={handleChange} placeholder={t("recruitment.form.replacementReasonPlaceholder", { defaultValue: "e.g. Resignation, end of contract" })} required />
+                                <label>Grade</label>
+                                <select name="grade" value={form.grade || ""} onChange={handleChange}>
+                                    <option value="">Select grade</option>
+                                    {GRADES.map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
                             </div>
-                        </>
-                    )}
-                </div>
-
-                {isNewPosition && <BudgetBadge budget={budgetResult?.data} acknowledged={budgetResult?.acknowledged} />}
-
-                <h3 className="mpr-form-section">{t("recruitment.fields.position", { defaultValue: "Position" })}</h3>
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title" })} *</label>
-                        <input type="text" name="title" value={form.title} onChange={handleChange} placeholder={t("recruitment.form.jobTitlePlaceholder", { defaultValue: "e.g. Frontend Developer" })} required />
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.openingsCount", { defaultValue: "No. of Openings" })} *</label>
-                        <input ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder={t("recruitment.form.openingsPlaceholder", { defaultValue: "e.g. 2" })} required />
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
-                        <input type="text" name="experience" value={form.experience} onChange={handleChange} placeholder={t("recruitment.form.experiencePlaceholder", { defaultValue: "e.g. 0-2 Years" })} required />
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.location", { defaultValue: "Location" })} *</label>
-                        <select name="location" value={form.location} onChange={handleChange} required>
-                            <option value="">{t("recruitment.form.selectLocation", { defaultValue: "Select Location" })}</option>
-                            {meta.locations.map((location) => <option key={location.id} value={location.name}>{location.name}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("profileEdit.sectionFields.employment_type", { defaultValue: "Employment Type" })}</label>
-                        <select name="employment_type" value={form.employment_type} onChange={handleChange}>
-                            {meta.employmentTypes.map((type) => <option key={type} value={type}>{recruitmentValueLabel("employmentType", type)}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.requiredSkills", { defaultValue: "Required Skills" })} *</label>
-                        <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder={t("recruitment.form.skillsPlaceholder", { defaultValue: "e.g. React, Node.js, MongoDB" })} required />
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.applicationStartDate", { defaultValue: "Application Start Date" })} *</label>
-                        <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
-                    </div>
-
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.applicationEndDate", { defaultValue: "Application End Date" })} *</label>
-                        <DatePicker
-                            value={form.application_end_date}
-                            onChange={(value) => set("application_end_date", value)}
-                            minDate={form.application_start_date && form.application_start_date > today ? form.application_start_date : today}
-                            today={today}
-                            autoPosition
-                        />
-                    </div>
-
-                    <div className="form-group mpr-full">
-                        <label>{t("recruitment.fields.jobDescription", { defaultValue: "Job Description" })} *</label>
-                        <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder={t("recruitment.form.jobDescriptionPlaceholder", { defaultValue: "Enter job description" })} rows="4" required />
-                    </div>
-                </div>
-
-                <h3 className="mpr-form-section">{t("recruitment.form.sectionCompensation", { defaultValue: "Compensation & Benefits" })}</h3>
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label>{t("recruitment.form.minimumSalary", { currency, defaultValue: "Minimum Salary ({{currency}} / month)" })} *</label>
-                        <input type="number" name="salary_min" min="0" step="0.01" value={form.salary_min} onChange={handleChange} placeholder={t("recruitment.form.minimumSalaryPlaceholder", { defaultValue: "e.g. 8000" })} required />
-                    </div>
-                    <div className="form-group">
-                        <label>{t("recruitment.form.maximumSalary", { currency, defaultValue: "Maximum Salary ({{currency}} / month)" })} *</label>
-                        <input type="number" name="salary_max" min="0" step="0.01" value={form.salary_max} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder={t("recruitment.form.maximumSalaryPlaceholder", { defaultValue: "e.g. 10000" })} required />
-                    </div>
-
-                    {[["air_ticket", "Air Ticket", "airTicket"], ["vehicle", "Vehicle", "vehicle"], ["accommodation", "Accommodation", "accommodation"]].map(([name, label, key]) => (
-                        <div className="form-group" key={name}>
-                            <label>{t(`recruitment.fields.${key}`, { defaultValue: label })}</label>
-                            <select value={form.benefits[name]} onChange={(event) => setBenefit(name, event.target.value)}>
-                                <option value="No">{t("employeeProfile.values.no", { defaultValue: "No" })}</option>
-                                <option value="Yes">{t("employeeProfile.values.yes", { defaultValue: "Yes" })}</option>
-                            </select>
+                            <div className="form-group">
+                                <label>{t("recruitment.fields.openingsCount", { defaultValue: "Number of Openings" })} *</label>
+                                <input ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder="e.g. 4" required />
+                            </div>
+                            <div className="form-group">
+                                <label>{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
+                                <select name="experience" value={form.experience} onChange={handleChange} required>
+                                    <option value="">Select experience</option>
+                                    {["Fresher", "0–2 years", "2–5 years", "5–10 years", "10+ years"].map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Required Qualification *</label>
+                                <CustomOptionSelect
+                                    value={form.qualification || ""}
+                                    onChange={(value) => set("qualification", value)}
+                                    options={QUALIFICATIONS}
+                                    storageKey="mprCustomQualifications"
+                                    placeholder="Select qualification"
+                                    otherPlaceholder="Enter qualification"
+                                    itemLabel="qualification"
+                                    onError={setError}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Required Joining Date *</label>
+                                <DatePicker value={form.required_joining_date || ""} onChange={(value) => set("required_joining_date", value)} minDate={today} today={today} autoPosition />
+                            </div>
+                            <div className="form-group">
+                                <label>Technical Skills / Trade Skills *</label>
+                                <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder="e.g. Construction drawings, BOQ, site supervision" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Application Start Date *</label>
+                                <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
+                            </div>
+                            <div className="form-group">
+                                <label>Application End Date *</label>
+                                <DatePicker value={form.application_end_date} onChange={(value) => set("application_end_date", value)} minDate={form.application_start_date && form.application_start_date > today ? form.application_start_date : today} today={today} autoPosition />
+                            </div>
+                            <div className="form-group mpr-full">
+                                <label>Construction Duties / Job Description *</label>
+                                <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder="e.g. Read construction drawings, supervise site activities, follow safety procedures, complete assigned trade work" rows="3" required />
+                            </div>
                         </div>
-                    ))}
+                    </div>}
+                </section>
 
-                    <div className="form-group">
-                        <label>{t("recruitment.fields.medicalInsurance", { defaultValue: "Medical Insurance Category" })}</label>
-                        <input value={form.benefits.medical_insurance_category} onChange={(event) => setBenefit("medical_insurance_category", event.target.value)} placeholder={t("recruitment.form.medicalInsurancePlaceholder", { defaultValue: "e.g. Category B" })} />
-                    </div>
+                <section className={`mpr-accordion-card ${expandedSections.site ? "expanded" : ""}`}>
+                    {accordionHeader("03", "Site & Employment", "Work location, project dates and work schedule", "site")}
+                    {expandedSections.site && <div className="mpr-accordion-content">
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Work Location / Site *</label>
+                                <select name="location" value={form.location} onChange={handleChange} required>
+                                    <option value="">Select site location</option>
+                                    {meta.locations.map((location) => <option key={location.id} value={location.name}>{location.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Employment Type *</label>
+                                <select name="employment_type" value={form.employment_type} onChange={handleChange} required>
+                                    {["Full Time", "Part Time", "Contract", "Temporary", "Project-based"].map((type) => <option key={type} value={type}>{type}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Project Start Date</label>
+                                <DatePicker value={form.project_start_date || ""} onChange={(value) => set("project_start_date", value)} minDate={today} today={today} autoPosition />
+                            </div>
+                            <div className="form-group">
+                                <label>Expected Deployment</label>
+                                <select name="deployment_timeline" value={form.deployment_timeline || ""} onChange={handleChange}>
+                                    <option value="">Select deployment timeline</option>
+                                    {["Immediately", "Within 2 weeks", "Within 1 month", "Within 2 months", "As per project schedule"].map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Shift / Work Schedule</label>
+                                <select name="shift_schedule" value={form.shift_schedule || ""} onChange={handleChange}>
+                                    <option value="">Select work schedule</option>
+                                    {["Day shift", "Night shift", "Rotational shift", "As per site requirements"].map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>}
+                </section>
 
-                    <div className="form-group mpr-full">
-                        <label>{t("recruitment.fields.allowances", { defaultValue: "Allowances" })}</label>
-                        <input value={form.benefits.allowances} onChange={(event) => setBenefit("allowances", event.target.value)} placeholder={t("recruitment.form.allowancesPlaceholder", { defaultValue: "e.g. Transport 500, Phone 200" })} />
-                    </div>
-                </div>
+                <section className={`mpr-accordion-card ${expandedSections.compensation ? "expanded" : ""}`}>
+                    {accordionHeader("04", "Compensation & Approval", "Salary, benefits, safety equipment and justification", "compensation")}
+                    {expandedSections.compensation && <div className="mpr-accordion-content">
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>{t("recruitment.form.minimumSalary", { currency, defaultValue: `Minimum Pay (${currency} / month)` })} *</label>
+                                <input type="number" name="salary_min" min="0" step="0.01" value={form.salary_min} onChange={handleChange} placeholder="Enter minimum pay" required />
+                            </div>
+                            <div className="form-group">
+                                <label>{t("recruitment.form.maximumSalary", { currency, defaultValue: `Maximum Pay (${currency} / month)` })} *</label>
+                                <input type="number" name="salary_max" min="0" step="0.01" value={form.salary_max} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder="Enter maximum pay" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Pay Basis</label>
+                                <select name="pay_basis" value={form.pay_basis || "Monthly"} onChange={handleChange}>
+                                    {["Monthly", "Daily", "Hourly", "Contract"].map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
+                            </div>
+                            {[ ["air_ticket", "Air Ticket Eligibility"], ["vehicle", "Transportation"], ["accommodation", "Accommodation"] ].map(([name, label]) => (
+                                <div className="form-group" key={name}>
+                                    <label>{label}</label>
+                                    <select value={form.benefits[name]} onChange={(event) => setBenefit(name, event.target.value)}>
+                                        <option value="No">No</option><option value="Yes">Company provided / Eligible</option>
+                                    </select>
+                                </div>
+                            ))}
+                            <div className="form-group mpr-full">
+                                <label>{t("recruitment.fields.allowances", { defaultValue: "Allowances" })}</label>
+                                <input value={form.benefits.allowances} onChange={(event) => setBenefit("allowances", event.target.value)} placeholder="e.g. Transport, food or site allowance" />
+                            </div>
+                            <div className="form-group">
+                                <label>Medical Insurance Category</label>
+                                <input value={form.benefits.medical_insurance_category} onChange={(event) => setBenefit("medical_insurance_category", event.target.value)} placeholder="e.g. Category B" />
+                            </div>
+                            <div className="form-group">
+                                <label>PPE / Site Safety Equipment Required</label>
+                                <label className="mpr-switch-line"><input type="checkbox" checked={Boolean(form.ppe_required)} onChange={(event) => set("ppe_required", event.target.checked)} /> Required for this position</label>
+                            </div>
 
-                <h3 className="mpr-form-section">{t("recruitment.fields.assetsRequired", { defaultValue: "Assets Required" })}</h3>
-                <div className="mpr-checklist">
-                    {meta.assetOptions.map((asset) => (
-                        <label key={asset} className={form.assets.includes(asset) ? "checked" : ""}>
-                            <input type="checkbox" checked={form.assets.includes(asset)} onChange={() => toggleAsset(asset)} />
-                            {recruitmentValueLabel("asset", asset)}
-                        </label>
-                    ))}
-                </div>
-                {form.assets.includes("Other") && (
-                    <div className="form-group mpr-inline">
-                        <label>{t("recruitment.form.otherAsset", { defaultValue: "Other Asset" })} *</label>
-                        <input name="asset_other" value={form.asset_other} onChange={handleChange} placeholder={t("recruitment.form.otherAssetPlaceholder", { defaultValue: "Describe the other asset" })} required />
-                    </div>
-                )}
+                            <div className="form-group mpr-full">
+                                <label>Business Justification *</label>
+                                <textarea ref={justificationRef} name="justification" value={form.justification} onChange={handleChange} rows="3" placeholder={justificationRequired ? "Required: explain why this position is needed despite the budget" : "Explain the business need for this manpower request"} required={justificationRequired || false} />
+                            </div>
+                        </div>
+                        <div className="mpr-approval-preview">
+                            <strong>Proposed approval path</strong>
+                            <div className="mpr-approval-steps"><span>Project / Department Manager</span><i>→</i><span>HR / Management</span></div>
+                            <small>Final approval steps are determined by the configured HRMS workflow.</small>
+                        </div>
+                    </div>}
+                </section>
 
-                <div className="form-group mpr-inline">
-                    <label>{t("recruitment.fields.justification", { defaultValue: "Justification" })} {justificationRequired ? "*" : ""}</label>
-                    <textarea
-                        ref={justificationRef}
-                        name="justification"
-                        value={form.justification}
-                        onChange={handleChange}
-                        rows="3"
-                        placeholder={justificationRequired
-                            ? t("recruitment.form.justificationRequiredPlaceholder", { defaultValue: "Required: explain why this position is needed despite the budget" })
-                            : t("recruitment.form.justificationPlaceholder", { defaultValue: "Why is this position needed?" })}
-                        required={justificationRequired}
-                    />
-                </div>
+                <section className={`mpr-accordion-card mpr-summary-card ${expandedSections.summary ? "expanded" : ""}`}>
+                    <button type="button" className={`mpr-accordion-trigger mpr-summary-trigger ${expandedSections.summary ? "is-open" : ""}`} onClick={() => toggleSection("summary")} aria-expanded={Boolean(expandedSections.summary)}>
+                        <span className="mpr-summary-icon">▤</span>
+                        <span className="mpr-accordion-heading"><strong>Request Summary</strong><small>Review your information before submitting</small></span>
+                        <span className="mpr-accordion-chevron">{expandedSections.summary ? "⌃" : "⌄"}</span>
+                    </button>
+                    {expandedSections.summary && <div className="mpr-accordion-content">
+                        <div className="mpr-summary-grid">
+                            {[["Request Type", form.request_type], ["Department", form.department], ["Project", form.project_name], ["Project Code", form.project_code], ["Job Title", form.title], ["Job Category", form.job_category], ["Employee Category", form.employee_category], ["Grade", form.grade], ["Openings", form.openings], ["Qualification", form.qualification], ["Joining Date", form.required_joining_date], ["Site", form.location], ["Employment", form.employment_type], ["Salary Range", form.salary_min || form.salary_max ? `${form.salary_min || "—"} – ${form.salary_max || "—"} ${currency}` : "—"]].map(([label, value]) => <div className="mpr-summary-item" key={label}><span>{label}</span><strong>{value && value !== OTHER_OPTION ? value : "—"}</strong></div>)}
+                        </div>
+                    </div>}
+                </section>
 
                 {error && <p className="mpr-form-error">{error}</p>}
-
-                <div className="form-actions">
+                <div className="form-actions mpr-modern-actions">
                     <button type="button" className="cancel-btn" onClick={onClose}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
-                    <button type="button" className="cancel-btn" onClick={() => save("draft")} disabled={Boolean(saving)}>
-                        {saving === "draft"
-                            ? t("profileEdit.saving", { defaultValue: "Saving..." })
-                            : t("recruitment.form.saveDraft", { defaultValue: "Save as Draft" })}
-                    </button>
-                    <button type="submit" className="save-job-btn" disabled={Boolean(saving)}>
-                        {saving === "submit"
-                            ? t("recruitment.form.submitting", { defaultValue: "Submitting..." })
-                            : mpr?.status === "Sent Back"
-                                ? t("recruitment.form.resubmit", { defaultValue: "Resubmit" })
-                                : t("recruitment.form.submit", { defaultValue: "Submit" })}
-                    </button>
+                    <button type="button" className="cancel-btn" onClick={() => save("draft")} disabled={Boolean(saving)}>{saving === "draft" ? "Saving..." : t("recruitment.form.saveDraft", { defaultValue: "Save as Draft" })}</button>
+                    <button type="submit" className="save-job-btn" disabled={Boolean(saving)}>{saving === "submit" ? "Submitting..." : mpr?.status === "Sent Back" ? t("recruitment.form.resubmit", { defaultValue: "Resubmit" }) : "Submit Request"}</button>
                 </div>
             </form>
         </div>
