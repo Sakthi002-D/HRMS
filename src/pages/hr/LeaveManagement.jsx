@@ -68,6 +68,59 @@ const MONTHS = [
 // Holiday names / dates come from the saved policy (English); shown translated when known
 const holidayKey = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
+// Holiday editor: the date formats the backend leave-day count can resolve (services/leaveDayCount.js)
+const HOLIDAY_MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const HOLIDAY_WEEKDAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const HOLIDAY_ORDINALS = ["first", "second", "third", "fourth", "fifth", "last"];
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const isExactHolidayDate = (text) => {
+    if (!ISO_DATE_PATTERN.test(text)) return false;
+    const [year, month, day] = text.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
+// True when the leave-day count can exclude this date: "2027-03-09", "18 December" or "Second Tuesday of February"
+const isResolvableHolidayDate = (value) => {
+    const text = String(value || "").trim();
+    if (isExactHolidayDate(text)) return true;
+    const dayMonth = text.match(/^(\d{1,2})\s+([A-Za-z]+)$/) || text.match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+    if (dayMonth) {
+        const [day, monthName] = /^\d/.test(dayMonth[1]) ? [dayMonth[1], dayMonth[2]] : [dayMonth[2], dayMonth[1]];
+        const month = HOLIDAY_MONTH_NAMES.indexOf(monthName.toLowerCase());
+        // 2028 is a leap year, so 29 February is accepted
+        return month >= 0 && Number(day) >= 1 && Number(day) <= new Date(Date.UTC(2028, month + 1, 0)).getUTCDate();
+    }
+    const rule = text.match(/^(\w+)\s+(\w+)\s+of\s+(\w+)$/i);
+    return Boolean(rule)
+        && HOLIDAY_ORDINALS.includes(rule[1].toLowerCase())
+        && HOLIDAY_WEEKDAY_NAMES.includes(rule[2].toLowerCase())
+        && HOLIDAY_MONTH_NAMES.includes(rule[3].toLowerCase());
+};
+
+const EID_DEFAULT_HOLIDAYS = [
+    { name: "Eid al-Fitr", date: "2027-03-09", days: 3 },
+    { name: "Eid al-Adha", date: "2027-06-16", days: 4 },
+];
+
+const compactName = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// Fills in the 2027 Eid dates when the calendar has no exact date for that Eid:
+// the "Islamic calendar" placeholder row is replaced, or the row is added.
+const withEidDefaults = (holidays) => {
+    let rows = holidays.map((holiday) => ({ ...holiday }));
+    for (const eid of EID_DEFAULT_HOLIDAYS) {
+        const matches = (holiday) => compactName(holiday.name).includes(compactName(eid.name));
+        if (rows.some((holiday) => matches(holiday) && isExactHolidayDate(String(holiday.date || "").trim()))) continue;
+        const placeholderIndex = rows.findIndex(matches);
+        rows = placeholderIndex >= 0
+            ? rows.map((holiday, index) => (index === placeholderIndex ? { ...eid } : holiday))
+            : [...rows, { ...eid }];
+    }
+    return rows;
+};
+
 function LeaveManagement() {
     const { t } = useTranslation();
     // Values stay English (filters, CSS classes, saving); only the shown text is translated
@@ -130,6 +183,9 @@ function LeaveManagement() {
     const [policyLoading, setPolicyLoading] = useState(false);
     const [policySaving, setPolicySaving] = useState(false);
     const [policyMessage, setPolicyMessage] = useState("");
+    // Holiday editor rows while editing; null when the editor is closed
+    const [holidayDraft, setHolidayDraft] = useState(null);
+    const [holidayError, setHolidayError] = useState("");
 
     // =========================================================
     // DATE FORMAT
@@ -342,7 +398,9 @@ function LeaveManagement() {
         }
     };
 
-    const saveLeavePolicy = async () => {
+    // Saves the whole policy (PUT replaces it); `holidays` overrides the calendar being saved.
+    // Returns true when saved.
+    const saveLeavePolicy = async (holidays = leavePolicy.qatarHolidayCalendar) => {
         try {
             setPolicySaving(true);
             setPolicyMessage("");
@@ -352,7 +410,7 @@ function LeaveManagement() {
                 body: JSON.stringify({
                     policy: {
                         leaveTypes: leavePolicy.leaveTypes,
-                        qatarHolidayCalendar: leavePolicy.qatarHolidayCalendar,
+                        qatarHolidayCalendar: holidays,
                         annualLeave: {
                             yearly_entitlement_days: Number(leavePolicy.annualYearlyEntitlementDays) || 30,
                             grade_overrides: Object.fromEntries(
@@ -391,11 +449,49 @@ function LeaveManagement() {
             });
             if (!response.ok) throw new Error("Failed to save leave policy");
             setPolicyMessage(t("leaveManagement.policy.saved", { defaultValue: "Policy saved successfully" }));
+            return true;
         } catch (error) {
             console.error("Error saving leave policy:", error);
             setPolicyMessage(t("leaveManagement.policy.saveFailed", { defaultValue: "Unable to save policy" }));
+            return false;
         } finally {
             setPolicySaving(false);
+        }
+    };
+
+    const startHolidayEditing = () => {
+        setHolidayError("");
+        setHolidayDraft(withEidDefaults(leavePolicy.qatarHolidayCalendar));
+    };
+
+    const updateHolidayDraft = (index, field, value) => {
+        setHolidayDraft((current) => current.map((holiday, holidayIndex) =>
+            holidayIndex === index ? { ...holiday, [field]: value } : holiday
+        ));
+    };
+
+    const saveHolidays = async () => {
+        const holidays = holidayDraft.map((holiday) => ({
+            name: String(holiday.name || "").trim(),
+            date: String(holiday.date || "").trim(),
+            days: Number(holiday.days),
+        }));
+        if (holidays.some((holiday) => !holiday.name || !holiday.date)) {
+            setHolidayError(t("leaveManagement.holidayEditor.missingFields", { defaultValue: "Each holiday needs a name and a date." }));
+            return;
+        }
+        if (holidays.some((holiday) => ISO_DATE_PATTERN.test(holiday.date) && !isExactHolidayDate(holiday.date))) {
+            setHolidayError(t("leaveManagement.holidayEditor.invalidDate", { defaultValue: "One of the dates does not exist. Check the YYYY-MM-DD dates." }));
+            return;
+        }
+        if (holidays.some((holiday) => !Number.isInteger(holiday.days) || holiday.days < 1 || holiday.days > 7)) {
+            setHolidayError(t("leaveManagement.holidayEditor.invalidDays", { defaultValue: "Days must be a whole number from 1 to 7." }));
+            return;
+        }
+        setHolidayError("");
+        if (await saveLeavePolicy(holidays)) {
+            setLeavePolicy((current) => ({ ...current, qatarHolidayCalendar: holidays }));
+            setHolidayDraft(null);
         }
     };
 
@@ -1216,16 +1312,115 @@ function LeaveManagement() {
                             </div>
                         </div>
                         <div className="leave-holiday-calendar">
-                            <h3>{t("leaveDetails.holidayCalendar", { defaultValue: "Qatar Holiday Calendar" })}</h3>
-                            <div className="leave-holiday-list">
-                                {leavePolicy.qatarHolidayCalendar.map((holiday) => (
-                                    <div className="leave-holiday-row" key={holiday.name}>
-                                        <strong>{holidayName(holiday.name)}</strong>
-                                        <span>{holidayDate(holiday.date)}</span>
-                                        <b>{t("leaveManagement.dayCount", { count: Number(holiday.days), defaultValue: `${holiday.days} ${holiday.days === 1 ? "day" : "days"}` })}</b>
-                                    </div>
-                                ))}
+                            <div className="leave-holiday-heading">
+                                <h3>{t("leaveDetails.holidayCalendar", { defaultValue: "Qatar Holiday Calendar" })}</h3>
+                                {!holidayDraft && (
+                                    <button
+                                        type="button"
+                                        className="leave-policy-add-grade"
+                                        disabled={policyLoading || policySaving}
+                                        onClick={startHolidayEditing}
+                                    >
+                                        {t("leaveManagement.holidayEditor.edit", { defaultValue: "Edit holidays" })}
+                                    </button>
+                                )}
                             </div>
+                            {holidayDraft ? (
+                                <div className="leave-holiday-editor">
+                                    <p className="leave-holiday-note">
+                                        {t("leaveManagement.holidayEditor.note", { defaultValue: "For Islamic holidays enter the real date each year (e.g. 2027-03-09)" })}
+                                    </p>
+                                    <div className="leave-holiday-edit-row leave-holiday-edit-labels" aria-hidden="true">
+                                        <span>{t("leaveManagement.holidayEditor.name", { defaultValue: "Name" })}</span>
+                                        <span>{t("leaveManagement.holidayEditor.date", { defaultValue: "Date (YYYY-MM-DD or 18 December)" })}</span>
+                                        <span>{t("leaveManagement.holidayEditor.days", { defaultValue: "Days" })}</span>
+                                    </div>
+                                    {holidayDraft.map((holiday, index) => (
+                                        <div key={index}>
+                                            <div className="leave-holiday-edit-row">
+                                                <input
+                                                    type="text"
+                                                    aria-label={t("leaveManagement.holidayEditor.name", { defaultValue: "Name" })}
+                                                    placeholder={t("leaveManagement.holidayEditor.namePlaceholder", { defaultValue: "Holiday name" })}
+                                                    value={holiday.name}
+                                                    disabled={policySaving}
+                                                    onChange={(event) => updateHolidayDraft(index, "name", event.target.value)}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    aria-label={t("leaveManagement.holidayEditor.date", { defaultValue: "Date (YYYY-MM-DD or 18 December)" })}
+                                                    placeholder="2027-03-09"
+                                                    value={holiday.date}
+                                                    disabled={policySaving}
+                                                    onChange={(event) => updateHolidayDraft(index, "date", event.target.value)}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="7"
+                                                    step="1"
+                                                    aria-label={t("leaveManagement.holidayEditor.days", { defaultValue: "Days" })}
+                                                    value={holiday.days}
+                                                    disabled={policySaving}
+                                                    onChange={(event) => updateHolidayDraft(index, "days", event.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    aria-label={t("leaveManagement.holidayEditor.remove", { name: holiday.name, defaultValue: "Remove holiday {{name}}" })}
+                                                    disabled={policySaving}
+                                                    onClick={() => setHolidayDraft((current) => current.filter((_, holidayIndex) => holidayIndex !== index))}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                            {String(holiday.date || "").trim() && !isResolvableHolidayDate(holiday.date) && (
+                                                <p className="leave-holiday-warning">
+                                                    {t("leaveManagement.holidayEditor.unresolved", { defaultValue: "This date is not recognised, so leave on it is still counted. Enter a date like 2027-03-09 or 18 December." })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        className="leave-policy-add-grade"
+                                        disabled={policySaving}
+                                        onClick={() => setHolidayDraft((current) => [...current, { name: "", date: "", days: 1 }])}
+                                    >
+                                        {t("leaveManagement.holidayEditor.add", { defaultValue: "+ Add holiday" })}
+                                    </button>
+                                    {holidayError && <p className="leave-holiday-error" role="alert">{holidayError}</p>}
+                                    <div className="leave-holiday-editor-actions">
+                                        <button
+                                            type="button"
+                                            className="leave-holiday-cancel"
+                                            disabled={policySaving}
+                                            onClick={() => { setHolidayDraft(null); setHolidayError(""); }}
+                                        >
+                                            {t("leaveManagement.holidayEditor.cancel", { defaultValue: "Cancel" })}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="leave-holiday-save"
+                                            disabled={policySaving}
+                                            onClick={saveHolidays}
+                                        >
+                                            {policySaving
+                                                ? t("profileEdit.saving", { defaultValue: "Saving..." })
+                                                : t("leaveManagement.holidayEditor.save", { defaultValue: "Save holidays" })}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="leave-holiday-list">
+                                    {leavePolicy.qatarHolidayCalendar.map((holiday, index) => (
+                                        <div className="leave-holiday-row" key={`${holiday.name}-${index}`}>
+                                            <strong>{holidayName(holiday.name)}</strong>
+                                            <span>{holidayDate(holiday.date)}</span>
+                                            <b>{t("leaveManagement.dayCount", { count: Number(holiday.days), defaultValue: `${holiday.days} ${holiday.days === 1 ? "day" : "days"}` })}</b>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="leave-policy-rules">
                             <p><Trans i18nKey="leaveManagement.policy.rules.sick" components={{ b: <strong /> }} defaults="<b>Sick Leave:</b> Medical certificate required. First 14 days at 100% salary, next 28 days at 50%, additional 42 days unpaid." /></p>
@@ -1235,7 +1430,7 @@ function LeaveManagement() {
                         </div>
                         <div className="leave-policy-footer">
                             {policyMessage && <span>{policyMessage}</span>}
-                            <button type="button" onClick={saveLeavePolicy} disabled={policyLoading || policySaving}>
+                            <button type="button" onClick={() => saveLeavePolicy()} disabled={policyLoading || policySaving}>
                                 {policySaving
                                     ? t("profileEdit.saving", { defaultValue: "Saving..." })
                                     : t("leaveManagement.policy.save", { defaultValue: "Save Policy" })}

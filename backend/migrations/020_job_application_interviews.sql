@@ -16,5 +16,5 @@ CREATE TABLE IF NOT EXISTS public.job_application_interviews (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS job_application_interviews_app_idx
+CREATE INDEX IF NOT EXISTS job_application_interviews_app_idx`
 ON public.job_application_interviews (application_db_id, created_at DESC);
