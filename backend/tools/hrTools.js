@@ -1,5 +1,6 @@
 import pool from "../db.js";
 import { getAttendanceCounts } from "../services/attendanceCounts.js";
+import { calculateLeaveDays } from "../services/leaveDayCount.js";
 
 /**
  * HR / Admin Tools - Authorized functions available strictly to users with role === 'hr'.
@@ -320,12 +321,30 @@ export async function prepareLeaveStatusChange({ leaveId, action }) {
 
 // 8. Execute Confirmed Leave Status Change
 export async function executeLeaveStatusChange({ leaveId, newStatus }) {
+    // Approval recounts working days with the current holiday calendar
+    let approvedDays = null;
+    if (newStatus === "Approved") {
+        const leaveRes = await pool.query(
+            `SELECT TO_CHAR(from_date, 'YYYY-MM-DD') AS from_day, TO_CHAR(to_date, 'YYYY-MM-DD') AS to_day
+             FROM leaves WHERE id = $1`,
+            [leaveId]
+        );
+        if (leaveRes.rows.length) {
+            const leaveDays = await calculateLeaveDays(leaveRes.rows[0].from_day, leaveRes.rows[0].to_day);
+            if (leaveDays.error) {
+                return { success: false, message: `Could not approve leave request #${leaveId}: ${leaveDays.error}.` };
+            }
+            approvedDays = leaveDays.days;
+        }
+    }
+
     const updateRes = await pool.query(`
         UPDATE leaves
-        SET status = $1
+        SET status = $1,
+            days = COALESCE($3::numeric, days)
         WHERE id = $2 AND status = 'Pending'
         RETURNING id, employee_id, status
-    `, [newStatus, leaveId]);
+    `, [newStatus, leaveId, approvedDays]);
 
     if (updateRes.rows.length === 0) {
         return {

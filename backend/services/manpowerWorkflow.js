@@ -36,7 +36,7 @@ export const WORKFLOW_STEP_ROLES = ["DEPT_HEAD", "HR", "EXEC", "FINANCE", "CEO"]
 export const REQUEST_TYPES = ["Replacement", "New Position"];
 export const ASSET_OPTIONS = ["Laptop", "Mobile", "SIM", "Vehicle", "Access Card", "Other"];
 export const SOURCING_OPTIONS = ["Agency", "Internal", "Both"];
-export const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract"];
+export const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Other"];
 export const FILLED_APPLICATION_STATUSES = ["hired", "joined"];
 
 export const DEFAULT_RECRUITMENT_SETTINGS = {
@@ -47,8 +47,8 @@ export const DEFAULT_RECRUITMENT_SETTINGS = {
     execByDepartment: { IT: "CTO" },
     defaultExec: "COO",
     departmentCodes: { IT: "IT", Finance: "FIN", HR: "HR" },
-    currency: "INR",
-    currencySymbol: "₹",
+    currency: "QAR",
+    currencySymbol: "QR",
 };
 
 const FINAL_STATUSES = ["Approved", "Rejected", "Cancelled"];

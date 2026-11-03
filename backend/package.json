@@ -17,7 +17,12 @@
     "test:mpr-period": "node scripts/testMprApplicationPeriod.js",
     "test:attendance-counts": "node scripts/testAttendanceCounts.js",
     "test:employee-auth": "node scripts/testEmployeeAuth.js",
-    "test:d365-sync": "node --test services/d365EmployeeSync.test.js"
+    "test:d365-sync": "node --test services/d365EmployeeSync.test.js",
+    "test:projects": "node --test services/projects.test.js",
+    "test:db-errors": "node --test services/dbErrors.test.js",
+    "test:shifts": "node --test services/shifts.test.js",
+    "test:dashboard-widgets": "node --test services/dashboardWidgets.test.js",
+    "test:leave-days": "node --test services/leaveDayCount.test.js services/annualLeaveBalance.test.js services/leavePolicy.test.js"
   },
   "keywords": [],
   "author": "",

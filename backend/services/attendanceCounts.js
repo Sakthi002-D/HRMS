@@ -33,3 +33,10 @@ export async function getAttendanceCounts(db, date = null) {
         late: row.hrms_late + row.d365_late,
     };
 }
+
+// Attendance has no Late status: a late punch-in is Present, with its late minutes kept.
+// Older saved Late rows are shown the same way without changing them.
+export const withoutLate = (row) => ({
+    ...row,
+    status: String(row.status || "").toLowerCase() === "late" ? "Present" : row.status,
+});

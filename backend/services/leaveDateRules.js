@@ -3,6 +3,16 @@
 
 export const COMPANY_TIMEZONE = process.env.COMPANY_TIMEZONE || "Asia/Qatar";
 
+export const isValidTimeZone = (timeZone) => {
+    if (!timeZone || typeof timeZone !== "string") return false;
+    try {
+        new Intl.DateTimeFormat("en-CA", { timeZone: timeZone.trim() });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const getCompanyToday = () =>

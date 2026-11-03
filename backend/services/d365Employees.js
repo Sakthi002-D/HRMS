@@ -196,11 +196,7 @@ let cachedEmployees = null;
 let cachedEmployeesExpiresAt = 0;
 let inFlightEmployees = null;
 
-export const getD365Employees = async () => {
-    if (cachedEmployees && cachedEmployeesExpiresAt > Date.now()) {
-        return cachedEmployees;
-    }
-
+const refreshD365Employees = () => {
     inFlightEmployees ??= fetchD365Employees()
         .then((employees) => {
             cachedEmployees = employees;
@@ -212,6 +208,24 @@ export const getD365Employees = async () => {
         });
 
     return inFlightEmployees;
+};
+
+const logRefreshFailure = (error) => console.error("D365 employee list refresh failed:", error.message);
+
+// An older list is served while a new one loads: D365 can take minutes to answer after being idle
+export const getD365Employees = async () => {
+    if (cachedEmployees && cachedEmployeesExpiresAt > Date.now()) {
+        return cachedEmployees;
+    }
+    if (cachedEmployees) {
+        refreshD365Employees().catch(logRefreshFailure);
+        return cachedEmployees;
+    }
+    return refreshD365Employees();
+};
+
+export const warmD365Employees = () => {
+    refreshD365Employees().catch(logRefreshFailure);
 };
 
 export const findD365Employee = async ({ personnelNumber, employmentLegalEntityId, employmentId }) => {
