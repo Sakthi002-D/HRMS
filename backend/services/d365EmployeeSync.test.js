@@ -199,7 +199,7 @@ test("syncSingleEmployee fetches one record by key with cross-company and a narr
         const result = await syncSingleEmployee(pool, "EMP3544", { log: () => {} });
         assert.equal(result.synced, true);
         assert.deepEqual(result.fields.sort(), ["designation", "phone"]);
-        const d365Requests = requests.filter((href) => href.includes("/data/"));
+        const d365Requests = requests.filter((href) => href.includes("/data/EmployeesV2"));
         assert.equal(d365Requests.length, 1);
         const url = decodeURIComponent(d365Requests[0]);
         assert.ok(url.includes("EmployeesV2(PersonnelNumber='3544',EmploymentLegalEntityId='SHLT',EmploymentId='000010001')"));
@@ -225,10 +225,97 @@ test("syncSingleEmployee reports unlinked, missing and mismatched records withou
     assert.equal(pool.calls.some((call) => call.sql.startsWith("UPDATE employees")), false);
 });
 
+test("syncSingleEmployee tries a timed-out read once more, then gives up", async () => {
+    const timeout = () => { throw new DOMException("The operation was aborted due to timeout", "TimeoutError"); };
+    const reads = (requests) => requests.filter((href) => href.includes("EmployeesV2(")).length;
+
+    let attempts = 0;
+    await withMockedFetch((href) => (href.includes("EmployeesV2(") && ++attempts === 1 ? timeout() : json(d365Row())), async (requests) => {
+        assert.equal((await syncSingleEmployee(fakePool(), "EMP3544", { log: () => {} })).synced, true);
+        assert.equal(reads(requests), 2);
+    });
+    await withMockedFetch((href) => (href.includes("EmployeesV2(") ? timeout() : json(d365Row())), async (requests) => {
+        await assert.rejects(() => syncSingleEmployee(fakePool(), "EMP3544", { log: () => {} }), { name: "TimeoutError" });
+        assert.equal(reads(requests), 2);
+    });
+    // Only timeouts are retried
+    await withMockedFetch(() => json({}, 500), async (requests) => {
+        await assert.rejects(() => syncSingleEmployee(fakePool(), "EMP3544", { log: () => {} }), /read failed \(500\)/);
+        assert.equal(reads(requests), 1);
+    });
+});
+
+// Answers the position, department and legal entity lookups the way D365 does
+const positionResponses = (href, overrides = {}) => {
+    const url = decodeURIComponent(href);
+    if (url.includes("/data/PositionWorkerAssignments")) return json({ value: [{ PersonnelNumber: "3544", PositionId: "POS68" }, { PersonnelNumber: "9999", PositionId: "POS99" }] });
+    if (url.includes("/data/PositionDetails")) return json({ value: [{ PositionId: "POS68", Description: "Mechanical Supervisor", DepartmentNumber: "00000031" }] });
+    if (url.includes("/data/Departments")) return json({ value: [{ OperatingUnitNumber: "00000031", Name: "Operations - Mechanical" }] });
+    if (url.includes("/data/LegalEntities")) return json({ value: [{ LegalEntityId: "SHLT", AddressCity: "DOHA" }] });
+    return overrides.employee ?? json(d365Row({ PrimaryContactPhone: "555-0100" }));
+};
+
+test("buildPullTarget prefers the position title and fills department and work location", () => {
+    const target = buildPullTarget(d365Row({ ProfessionalTitle: "Engineer" }), {
+        positionDesignation: "Mechanical Supervisor", department: "Operations - Mechanical", workLocation: "DOHA",
+    });
+    assert.equal(target.designation, "Mechanical Supervisor");
+    assert.equal(target.department, "Operations - Mechanical");
+    assert.equal(target.work_location, "DOHA");
+    const fallback = buildPullTarget(d365Row({ ProfessionalTitle: "Engineer" }));
+    assert.equal(fallback.designation, "Engineer");
+    assert.equal(fallback.department, null);
+    assert.equal(fallback.work_location, null);
+});
+
+test("syncSingleEmployee writes position, department and work location", async () => {
+    await withMockedFetch((href) => positionResponses(href), async (requests) => {
+        const result = await syncSingleEmployee(fakePool(), "EMP3544", { log: () => {} });
+        assert.deepEqual(result.fields.sort(), ["department", "designation", "phone", "work_location"]);
+        const assignment = requests.find((href) => href.includes("/data/PositionWorkerAssignments"));
+        assert.ok(decodeURIComponent(assignment).includes("NoYes'Yes'"));
+    });
+});
+
+test("pullD365Changes looks up positions in batches for linked employees only", async () => {
+    await withMockedFetch((href) => (href.includes("/data/EmployeesV2")
+        ? json({ value: [d365Row({ PrimaryContactPhone: "555-0100" })] })
+        : positionResponses(href)), async (requests) => {
+        const pool = fakePool();
+        const lines = [];
+        await pullD365Changes(pool, { log: (line) => lines.push(line) });
+        for (const stepName of ["positions", "departments"]) {
+            assert.ok(lines.some((line) => line.startsWith(`D365 sync [${stepName}] `)), stepName);
+        }
+        const update = pool.calls.find((call) => call.sql.startsWith("UPDATE employees"));
+        for (const value of ["Mechanical Supervisor", "Operations - Mechanical", "DOHA"]) assert.ok(update.params.includes(value), value);
+        const details = requests.filter((href) => href.includes("/data/PositionDetails"));
+        assert.equal(details.length, 1);
+        assert.equal(details[0].includes("POS99"), false);
+    });
+});
+
+test("failed position lookups never break either sync", async () => {
+    const failing = (error) => (href) => {
+        if (href.includes("/data/EmployeesV2?")) return json({ value: [d365Row({ PrimaryContactPhone: "555-0100" })] });
+        if (href.includes("/data/EmployeesV2(")) return json(d365Row({ PrimaryContactPhone: "555-0100" }));
+        if (error) throw error;
+        return json({}, 500);
+    };
+    for (const handler of [failing(), failing(new DOMException("timed out", "TimeoutError"))]) {
+        await withMockedFetch(handler, async () => {
+            const single = await syncSingleEmployee(fakePool(), "EMP3544", { log: () => {} });
+            assert.deepEqual(single.fields, ["phone"]);
+            const full = await pullD365Changes(fakePool(), { log: () => {} });
+            assert.equal(full.updated, 1);
+        });
+    }
+});
+
 test("syncSingleEmployee is not blocked by a running full sync", async () => {
     let release;
     const gate = new Promise((resolve) => { release = resolve; });
-    await withMockedFetch(async (href) => (href.includes("EmployeesV2(") ? json(d365Row({ PrimaryContactPhone: "555-0100" })) : (await gate, json({ value: [d365Row()] }))), async () => {
+    await withMockedFetch(async (href) => (href.includes("/data/EmployeesV2?") ? (await gate, json({ value: [d365Row()] })) : json(d365Row({ PrimaryContactPhone: "555-0100" }))), async () => {
         const full = runFullSync(fakePool(), { log: () => {} });
         await new Promise((resolve) => setTimeout(resolve, 20));
         assert.equal(isFullSyncRunning(), true);

@@ -16,9 +16,12 @@ import { getD365Config, getAccessToken } from "./d365Employees.js";
 import { fetchD365Pages } from "../scripts/d365Reconciliation.js";
 
 // Only the fields the pull actually compares (First/Middle/Last name are not needed: Name is pull-only).
+// OriginalHireDateTime confirmed present on EmployeesV2 (verified via testD365Fields.js).
+// Department is NOT on EmployeesV2 — it lives on the Position entity (separate D365 API call needed).
 const SELECT = [
     "PersonnelNumber", "EmploymentLegalEntityId", "EmploymentId", "Name",
-    "PrimaryContactEmail", "PrimaryContactPhone", "Gender", "MaritalStatus", "BirthDate", "EmploymentStartDate",
+    "PrimaryContactEmail", "PrimaryContactPhone", "Gender", "MaritalStatus", "BirthDate",
+    "OriginalHireDateTime", "EmploymentStartDate",
     "EmploymentEndDate", "TerminationDate", "LastDateWorked", "ProfessionalTitle",
 ].join(",");
 
@@ -38,7 +41,7 @@ const GENDER_MAP = { male: "Male", female: "Female" };
 const MARITAL_MAP = { single: "Single", married: "Married" };
 
 // Same normalization the import uses; only fields D365 actually owns are compared.
-export const buildPullTarget = (source) => {
+export const buildPullTarget = (source, positionInfo = {}) => {
     const hasEnded = !isOpenEnded(source.EmploymentEndDate) && new Date(source.EmploymentEndDate) < new Date();
     const terminated = !isUnset(source.TerminationDate) && !isOpenEnded(source.TerminationDate);
     return {
@@ -48,11 +51,16 @@ export const buildPullTarget = (source) => {
         gender: GENDER_MAP[lower(source.Gender)] ?? null,
         marital_status: MARITAL_MAP[lower(source.MaritalStatus)] ?? null,
         date_of_birth: toDate(source.BirthDate),
-        joining_date: toDate(source.EmploymentStartDate),
+        // OriginalHireDateTime = the date the person first joined the company (e.g. 2022-05-14).
+        // EmploymentStartDate = the start of their current employment record (may differ after rehire).
+        // toDate() slices the DateTime to "YYYY-MM-DD" and treats 1900-era values as null.
+        joining_date: toDate(source.OriginalHireDateTime) || toDate(source.EmploymentStartDate),
         employment_end_date: isOpenEnded(source.EmploymentEndDate) ? "Never" : toDate(source.EmploymentEndDate),
         last_date_worked: toDate(source.LastDateWorked),
         status: hasEnded || terminated ? "Inactive" : "Active",
-        designation: norm(source.ProfessionalTitle) || null,
+        designation: norm(positionInfo.positionDesignation) || norm(source.ProfessionalTitle) || null,
+        department: norm(positionInfo.department) || null,
+        work_location: norm(positionInfo.workLocation) || null,
     };
 };
 
@@ -85,7 +93,95 @@ const d365EntityUrl = (config, mapping, select = null) =>
     + `,EmploymentLegalEntityId='${odataKey(mapping.employment_legal_entity_id)}'`
     + `,EmploymentId='${odataKey(mapping.employment_id)}')?cross-company=true${select ? `&$select=${select}` : ""}`;
 
-const CURRENT_COLUMNS = "employee_id, name, email, phone, gender, marital_status, date_of_birth, joining_date, employment_end_date, last_date_worked, status, designation";
+const LOOKUP_TIMEOUT_MS = 30_000;
+const LOOKUP_BATCH_SIZE = 50;
+// D365 rejects a plain 'Yes' here (400): the field is an enum, not a string
+const IS_PRIMARY = "IsPrimaryPosition eq Microsoft.Dynamics.DataEntities.NoYes'Yes'";
+
+// Position, department and city are extras: a failed lookup gives no rows and the sync carries on.
+const d365Lookup = async (origin, token, entity, query) => {
+    try {
+        const response = await fetch(`${origin}/data/${entity}?${query}&cross-company=true`, {
+            method: "GET",
+            redirect: "error",
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data?.value) ? data.value : [];
+    } catch {
+        return [];
+    }
+};
+
+const odataEq = (field, value) => `${field} eq '${odataKey(value)}'`;
+
+const d365LookupMany = async (origin, token, entity, field, values, select) => {
+    const unique = [...new Set(values.map(norm).filter(Boolean))];
+    const rows = [];
+    for (let index = 0; index < unique.length; index += LOOKUP_BATCH_SIZE) {
+        const filter = unique.slice(index, index + LOOKUP_BATCH_SIZE).map((value) => odataEq(field, value)).join(" or ");
+        rows.push(...await d365Lookup(origin, token, entity, `$filter=${filter}&$select=${select}`));
+    }
+    return rows;
+};
+
+// Primary position, department and work location for one employee. Never throws.
+export async function fetchPositionInfo(origin, token, personnelNumber, legalEntityId) {
+    try {
+        const [assignment] = await d365Lookup(origin, token, "PositionWorkerAssignments",
+            `$filter=${odataEq("PersonnelNumber", personnelNumber)} and ${IS_PRIMARY}&$top=1&$select=PositionId`);
+        const [position] = assignment?.PositionId
+            ? await d365Lookup(origin, token, "PositionDetails",
+                `$filter=${odataEq("PositionId", assignment.PositionId)}&$top=1&$select=PositionId,Description,DepartmentNumber`)
+            : [];
+        const [department] = position?.DepartmentNumber
+            ? await d365Lookup(origin, token, "Departments",
+                `$filter=${odataEq("OperatingUnitNumber", position.DepartmentNumber)}&$top=1&$select=Name,OperatingUnitNumber`)
+            : [];
+        const [legalEntity] = await d365Lookup(origin, token, "LegalEntities",
+            `$filter=${odataEq("LegalEntityId", legalEntityId)}&$top=1&$select=AddressCity`);
+        return {
+            positionDesignation: position?.Description,
+            department: department?.Name,
+            workLocation: legalEntity?.AddressCity,
+        };
+    } catch {
+        return {};
+    }
+}
+
+// Full sync: primary position of each linked employee, by personnel number
+const fetchPrimaryPositions = async (origin, token, personnelNumbers) => {
+    const assignments = (await d365Lookup(origin, token, "PositionWorkerAssignments",
+        `$filter=${IS_PRIMARY}&$select=PersonnelNumber,PositionId&$top=5000`))
+        .filter((assignment) => personnelNumbers.has(norm(assignment.PersonnelNumber)));
+    const details = await d365LookupMany(origin, token, "PositionDetails", "PositionId",
+        assignments.map((assignment) => assignment.PositionId), "PositionId,Description,DepartmentNumber");
+    const positionById = new Map(details.map((position) => [norm(position.PositionId), position]));
+    return new Map(assignments.map((assignment) => [norm(assignment.PersonnelNumber), positionById.get(norm(assignment.PositionId))]));
+};
+
+// Full sync: department and city names, returned as the lookup planPull uses per employee
+const fetchDepartmentLookup = async (origin, token, positions, legalEntityIds) => {
+    const departments = await d365LookupMany(origin, token, "Departments", "OperatingUnitNumber",
+        [...positions.values()].map((position) => position?.DepartmentNumber), "Name,OperatingUnitNumber");
+    const legalEntities = await d365LookupMany(origin, token, "LegalEntities", "LegalEntityId", legalEntityIds, "LegalEntityId,AddressCity");
+    const departmentNames = new Map(departments.map((department) => [norm(department.OperatingUnitNumber), department.Name]));
+    const cities = new Map(legalEntities.map((legalEntity) => [lower(legalEntity.LegalEntityId), legalEntity.AddressCity]));
+
+    return (personnelNumber, legalEntityId) => {
+        const position = positions.get(norm(personnelNumber));
+        return {
+            positionDesignation: position?.Description,
+            department: departmentNames.get(norm(position?.DepartmentNumber)),
+            workLocation: cities.get(lower(legalEntityId)),
+        };
+    };
+};
+
+const CURRENT_COLUMNS = "employee_id, name, email, phone, gender, marital_status, date_of_birth, joining_date, employment_end_date, last_date_worked, status, designation, department, work_location";
 const LINKED_MAPPINGS_SQL = `SELECT m.employee_id, m.personnel_number, m.employment_legal_entity_id, m.employment_id
          FROM employee_d365_mapping m
          JOIN employees e ON e.employee_id = m.employee_id
@@ -97,11 +193,11 @@ const stopwatch = () => {
 };
 
 // Decides what (if anything) to write for one linked employee. Shared by the full and single sync.
-async function planPull(pool, mapping, source, current, summary) {
+async function planPull(pool, mapping, source, current, summary, positionInfo = {}) {
     if (!source) { summary.missingInD365++; return null; }
     if (source === "duplicate") { summary.skipped.push({ employee_id: mapping.employee_id, reason: "duplicate-d365-identity" }); return null; }
     if (!current) { summary.skipped.push({ employee_id: mapping.employee_id, reason: "missing-employee" }); return null; }
-    const changes = diffPullTarget(buildPullTarget(source), current);
+    const changes = diffPullTarget(buildPullTarget(source, positionInfo), current);
     if (changes.email) {
         const clash = await pool.query(
             "SELECT 1 FROM employees WHERE LOWER(email) = LOWER($1) AND employee_id <> $2",
@@ -157,11 +253,21 @@ export async function pullD365Changes(pool, { log = console.log } = {}) {
         return { mappings: rows, currentById: new Map(current.map((row) => [row.employee_id, row])) };
     }, ({ mappings: rows }) => ` (${rows.length} linked)`);
 
+    const positions = await step(
+        "positions",
+        () => fetchPrimaryPositions(config.baseUrl, token, new Set(mappings.map((mapping) => norm(mapping.personnel_number)))),
+        (found) => ` (${found.size} assigned)`
+    );
+    const getPositionInfo = await step("departments", () => fetchDepartmentLookup(
+        config.baseUrl, token, positions, mappings.map((mapping) => mapping.employment_legal_entity_id)
+    ));
+
     const summary = { d365Rows: d365Rows.length, linked: mappings.length, updated: 0, unchanged: 0, missingInD365: 0, skipped: [] };
     const plans = await step("diff", async () => {
         const planned = [];
         for (const mapping of mappings) {
-            const changes = await planPull(pool, mapping, byIdentity.get(identityKey(mapping)), currentById.get(mapping.employee_id), summary);
+            const positionInfo = getPositionInfo(mapping.personnel_number, mapping.employment_legal_entity_id);
+            const changes = await planPull(pool, mapping, byIdentity.get(identityKey(mapping)), currentById.get(mapping.employee_id), summary, positionInfo);
             if (changes) planned.push({ employeeId: mapping.employee_id, changes });
         }
         return planned;
@@ -192,6 +298,30 @@ export async function runFullSync(pool, options) {
     }
 }
 
+// D365 usually answers in about 1s but can take minutes when it has been idle
+// (measured: over 100s, then 72s, then 1s), so a timed-out read is tried once more.
+const SINGLE_READ_TIMEOUT_MS = 120_000;
+const SINGLE_READ_ATTEMPTS = 2;
+
+// Returns undefined when D365 has no such record
+const readD365Employee = async (url, token) => {
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                redirect: "error",
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                signal: AbortSignal.timeout(SINGLE_READ_TIMEOUT_MS),
+            });
+            if (response.status === 404) return undefined;
+            if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
+            return await response.json();
+        } catch (error) {
+            if (error?.name !== "TimeoutError" || attempt === SINGLE_READ_ATTEMPTS) throw error;
+        }
+    }
+};
+
 // Fetches just one EmployeesV2 record by its D365 key and applies the same diff as the full pull.
 export async function syncSingleEmployee(pool, employeeId, { log = console.log } = {}) {
     const total = stopwatch();
@@ -201,23 +331,20 @@ export async function syncSingleEmployee(pool, employeeId, { log = console.log }
     const config = getD365Config();
     const token = await getAccessToken(config);
     const fetchTimer = stopwatch();
-    const response = await fetch(d365EntityUrl(config, mapping, SELECT), {
-        method: "GET",
-        redirect: "error",
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        signal: AbortSignal.timeout(30_000),
-    });
+    // Use the key-based entity URL with SELECT. OriginalHireDateTime is confirmed to return
+    // correctly via this URL when D365 is healthy (verified via testD365Fields.js).
+    // The 2-minute timeout + retry above handles the occasional D365 slowness.
+    const source = await readD365Employee(d365EntityUrl(config, mapping, SELECT), token);
     const fetchMs = fetchTimer();
-    if (response.status === 404) return { synced: false, reason: "missing-in-d365" };
-    if (!response.ok) throw new Error(`D365 EmployeesV2 read failed (${response.status})`);
-    const source = await response.json();
+    if (source === undefined) return { synced: false, reason: "missing-in-d365" };
     if (!source || typeof source !== "object" || identityKey(source) !== identityKey(mapping)) {
         return { synced: false, reason: "identity-mismatch" };
     }
 
+    const positionInfo = await fetchPositionInfo(config.baseUrl, token, mapping.personnel_number, mapping.employment_legal_entity_id);
     const current = (await pool.query(`SELECT ${CURRENT_COLUMNS} FROM employees WHERE employee_id = $1`, [employeeId])).rows[0];
     const summary = { updated: 0, unchanged: 0, missingInD365: 0, skipped: [] };
-    const changes = await planPull(pool, mapping, source, current, summary);
+    const changes = await planPull(pool, mapping, source, current, summary, positionInfo);
     if (changes) await writePull(pool, employeeId, changes);
     const result = {
         synced: true,
