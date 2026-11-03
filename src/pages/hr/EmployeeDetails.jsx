@@ -1,12 +1,15 @@
 import { isValidElement, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Upload } from "lucide-react";
+import { ArrowLeft, Briefcase, BriefcaseBusiness, CalendarDays, ChevronDown, ChevronsUpDown, Clock3, Eye, EyeOff, FileText, FolderKanban, GraduationCap, KeyRound, Landmark, Mail, MapPin, Network, Pencil, RefreshCw, Upload, UsersRound } from "lucide-react";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import DatePicker from "../../components/layout/common/DatePicker";
 import Modal from "../../components/layout/common/Modal";
 import { DocumentToast, EmployeeDocumentPreviewModal } from "../../components/documents/EmployeeDocumentOverlays";
+import EmployeeEditPage from "./EmployeeEditPage";
+import EmployeeShiftPanel from "./EmployeeShiftPanel";
+import EmployeeProjectList from "./EmployeeProjectList";
+import { employeeValueLabel, serviceLength } from "./employeeProfileData";
 import {
     formatDocumentDate,
     listEmployeeDocuments,
@@ -25,9 +28,6 @@ const EMPLOYEE_DOCUMENTS = [
     ["qid_copy", "QID Copy", "HR"],
     ["passport_copy", "Passport Copy", "EMPLOYEE"],
 ];
-
-// "Full Time" → full_time (translation key); the saved value itself stays English
-const valueKey = (value) => String(value).trim().toLowerCase().replace(/[\s-]+/g, "_");
 
 async function readApiResponse(response) {
     const responseText = await response.text();
@@ -48,13 +48,7 @@ function EmployeeDetails() {
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [editForm, setEditForm] = useState({});
-    const [sectionEditor, setSectionEditor] = useState(null);
-    const [sectionForm, setSectionForm] = useState({});
-    const [educationEditorId, setEducationEditorId] = useState(null);
-    const [educationDeleteId, setEducationDeleteId] = useState(null);
+    const [editSection, setEditSection] = useState(null);
     const [notification, setNotification] = useState("");
     const [resetPasswordResult, setResetPasswordResult] = useState(null);
     const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
@@ -204,9 +198,7 @@ function EmployeeDetails() {
     };
 
     // Saved values stay English; only the shown text is translated (Employees List keys as a second source)
-    const valueLabel = (group, value) => (value === null || value === undefined || value === ""
-        ? value
-        : t([`employeeProfile.values.${group}.${valueKey(value)}`, `employeesList.values.${group}.${valueKey(value)}`], { defaultValue: String(value) }));
+    const valueLabel = (group, value) => employeeValueLabel(t, group, value);
     // Phones, emails, IDs, codes and dates keep their left-to-right order inside the Arabic page
     const ltr = (value) => (value === null || value === undefined || value === "" ? value : <span dir="ltr" className="ltr-text">{value}</span>);
     // Text typed by people (address, names, about…) shows in its own direction, English or Arabic
@@ -219,73 +211,16 @@ function EmployeeDetails() {
             ? valueLabel("accountType", value)
             : ["account_number", "ifsc_code"].includes(key) ? ltr(value) : auto(value));
 
-    const openEditor = () => {
-        setEditForm({
-            employee_id: employee.employee_id || "",
-            name: employee.name || "",
-            date_of_birth: employee.date_of_birth ? String(employee.date_of_birth).slice(0, 10) : "",
-            gender: employee.gender || "",
-            phone: employee.phone || "",
-            email: employee.email || "",
-            address: employee.address || "",
-            designation: employee.designation || "",
-            department: employee.department || "",
-            joining_date: employee.joining_date ? String(employee.joining_date).slice(0, 10) : "",
-            employment_type: employee.employment_type || "",
-            status: employee.status || "Active",
-            emergency_contact: employee.emergency_contact || "",
-            passport_no: employee.passport_no || "",
-            passport_exp_date: employee.passport_exp_date ? String(employee.passport_exp_date).slice(0, 10) : "",
-            nationality: employee.nationality || employee.country || "Indian",
-            religion: employee.religion || "",
-            marital_status: employee.marital_status || "",
-            children_count: employee.children_count ?? "",
-            legal_entity: employee.legal_entity || "SHLT",
-            worker_type: employee.worker_type || "Employee",
-            profile_photo: employee.profile_photo || "",
-            employment_category: employee.employment_category || "",
-            project_role_id: employee.project_role_id || "",
-            employment_end_date: employee.employment_end_date || "Never",
-            termination_reason: employee.termination_reason || "",
-            last_date_worked: employee.last_date_worked || "",
-            position: employee.position || employee.designation || "",
-            position_title: employee.position_title || employee.designation || "",
-            assignment_start: employee.assignment_start ? String(employee.assignment_start).slice(0, 10) : "",
-            assignment_end: employee.assignment_end ? String(employee.assignment_end).slice(0, 10) : "",
-            make_primary: employee.make_primary || false,
-        });
-        setIsEditing(true);
-    };
+    const openEditor = (section = "basic") => setEditSection(section);
 
-    const updateFormField = ({ target }) => {
-        setEditForm((current) => ({ ...current, [target.name]: target.value }));
-    };
-
-    const saveEmployee = async (event) => {
-        event.preventDefault();
-        setIsSaving(true);
-        setNotification("");
-        try {
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}`, {
-                method: "PUT",
-                headers: authHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify(editForm),
-            });
-            const data = await readApiResponse(response);
-            if (!response.ok) {
-                throw new Error(
-                    [data.message, data.details].filter(Boolean).join(": ") ||
-                    t("employeeDetails.errors.updateFailed", { defaultValue: "Failed to update employee" })
-                );
-            }
-            setEmployee((current) => ({ ...current, ...data }));
+    const finishEditing = async (name) => {
+        setEditSection(null);
+        setDocumentToast({ type: "success", message: t("employeeDetails.edit.saved", { defaultValue: "Employee details saved" }) });
+        const newSlug = createSlug(name);
+        if (newSlug && newSlug !== employeeSlug) {
+            navigate(`/employees/employeedetails/${newSlug}`, { replace: true });
+        } else {
             await fetchEmployee();
-            setIsEditing(false);
-        } catch (saveError) {
-            console.error("Employee update error:", saveError);
-            setNotification(saveError.message);
-        } finally {
-            setIsSaving(false);
         }
     };
 
@@ -301,105 +236,6 @@ function EmployeeDetails() {
         } finally {
             setUploadingDocument("");
         }
-    };
-
-    const sectionFields = {
-        about: [["about", t("profileEdit.sectionFields.about", { defaultValue: "About Employee" })]],
-        bank: [["account_holder_name", t("profileEdit.sectionFields.account_holder_name", { defaultValue: "Account Holder Name" })], ["account_number", t("profileEdit.sectionFields.account_number", { defaultValue: "Account Number" })], ["bank_name", t("profileEdit.sectionFields.bank_name", { defaultValue: "Bank Name" })], ["branch_name", t("profileEdit.sectionFields.branch_name", { defaultValue: "Branch Name" })], ["ifsc_code", t("profileEdit.sectionFields.ifsc_code", { defaultValue: "IFSC Code" })], ["account_type", t("profileEdit.sectionFields.account_type", { defaultValue: "Account Type" })]],
-        family: [["father_name", t("profileEdit.sectionFields.father_name", { defaultValue: "Father Name" })], ["mother_name", t("profileEdit.sectionFields.mother_name", { defaultValue: "Mother Name" })], ["spouse_name", t("profileEdit.sectionFields.spouse_name", { defaultValue: "Spouse Name" })], ["spouse_employment", t("profileEdit.sectionFields.spouse_employment", { defaultValue: "Spouse Employment" })], ["marital_status", t("profileEdit.sectionFields.marital_status", { defaultValue: "Marital Status" })], ["children_count", t("profileEdit.sectionFields.children_count", { defaultValue: "Children Count" })]],
-        employment: [["legal_entity", t("profileEdit.sectionFields.legal_entity", { defaultValue: "Legal Entity" })], ["worker_type", t("profileEdit.sectionFields.worker_type", { defaultValue: "Worker Type" })], ["employee_id", t("profileEdit.sectionFields.employee_id", { defaultValue: "Personnel Number" })], ["employment_category", t("profileEdit.sectionFields.employment_category", { defaultValue: "Employment Category" })], ["joining_date", t("profileEdit.sectionFields.joining_date", { defaultValue: "Employment Start Date" })], ["employment_end_date", t("profileEdit.sectionFields.employment_end_date", { defaultValue: "Employment End Date" })], ["employment_type", t("profileEdit.sectionFields.employment_type", { defaultValue: "Employment Type" })], ["project_role_id", t("profileEdit.sectionFields.project_role_id", { defaultValue: "Project Role ID" })], ["termination_reason", t("profileEdit.sectionFields.termination_reason", { defaultValue: "Termination Reason" })], ["last_date_worked", t("profileEdit.sectionFields.last_date_worked", { defaultValue: "Last Date Worked" })]],
-        position: [["position", t("profileEdit.sectionFields.position", { defaultValue: "Position" })], ["position_title", t("profileEdit.sectionFields.position_title", { defaultValue: "Position Title" })], ["assignment_start", t("profileEdit.sectionFields.assignment_start", { defaultValue: "Assignment Start" })], ["assignment_end", t("profileEdit.sectionFields.assignment_end", { defaultValue: "Assignment End" })], ["make_primary", t("employeeProfile.position.makePrimary", { defaultValue: "Make Primary" })]],
-        education: [["qualification", t("profileEdit.sectionFields.qualification", { defaultValue: "Degree / Qualification" })], ["institution", t("profileEdit.sectionFields.institution", { defaultValue: "Institution / University" })], ["field_of_study", t("profileEdit.sectionFields.field_of_study", { defaultValue: "Field of Study" })], ["specialization", t("profileEdit.sectionFields.specialization", { defaultValue: "Specialization" })], ["start_year", t("profileEdit.sectionFields.start_year", { defaultValue: "Start Year" })], ["end_year", t("profileEdit.sectionFields.end_year", { defaultValue: "End Year" })], ["grade", t("profileEdit.sectionFields.grade", { defaultValue: "Grade / CGPA" })], ["education_type", t("profileEdit.sectionFields.education_type", { defaultValue: "Education Type" })], ["location", t("profileEdit.sectionFields.location", { defaultValue: "Location" })]],
-        experience: [["company_name", t("profileEdit.sectionFields.company_name", { defaultValue: "Company Name" })], ["designation", t("employeeDetails.fields.designation", { defaultValue: "Designation" })], ["start_date", t("profileEdit.sectionFields.start_date", { defaultValue: "Start Date" })], ["end_date", t("profileEdit.sectionFields.end_date", { defaultValue: "End Date" })], ["description", t("employeeDetails.fields.description", { defaultValue: "Description" })]],
-        project: [["project_name", t("employeeDetails.fields.projectName", { defaultValue: "Project Name" })], ["description", t("employeeDetails.fields.description", { defaultValue: "Description" })], ["project_lead", t("employeeDetails.fields.projectLead", { defaultValue: "Project Lead" })], ["start_date", t("profileEdit.sectionFields.start_date", { defaultValue: "Start Date" })], ["deadline", t("employeeDetails.fields.deadline", { defaultValue: "Deadline" })], ["status", t("profileEdit.fields.status", { defaultValue: "Status" })]],
-    };
-
-    const openSectionEditor = (section, recordId = null) => {
-        const records = section === "education" ? (Array.isArray(employee.education) ? employee.education : []) : [];
-        const source = section === "education" ? (records.find((record) => record.id === recordId) || {}) : ["about", "employment", "position"].includes(section) ? employee : employee[section] || {};
-
-        const nextSectionForm = Object.fromEntries((sectionFields[section] || []).map(([name]) => {
-            const value = source[name] ?? "";
-            return [name, name.includes("date") && value !== "Never" ? String(value).slice(0, 10) : value === "Never" ? "" : value];
-        }));
-        if (section === "education") {
-            nextSectionForm.currently_pursuing = Boolean(source.currently_pursuing);
-        }
-
-        setSectionForm(nextSectionForm);
-        setEducationEditorId(recordId);
-        setSectionEditor(section);
-    };
-
-    const addEducation = () => openSectionEditor("education");
-
-    const saveSection = async (event) => {
-        event.preventDefault();
-        setIsSaving(true);
-        try {
-            const isEducation = sectionEditor === "education";
-            const isEmployeeSection = ["employment", "position"].includes(sectionEditor);
-            const method = isEducation && !educationEditorId ? "POST" : "PUT";
-            const endpoint = isEducation
-                ? `${API_URL}/api/employees/${employee.employee_id}/education${educationEditorId ? `/${educationEditorId}` : ""}`
-                : isEmployeeSection
-                    ? `${API_URL}/api/employees/${employee.employee_id}`
-                    : `${API_URL}/api/employees/${employee.employee_id}/${sectionEditor}`;
-
-            const body = isEducation
-                ? { ...sectionForm, currently_pursuing: Boolean(sectionForm.currently_pursuing) }
-                : isEmployeeSection
-                    ? { ...employee, ...sectionForm, employment_end_date: sectionForm.employment_end_date || "Never", employee_id: employee.employee_id }
-                    : { ...sectionForm };
-            const response = await fetch(endpoint, {
-                method,
-                headers: authHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify(body),
-            });
-            const data = await readApiResponse(response);
-            if (!response.ok) throw new Error(data.message || t("employeeDetails.errors.saveFailed", { defaultValue: "Failed to save details" }));
-
-            setEmployee((current) => ({
-                ...current,
-                ...(isEducation
-                    ? {
-                        education: educationEditorId
-                            ? (current.education || []).map((record) => record.id === educationEditorId ? data : record)
-                            : [...(current.education || []), data],
-                    }
-                    : isEmployeeSection ? data : { [sectionEditor]: data }),
-            }));
-            setSectionEditor(null);
-            setEducationEditorId(null);
-        } catch (saveError) {
-            setNotification(saveError.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const deleteEducation = async (educationId) => {
-        try {
-            const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/education/${educationId}`, {
-                method: "DELETE",
-                headers: authHeaders(),
-            });
-            if (!response.ok) {
-                throw new Error(t("employeeDetails.errors.deleteEducationFailed", { defaultValue: "Unable to delete education record" }));
-            }
-            setEmployee((current) => ({
-                ...current,
-                education: (current.education || []).filter((record) => record.id !== educationId),
-            }));
-        } catch (deleteError) {
-            setNotification(deleteError.message || t("employeeDetails.errors.deleteEducationFailed", { defaultValue: "Unable to delete education record" }));
-        } finally {
-            setEducationDeleteId(null);
-        }
-    };
-
-    const confirmDeleteEducation = async () => {
-        if (educationDeleteId) await deleteEducation(educationDeleteId);
     };
 
     const resetEmployeePassword = async () => {
@@ -474,6 +310,19 @@ function EmployeeDetails() {
         );
     }
 
+    if (editSection) {
+        return (
+            <DashboardLayout>
+                <EmployeeEditPage
+                    employee={employee}
+                    initialSection={editSection}
+                    onClose={() => setEditSection(null)}
+                    onSaved={finishEditing}
+                />
+            </DashboardLayout>
+        );
+    }
+
     const initials = employee.name
         ?.split(" ")
         .map((word) => word.charAt(0))
@@ -487,64 +336,58 @@ function EmployeeDetails() {
         [t("employeeProfile.basic.email", { defaultValue: "Email" }), ltr(employee.email)],
         [t("employeeProfile.basic.gender", { defaultValue: "Gender" }), valueLabel("gender", employee.gender)],
         [t("employeeProfile.basic.birthday", { defaultValue: "Birthday" }), ltr(formatDate(employee.date_of_birth))],
-        [t("employeeProfile.basic.joiningDate", { defaultValue: "Joining Date" }), ltr(formatDate(employee.joining_date))],
         [t("employeeProfile.basic.employmentType", { defaultValue: "Employment Type" }), valueLabel("employmentType", employee.employment_type)],
+        [t("employeeProfile.basic.grade", { defaultValue: "Grade" }), ltr(employee.grade)],
         [t("employeeProfile.basic.address", { defaultValue: "Address" }), auto(employee.address)],
     ];
 
-    const renderEducationContent = () => {
-        const educationRecords = Array.isArray(employee.education) ? employee.education : [];
+    const overviewStats = [
+        [CalendarDays, t("employeeProfile.basic.joiningDate", { defaultValue: "Joining Date" }), ltr(formatDate(employee.joining_date))],
+        [Clock3, t("employeeProfile.basic.yearsOfService", { defaultValue: "Years of Service" }), auto(serviceLength(t, employee.joining_date))],
+        [MapPin, t("employeeProfile.basic.officeLocation", { defaultValue: "Office Location" }), auto(employee.work_location)],
+        [Network, t("profileEdit.fields.department", { defaultValue: "Department" }), auto(employee.department)],
+    ];
+    const isActive = String(employee.status || "Active").toLowerCase() === "active";
 
-        if (educationRecords.length === 0) {
-            return (
-                <div className="education-records">
-                    <button type="button" className="add-education-button" onClick={addEducation}>{t("employeeProfile.education.add", { defaultValue: "+ Add Education" })}</button>
-                </div>
-            );
-        }
+    const renderEducationContent = () => {
+        const records = Array.isArray(employee.education) ? employee.education : [];
+        if (records.length === 0) return <p className="employee-record-empty">{t("employeeDetails.edit.empty.education", { defaultValue: "No education added yet" })}</p>;
 
         return (
             <div className="education-records">
-                {educationRecords.map((education) => (
-                    <article className="education-record" key={education.id || `${education.qualification}-${education.institution}`}>
+                {records.map((education) => (
+                    <article className="education-record" key={education.id}>
                         <div>
-                            <strong><span dir="auto" className="details-free-text">{education.qualification || t("employeeProfile.education.qualification", { defaultValue: "Qualification" })}{education.specialization ? ` ${education.specialization}` : ""}</span></strong>
+                            <strong>{auto(education.qualification) || t("employeeProfile.education.qualification", { defaultValue: "Qualification" })}</strong>
                             <span>{auto(education.institution) || "-"}</span>
                             <small>
                                 <bdi>{education.start_year || "-"}</bdi> - {education.currently_pursuing ? t("employeeProfile.education.present", { defaultValue: "Present" }) : <bdi>{education.end_year || "-"}</bdi>}
                                 {education.grade ? <> • <bdi>{education.grade}</bdi></> : ""}
                             </small>
                         </div>
-                        <div>
-                            <button type="button" className="education-action-button edit" onClick={() => openSectionEditor("education", education.id)}>{t("employeeProfile.edit", { defaultValue: "Edit" })}</button>
-                            <button type="button" className="education-action-button delete" onClick={() => setEducationDeleteId(education.id)}>{t("employeeProfile.delete", { defaultValue: "Delete" })}</button>
-                        </div>
                     </article>
                 ))}
-                <button type="button" className="add-education-button" onClick={addEducation}>{t("employeeProfile.education.add", { defaultValue: "+ Add Education" })}</button>
             </div>
         );
     };
 
     const renderExperienceContent = () => {
+        const records = Array.isArray(employee.experience) ? employee.experience : [];
+        if (records.length === 0) return <p className="employee-record-empty">{t("employeeDetails.edit.empty.experience", { defaultValue: "No experience added yet" })}</p>;
+
         return (
-            <div className="detail-content-grid">
-                <div className="detail-content-cell">
-                    <span>{t("employeeProfile.experience.company", { defaultValue: "Company" })}</span>
-                    <strong>{auto(employee.experience?.company_name) || "-"}</strong>
-                </div>
-                <div className="detail-content-cell">
-                    <span>{t("employeeDetails.experience.role", { defaultValue: "Role" })}</span>
-                    <strong>{auto(employee.experience?.designation) || "-"}</strong>
-                </div>
-                <div className="detail-content-cell">
-                    <span>{t("employeeDetails.experience.start", { defaultValue: "Start" })}</span>
-                    <strong>{ltr(formatDate(employee.experience?.start_date)) || "-"}</strong>
-                </div>
-                <div className="detail-content-cell">
-                    <span>{t("employeeDetails.experience.end", { defaultValue: "End" })}</span>
-                    <strong>{ltr(formatDate(employee.experience?.end_date)) || "-"}</strong>
-                </div>
+            <div className="education-records">
+                {records.map((experience) => (
+                    <article className="education-record" key={experience.id}>
+                        <div>
+                            <strong>{auto(experience.company_name) || "-"}</strong>
+                            <span>{auto(experience.designation) || "-"}</span>
+                            <small>
+                                <bdi dir="ltr">{formatDate(experience.start_date)}</bdi> - {experience.currently_working ? t("employeeProfile.education.present", { defaultValue: "Present" }) : <bdi dir="ltr">{formatDate(experience.end_date)}</bdi>}
+                            </small>
+                        </div>
+                    </article>
+                ))}
             </div>
         );
     };
@@ -552,52 +395,77 @@ function EmployeeDetails() {
     return (
         <>
             <DashboardLayout>
-                <div className="employee-details-page">
-                <div className="employee-details-topbar">
-                    <button className="back-btn" onClick={() => navigate("/employees")}>
-                        <span className="details-back-arrow" aria-hidden="true">←</span> {t("employeeDetails.backTitle", { defaultValue: "Employee Details" })}
-                    </button>
-                    <div className="topbar-actions">
-                        <span className="details-heading">{t("employeeProfile.overview", { defaultValue: "Employee Overview" })}</span>
+                <div className="employee-details-page epf">
+                <header className="epf-hero">
+                    <div className="epf-hero-top">
+                        <button type="button" className="epf-ghost" onClick={() => navigate("/employees")}>
+                            <ArrowLeft className="epf-back-icon" size={16} aria-hidden="true" />
+                            {t("employeeDetails.backToEmployees", { defaultValue: "Back to Employees" })}
+                        </button>
                         <button
-                            className="collapse-btn"
                             type="button"
+                            className="epf-ghost"
                             onClick={() => setOpenPanels((current) => {
                                 const shouldOpen = Object.values(current).some(Boolean) === false;
                                 return Object.fromEntries(Object.keys(current).map((key) => [key, shouldOpen]));
                             })}
                             aria-label={t("employeeDetails.toggleAll", { defaultValue: "Expand or collapse all employee details" })}
                         >
-                            {Object.values(openPanels).some(Boolean) ? "⌃" : "⌄"}
+                            <ChevronsUpDown size={16} aria-hidden="true" />
+                            {Object.values(openPanels).some(Boolean)
+                                ? t("employeeDetails.edit.collapseAll", { defaultValue: "Collapse all" })
+                                : t("employeeDetails.edit.expandAll", { defaultValue: "Expand all" })}
                         </button>
                     </div>
-                </div>
-
-                <div className="employee-details-layout">
-                    <aside className="employee-summary">
-                        <div className="profile-cover"></div>
-                        <div className="profile-avatar-large">
-                            {employee.profile_photo ? (
-                                <img src={employee.profile_photo} alt={employee.name} />
-                            ) : initials}
+                    <div className="epf-hero-main">
+                        <div className="epf-avatar">
+                            {employee.profile_photo ? <img src={employee.profile_photo} alt={employee.name} /> : initials}
                         </div>
-                        <h1>{auto(employee.name)}</h1>
-                        <span className="verified-name">●</span>
-                        <div className="profile-tags">
-                            <span>● {employee.designation ? auto(employee.designation) : t("employeeProfile.employee", { defaultValue: "Employee" })}</span>
-                            <span>{employee.employment_type ? valueLabel("employmentType", employee.employment_type) : t("employeeDetails.fullTimeFallback", { defaultValue: "Full time" })}</span>
+                        <div className="epf-hero-copy">
+                            <span className="epf-kicker">{t("employeeProfile.overview", { defaultValue: "Employee Overview" })}</span>
+                            <h1>{auto(employee.name)}</h1>
+                            <div className="epf-tags">
+                                <span>{employee.designation ? auto(employee.designation) : t("employeeProfile.employee", { defaultValue: "Employee" })}</span>
+                                <span>{employee.employment_type ? valueLabel("employmentType", employee.employment_type) : t("employeeDetails.fullTimeFallback", { defaultValue: "Full time" })}</span>
+                                <span className={isActive ? "epf-tag-active" : "epf-tag-inactive"}>{valueLabel("status", employee.status || "Active")}</span>
+                            </div>
                         </div>
-                        <div className="summary-actions">
-                            <button type="button" onClick={openEditor}>✎ {t("employeeProfile.editInfo", { defaultValue: "Edit Info" })}</button>
-                            <a href={`mailto:${employee.email}`}>▣ {t("employeeProfile.message", { defaultValue: "Message" })}</a>
+                        <div className="epf-actions">
+                            <button type="button" className="epf-primary" onClick={() => openEditor()}>
+                                <Pencil size={15} aria-hidden="true" />
+                                {t("employeeProfile.editInfo", { defaultValue: "Edit Info" })}
+                            </button>
+                            {employee.email && (
+                                <a className="epf-secondary" href={`mailto:${employee.email}`}>
+                                    <Mail size={15} aria-hidden="true" />
+                                    {t("employeeProfile.message", { defaultValue: "Message" })}
+                                </a>
+                            )}
                             {getAuthRole() === "hr" && (
-                                <button type="button" className="d365-sync-button" onClick={syncThisEmployee} disabled={d365Syncing}>
+                                <button type="button" className="epf-secondary" onClick={syncThisEmployee} disabled={d365Syncing}>
+                                    <RefreshCw size={15} aria-hidden="true" />
                                     {d365Syncing
                                         ? t("employeeDetails.d365Sync.syncing", { defaultValue: "Syncing..." })
                                         : t("employeeDetails.d365Sync.button", { defaultValue: "Sync this employee" })}
                                 </button>
                             )}
                         </div>
+                    </div>
+                    <div className="epf-stats">
+                        {overviewStats.map(([Icon, label, value]) => (
+                            <div key={label}>
+                                <i aria-hidden="true"><Icon size={18} /></i>
+                                <div>
+                                    <span>{label}</span>
+                                    <strong>{value || "-"}</strong>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </header>
+
+                <div className="employee-details-layout">
+                    <aside className="employee-summary">
                         <InfoSection title={t("employeeProfile.basic.title", { defaultValue: "Basic information" })} rows={detailRows} />
                         <InfoSection
                             title={t("employeeProfile.personal.title", { defaultValue: "Personal Information" })}
@@ -617,10 +485,10 @@ function EmployeeDetails() {
                     </aside>
 
                     <main className="employee-detail-content">
-                        <DetailPanel panelKey="about" isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title={t("employeeProfile.panels.about", { defaultValue: "About Employee" })} content={t("employeeProfile.defaultAbout", { name: `\u2068${employee.name}\u2069`, department: `\u2068${employee.department || t("employeeProfile.defaultDepartment", { defaultValue: "organization" })}\u2069`, designation: `\u2068${employee.designation || t("employeeProfile.defaultDesignation", { defaultValue: "valued employee" })}\u2069`, defaultValue: "Employee {{name}} is part of the {{department}} team as a {{designation}}." })} onEdit={() => openSectionEditor("about")} />
-                        <DetailPanel panelKey="bank" isOpen={openPanels.bank} onToggle={() => setOpenPanels((current) => ({ ...current, bank: !current.bank }))} title={t("employeeProfile.panels.bank", { defaultValue: "Bank Information" })} onEdit={() => openSectionEditor("bank")} content={formatSection(employee.bank, t, sectionValue, sectionLabel)} />
-                        <DetailPanel panelKey="family" isOpen={openPanels.family} onToggle={() => setOpenPanels((current) => ({ ...current, family: !current.family }))} title={t("employeeProfile.panels.family", { defaultValue: "Family Information" })} onEdit={() => openSectionEditor("family")} content={formatSection(employee.family, t, sectionValue, sectionLabel)} />
-                        <DetailPanel panelKey="employment" isOpen={openPanels.employment} onToggle={() => setOpenPanels((current) => ({ ...current, employment: !current.employment }))} title={t("employeeProfile.panels.employment", { defaultValue: "Employment Details" })} content={formatSection({
+                        <DetailPanel panelKey="about" icon={FileText} isOpen={openPanels.about} onToggle={() => setOpenPanels((current) => ({ ...current, about: !current.about }))} title={t("employeeProfile.panels.about", { defaultValue: "About Employee" })} content={t("employeeProfile.defaultAbout", { name: `\u2068${employee.name}\u2069`, department: `\u2068${employee.department || t("employeeProfile.defaultDepartment", { defaultValue: "organization" })}\u2069`, designation: `\u2068${employee.designation || t("employeeProfile.defaultDesignation", { defaultValue: "valued employee" })}\u2069`, defaultValue: "Employee {{name}} is part of the {{department}} team as a {{designation}}." })} />
+                        <DetailPanel panelKey="bank" icon={Landmark} isOpen={openPanels.bank} onToggle={() => setOpenPanels((current) => ({ ...current, bank: !current.bank }))} title={t("employeeProfile.panels.bank", { defaultValue: "Bank Information" })} content={formatSection(employee.bank, t, sectionValue, sectionLabel)} />
+                        <DetailPanel panelKey="family" icon={UsersRound} isOpen={openPanels.family} onToggle={() => setOpenPanels((current) => ({ ...current, family: !current.family }))} title={t("employeeProfile.panels.family", { defaultValue: "Family Information" })} content={formatSection(employee.family, t, sectionValue, sectionLabel)} />
+                        <DetailPanel panelKey="employment" icon={Briefcase} isOpen={openPanels.employment} onToggle={() => setOpenPanels((current) => ({ ...current, employment: !current.employment }))} title={t("employeeProfile.panels.employment", { defaultValue: "Employment Details" })} content={formatSection({
                             [t("employeeProfile.employment.legalEntity", { defaultValue: "Legal Entity" })]: ltr(employee.legal_entity || "SHLT"),
                             [t("employeeProfile.employment.workerType", { defaultValue: "Worker Type" })]: valueLabel("workerType", employee.worker_type || "Employee"),
                             [t("employeeProfile.employment.personnelNumber", { defaultValue: "Personnel Number" })]: ltr(employee.employee_id),
@@ -631,17 +499,18 @@ function EmployeeDetails() {
                             [t("employeeProfile.employment.projectRoleId", { defaultValue: "Project Role ID" })]: ltr(employee.project_role_id),
                             [t("employeeProfile.employment.terminationReason", { defaultValue: "Termination Reason" })]: auto(employee.termination_reason),
                             [t("employeeProfile.employment.lastDateWorked", { defaultValue: "Last Date Worked" })]: ltr(employee.last_date_worked),
-                        }, t)} onEdit={() => openSectionEditor("employment")} />
-                        <DetailPanel panelKey="position" isOpen={openPanels.position} onToggle={() => setOpenPanels((current) => ({ ...current, position: !current.position }))} title={t("employeeProfile.panels.position", { defaultValue: "Position Details" })} content={formatSection({
+                        }, t)} />
+                        <DetailPanel panelKey="position" icon={FolderKanban} isOpen={openPanels.position} onToggle={() => setOpenPanels((current) => ({ ...current, position: !current.position }))} title={t("employeeProfile.panels.position", { defaultValue: "Position Details" })} content={formatSection({
                             [t("employeeProfile.position.position", { defaultValue: "Position" })]: auto(employee.position || employee.designation),
                             [t("employeeProfile.position.positionTitle", { defaultValue: "Position Title" })]: auto(employee.position_title || employee.designation),
                             [t("employeeProfile.position.assignmentStart", { defaultValue: "Assignment Start" })]: ltr(formatDate(employee.assignment_start || employee.joining_date)),
                             [t("employeeProfile.position.assignmentEnd", { defaultValue: "Assignment End" })]: ltr(formatDate(employee.assignment_end)),
                             [t("employeeProfile.position.makePrimary", { defaultValue: "Make Primary" })]: employee.make_primary ? t("employeeProfile.values.yes", { defaultValue: "Yes" }) : t("employeeProfile.values.no", { defaultValue: "No" }),
-                        }, t)} onEdit={() => openSectionEditor("position")} />
+                        }, t)} />
+                        <EmployeeShiftPanel employeeId={employee.employee_id} formatDate={formatDate} />
                         <div className="detail-panel-row">
-                            <DetailPanel panelKey="education" isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title={t("employeeProfile.panels.education", { defaultValue: "Education Details" })} onEdit={() => openSectionEditor("education")} content={renderEducationContent()} />
-                            <DetailPanel panelKey="experience" isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title={t("employeeProfile.panels.experience", { defaultValue: "Experience" })} onEdit={() => openSectionEditor("experience")} content={renderExperienceContent()} />
+                            <DetailPanel panelKey="education" icon={GraduationCap} isOpen={openPanels.education} onToggle={() => setOpenPanels((current) => ({ ...current, education: !current.education }))} title={t("employeeProfile.panels.education", { defaultValue: "Education Details" })} content={renderEducationContent()} />
+                            <DetailPanel panelKey="experience" icon={BriefcaseBusiness} isOpen={openPanels.experience} onToggle={() => setOpenPanels((current) => ({ ...current, experience: !current.experience }))} title={t("employeeProfile.panels.experience", { defaultValue: "Experience" })} content={renderExperienceContent()} />
                         </div>
                         <section className="projects-panel">
                             <div className="project-tabs" role="tablist" aria-label={t("employeeDetails.workDetails", { defaultValue: "Employee work details" })}>
@@ -649,18 +518,12 @@ function EmployeeDetails() {
                                 <button type="button" role="tab" aria-selected={activeWorkTab === "assets"} className={activeWorkTab === "assets" ? "active" : ""} onClick={() => setActiveWorkTab("assets")}>{t("employeeProfile.work.assets", { defaultValue: "Assets" })}</button>
                             </div>
                             {activeWorkTab === "projects" ? (
-                                <div className="project-list" role="tabpanel">
-                                    <article><span className="project-icon blue">C</span><div><b>{t("employeeProfile.work.management", { name: employee.department || t("employeeProfile.work.workforce", { defaultValue: "Workforce" }), defaultValue: "{{name}} Management" })}</b><p>{t("employeeProfile.work.managementHint", { defaultValue: "Employee responsibilities and assigned work" })}</p></div></article>
-                                    <article><span className="project-icon purple">●</span><div><b>{t("employeeProfile.work.operations", { name: employee.designation || t("employeeProfile.employee", { defaultValue: "Employee" }), defaultValue: "{{name}} Operations" })}</b><p>{t("employeeProfile.work.operationsHint", { defaultValue: "Current role and organizational activities" })}</p></div></article>
-                                </div>
+                                <EmployeeProjectList employeeId={employee.employee_id} />
                             ) : (
                                 <div className="assets-empty-state" role="tabpanel">
                                     <span className="assets-empty-icon">▣</span>
                                     <div><b>{t("employeeProfile.work.noAssets", { defaultValue: "No assets assigned" })}</b><p>{t("employeeDetails.noAssetsHint", { defaultValue: "Company assets assigned to this employee will appear here." })}</p></div>
                                 </div>
-                            )}
-                            {activeWorkTab === "projects" && (
-                                <button className="section-edit-button" type="button" onClick={() => openSectionEditor("project")} aria-label={t("employeeDetails.editProjects", { defaultValue: "Edit projects" })}>✎</button>
                             )}
                         </section>
                         <section className="employee-documents-admin-panel" id="employee-documents">
@@ -730,155 +593,6 @@ function EmployeeDetails() {
                     </main>
                 </div>
 
-                {isEditing && (
-                    <div className="employee-edit-overlay">
-                        <form className="employee-edit-form" onSubmit={saveEmployee}>
-                            <div className="edit-form-header">
-                                <h2>{t("employeeDetails.editTitle", { defaultValue: "Edit Employee Details" })}</h2>
-                                <button type="button" onClick={() => setIsEditing(false)}>×</button>
-                            </div>
-                            <div className="edit-form-grid">
-                                <h3 className="employee-edit-section-title">{t("profileEdit.sections.basic", { defaultValue: "Basic information" })}</h3>
-                                {[
-                                    ["employee_id", t("profileEdit.fields.employee_id", { defaultValue: "QID" }), "text"],
-                                    ["name", t("profileEdit.fields.name", { defaultValue: "Full Name" }), "text"],
-                                    ["date_of_birth", t("employeeDetails.fields.dateOfBirth", { defaultValue: "Date of Birth" }), "date"],
-                                    ["phone", t("profileEdit.fields.phone", { defaultValue: "Phone" }), "tel"],
-                                    ["email", t("profileEdit.fields.email", { defaultValue: "Email" }), "email"],
-                                    ["address", t("profileEdit.fields.address", { defaultValue: "Address" }), "text"],
-                                    ["designation", t("employeeDetails.fields.designation", { defaultValue: "Designation" }), "text"],
-                                    ["department", t("profileEdit.fields.department", { defaultValue: "Department" }), "text"],
-                                    ["joining_date", t("profileEdit.fields.joining_date", { defaultValue: "Joining Date" }), "date"],
-                                    ["designation", t("profileEdit.fields.designation", { defaultValue: "Designation / Role" }), "text"],
-                                    ["department", t("profileEdit.fields.department", { defaultValue: "Department" }), "text"],
-                                ].map(([name, label, type]) => (
-                                    <label key={name}>{label}
-                                        {type === "date" ? (
-                                            <DatePicker value={editForm[name] || ""} onChange={(value) => setEditForm((current) => ({ ...current, [name]: value }))} />
-                                        ) : (
-                                            <input name={name} type={type} dir={["employee_id", "phone", "email"].includes(name) ? "ltr" : "auto"} value={editForm[name] || ""} onChange={updateFormField} />
-                                        )}
-                                    </label>
-                                ))}
-                                <label>{t("profileEdit.fields.gender", { defaultValue: "Gender" })}
-                                    <select name="gender" value={editForm.gender || ""} onChange={updateFormField}>
-                                        <option value="">{t("profileEdit.selectGender", { defaultValue: "Select gender" })}</option><option value="Male">{valueLabel("gender", "Male")}</option><option value="Female">{valueLabel("gender", "Female")}</option><option value="Other">{valueLabel("gender", "Other")}</option>
-                                    </select>
-                                </label>
-                                <label>{t("profileEdit.fields.employment_type", { defaultValue: "Employment Type" })}
-                                    <select name="employment_type" value={editForm.employment_type || ""} onChange={updateFormField}>
-                                        <option value="">{t("profileEdit.selectEmploymentType", { defaultValue: "Select employment type" })}</option><option value="Full Time">{valueLabel("employmentType", "Full Time")}</option><option value="Part Time">{valueLabel("employmentType", "Part Time")}</option><option value="Contract">{valueLabel("employmentType", "Contract")}</option><option value="Intern">{valueLabel("employmentType", "Intern")}</option>
-                                    </select>
-                                </label>
-                                <label>{t("profileEdit.fields.status", { defaultValue: "Status" })}
-                                    <select name="status" value={editForm.status || "Active"} onChange={updateFormField}>
-                                        <option value="Active">{valueLabel("status", "Active")}</option>
-                                        <option value="Inactive">{valueLabel("status", "Inactive")}</option>
-                                        <option value="Resigned">{valueLabel("status", "Resigned")}</option>
-                                        <option value="Retired">{valueLabel("status", "Retired")}</option>
-                                        <option value="Dismissed">{valueLabel("status", "Dismissed")}</option>
-                                        <option value="Terminated">{valueLabel("status", "Terminated")}</option>
-                                    </select>
-                                </label>
-                                <h3 className="employee-edit-section-title">{t("profileEdit.sections.personal", { defaultValue: "Personal Information" })}</h3>
-                                <label>{t("profileEdit.fields.passport_no", { defaultValue: "Passport No" })}
-                                    <input name="passport_no" type="text" dir="ltr" value={editForm.passport_no || ""} onChange={updateFormField} />
-                                </label>
-                                <label>{t("profileEdit.fields.passport_exp_date", { defaultValue: "Passport Exp Date" })}
-                                    <DatePicker value={editForm.passport_exp_date || ""} onChange={(value) => setEditForm((current) => ({ ...current, passport_exp_date: value }))} />
-                                </label>
-                                <label>{t("profileEdit.fields.nationality", { defaultValue: "Nationality" })}
-                                    <input name="nationality" type="text" dir="auto" value={editForm.nationality || ""} onChange={updateFormField} />
-                                </label>
-                                <label>{t("profileEdit.fields.religion", { defaultValue: "Religion" })}
-                                    <input name="religion" type="text" dir="auto" value={editForm.religion || ""} onChange={updateFormField} />
-                                </label>
-                                <label>{t("profileEdit.fields.marital_status", { defaultValue: "Marital Status" })}
-                                    <select name="marital_status" value={editForm.marital_status || ""} onChange={updateFormField}>
-                                        <option value="">{t("profileEdit.selectMaritalStatus", { defaultValue: "Select marital status" })}</option>
-                                        <option value="Single">{valueLabel("maritalStatus", "Single")}</option><option value="Married">{valueLabel("maritalStatus", "Married")}</option><option value="Divorced">{valueLabel("maritalStatus", "Divorced")}</option><option value="Widowed">{valueLabel("maritalStatus", "Widowed")}</option>
-                                    </select>
-                                </label>
-                                <label>{t("profileEdit.fields.children_count", { defaultValue: "No. of Children" })}
-                                    <input name="children_count" type="number" min="0" value={editForm.children_count ?? ""} onChange={updateFormField} />
-                                </label>
-                                <h3 className="employee-edit-section-title">{t("profileEdit.sections.emergency", { defaultValue: "Emergency Contact Number" })}</h3>
-                                <label>{t("profileEdit.fields.emergency_contact", { defaultValue: "Primary" })}
-                                    <input name="emergency_contact" type="tel" dir="ltr" value={editForm.emergency_contact || ""} onChange={updateFormField} />
-                                </label>
-                                <h3 className="employee-edit-section-title">{t("profileEdit.sections.work", { defaultValue: "Work information" })}</h3>
-                                <label>{t("profileEdit.fields.profile_photo", { defaultValue: "Profile Photo" })}
-                                    <input type="file" accept="image/*" onChange={(event) => {
-                                        const file = event.target.files[0];
-                                        if (!file) return;
-                                        const reader = new FileReader();
-                                        reader.onload = () => setEditForm((current) => ({ ...current, profile_photo: reader.result }));
-                                        reader.readAsDataURL(file);
-                                    }} />
-                                    {editForm.profile_photo && <img className="employee-edit-photo-preview" src={editForm.profile_photo} alt={t("profileEdit.photoPreview", { defaultValue: "Profile preview" })} />}
-                                </label>
-                            </div>
-                            <div className="edit-form-actions">
-                                <button type="button" onClick={() => setIsEditing(false)}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
-                                <button type="submit" disabled={isSaving}>{isSaving ? t("profileEdit.saving", { defaultValue: "Saving..." }) : t("profileEdit.save", { defaultValue: "Save Changes" })}</button>
-                            </div>
-                        </form>
-                    </div>
-                )}
-                {sectionEditor && (
-                    <div className="employee-edit-overlay">
-                        <form className="employee-edit-form" onSubmit={saveSection}>
-                            <div className="edit-form-header">
-                                <h2>{t("employeeDetails.editSection", { section: t(`employeeDetails.sectionNames.${sectionEditor}`, { defaultValue: sectionEditor }), defaultValue: "Edit {{section}} Details" })}</h2>
-                                <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>×</button>
-                            </div>
-                            <div className="edit-form-grid">
-                                {sectionFields[sectionEditor].map(([name, label]) => {
-                                    const isSingleField = sectionFields[sectionEditor].length === 1;
-
-                                    return (
-                                        <label key={name} className={isSingleField ? "wide-field" : ""}>
-                                            {label}
-                                            {name === "make_primary" ? (
-                                                <select name={name} value={sectionForm[name] ? "true" : "false"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value === "true" }))}>
-                                                    <option value="false">{t("employeeProfile.values.no", { defaultValue: "No" })}</option>
-                                                    <option value="true">{t("employeeProfile.values.yes", { defaultValue: "Yes" })}</option>
-                                                </select>
-                                            ) : name.includes("date") || name === "deadline" ? (
-                                                <DatePicker value={sectionForm[name] || ""} onChange={(value) => setSectionForm((current) => ({ ...current, [name]: value }))} />
-                                            ) : name === "start_year" || name === "end_year" ? (
-                                                <select name={name} value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
-                                                    <option value="">{t("profileEdit.selectYear", { defaultValue: "Select year" })}</option>
-                                                    {Array.from({ length: 81 }, (_, index) => String(new Date().getFullYear() - index)).map((year) => <option key={year} value={year}>{year}</option>)}
-                                                </select>
-                                            ) : name === "education_type" ? (
-                                                <select name={name} value={sectionForm[name] || "Full Time"} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}>
-                                                    <option value="Full Time">{valueLabel("educationType", "Full Time")}</option>
-                                                    <option value="Part Time">{valueLabel("educationType", "Part Time")}</option>
-                                                    <option value="Distance">{valueLabel("educationType", "Distance")}</option>
-                                                </select>
-                                            ) : name === "about" ? (
-                                                <textarea
-                                                    name={name}
-                                                    dir="auto"
-                                                    rows={4}
-                                                    value={sectionForm[name] || ""}
-                                                    onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))}
-                                                />
-                                            ) : (
-                                                <input name={name} type="text" dir={["account_number", "ifsc_code", "project_role_id", "employee_id"].includes(name) ? "ltr" : "auto"} value={sectionForm[name] || ""} onChange={({ target }) => setSectionForm((current) => ({ ...current, [target.name]: target.value }))} />
-                                            )}
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                            <div className="edit-form-actions">
-                                <button type="button" onClick={() => { setSectionEditor(null); setEducationEditorId(null); }}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
-                                <button type="submit" disabled={isSaving}>{isSaving ? t("profileEdit.saving", { defaultValue: "Saving..." }) : t("profileEdit.save", { defaultValue: "Save Changes" })}</button>
-                            </div>
-                        </form>
-                    </div>
-                )}
                 </div>
             </DashboardLayout>
             <Modal
@@ -970,19 +684,6 @@ function EmployeeDetails() {
                 onClose={() => setPreviewDocument(null)}
                 onError={(message) => setDocumentToast({ type: "error", message })}
             />
-            {educationDeleteId && (
-                <div className="education-delete-overlay" onClick={() => setEducationDeleteId(null)}>
-                    <div className="education-delete-card" role="dialog" aria-modal="true" aria-labelledby="education-delete-title" onClick={(event) => event.stopPropagation()}>
-                        <div className="education-delete-icon">🗑</div>
-                        <h2 id="education-delete-title">{t("employeeDetails.deleteEducation.title", { defaultValue: "Delete education record?" })}</h2>
-                        <p>{t("employeeDetails.deleteEducation.message", { defaultValue: "This education record will be permanently removed from this employee profile." })}</p>
-                        <div className="education-delete-actions">
-                            <button type="button" className="education-delete-cancel" onClick={() => setEducationDeleteId(null)}>{t("profileEdit.cancel", { defaultValue: "Cancel" })}</button>
-                            <button type="button" className="education-delete-confirm" onClick={confirmDeleteEducation}>{t("employeeDetails.deleteEducation.confirm", { defaultValue: "Delete Record" })}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
             <Modal
                 isOpen={Boolean(resetPasswordResult)}
                 onClose={() => setResetPasswordResult(null)}
@@ -1014,15 +715,15 @@ function InfoSection({ title, rows }) {
     );
 }
 
-function DetailPanel({ panelKey, title, content, isOpen, onToggle, onEdit }) {
+function DetailPanel({ panelKey, icon: Icon, title, content, isOpen, onToggle }) {
     const { t } = useTranslation();
     return (
         <section className={`detail-panel ${isOpen ? "open" : "collapsed"}`}>
             <header>
+                <i className="epf-panel-icon" aria-hidden="true"><Icon size={18} /></i>
                 <h2>{title}</h2>
-                <button type="button" className="panel-edit-button" onClick={onEdit} aria-label={t("employeeProfile.editPanel", { title, defaultValue: "Edit {{title}}" })}>✎</button>
                 <button type="button" className="panel-toggle-button" onClick={onToggle} aria-label={isOpen ? t("employeeProfile.collapsePanel", { title, defaultValue: "Collapse {{title}}" }) : t("employeeProfile.expandPanel", { title, defaultValue: "Expand {{title}}" })}>
-                    {isOpen ? "⌃" : "⌄"}
+                    <ChevronDown size={17} aria-hidden="true" />
                 </button>
             </header>
             {isOpen && content && (

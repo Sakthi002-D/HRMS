@@ -9,6 +9,7 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import { useAlert, useConfirm } from "../../components/common/dialog/dialogContext";
 import API_URL from "../../config/api";
 import { formatAppDate, getAppSettings } from "../../utils/appSettings";
+import { exportTable } from "../../utils/tableExport";
 import "./Payroll.css";
 
 const monthKey = (value) => String(value || "").slice(0, 7);
@@ -172,17 +173,7 @@ function Payroll() {
     const exportPayroll = (format) => {
         const headers = ["Employee ID", "Name", "Department", "Designation", "Salary Month", "Basic", "Allowances", "Deductions", "Net Salary", "Status"];
         const rows = filtered.map((record) => [record.employeeID, record.employeeName, record.department, record.designation, monthLabel(record.salaryMonth), record.basicSalary, record.allowances, record.deductions, record.netSalary, record.status]);
-        const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
-        const content = format === "excel"
-            ? `<table><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>${rows.map((row) => `<tr>${row.map((value) => `<td>${value ?? ""}</td>`).join("")}</tr>`).join("")}</table>`
-            : csv;
-        const blob = new Blob([content], { type: format === "excel" ? "application/vnd.ms-excel" : "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `employee-salary.${format === "excel" ? "xls" : "csv"}`;
-        link.click();
-        URL.revokeObjectURL(url);
+        exportTable(format, { fileName: "employee-salary", title: "Employee Salary", headers, rows });
         setIsExportOpen(false);
     };
 
@@ -243,7 +234,7 @@ function Payroll() {
                             <button type="button" className="payroll-export-btn" onClick={() => setIsExportOpen((open) => !open)} aria-expanded={isExportOpen}>
                                 <Download size={14} /> {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} />
                             </button>
-                            {isExportOpen && <div className="payroll-export-options"><button type="button" onClick={() => exportPayroll("excel")}>{t("hrPayroll.export.excel", { defaultValue: "Excel" })}</button><button type="button" onClick={() => exportPayroll("csv")}>{t("hrPayroll.export.csv", { defaultValue: "CSV" })}</button></div>}
+                            {isExportOpen && <div className="payroll-export-options"><button type="button" onClick={() => exportPayroll("excel")}>{t("hrPayroll.export.excel", { defaultValue: "Excel" })}</button><button type="button" onClick={() => exportPayroll("pdf")}>{t("export.pdf", { defaultValue: "PDF" })}</button></div>}
                         </div>
                         <button type="button" className="payroll-process-btn" onClick={processMonth} disabled={processing || loading}>
                             {processing ? <Loader2 size={15} className="payroll-spin" /> : <CheckCircle2 size={15} />} {t("hrPayroll.process.button", { defaultValue: "Process Month" })}

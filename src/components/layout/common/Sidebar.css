@@ -225,3 +225,9 @@
   font-size: 10px;
   line-height: 16px;
 }
+
+/* Settings → Grade Assignment sits under Settings */
+.sidebar-account .sidebar-sublink {
+  padding-inline-start: 34px;
+  font-size: 13.5px;
+}

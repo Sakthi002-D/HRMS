@@ -24,6 +24,7 @@ import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditMo
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
 import API_URL from "../config/api";
+import { toDateInput } from "../utils/dateInput";
 import { authHeaders } from "../utils/auth";
 
 const DEFAULT_QATAR_HOLIDAYS = [
@@ -34,10 +35,12 @@ const DEFAULT_QATAR_HOLIDAYS = [
     { name: "Islamic New Year", date: "Islamic calendar", days: 1 },
     { name: "Prophet's Birthday", date: "Islamic calendar", days: 1 },
 ];
-const EMPLOYEE_LEAVE_TYPES = ["Annual Leave", "Sick Leave", "Maternity Leave", "Paternity Leave", "Hajj Leave", "Emergency Leave", "Unpaid Leave (LOP)", "Compensatory Off", "Bereavement Leave"];
+const EMPLOYEE_LEAVE_TYPES = ["Annual Leave", "Casual Leave", "Sick Leave", "Maternity Leave", "Paternity Leave", "Hajj Leave", "Umrah Leave", "Emergency Leave", "Unpaid Leave (LOP)", "Compensatory Off", "Bereavement Leave"];
 
+// Company limits; the saved Leave Policy replaces them. Sick and Casual are per year, the others per request.
 const LEAVE_RULES = {
-    sick: { eligibleMonths: 3, totalDays: 84 }, maternity: { days: 50 }, bereavement: { days: 3 }, compensatory: { validityDays: 90 },
+    sick: { eligibleMonths: 3, totalDays: 14 }, casual: { days: 2 }, maternity: { days: 50 }, paternity: { days: 3 },
+    bereavement: { days: 14 }, umrah: { days: 7 }, hajj: { days: 14 }, compensatory: { validityDays: 90 },
 };
 const parseDateOnly = (value) => {
     if (!value) return null;
@@ -103,6 +106,8 @@ function EmployeeDashboard() {
     const [employee, setEmployee] = useState(null);
     const [leaves, setLeaves] = useState([]);
     const [annualBalance, setAnnualBalance] = useState(null);
+    const [leaveTypes, setLeaveTypes] = useState(EMPLOYEE_LEAVE_TYPES);
+    const [leaveRules, setLeaveRules] = useState(LEAVE_RULES);
     // Manpower Requests section: only for Department Coordinators and MPR approvers
     const [showManpower, setShowManpower] = useState(false);
     // Resignation page data; also drives the serving-notice banner and the leave cut-off
@@ -352,6 +357,25 @@ function EmployeeDashboard() {
             if (Array.isArray(configuredHolidays) && configuredHolidays.length > 0) {
                 setHolidays(configuredHolidays);
             }
+            // Types HR added in Leave Policy Setup
+            const configuredTypes = data.policy?.leaveTypes;
+            if (Array.isArray(configuredTypes) && configuredTypes.length > 0) {
+                setLeaveTypes(configuredTypes);
+            }
+            setLeaveRules((current) => ({
+                ...current,
+                sick: {
+                    eligibleMonths: data.policy?.sickLeave?.eligibleAfterMonths ?? current.sick.eligibleMonths,
+                    totalDays: data.policy?.sickLeave?.yearlyDays ?? current.sick.totalDays,
+                },
+                casual: { days: data.policy?.casualLeave?.days ?? current.casual.days },
+                maternity: { days: data.policy?.maternityLeave?.days ?? current.maternity.days },
+                paternity: { days: data.policy?.paternityLeave?.days ?? current.paternity.days },
+                bereavement: { days: data.policy?.bereavementLeave?.immediateFamilyDays ?? current.bereavement.days },
+                umrah: { days: data.policy?.umrahLeave?.days ?? current.umrah.days },
+                hajj: { days: data.policy?.hajjLeave?.days ?? current.hajj.days },
+                compensatory: { validityDays: data.policy?.compensatoryOff?.validityDays ?? current.compensatory.validityDays },
+            }));
         } catch (error) {
             console.error("Error fetching holiday policy:", error);
         }
@@ -469,7 +493,7 @@ function EmployeeDashboard() {
                 showAlert(t("leaveDetails.availableToApply", { count: selectedLeaveInfo.available }));
                 return;
             }
-        } else if (selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
+        } else if (selectedLeaveInfo.calendarDays && selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
             showAlert(t("leaveDetails.onlyRemaining", { count: selectedLeaveInfo.remaining, type: t(`leaveTypes.${formData.leave_type}`, { defaultValue: formData.leave_type }) }));
             return;
         }
@@ -561,6 +585,14 @@ function EmployeeDashboard() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
+    const refreshProfile = async () => {
+        const response = await fetch(`${API_URL}/api/employees/${employee.employee_id}/details`);
+        if (!response.ok) return;
+        const updatedEmployee = { ...employee, ...await response.json() };
+        setEmployee(updatedEmployee);
+        sessionStorage.setItem("loggedInEmployee", JSON.stringify(updatedEmployee));
+    };
+
     const openEditProfile = () => {
         setProfileDraft({
             employee_id: employee.employee_id || "",
@@ -569,7 +601,7 @@ function EmployeeDashboard() {
             email: employee.email || "",
             address: employee.address || "",
             gender: employee.gender || "",
-            date_of_birth: employee.date_of_birth ? String(employee.date_of_birth).slice(0, 10) : "",
+            date_of_birth: toDateInput(employee.date_of_birth),
             emergency_contact: employee.emergency_contact || "",
             nationality: employee.nationality || employee.country || "",
             religion: employee.religion || "",
@@ -577,11 +609,11 @@ function EmployeeDashboard() {
             children_count: employee.children_count ?? "",
             designation: employee.designation || "",
             department: employee.department || "",
-            joining_date: employee.joining_date ? String(employee.joining_date).slice(0, 10) : "",
+            joining_date: toDateInput(employee.joining_date),
             employment_type: employee.employment_type || "",
             status: employee.status || "Active",
             passport_no: employee.passport_no || "",
-            passport_exp_date: employee.passport_exp_date ? String(employee.passport_exp_date).slice(0, 10) : "",
+            passport_exp_date: toDateInput(employee.passport_exp_date),
             position: employee.position || employee.designation || "",
             position_title: employee.position_title || employee.designation || "",
             employment_category: employee.employment_category || "",
@@ -609,7 +641,7 @@ function EmployeeDashboard() {
         const defaultAbout = `Employee ${employee.name} is part of the ${employee.department || "organization"} team as a ${employee.designation || "valued employee"}.`;
         const nextSectionForm = Object.fromEntries(sectionFields[section].map(([name]) => {
             const value = source[name] ?? (name === "about" ? defaultAbout : "");
-            return [name, name.includes("date") && value !== "Never" ? String(value).slice(0, 10) : value === "Never" ? "" : value];
+            return [name, name.includes("date") ? toDateInput(value) : value];
         }));
         if (section === "education") nextSectionForm.currently_pursuing = Boolean(source.currently_pursuing);
         if (section === "experience") nextSectionForm.currently_working = Boolean(source.currently_working);
@@ -618,9 +650,6 @@ function EmployeeDashboard() {
         setExperienceEditorId(section === "experience" ? recordId : null);
         setSectionEditor(section);
     };
-
-    const addEducation = () => openSectionEditor("education");
-    const addExperience = () => openSectionEditor("experience");
 
     const updateSectionForm = (field, value) => {
         setSectionForm((current) => ({ ...current, [field]: value }));
@@ -802,37 +831,34 @@ function EmployeeDashboard() {
     const sickTaken = approvedLeaveRequests
         .filter((leave) => leave.leave_type === "Sick Leave" && parseDateOnly(leave.from_date)?.getFullYear() === currentYear)
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
-    const maternityTaken = approvedLeaveRequests
-        .filter((leave) => leave.leave_type === "Maternity Leave")
-        .reduce((total, leave) => total + Number(leave.days || 0), 0);
-    const bereavementTaken = approvedLeaveRequests
-        .filter((leave) => leave.leave_type === "Bereavement Leave")
+    const casualTaken = approvedLeaveRequests
+        .filter((leave) => leave.leave_type === "Casual Leave" && parseDateOnly(leave.from_date)?.getFullYear() === currentYear)
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
     const selectedFromDate = parseDateOnly(formData.from_date);
     const selectedToDate = parseDateOnly(formData.to_date);
     const requestedDays = daysBetweenInclusive(selectedFromDate, selectedToDate);
     const selectedLeaveType = formData.leave_type;
     const selectedTrackingLeave = leaves.find((leave) => String(leave.id) === String(openTrackingId));
-    const sickEligible = serviceMonths >= LEAVE_RULES.sick.eligibleMonths;
+    const sickEligible = serviceMonths >= leaveRules.sick.eligibleMonths;
     const sickEligibleDate = joiningDate
-        ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + 3, joiningDate.getDate())
+        ? new Date(joiningDate.getFullYear(), joiningDate.getMonth() + leaveRules.sick.eligibleMonths, joiningDate.getDate())
         : null;
     const formatRuleDate = (date) => date?.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
         // Leave policy texts shown in the Apply Leave box (translated; numbers filled in from the rules)
     const leaveTypeDetails = {
-        "Paternity Leave": {
-            detail: t("leavePolicy.paternityDetail"),
-            entitlement: t("leavePolicy.hrPolicy"),
-            approval: t("leavePolicy.hrApproval"),
-            document: t("leavePolicy.asRequiredByHr"),
-            pay: t("leavePolicy.asPerPolicy"),
-        },
         "Hajj Leave": {
             detail: t("leavePolicy.hajjDetail"),
-            entitlement: t("leavePolicy.hrPolicy"),
+            entitlement: t("leavePolicy.daysPerRequest", { count: leaveRules.hajj.days, defaultValue: "Up to {{count}} days per request" }),
             approval: t("leavePolicy.hrApproval"),
             document: t("leavePolicy.supportingDocMayBeRequired"),
-            pay: t("leavePolicy.asPerPolicy"),
+            pay: t("leavePolicy.unpaid"),
+        },
+        "Umrah Leave": {
+            detail: t("leavePolicy.umrahDetail", { defaultValue: "Religious leave for Umrah, subject to approval." }),
+            entitlement: t("leavePolicy.daysPerRequest", { count: leaveRules.umrah.days, defaultValue: "Up to {{count}} days per request" }),
+            approval: t("leavePolicy.hrApproval"),
+            document: t("leavePolicy.supportingDocMayBeRequired"),
+            pay: t("leavePolicy.unpaid"),
         },
         "Emergency Leave": {
             detail: t("leavePolicy.emergencyDetail"),
@@ -850,7 +876,7 @@ function EmployeeDashboard() {
         },
         "Compensatory Off": {
             detail: t("leavePolicy.compensatoryDetail"),
-            entitlement: t("leavePolicy.validForDays", { count: LEAVE_RULES.compensatory.validityDays }),
+            entitlement: t("leavePolicy.validForDays", { count: leaveRules.compensatory.validityDays }),
             approval: t("leavePolicy.managerApproval"),
             document: t("leavePolicy.workProofRequired"),
             pay: t("leavePolicy.paidTimeOff"),
@@ -878,41 +904,64 @@ function EmployeeDashboard() {
         : selectedLeaveType === "Sick Leave"
             ? {
                 eligible: sickEligible,
-                remaining: sickEligible ? Math.max(0, LEAVE_RULES.sick.totalDays - sickTaken) : null,
+                remaining: sickEligible ? Math.max(0, leaveRules.sick.totalDays - sickTaken) : null,
                 used: sickTaken,
-                entitlement: t("leavePolicy.daysMaximum", { count: LEAVE_RULES.sick.totalDays }),
+                entitlement: t("leavePolicy.daysPerYear", { count: leaveRules.sick.totalDays, defaultValue: "{{count}} days per year" }),
                 approval: t("leavePolicy.hrApproval"),
                 document: t("leavePolicy.medicalCertificate"),
-                pay: t("leavePolicy.sickPay"),
+                pay: t("leavePolicy.fullPay"),
                 detail: sickEligible
-                    ? t("leavePolicy.sickDetail")
+                    ? t("leavePolicy.sickYearlyDetail", { count: leaveRules.sick.totalDays, defaultValue: "{{count}} days per calendar year, medical certificate required" })
                     : t("leavePolicy.eligibleAfter", { date: formatRuleDate(sickEligibleDate) }),
             }
-            : selectedLeaveType === "Maternity Leave"
+            : selectedLeaveType === "Casual Leave"
                 ? {
                     eligible: true,
-                    remaining: Math.max(0, LEAVE_RULES.maternity.days - maternityTaken),
-                    used: maternityTaken,
-                    entitlement: t("leavePolicy.daysTotal", { count: LEAVE_RULES.maternity.days }),
-                    approval: t("leavePolicy.hrApproval"),
-                    document: t("leavePolicy.medicalCertificate"),
+                    remaining: Math.max(0, leaveRules.casual.days - casualTaken),
+                    used: casualTaken,
+                    entitlement: t("leavePolicy.workingDaysPerYear", { count: leaveRules.casual.days, defaultValue: "{{count}} working days per year" }),
+                    approval: t("leavePolicy.managerOrHrApproval"),
+                    document: t("leavePolicy.notRequired"),
                     pay: t("leavePolicy.fullPay"),
-                    detail: t("leavePolicy.maternityDetail"),
+                    detail: t("leavePolicy.casualDetail", { defaultValue: "For short personal needs." }),
+                }
+            : selectedLeaveType === "Maternity Leave" || selectedLeaveType === "Paternity Leave"
+                ? {
+                    eligible: true,
+                    // Counted in calendar days, the same way the form counts them
+                    calendarDays: true,
+                    remaining: selectedLeaveType === "Maternity Leave" ? leaveRules.maternity.days : leaveRules.paternity.days,
+                    entitlement: t("leavePolicy.calendarDaysPerRequest", {
+                        count: selectedLeaveType === "Maternity Leave" ? leaveRules.maternity.days : leaveRules.paternity.days,
+                        defaultValue: "{{count}} calendar days",
+                    }),
+                    approval: t("leavePolicy.hrApproval"),
+                    document: selectedLeaveType === "Maternity Leave" ? t("leavePolicy.medicalCertificate") : t("leavePolicy.asRequiredByHr"),
+                    pay: t("leavePolicy.fullPay"),
+                    detail: selectedLeaveType === "Maternity Leave" ? t("leavePolicy.maternityDetail") : t("leavePolicy.paternityDetail"),
                 }
                 : selectedLeaveType === "Bereavement Leave"
                     ? {
                         eligible: true,
-                        remaining: Math.max(0, LEAVE_RULES.bereavement.days - bereavementTaken),
-                        used: bereavementTaken,
-                        entitlement: t("leavePolicy.daysTotal", { count: LEAVE_RULES.bereavement.days }),
+                        remaining: leaveRules.bereavement.days,
+                        entitlement: t("leavePolicy.daysPerRequest", { count: leaveRules.bereavement.days, defaultValue: "Up to {{count}} days per request" }),
                         approval: t("leavePolicy.managerApproval"),
                         document: t("leavePolicy.proofMayBeRequired"),
-                        pay: t("leavePolicy.asPerPolicy"),
+                        pay: t("leavePolicy.fullPay"),
                         detail: t("leavePolicy.bereavementDetail"),
                     }
                     : selectedLeaveType === "Compensatory Off"
                         ? { eligible: true, remaining: null, ...leaveTypeDetails["Compensatory Off"] }
-                        : { eligible: true, remaining: null, ...leaveTypeDetails[selectedLeaveType] };
+                        : {
+                            eligible: true,
+                            remaining: null,
+                            detail: t("leavePolicy.customDetail", { defaultValue: "Available as per company policy. HR reviews each request." }),
+                            entitlement: t("leavePolicy.hrPolicy"),
+                            approval: t("leavePolicy.hrApproval"),
+                            document: t("leavePolicy.asRequiredByHr"),
+                            pay: t("leavePolicy.asPerPolicy"),
+                            ...leaveTypeDetails[selectedLeaveType],
+                        };
     const todayDateKey = localDateKey(currentDate);
     const todayAttendance = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() !== "absent");
     const todayAbsentRecord = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() === "absent");
@@ -1291,7 +1340,7 @@ function EmployeeDashboard() {
                 </section>
 
 
-                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profilePanelFields={profilePanelFields} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onEditProfile={openEditProfile} onEditSection={openSectionEditor} onAddEducation={addEducation} onAddExperience={addExperience} onDeleteEducation={deleteEducation} formatProfileDate={formatProfileDate} />
+                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onSaved={refreshProfile} formatProfileDate={formatProfileDate} />
                 <section className="employee-profile-view legacy-profile-view">
                     <div className="employee-section-heading">
                         <div>
@@ -1385,7 +1434,7 @@ function EmployeeDashboard() {
             )}
 
 
-            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={EMPLOYEE_LEAVE_TYPES} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} timeZone={timeZone} />}
+            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={leaveTypes} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} timeZone={timeZone} />}
             {requestType && <EmployeeRequestModal requestType={requestType} onSubmit={submitEmployeeRequest} onClose={() => setRequestType(null)} />}
 
             {showEditProfile && profileDraft && <EmployeeEditModal draft={profileDraft} updateDraft={updateProfileDraft} onSubmit={saveProfile} loading={loading} onClose={() => setShowEditProfile(false)} />}

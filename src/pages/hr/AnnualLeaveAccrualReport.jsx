@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Banknote, CalendarDays, CircleCheck, PiggyBank, Users } from "lucide-react";
+import ExportMenu from "../../components/common/ExportMenu";
+import { exportTable } from "../../utils/tableExport";
 import i18n from "i18next";
 import { Trans, useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -29,33 +31,26 @@ const formatAmount = (value) =>
         ? "—"
         : Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const escapeHTML = (value) =>
-    String(value ?? "").replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
-
 const EXPORT_HEADERS = [
     "Employee ID", "Employee Name", "Department", "Grade", "Accrual Month", "Accrual Date",
     "Days Accrued", "Salary Basis", "Salary", "Amount Accrued", "Posted to Finance", "Posting Reference",
 ];
 
-// Excel download (HTML table .xls, same approach as the Leave Management export)
-const downloadExcel = (report, fileName) => {
+// Rows plus a total line, as Excel or PDF
+const downloadReport = (format, report, fileName) => {
     const rows = report.rows.map((row) => [
         row.employee_id, row.employee_name, row.department, row.grade || "", row.accrual_month, row.accrual_date,
         row.days_accrued, row.salary_basis, row.salary_amount ?? "", row.amount_accrued ?? "",
         row.posted_to_finance ? "Yes" : "No", row.posting_reference || "",
     ]);
     const totalsRow = ["TOTAL", `${report.totals.employees} employees`, "", "", report.month || "All", "", report.totals.days, "", "", report.totals.amount, "", ""];
-    const html = `<table><thead><tr>${EXPORT_HEADERS.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${[...rows, totalsRow]
-        .map((row) => `<tr>${row.map((value) => `<td>${escapeHTML(value)}</td>`).join("")}</tr>`)
-        .join("")}</tbody></table>`;
-
-    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
+    exportTable(format, {
+        fileName,
+        title: `Annual Leave Accrual (${report.month || "All months"})`,
+        sheetName: "Accrual",
+        headers: EXPORT_HEADERS,
+        rows: [...rows, totalsRow],
+    });
 };
 
 function AnnualLeaveAccrualReport() {
@@ -119,7 +114,7 @@ function AnnualLeaveAccrualReport() {
             const exported = await response.json();
             if (!response.ok) throw new Error(exported.message || t("reports.accrual.exportFailed", { defaultValue: "Export failed" }));
 
-            downloadExcel(exported, `annual-leave-accrual-${month}-${exported.postingReference}.xls`);
+            downloadReport("excel", exported, `annual-leave-accrual-${month}-${exported.postingReference}`);
             setResult({ month, report: exported, error: "" });
             setMessage(t("reports.accrual.postedMessage", { count: exported.postedCount, reference: `\u2066${exported.postingReference}\u2069`, defaultValue: "{{count}} row(s) marked as posted • Reference {{reference}}" }));
         } catch (err) {
@@ -239,14 +234,11 @@ function AnnualLeaveAccrualReport() {
                         </button>
                         <span className="rp-toolbar-spacer" />
                         <div className="rp-toolbar-actions">
-                            <button
-                                type="button"
-                                className="rp-btn rp-btn-light"
-                                onClick={() => downloadExcel(report, `annual-leave-accrual-${month || "all"}.xls`)}
+                            <ExportMenu
+                                className="accrual-export-menu"
                                 disabled={!rows.length}
-                            >
-                                {t("reports.accrual.exportExcel", { defaultValue: "Export to Excel" })}
-                            </button>
+                                onExport={(format) => downloadReport(format, report, `annual-leave-accrual-${month || "all"}`)}
+                            />
                             <button
                                 type="button"
                                 className="rp-btn rp-btn-primary"

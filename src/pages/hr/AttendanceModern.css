@@ -241,7 +241,7 @@
 /* Status summary cards */
 .attendance-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -273,7 +273,6 @@
 
 .attendance-stat--total { --stat-color: #16466d; --stat-soft: rgba(22, 70, 109, 0.14); }
 .attendance-stat--present { --stat-color: #16a34a; --stat-soft: rgba(22, 163, 74, 0.16); }
-.attendance-stat--late { --stat-color: #d97706; --stat-soft: rgba(217, 119, 6, 0.16); }
 .attendance-stat--absent { --stat-color: #dc2626; --stat-soft: rgba(220, 38, 38, 0.14); }
 .attendance-stat--leave { --stat-color: #0284c7; --stat-soft: rgba(2, 132, 199, 0.16); }
 
@@ -534,4 +533,36 @@
 
 [dir="rtl"] .attendance-stat {
   text-align: right;
+}
+
+/* Shift column and late / early-leave notes */
+
+.attendance-shift-name {
+  display: inline-block;
+  max-width: 190px;
+  color: #042330;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.attendance-flag {
+  display: block;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.attendance-flag.late {
+  background: #fff7ed;
+  color: #c2410c !important;
+}
+
+.attendance-flag.early {
+  background: #fdecec;
+  color: #b42318 !important;
 }

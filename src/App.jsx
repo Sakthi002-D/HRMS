@@ -14,6 +14,7 @@ import EmployeeRequests from "./pages/hr/EmployeeRequests";
 import Notifications from "./pages/hr/Notifications";
 import Payroll from "./pages/hr/Payroll";
 import Tickets from "./pages/hr/Tickets";
+import Projects from "./pages/hr/Projects";
 import Reports from "./pages/hr/Reports";
 
 import Home from "./pages/Home";
@@ -39,6 +40,7 @@ import PayrollReport from "./pages/hr/PayrollReport";
 import AnnualLeaveAccrualReport from "./pages/hr/AnnualLeaveAccrualReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
+import GradeAssignment from "./pages/hr/GradeAssignment";
 
 import DialogProvider from "./components/common/dialog/DialogProvider";
 import { installApiAuthorizationFetch } from "./utils/auth";
@@ -204,6 +206,11 @@ function App() {
           />
 
           <Route
+            path="/projects"
+            element={<Projects />}
+          />
+
+          <Route
             path="/reports"
             element={<Reports />}
           />
@@ -243,6 +250,11 @@ function App() {
           <Route
             path="/settings"
             element={<Settings />}
+          />
+
+          <Route
+            path="/settings/grade-assignment"
+            element={<GradeAssignment />}
           />
 
         </Route>
