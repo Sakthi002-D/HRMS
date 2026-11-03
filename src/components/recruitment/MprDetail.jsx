@@ -187,6 +187,9 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                             <h3>{t("recruitment.fields.position", { defaultValue: "Position" })}</h3>
                             <div className="candidate-grid">
                                 <div><label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title" })}</label><p>{mpr.title || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.grade", { defaultValue: "Grade" })}</label><p>{mpr.grade ? <span dir="ltr" className="ltr-text">{mpr.grade}</span> : "—"}</p></div>
+                                <div><label>{t("recruitment.fields.gradePosition", { defaultValue: "Position" })}</label><p>{mpr.position || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.designation", { defaultValue: "Designation" })}</label><p>{mpr.designation || "—"}</p></div>
                                 <div><label>{t("recruitment.fields.openingsCount", { defaultValue: "No. of Openings" })}</label><p>{mpr.openings ?? "—"}</p></div>
                                 <div><label>{t("recruitment.fields.experience", { defaultValue: "Experience" })}</label><p>{mpr.experience || "—"}</p></div>
                                 <div><label>{t("recruitment.fields.location", { defaultValue: "Location" })}</label><p>{mpr.location || "—"}</p></div>

@@ -432,6 +432,7 @@ const isDateKey = (value) => {
 // =====================================================
 
 const yesNo = (value) => value === true || value === "Yes" || value === "yes" || value === "true";
+const shortText = (value, max = 120) => String(value ?? "").trim().slice(0, max) || null;
 
 const normalizeInput = (body) => {
     const benefits = body.benefits || {};
@@ -464,6 +465,11 @@ const normalizeInput = (body) => {
         asset_other: assets.includes("Other") ? body.asset_other?.trim() || null : null,
         replaced_employee_id: body.request_type === "Replacement" ? body.replaced_employee_id || null : null,
         replacement_reason: body.request_type === "Replacement" ? body.replacement_reason?.trim() || null : null,
+        // Grade Master choice, saved as text so old MPRs keep it if the master changes later
+        grade: shortText(body.grade, 20),
+        position: shortText(body.position),
+        designation: shortText(body.designation),
+        employee_category: shortText(body.employee_category),
         // Company currency from HR portal → Settings (falls back to the server copy)
         currency: String(body.currency || "").trim().slice(0, 8) || null,
     };
@@ -621,6 +627,7 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
         JSON.stringify(input.benefits), input.application_start_date, input.application_end_date, input.justification,
         JSON.stringify(input.assets), input.asset_other, input.replaced_employee_id, input.replacement_reason,
         budgetStatusFor(budget), budget ? JSON.stringify(budget) : null,
+        input.grade, input.position, input.designation, input.employee_category,
     ];
 
     let mpr;
@@ -634,10 +641,11 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 benefits = $16::jsonb, application_start_date = $17, application_end_date = $18, justification = $19,
                 assets = $20::jsonb, asset_other = $21, replaced_employee_id = $22, replacement_reason = $23,
                 budget_status = $24, budget_snapshot = $25::jsonb,
+                grade = $26, position = $27, designation = $28, employee_category = $29,
                 resume_step = CASE WHEN $2 LIKE 'Pending %' THEN NULL ELSE resume_step END,
                 submitted_at = CASE WHEN $2 LIKE 'Pending %' THEN CURRENT_TIMESTAMP ELSE submitted_at END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $26
+            WHERE id = $30
             RETURNING *
             `,
             [...values, id]
@@ -653,10 +661,13 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 job_description, skills, salary_min, salary_max, currency,
                 benefits, application_start_date, application_end_date, justification,
                 assets, asset_other, replaced_employee_id, replacement_reason,
-                budget_status, budget_snapshot, mpr_no, requested_by, submitted_at
+                budget_status, budget_snapshot,
+                grade, position, designation, employee_category,
+                mpr_no, requested_by, submitted_at
             ) VALUES (
                 $1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16::jsonb, $17, $18, $19, $20::jsonb, $21, $22, $23, $24, $25::jsonb, $26, $27,
+                $16::jsonb, $17, $18, $19, $20::jsonb, $21, $22, $23, $24, $25::jsonb,
+                $26, $27, $28, $29, $30, $31,
                 CASE WHEN $2 LIKE 'Pending %' THEN CURRENT_TIMESTAMP END
             )
             RETURNING *

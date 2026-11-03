@@ -2,21 +2,38 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { Award, BriefcaseBusiness, CalendarDays, Minus, Plus, Wrench } from "lucide-react";
 import { useConfirm } from "../common/dialog/dialogContext";
 import DatePicker from "../layout/common/DatePicker";
+import SkillTagInput from "../careers/SkillTagInput";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
 import CustomOptionSelect, { OTHER_OPTION } from "./CustomOptionSelect";
+import DesignationSelect from "./DesignationSelect";
 import EmployeeSearchSelect from "./EmployeeSearchSelect";
 import { BUILT_IN_DEPARTMENTS, CUSTOM_DEPARTMENTS_KEY, readCustomDepartments } from "./departments";
 import { api, getCompanyCurrency, isBudgetException } from "./recruitmentApi";
 
 const JOB_CATEGORIES = ["Site Engineering", "Civil", "Electrical", "Mechanical", "Plumbing", "HVAC", "HSE / Safety", "Surveying", "Equipment Operator", "General Labour"];
 const QUALIFICATIONS = ["School Certificate", "ITI / Trade Certificate", "Diploma", "Bachelor's Degree", "Master's Degree", "Professional Certification"];
-const EMPLOYEE_CATEGORIES = ["Management", "Staff", "Supervisor / Foreman", "Skilled Worker", "Semi-skilled Worker", "Unskilled Worker"];
-// Placeholder grades: replace with the final grade structure from Karthick
-const GRADES = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8"];
+const EXPERIENCE_OPTIONS = ["Fresher", "0–2 years", "2–5 years", "5–10 years", "10+ years"];
+
+// Grade Master grades grouped by band, in master order (for the Grade <optgroup>s)
+const groupByBand = (grades) => grades.reduce((groups, grade) => {
+    const group = groups.find((item) => item.band === grade.band);
+    if (group) group.grades.push(grade);
+    else groups.push({ band: grade.band, grades: [grade] });
+    return groups;
+}, []);
+
+// A value saved on an older MPR that is no longer in the master stays selectable
+const withSaved = (names, saved) => (saved && !names.includes(saved) ? [...names, saved] : names);
+
+const splitSkills = (skills) => [...new Set(String(skills || "").split(",").map((skill) => skill.trim()).filter(Boolean))];
+
+// Days the application window is open, counting both the start and end date
+const applicationDays = (start, end) => Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000) + 1;
 
 const emptyForm = (department) => ({
     request_type: "",
@@ -27,6 +44,8 @@ const emptyForm = (department) => ({
     job_category: "",
     employee_category: "",
     grade: "",
+    position: "",
+    designation: "",
     qualification: "",
     required_joining_date: "",
     project_start_date: "",
@@ -277,26 +296,87 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
     const checkBudgetOnBlur = () => runBudgetCheck(form);
 
-    const set = (name, value) => setForm((current) => ({ ...current, [name]: value }));
+    // Errors shown in red under a field (as well as the message above the buttons); cleared when it changes
+    const [fieldErrors, setFieldErrors] = useState({});
+    const clearFieldErrors = (names) => setFieldErrors((current) => {
+        const stale = names.filter((name) => current[name]);
+        if (!stale.length) return current;
+        const next = { ...current };
+        stale.forEach((name) => delete next[name]);
+        return next;
+    });
+    const fieldError = (name) => fieldErrors[name] && <small className="mpr-field-error" role="alert">{fieldErrors[name]}</small>;
+
+    const updateFields = (patch) => {
+        setForm((current) => ({ ...current, ...patch }));
+        clearFieldErrors(Object.keys(patch));
+    };
+    const set = (name, value) => updateFields({ [name]: value });
     const setBenefit = (name, value) => setForm((current) => ({ ...current, benefits: { ...current.benefits, [name]: value } }));
     const handleChange = (event) => set(event.target.name, event.target.value);
 
+    // Grade → Position → Designation (Settings → Grade Master). Changing a level clears the levels below it;
+    // a level with only one choice is picked automatically.
+    const grades = meta.grades || [];
+    const gradeGroups = groupByBand(grades);
+    const selectedGrade = grades.find((grade) => grade.code === form.grade) || null;
+    const gradePositions = selectedGrade?.positions || [];
+    const selectedPosition = gradePositions.find((position) => position.name === form.position) || null;
+    const positionNames = withSaved(gradePositions.map((position) => position.name), form.position);
+    const designationNames = withSaved((selectedPosition?.designations || []).map((designation) => designation.name), form.designation);
+
+    // Designation picked: fills Job Title / Trade (still editable) and the Employee Category (= the grade's band)
+    const designationPatch = (grade, name) => (name
+        ? { designation: name, title: name, employee_category: grade?.band || form.employee_category }
+        : { designation: "", employee_category: "" });
+
+    const onlyDesignation = (position) => (position?.designations.length === 1 ? position.designations[0].name : "");
+
+    const chooseGrade = (code) => {
+        const grade = grades.find((item) => item.code === code) || null;
+        const position = grade?.positions.length === 1 ? grade.positions[0] : null;
+        updateFields({ grade: code, position: position?.name || "", ...designationPatch(grade, onlyDesignation(position)) });
+    };
+
+    const choosePosition = (name) => {
+        if (name === form.position) return;
+        const position = gradePositions.find((item) => item.name === name) || null;
+        updateFields({ position: name, ...designationPatch(selectedGrade, onlyDesignation(position)) });
+    };
+
+    const chooseDesignation = (name) => updateFields(designationPatch(selectedGrade, name));
+
+    const skillList = splitSkills(form.skills);
+    const experienceOptions = withSaved(EXPERIENCE_OPTIONS, form.experience);
+    const openDays = form.application_start_date && form.application_end_date && form.application_end_date >= form.application_start_date
+        ? applicationDays(form.application_start_date, form.application_end_date)
+        : 0;
+
+    // − / + change the number; the budget check still runs once focus leaves the Openings field
+    const stepOpenings = (delta) => set("openings", String(Math.max(1, (Number(form.openings) || 0) + delta)));
+    const handleOpeningsBlur = (event) => {
+        if (event.currentTarget.closest(".mpr-stepper")?.contains(event.relatedTarget)) return;
+        checkBudgetOnBlur();
+    };
+
     // Start Date moved past the End Date: clear the End Date
-    const handleStartDateChange = (value) =>
+    const handleStartDateChange = (value) => {
         setForm((current) => ({
             ...current,
             application_start_date: value,
             application_end_date: current.application_end_date && value && current.application_end_date < value ? "" : current.application_end_date,
         }));
+        clearFieldErrors(["application_start_date"]);
+    };
 
-    // Custom date pickers aren't covered by the browser's "required" check
+    // Custom date pickers aren't covered by the browser's "required" check. Returns [field, message].
     const applicationPeriodError = (values) => {
         const { application_start_date: start, application_end_date: end } = values;
-        if (!start) return t("recruitment.form.errors.chooseStart", { defaultValue: "Choose the Application Start Date." });
-        if (start < today) return t("recruitment.form.errors.startPast", { defaultValue: "Application Start Date must be today or later." });
-        if (!end) return t("recruitment.form.errors.chooseEnd", { defaultValue: "Choose the Application End Date." });
-        if (end < start) return t("recruitment.form.errors.endBeforeStart", { defaultValue: "Application End Date must be on or after the Application Start Date." });
-        return "";
+        if (!start) return ["application_start_date", t("recruitment.form.errors.chooseStart", { defaultValue: "Choose the Application Start Date." })];
+        if (start < today) return ["application_start_date", t("recruitment.form.errors.startPast", { defaultValue: "Application Start Date must be today or later." })];
+        if (!end) return ["application_end_date", t("recruitment.form.errors.chooseEnd", { defaultValue: "Choose the Application End Date." })];
+        if (end < start) return ["application_end_date", t("recruitment.form.errors.endBeforeStart", { defaultValue: "Application End Date must be on or after the Application Start Date." })];
+        return null;
     };
 
     const handleDepartmentChange = (department) => {
@@ -304,6 +384,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
 
         setForm(next);
         setError("");
+        clearFieldErrors(["department"]);
         setDepartmentDropdownOpen(false);
 
         if (department && department !== "Other") {
@@ -373,30 +454,38 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (saving) return;
-        // Custom dropdowns aren't covered by the browser's "required" check
+        setFieldErrors({});
+        const showFieldError = (name, section, message) => {
+            setExpandedSections((current) => ({ ...current, [section]: true }));
+            setError(message);
+            setFieldErrors({ [name]: message });
+        };
+        // Custom dropdowns, pills and tags aren't covered by the browser's "required" check
         for (const [name, label, section] of [
             ["department", "Department", "request"],
             ...(isReplacement ? [["replaced_employee_id", "Employee Being Replaced", "request"]] : []),
+            ["grade", "Grade", "position"],
+            ["position", "Position", "position"],
+            ["designation", "Designation", "position"],
             ["job_category", "Job Category", "position"],
-            ["employee_category", "Employee Category", "position"],
             ["qualification", "Required Qualification", "position"],
+            ["experience", "Experience", "position"],
+            ["skills", "Technical / Trade Skills", "position"],
         ]) {
             if (!form[name] || form[name] === OTHER_OPTION) {
-                setExpandedSections((current) => ({ ...current, [section]: true }));
-                setError(form[name] === OTHER_OPTION
+                showFieldError(name, section, form[name] === OTHER_OPTION
                     ? `Type the new ${label} and click Add, or choose one from the list.`
-                    : `Choose the ${label}.`);
+                    : name === "skills" ? `Add at least one of the ${label}.` : `Choose the ${label}.`);
                 return;
             }
         }
         if (!form.required_joining_date) {
-            setExpandedSections((current) => ({ ...current, position: true }));
-            setError("Choose the Required Joining Date.");
+            showFieldError("required_joining_date", "position", "Choose the Required Joining Date.");
             return;
         }
         const periodError = applicationPeriodError(form);
         if (periodError) {
-            setError(periodError);
+            showFieldError(periodError[0], "position", periodError[1]);
             return;
         }
         const { ok, values, result } = await runBudgetCheck(form, { fromSubmit: true });
@@ -414,8 +503,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const accordionHeader = (number, title, subtitle, name) => (
         <button type="button" className={`mpr-accordion-trigger ${expandedSections[name] ? "is-open" : ""}`} onClick={() => toggleSection(name)} aria-expanded={Boolean(expandedSections[name])}>
             <span className="mpr-accordion-number">{number}</span>
-            <span className="mpr-accordion-heading"><strong>{title}</strong><small>{subtitle}</small></span>
-            <span className="mpr-accordion-chevron" aria-hidden="true">{expandedSections[name] ? "⌃" : "⌄"}</span>
+            <span className="mpr-accordion-heading"><strong>{title}</strong><small>{subtitle}</small></span>            <span className="mpr-accordion-chevron" aria-hidden="true">{expandedSections[name] ? "⌃" : "⌄"}</span>
         </button>
     );
 
@@ -577,11 +665,12 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                         </button>
                                     </div>
                                 )}
+                                {fieldError("department")}
                             </div>
 
-                           
 
-                           
+
+
                             <div className="form-group">
                                 <label>Project Name *</label>
                                 <input name="project_name" value={form.project_name || ""} onChange={handleChange} placeholder="e.g. Doha Commercial Tower" required />
@@ -602,6 +691,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                         savedName={mpr?.replaced_employee_name}
                                         placeholder="Select employee"
                                     />
+                                    {fieldError("replaced_employee_id")}
                                 </div>
                                 <div className="form-group">
                                     <label>{t("recruitment.fields.replacementReason", { defaultValue: "Replacement Reason" })} *</label>
@@ -614,84 +704,156 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                 </section>
 
                 <section className={`mpr-accordion-card ${expandedSections.position ? "expanded" : ""}`}>
-                    {accordionHeader("02", "Position Requirements", "Job role, qualification, skills and joining date", "position")}
-                    {expandedSections.position && <div className="mpr-accordion-content">
-                        <div className="form-grid">
-                            <div className="form-group">
-                                <label>Job Category *</label>
-                                <CustomOptionSelect
-                                    value={form.job_category || ""}
-                                    onChange={(value) => set("job_category", value)}
-                                    options={JOB_CATEGORIES}
-                                    storageKey="mprCustomJobCategories"
-                                    placeholder="Select job category"
-                                    otherPlaceholder="Enter job category"
-                                    itemLabel="job category"
-                                    onError={setError}
-                                />
+                    {accordionHeader("02", "Position Requirements", "Grade, role, skills and hiring timeline", "position")}
+                    {expandedSections.position && <div className="mpr-accordion-content mpr-position-content">
+                        <div className="mpr-field-group">
+                            <h4 className="mpr-group-title"><Award size={15} aria-hidden="true" /> Grade &amp; Designation</h4>
+                            <div className="mpr-grade-panel">
+                                <div className="mpr-grade-steps">
+                                    <div className={`form-group mpr-grade-step${form.grade ? " is-done" : ""}`}>
+                                        <label htmlFor="mpr-grade"><span className="mpr-step-number">1</span> Grade *</label>
+                                        <select id="mpr-grade" value={form.grade || ""} onChange={(event) => chooseGrade(event.target.value)} aria-invalid={Boolean(fieldErrors.grade)} className={fieldErrors.grade ? "is-invalid" : ""}>
+                                            <option value="">Select grade</option>
+                                            {form.grade && !selectedGrade && <option value={form.grade}>{form.grade} (saved)</option>}
+                                            {gradeGroups.map((group) => (
+                                                <optgroup key={group.band} label={group.band}>
+                                                    {group.grades.map((grade) => <option key={grade.id} value={grade.code}>Grade {grade.code}</option>)}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                        {grades.length === 0 && <small className="mpr-step-hint">No grades found.</small>}
+                                        {fieldError("grade")}
+                                    </div>
+
+                                    <div className={`form-group mpr-grade-step${form.position ? " is-done" : ""}`}>
+                                        <label htmlFor="mpr-position"><span className="mpr-step-number">2</span> Position *</label>
+                                        <select id="mpr-position" value={form.position || ""} onChange={(event) => choosePosition(event.target.value)} disabled={!form.grade} aria-invalid={Boolean(fieldErrors.position)} className={fieldErrors.position ? "is-invalid" : ""}>
+                                            <option value="">{form.grade ? "Select position" : "Choose a grade first"}</option>
+                                            {positionNames.map((name) => <option key={name} value={name}>{name}</option>)}
+                                        </select>
+                                        {form.grade && positionNames.length === 0 && <small className="mpr-step-hint">This grade has no active positions.</small>}
+                                        {fieldError("position")}
+                                    </div>
+
+                                    <div className={`form-group mpr-grade-step${form.designation ? " is-done" : ""}`}>
+                                        <label><span className="mpr-step-number">3</span> Designation *</label>
+                                        <DesignationSelect
+                                            value={form.designation}
+                                            onChange={chooseDesignation}
+                                            options={designationNames}
+                                            disabled={!form.position}
+                                            invalid={Boolean(fieldErrors.designation)}
+                                            placeholder={form.position ? "Select designation" : "Choose a position first"}
+                                        />
+                                        {fieldError("designation")}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title / Trade" })} *</label>
-                                <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Civil Site Engineer, Mason, Electrician" required />
+
+                            {form.grade && (
+                                <div className="mpr-role-card">
+                                    <span className="mpr-role-badge" dir="ltr">{form.grade}</span>
+                                    <div className="mpr-role-text">
+                                        <strong>{form.designation || "Designation not chosen"}</strong>
+                                        <small>{form.position || "Position not chosen"} · Grade <bdi dir="ltr">{form.grade}</bdi></small>
+                                    </div>
+                                    {form.employee_category && (
+                                        <span className="mpr-role-category"><small>Employee Category</small>{form.employee_category}</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mpr-field-group">
+                            <h4 className="mpr-group-title"><BriefcaseBusiness size={15} aria-hidden="true" /> Role Details</h4>
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title / Trade" })} *</label>
+                                    <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Civil Site Engineer, Mason, Electrician" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Job Category *</label>
+                                    <CustomOptionSelect
+                                        value={form.job_category || ""}
+                                        onChange={(value) => set("job_category", value)}
+                                        options={JOB_CATEGORIES}
+                                        storageKey="mprCustomJobCategories"
+                                        placeholder="Select job category"
+                                        otherPlaceholder="Enter job category"
+                                        itemLabel="job category"
+                                        onError={setError}
+                                    />
+                                    {fieldError("job_category")}
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="mpr-openings">{t("recruitment.fields.openingsCount", { defaultValue: "Number of Openings" })} *</label>
+                                    <div className="mpr-stepper">
+                                        <button type="button" onClick={() => stepOpenings(-1)} onBlur={handleOpeningsBlur} disabled={!(Number(form.openings) > 1)} aria-label="Decrease openings"><Minus size={15} /></button>
+                                        <input id="mpr-openings" ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={handleOpeningsBlur} placeholder="e.g. 4" required />
+                                        <button type="button" onClick={() => stepOpenings(1)} onBlur={handleOpeningsBlur} aria-label="Increase openings"><Plus size={15} /></button>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Required Qualification *</label>
+                                    <CustomOptionSelect
+                                        value={form.qualification || ""}
+                                        onChange={(value) => set("qualification", value)}
+                                        options={QUALIFICATIONS}
+                                        storageKey="mprCustomQualifications"
+                                        placeholder="Select qualification"
+                                        otherPlaceholder="Enter qualification"
+                                        itemLabel="qualification"
+                                        onError={setError}
+                                    />
+                                    {fieldError("qualification")}
+                                </div>
+                                <div className="form-group mpr-full">
+                                    <label id="mpr-experience-label">{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
+                                    <div className={`mpr-pill-group${fieldErrors.experience ? " is-invalid" : ""}`} role="radiogroup" aria-labelledby="mpr-experience-label">
+                                        {experienceOptions.map((item) => (
+                                            <button key={item} type="button" role="radio" aria-checked={form.experience === item} className={`mpr-pill${form.experience === item ? " is-selected" : ""}`} onClick={() => set("experience", item)}>{item}</button>
+                                        ))}
+                                    </div>
+                                    {fieldError("experience")}
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>Employee Category *</label>
-                                <select name="employee_category" value={form.employee_category || ""} onChange={handleChange} required>
-                                    <option value="">Select employee category</option>
-                                    {EMPLOYEE_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
-                                </select>
+                        </div>
+
+                        <div className="mpr-field-group">
+                            <h4 className="mpr-group-title"><Wrench size={15} aria-hidden="true" /> Skills &amp; Duties</h4>
+                            <div className="form-grid">
+                                <div className="form-group mpr-full">
+                                    <label htmlFor="mpr-skills">Technical Skills / Trade Skills *</label>
+                                    <SkillTagInput id="mpr-skills" value={skillList} onChange={(skills) => set("skills", skills.join(", "))} invalid={Boolean(fieldErrors.skills)} />
+                                    {fieldError("skills")}
+                                </div>
+                                <div className="form-group mpr-full">
+                                    <label>Construction Duties / Job Description *</label>
+                                    <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder="e.g. Read construction drawings, supervise site activities, follow safety procedures, complete assigned trade work" rows="3" required />
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>Grade</label>
-                                <select name="grade" value={form.grade || ""} onChange={handleChange}>
-                                    <option value="">Select grade</option>
-                                    {GRADES.map((item) => <option key={item} value={item}>{item}</option>)}
-                                </select>
+                        </div>
+
+                        <div className="mpr-field-group">
+                            <h4 className="mpr-group-title"><CalendarDays size={15} aria-hidden="true" /> Hiring Timeline</h4>
+                            <div className="form-grid mpr-timeline-grid">
+                                <div className="form-group">
+                                    <label>Application Start Date *</label>
+                                    <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
+                                    {fieldError("application_start_date")}
+                                </div>
+                                <div className="form-group">
+                                    <label>Application End Date *</label>
+                                    <DatePicker value={form.application_end_date} onChange={(value) => set("application_end_date", value)} minDate={form.application_start_date && form.application_start_date > today ? form.application_start_date : today} today={today} autoPosition />
+                                    {fieldError("application_end_date")}
+                                </div>
+                                <div className="form-group">
+                                    <label>Required Joining Date *</label>
+                                    <DatePicker value={form.required_joining_date || ""} onChange={(value) => set("required_joining_date", value)} minDate={today} today={today} autoPosition />
+                                    {fieldError("required_joining_date")}
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>{t("recruitment.fields.openingsCount", { defaultValue: "Number of Openings" })} *</label>
-                                <input ref={openingsRef} type="number" name="openings" min="1" value={form.openings} onChange={handleChange} onBlur={checkBudgetOnBlur} placeholder="e.g. 4" required />
-                            </div>
-                            <div className="form-group">
-                                <label>{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
-                                <select name="experience" value={form.experience} onChange={handleChange} required>
-                                    <option value="">Select experience</option>
-                                    {["Fresher", "0–2 years", "2–5 years", "5–10 years", "10+ years"].map((item) => <option key={item} value={item}>{item}</option>)}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Required Qualification *</label>
-                                <CustomOptionSelect
-                                    value={form.qualification || ""}
-                                    onChange={(value) => set("qualification", value)}
-                                    options={QUALIFICATIONS}
-                                    storageKey="mprCustomQualifications"
-                                    placeholder="Select qualification"
-                                    otherPlaceholder="Enter qualification"
-                                    itemLabel="qualification"
-                                    onError={setError}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Required Joining Date *</label>
-                                <DatePicker value={form.required_joining_date || ""} onChange={(value) => set("required_joining_date", value)} minDate={today} today={today} autoPosition />
-                            </div>
-                            <div className="form-group">
-                                <label>Technical Skills / Trade Skills *</label>
-                                <input type="text" name="skills" value={form.skills} onChange={handleChange} placeholder="e.g. Construction drawings, BOQ, site supervision" required />
-                            </div>
-                            <div className="form-group">
-                                <label>Application Start Date *</label>
-                                <DatePicker value={form.application_start_date} onChange={handleStartDateChange} minDate={today} today={today} autoPosition />
-                            </div>
-                            <div className="form-group">
-                                <label>Application End Date *</label>
-                                <DatePicker value={form.application_end_date} onChange={(value) => set("application_end_date", value)} minDate={form.application_start_date && form.application_start_date > today ? form.application_start_date : today} today={today} autoPosition />
-                            </div>
-                            <div className="form-group mpr-full">
-                                <label>Construction Duties / Job Description *</label>
-                                <textarea name="job_description" value={form.job_description} onChange={handleChange} placeholder="e.g. Read construction drawings, supervise site activities, follow safety procedures, complete assigned trade work" rows="3" required />
-                            </div>
+                            {openDays > 0 && <p className="mpr-timeline-note">Applications open for {openDays} {openDays === 1 ? "day" : "days"}</p>}
                         </div>
                     </div>}
                 </section>
@@ -795,7 +957,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                     </button>
                     {expandedSections.summary && <div className="mpr-accordion-content">
                         <div className="mpr-summary-grid">
-                            {[["Request Type", form.request_type], ["Department", form.department], ["Project", form.project_name], ["Project Code", form.project_code], ["Job Title", form.title], ["Job Category", form.job_category], ["Employee Category", form.employee_category], ["Grade", form.grade], ["Openings", form.openings], ["Qualification", form.qualification], ["Joining Date", form.required_joining_date], ["Site", form.location], ["Employment", form.employment_type], ["Salary Range", form.salary_min || form.salary_max ? `${form.salary_min || "—"} – ${form.salary_max || "—"} ${currency}` : "—"]].map(([label, value]) => <div className="mpr-summary-item" key={label}><span>{label}</span><strong>{value && value !== OTHER_OPTION ? value : "—"}</strong></div>)}
+                            {[["Request Type", form.request_type], ["Department", form.department], ["Project", form.project_name], ["Project Code", form.project_code], ["Job Title", form.title], ["Grade", form.grade], ["Position", form.position], ["Designation", form.designation], ["Employee Category", form.employee_category], ["Job Category", form.job_category], ["Openings", form.openings], ["Qualification", form.qualification], ["Joining Date", form.required_joining_date], ["Site", form.location], ["Employment", form.employment_type], ["Salary Range", form.salary_min || form.salary_max ? `${form.salary_min || "—"} – ${form.salary_max || "—"} ${currency}` : "—"]].map(([label, value]) => <div className="mpr-summary-item" key={label}><span>{label}</span><strong>{value && value !== OTHER_OPTION ? value : "—"}</strong></div>)}
                         </div>
                     </div>}
                 </section>

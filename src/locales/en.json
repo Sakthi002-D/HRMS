@@ -131,8 +131,7 @@
         "recruitment": {
           "title": "Recruitment Masters",
           "desc": "Locations, agencies, budgets"
-        },
-        "resignation": {
+        },        "resignation": {
           "title": "Resignation",
           "desc": "Notice periods and approval steps"
         }
@@ -143,8 +142,7 @@
         "notifications": "Choose which alerts and emails the HRMS sends.",
         "security": "Protect HR accounts with an inactivity timeout and a strong password.",
         "approval": "Set who approves manpower requests and in which order.",
-        "recruitment": "Maintain the lists used in manpower requests.",
-        "resignation": "Define notice periods and the resignation approval chain."
+        "recruitment": "Maintain the lists used in manpower requests.",        "resignation": "Define notice periods and the resignation approval chain."
       },
       "companyNameHint": "Shown in the browser tab title and in the sender name of emails.",
       "supportEmail": "Support Email",
@@ -1506,6 +1504,9 @@
       "accommodation": "Accommodation",
       "action": "Action",
       "airTicket": "Air Ticket",
+      "grade": "Grade",
+      "gradePosition": "Position",
+      "designation": "Designation",
       "allowances": "Allowances",
       "applicationDeadline": "Application Deadline",
       "applicationEndDate": "Application End Date",

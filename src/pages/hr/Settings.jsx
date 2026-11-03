@@ -25,8 +25,7 @@ const GROUP_ICONS = {
     notifications: Bell,
     security: ShieldCheck,
     approval: GitBranch,
-    recruitment: Briefcase,
-    resignation: DoorOpen,
+    recruitment: Briefcase,    resignation: DoorOpen,
 };
 
 // Groups edited as one draft and saved with the Save bar; the others save themselves
@@ -168,8 +167,7 @@ function Settings() {
     } else if (activeGroup === "approval") {
         body = <ApprovalWorkflowSettings />;
     } else if (activeGroup === "recruitment") {
-        body = <RecruitmentMastersSettings />;
-    } else {
+        body = <RecruitmentMastersSettings />;    } else {
         body = <ResignationNoticeSettings />;
     }
 

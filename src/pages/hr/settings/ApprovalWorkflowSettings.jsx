@@ -8,6 +8,9 @@ import { ResignationWorkflowSettings } from "./ResignationSettings";
 import "./RecruitmentSettings.css";
 
 const REQUEST_TYPES = ["Replacement", "New Position"];
+// Departments shown in the "COO / CTO by department" and "Job ID department codes" grids.
+// Others are only hidden: their saved values stay in the draft and are sent back on Save.
+const GRID_DEPARTMENTS = ["HR", "IT", "Finance"];
 
 function ApprovalWorkflowSettings() {
     const { t } = useTranslation();
@@ -16,6 +19,9 @@ function ApprovalWorkflowSettings() {
     const [draft, setDraft] = useState(null);
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const gridDepartments = GRID_DEPARTMENTS
+        .map((name) => departments.find((department) => department.toLowerCase() === name.toLowerCase()))
+        .filter(Boolean);
     const [assignments, setAssignments] = useState({ assignments: [], assignableRoles: [], departmentScopedRoles: [] });
     const [newAssignment, setNewAssignment] = useState({ role_key: "", department: "", employee_id: "" });
     const [message, setMessage] = useState({ text: "", error: false });
@@ -149,7 +155,7 @@ function ApprovalWorkflowSettings() {
             <section className="rs-section">
                 <h3>{t("settings.workflows.execByDepartment", { defaultValue: "COO / CTO by department" })}</h3>
                 <div className="rs-grid">
-                    {departments.map((department) => (
+                    {gridDepartments.map((department) => (
                         <label className="settings-field" key={department}>
                             <span>{department}</span>
                             <select
@@ -180,7 +186,7 @@ function ApprovalWorkflowSettings() {
                 <h3>{t("settings.workflows.jobCodes", { defaultValue: "Job ID department codes" })}</h3>
                 <p>{t("settings.workflows.jobCodesHint", { defaultValue: "New job openings get IDs like IT001, FIN001. Existing JOB001 / JOB002 are unchanged." })}</p>
                 <div className="rs-grid">
-                    {departments.map((department) => (
+                    {gridDepartments.map((department) => (
                         <label className="settings-field" key={department}>
                             <span>{department}</span>
                             <input

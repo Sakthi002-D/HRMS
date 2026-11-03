@@ -1469,3 +1469,227 @@
     font-size: 13px;
     text-align: center;
 }
+
+/* ---------- MPR section 02 "Position Requirements": Grade → Position → Designation picker ----------
+   Four groups (Grade & Designation, Role Details, Skills & Duties, Hiring Timeline). */
+
+.mpr-position-content { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
+.mpr-field-group { min-width: 0; }
+.mpr-group-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    color: #12304a;
+    font-size: 13px;
+    font-weight: 750;
+    letter-spacing: .1px;
+}
+.mpr-group-title svg { color: #245fe8; }
+
+.mpr-grade-panel {
+    padding: 16px;
+    border: 1px solid #d6e5fb;
+    border-radius: 10px;
+    background: #f3f8ff;
+}
+.mpr-grade-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 18px; align-items: start; }
+.mpr-accordion-content .mpr-grade-step label:not(.mpr-switch-line) { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mpr-step-number {
+    display: inline-grid;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 1px solid #b9c9dc;
+    border-radius: 50%;
+    background: #fff;
+    color: #60758a;
+    font-size: 11.5px;
+    font-weight: 750;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.mpr-grade-step.is-done .mpr-step-number { border-color: #245fe8; background: #245fe8; color: #fff; }
+.dashboard-content .mpr-step-hint, .mpr-step-hint { display: block; color: #64748b !important; font-size: 12px; line-height: 1.5; }
+
+/* Selectable pill buttons (Experience) */
+.mpr-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
+.mpr-pill-group.is-invalid .mpr-pill { border-color: #f1a7a7; }
+.mpr-accordion-form .mpr-pill {
+    min-height: 34px;
+    padding: 6px 13px;
+    border: 1px solid #cbd8e6;
+    border-radius: 999px;
+    background: #fff;
+    color: #244b77;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: start;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.mpr-accordion-form .mpr-pill:hover { border-color: #8fb1f8; background: #f3f7ff; }
+.mpr-accordion-form .mpr-pill:focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; }
+.mpr-accordion-form .mpr-pill.is-selected { border-color: #245fe8; background: #245fe8; color: #fff; }
+
+/* Role card under the picker */
+.mpr-role-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #dfe8f2;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(18, 48, 74, .04);
+}
+.mpr-role-badge {
+    display: grid;
+    flex: 0 0 auto;
+    min-width: 46px;
+    height: 46px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    place-items: center;
+    border-radius: 10px;
+    background: #12304a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+.mpr-role-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.mpr-role-text strong { overflow-wrap: anywhere; color: #12304a; font-size: 14.5px; font-weight: 750; }
+.dashboard-content .mpr-role-text small, .mpr-role-text small { color: #64748b !important; font-size: 12px; }
+.mpr-role-category {
+    display: inline-flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    max-width: 45%;
+    padding: 6px 12px;
+    border: 1px solid #bbe5cc;
+    border-radius: 999px;
+    background: #e9f8ef;
+    color: #07804b;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: end;
+}
+.dashboard-content .mpr-role-category small, .mpr-role-category small { color: #3f8f63 !important; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+
+/* Number of Openings − / + stepper */
+.mpr-stepper {
+    display: flex;
+    align-items: stretch;
+    min-height: 42px;
+    overflow: hidden;
+    border: 1px solid #cbd8e6;
+    border-radius: 7px;
+    background: #fff;
+}
+.mpr-stepper:focus-within { border-color: #2564eb; box-shadow: 0 0 0 3px rgba(37, 100, 235, .11); }
+.mpr-accordion-form .mpr-stepper button {
+    display: grid;
+    flex: 0 0 42px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: #f3f7ff;
+    color: #245fe8;
+    cursor: pointer;
+    box-shadow: none;
+}
+.mpr-accordion-form .mpr-stepper button:hover:not(:disabled) { background: #e3ecfd; }
+.mpr-accordion-form .mpr-stepper button:disabled { color: #a8b6c6; cursor: not-allowed; }
+.mpr-accordion-content .form-group .mpr-stepper input:not([type="checkbox"]) {
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    border: 0;
+    border-inline: 1px solid #e2eaf2;
+    border-radius: 0;
+    box-shadow: none;
+    text-align: center;
+    font-weight: 650;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.mpr-stepper input::-webkit-outer-spin-button,
+.mpr-stepper input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+
+/* Skills tag input (SkillTagInput) in the MPR blue style */
+.mpr-accordion-form .skill-tags-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border: 1px solid #cbd8e6;
+    border-radius: 7px;
+    background: #fff;
+}
+.mpr-accordion-form .skill-tags-box:focus-within { border-color: #2564eb; box-shadow: 0 0 0 3px rgba(37, 100, 235, .11); }
+.mpr-accordion-form .skill-tags-box.invalid { border-color: #e88b8b; }
+.mpr-accordion-content .form-group .skill-tags-box input:not([type="checkbox"]) {
+    flex: 1;
+    width: auto;
+    min-width: 160px;
+    min-height: 30px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.mpr-accordion-form .skill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px 4px 10px;
+    border-radius: 999px;
+    background: #eaf1fe;
+    color: #1d4ed8;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+.mpr-accordion-form .skill-tag button {
+    display: inline-flex;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    box-shadow: none;
+}
+.mpr-accordion-form .skill-tag button:hover { background: rgba(29, 78, 216, .14); }
+
+/* Hiring Timeline: three dates in one row */
+.mpr-accordion-content .form-grid.mpr-timeline-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-content .mpr-timeline-note, .mpr-timeline-note { margin: 10px 0 0; color: #536b82 !important; font-size: 12.5px; font-weight: 600; }
+
+/* Error under a field (as well as the message above the buttons) */
+.dashboard-content .mpr-field-error, .mpr-field-error { display: block; margin-top: 5px; color: #d43b3b !important; font-size: 12px; font-weight: 600; }
+.mpr-accordion-content .form-group select.is-invalid,
+.mpr-accordion-form .mpr-dept-field.is-invalid { border-color: #e88b8b; }
+
+/* Tablet: picker in 2 columns (Designation on its own row) */
+@media (max-width: 1024px) {
+    .mpr-grade-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mpr-grade-steps .mpr-grade-step:last-child { grid-column: 1 / -1; }
+}
+/* Phone: everything stacks */
+@media (max-width: 760px) {
+    .mpr-grade-steps,
+    .mpr-accordion-content .form-grid.mpr-timeline-grid { grid-template-columns: 1fr; }
+    .mpr-grade-steps .mpr-grade-step:last-child { grid-column: auto; }
+    .mpr-grade-panel { padding: 12px; }
+    .mpr-role-card { flex-wrap: wrap; }
+    .mpr-role-category { align-items: flex-start; max-width: 100%; text-align: start; }}

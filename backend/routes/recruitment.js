@@ -36,6 +36,7 @@ import {
     saveRecruitmentSettings,
     sendBackMpr,
 } from "../services/manpowerWorkflow.js";
+import { listActiveGrades } from "../services/gradeMaster.js";
 
 const router = express.Router();
 
@@ -101,14 +102,16 @@ router.get("/recruitment/meta", handle(async (req, res) => {
             canRaise: raiseDepartments.length > 0,
             raiseDepartments,
             isApprover: approverRoles.length > 0,
+            grades: await listActiveGrades(pool),
         });
     }
 
-    const [settings, locations, agencies, departments] = await Promise.all([
+    const [settings, locations, agencies, departments, grades] = await Promise.all([
         getRecruitmentSettings(),
         pool.query(`SELECT id, name FROM recruitment_locations WHERE active ORDER BY name`),
         pool.query(`SELECT id, name, contact_person, email, phone FROM recruitment_agencies WHERE active ORDER BY name`),
         pool.query(`SELECT DISTINCT TRIM(department) AS name FROM employees WHERE COALESCE(TRIM(department), '') <> '' ORDER BY 1`),
+        listActiveGrades(pool),
     ]);
 
     const departmentNames = [...new Set([...Object.keys(settings.departmentCodes || {}), ...departments.rows.map((row) => row.name)])];
@@ -125,6 +128,8 @@ router.get("/recruitment/meta", handle(async (req, res) => {
         departments: departmentNames,
         locations: locations.rows,
         agencies: agencies.rows,
+        // Grade → Position → Designation (active only, sorted) for the MPR form
+        grades,
         requestTypes: REQUEST_TYPES,
         assetOptions: ASSET_OPTIONS,
         employmentTypes: EMPLOYMENT_TYPES,
