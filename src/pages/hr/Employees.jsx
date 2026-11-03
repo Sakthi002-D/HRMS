@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./Employees.css";
 import "./EmployeesModern.css";
+import "./EmployeesRefresh.css";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import SearchBar from "../../components/layout/common/SearchBar";
 import Button from "../../components/layout/common/Button";
@@ -20,12 +21,22 @@ import {
   Users,
   UserX,
   Eye,
+  Archive,
+  Mail,
+  Phone,
+  ArrowLeft,
+  RotateCcw,
+  CalendarX2,
 } from "lucide-react";
-import { useAlert } from "../../components/common/dialog/dialogContext";
+import { useAlert, useConfirm } from "../../components/common/dialog/dialogContext";
+import { formatAppDate } from "../../utils/appSettings";
+import { toDateInput } from "../../utils/dateInput";
 import { Pagination } from "../../components/common/TablePagination";
 
 import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
+import { exportTable } from "../../utils/tableExport";
+import { GRADES } from "../../utils/grades";
 
 const PHONE_COUNTRIES = [
   { code: "+974", groupSize: 4, length: 8 },
@@ -89,6 +100,9 @@ const fileToDataUrl = (file) => {
 function Employees() {
   const { t } = useTranslation();
   const showAppAlert = useAlert();
+  const confirm = useConfirm();
+  // "current" = Active employees; "archived" = everyone archived (Resigned, Inactive, ...)
+  const [listTab, setListTab] = useState("current");
 
   // Same alert as before, with the dialog title and OK button translated too
   const showAlert = (options) => {
@@ -147,6 +161,8 @@ const fetchEmployees = async () => {
   phone: formatPhoneNumber(employee.phone),
   status: employee.status,
   joiningDate: employee.joining_date,
+  lastDateWorked: employee.last_date_worked,
+  terminationReason: employee.termination_reason,
 
   // Additional employee details
   dateOfBirth: employee.date_of_birth,
@@ -154,6 +170,7 @@ const fetchEmployees = async () => {
   country: employee.country,
   address: employee.address,
   employmentType: employee.employment_type,
+  grade: employee.grade || "",
   emergencyContact: employee.emergency_contact,
   passportNo: employee.passport_no,
   passportExpDate: employee.passport_exp_date,
@@ -186,6 +203,10 @@ useEffect(() => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [designationFilter, setDesignationFilter] = useState("All");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("All");
+  // "All", "none" (no grade yet) or a grade
+  const [gradeFilter, setGradeFilter] = useState("All");
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState("All");
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -257,6 +278,7 @@ useEffect(() => {
     department: "",
     joiningDate: "",
     employmentType: "",
+    grade: "",
     legalEntity: "SHLT",
     workerType: "Employee",
     employmentCategory: "",
@@ -346,6 +368,7 @@ const resetForm = () => {
     department: "",
     joiningDate: "",
     employmentType: "",
+    grade: "",
     legalEntity: "SHLT",
     workerType: "Employee",
     employmentCategory: "",
@@ -411,6 +434,47 @@ const resetForm = () => {
   });
 };
 
+  const closeEmployeeForm = () => {
+    setIsModalOpen(false);
+    setEditingEmployeeId(null);
+    resetForm();
+  };
+
+  // The form replaces the list, so start it at the top of the page
+  useEffect(() => {
+    if (!isModalOpen) return undefined;
+    window.scrollTo({ top: 0 });
+    document.querySelector(".dashboard-content")?.scrollTo?.({ top: 0 });
+    const onKey = (event) => { if (event.key === "Escape") closeEmployeeForm(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen]);
+
+  // Archived employees come back as Active; their history was never removed
+  const restoreEmployee = (employee) => confirm({
+    variant: "info",
+    title: t("employeesList.archived.restoreTitle", { defaultValue: "Restore Employee" }),
+    message: t("employeesList.archived.restoreMessage", { name: employee.name, defaultValue: "Restore {{name}} as an Active employee? Their leaving date and reason will be cleared." }),
+    confirmText: t("employeesList.archived.restore", { defaultValue: "Restore" }),
+    cancelText: t("profileEdit.cancel", { defaultValue: "Cancel" }),
+    loadingText: t("profileEdit.saving", { defaultValue: "Saving..." }),
+    onConfirm: async () => {
+      const response = await fetch(`${API_URL}/api/employees/${encodeURIComponent(employee.id)}/restore`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || (response.status === 404
+          ? t("settings.shifts.restartBackend", { defaultValue: "This feature is not on the server yet. Restart the backend and try again." })
+          : t("employeesList.archived.restoreFailed", { defaultValue: "Unable to restore the employee" })));
+      }
+      await fetchEmployees();
+      showAlert({ variant: "success", message: t("employeesList.archived.restored", { name: employee.name, defaultValue: "{{name}} is Active again." }) });
+    },
+  });
+
   const confirmArchiveEmployee = async () => {
     const { employeeId, exitStatus, lastDateWorked, terminationReason } = archiveModal;
     const allowedStatuses = ["Inactive", "Resigned", "Retired", "Dismissed", "Terminated"];
@@ -463,7 +527,7 @@ const resetForm = () => {
     }
   };
 
-  const exportEmployeesToCSV = (activeOnly = false) => {
+  const exportEmployees = (format, activeOnly = false) => {
   setExportMenuOpen(false);
   const exportRows = tabEmployees.filter((employee) => !activeOnly || employee.status === "Active");
 
@@ -492,17 +556,12 @@ const resetForm = () => {
     employee.status,
   ]);
 
-  const csvContent = [headers, ...rows]
-    .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = activeOnly ? "active-employees.csv" : "employees.csv";
-  link.click();
-  URL.revokeObjectURL(url);
+  exportTable(format, {
+    fileName: activeOnly ? "active-employees" : "employees",
+    title: activeOnly ? "Active Employees" : "Employees",
+    headers,
+    rows,
+  });
 };
 
   // =========================
@@ -701,6 +760,7 @@ const employeeData = {
   department: formData.department.trim(),
   joining_date: formData.joiningDate || null,
   employment_type: formData.employmentType || null,
+  grade: formData.grade || "",
   legal_entity: formData.legalEntity,
   worker_type: formData.workerType,
   employment_category: formData.employmentCategory,
@@ -855,6 +915,8 @@ const employeeData = {
       employmentType:
         employee.employmentType || "",
 
+      grade: employee.grade || "",
+
       legalEntity: employee.legalEntity || "SHLT",
       workerType: employee.workerType || "Employee",
       employmentCategory: employee.employmentCategory || "",
@@ -972,6 +1034,7 @@ const updateEmployee = async () => {
   department: formData.department,
   joining_date: formData.joiningDate || null,
   employment_type: formData.employmentType || null,
+  grade: formData.grade || "",
   legal_entity: formData.legalEntity || "SHLT",
   worker_type: formData.workerType || "Employee",
   employment_category: formData.employmentCategory || null,
@@ -1043,10 +1106,13 @@ const updateEmployee = async () => {
     },
 
     {
-      key: "name",
+      key: "employee",
       label: t("employeesList.table.name", { defaultValue: "Name" }),
       render: (employee) => (
         <span className="emp-person">
+          <span className="emp-avatar" aria-hidden="true">
+            {String(employee.name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("")}
+          </span>
           <span className="emp-person-name">{employee.name}</span>
         </span>
       ),
@@ -1065,63 +1131,69 @@ const updateEmployee = async () => {
     },
 
     {
-      key: "email",
-      label: t("profileEdit.fields.email", { defaultValue: "Email" }),
-      render: (employee) => employee.email ? <span className="emp-email" dir="ltr">{employee.email}</span> : <span className="emp-muted">-</span>,
+      key: "grade",
+      label: t("employeeProfile.basic.grade", { defaultValue: "Grade" }),
+      render: (employee) => employee.grade ? <span className="emp-grade" dir="ltr">{employee.grade}</span> : <span className="emp-muted">-</span>,
     },
 
-    {
-      key: "phone",
-      label: t("profileEdit.fields.phone", { defaultValue: "Phone" }),
-      render: (employee) => employee.phone ? <span className="emp-phone" dir="ltr">{employee.phone}</span> : <span className="emp-muted">-</span>,
-    },
-
-    {
-      key: "status",
-      label: t("profileEdit.fields.status", { defaultValue: "Status" }),
-
+    listTab === "archived" ? {
+      key: "left",
+      label: t("employeesList.archived.left", { defaultValue: "Left on" }),
       render: (employee) => (
-        <span
-          className={
-            employee.status === "Active"
-              ? "status active"
-              : "status inactive"
-          }
-        >
-          {valueLabel("status", employee.status)}
+        <span className="emp-left">
+          <span dir="ltr"><CalendarX2 size={13} aria-hidden="true" />{employee.lastDateWorked ? formatAppDate(new Date(`${toDateInput(employee.lastDateWorked)}T00:00:00`)) : "-"}</span>
+          <small dir="auto">{valueLabel("status", employee.status)}{employee.terminationReason && employee.terminationReason !== employee.status ? ` · ${employee.terminationReason}` : ""}</small>
+        </span>
+      ),
+    } : {
+      key: "contact",
+      label: t("employeesList.table.contact", { defaultValue: "Contact" }),
+      render: (employee) => (employee.phone || employee.email ? (
+        <span className="emp-contact">
+          {employee.phone && <span className="emp-phone" dir="ltr"><Phone size={13} aria-hidden="true" />{employee.phone}</span>}
+          {employee.email && <span className="emp-email" dir="ltr"><Mail size={13} aria-hidden="true" />{employee.email}</span>}
+        </span>
+      ) : <span className="emp-muted">-</span>),
+    },
+
+    {
+      key: "actions",
+      label: t("employeesList.table.actions", { defaultValue: "Actions" }),
+      render: (employee) => (
+        <span className="emp-actions">
+          <button
+            type="button"
+            className="employee-view-button"
+            onClick={() => viewEmployee(employee)}
+            aria-label={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
+            title={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
+          >
+            <Eye size={17} strokeWidth={2} aria-hidden="true" />
+          </button>
+          {listTab === "archived" ? (
+            <button
+              type="button"
+              className="emp-restore-button"
+              onClick={() => restoreEmployee(employee)}
+              aria-label={`${t("employeesList.archived.restore", { defaultValue: "Restore" })} ${employee.name}`}
+              title={t("employeesList.archived.restore", { defaultValue: "Restore" })}
+            >
+              <RotateCcw size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="emp-archive-button"
+              onClick={() => deleteEmployee(employee)}
+              aria-label={`${t("employeesList.table.archive", { defaultValue: "Archive" })} ${employee.name}`}
+              title={t("employeesList.table.archive", { defaultValue: "Archive" })}
+            >
+              <Archive size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
         </span>
       ),
     },
-
-    {
-      key: "view",
-      label: t("employeesList.table.view", { defaultValue: "View" }),
-      render: (employee) => (
-        <button
-          type="button"
-          className="employee-view-button"
-          onClick={() => viewEmployee(employee)}
-          aria-label={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
-          title={t("employeesList.table.viewEmployee", { name: employee.name, defaultValue: "View {{name}}" })}
-        >
-          <Eye size={18} strokeWidth={2} aria-hidden="true" />
-        </button>
-      ),
-    },
-
-{
-  key: "delete",
-  label: t("employeesList.table.delete", { defaultValue: "Delete" }),
-
-  render: (employee) => (
-    <Button
-      variant="danger"
-      onClick={() => deleteEmployee(employee)}
-    >
-      {t("employeesList.table.archive", { defaultValue: "Archive" })}
-    </Button>
-  ),
-},
   ]
 
   // =========================
@@ -1130,6 +1202,24 @@ const updateEmployee = async () => {
 const normalizedSearch = search.trim().toLowerCase();
 const tabEmployees = employees.filter((employee) => String(employee.role ?? "").toLowerCase() !== "hr");
 const designations = [...new Set(tabEmployees.map((employee) => employee.designation).filter(Boolean))].sort();
+const departments = [...new Set(tabEmployees.map((employee) => employee.department).filter(Boolean))].sort();
+const employmentTypes = [...new Set(tabEmployees.map((employee) => employee.employmentType).filter(Boolean))].sort();
+const activeFilterCount = [dateRangeFilter !== "all", designationFilter !== "All", departmentFilter !== "All", gradeFilter !== "All", employmentTypeFilter !== "All"]
+  .filter(Boolean).length;
+const clearFilters = () => {
+  setDateRangeFilter("all");
+  setDesignationFilter("All");
+  setDepartmentFilter("All");
+  setGradeFilter("All");
+  setEmploymentTypeFilter("All");
+  setStatusFilter("All");
+  setCurrentPage(1);
+};
+// A filter change goes back to page 1; the panel stays open so several can be set
+const setFilter = (setter) => (event) => {
+  setter(event.target.value);
+  setCurrentPage(1);
+};
 const filteredEmployees =
   tabEmployees
     .filter((employee) => {
@@ -1159,9 +1249,11 @@ const filteredEmployees =
         .toLowerCase()
         .includes(normalizedSearch);
 
+    const isArchived = String(employee.status || "Active") !== "Active";
+    const matchesTab = listTab === "archived" ? isArchived : !isArchived;
     const matchesStatus =
-      statusFilter === "All" ||
-      employee.status === statusFilter;
+      matchesTab && (statusFilter === "All" ||
+      employee.status === statusFilter);
 
     const matchesDesignation =
       designationFilter === "All" ||
@@ -1170,15 +1262,20 @@ const filteredEmployees =
     const joiningTime = employee.joiningDate
       ? new Date(employee.joiningDate).getTime()
       : NaN;
-    const rangeStart = Date.now() - (
-      dateRangeFilter === "7" ? 7 :
-      dateRangeFilter === "30" ? 30 : 0
-    ) * 24 * 60 * 60 * 1000;
+    const rangeStart = dateRangeFilter === "year"
+      ? new Date(new Date().getFullYear(), 0, 1).getTime()
+      : Date.now() - Number(dateRangeFilter === "all" ? 0 : dateRangeFilter) * 24 * 60 * 60 * 1000;
     const matchesDateRange =
       dateRangeFilter === "all" ||
       (!Number.isNaN(joiningTime) && joiningTime >= rangeStart && joiningTime <= Date.now());
 
-    return matchesSearch && matchesStatus && matchesDesignation && matchesDateRange;
+    const matchesDepartment = departmentFilter === "All" || employee.department === departmentFilter;
+    const matchesGrade = gradeFilter === "All"
+      || (gradeFilter === "none" ? !employee.grade : employee.grade === gradeFilter);
+    const matchesEmploymentType = employmentTypeFilter === "All" || employee.employmentType === employmentTypeFilter;
+
+    return matchesSearch && matchesStatus && matchesDesignation && matchesDateRange
+      && matchesDepartment && matchesGrade && matchesEmploymentType;
     })
     .sort((first, second) => {
       const firstName = (first.name ?? "").trim().toLowerCase();
@@ -1231,12 +1328,14 @@ const filteredEmployees =
   return (
     <DashboardLayout>
 
-      <div className="employees-page">
+      <div className={`employees-page emp-v2${isModalOpen ? " emp-form-open" : ""}`}>
 
         {/* ================= HEADER ================= */}
 
+        <header className="emp-hero">
         <div className="employees-header">
-          <div>
+          <div className="emp-hero-copy">
+            <span className="emp-hero-kicker">{t("projects.kicker", { defaultValue: "Workforce" })}</span>
             <h1>{t("employeesList.title", { defaultValue: "Employees List" })}</h1>
             <p>
               {t("employeesList.subtitle", { defaultValue: "Manage all company employees" })}
@@ -1274,11 +1373,17 @@ const filteredEmployees =
                 <>
                   <div className="export-menu-backdrop" onClick={() => setExportMenuOpen(false)} />
                   <div className="export-menu-list" role="menu">
-                    <button type="button" role="menuitem" onClick={() => exportEmployeesToCSV(false)}>
-                      {t("employeesList.export.download", { defaultValue: "Download" })}
+                    <button type="button" role="menuitem" onClick={() => exportEmployees("excel")}>
+                      {t("employeesList.export.excelAll", { defaultValue: "Excel — all employees" })}
                     </button>
-                    <button type="button" role="menuitem" onClick={() => exportEmployeesToCSV(true)}>
-                      {t("employeesList.export.activeList", { defaultValue: "Active list" })}
+                    <button type="button" role="menuitem" onClick={() => exportEmployees("excel", true)}>
+                      {t("employeesList.export.excelActive", { defaultValue: "Excel — active only" })}
+                    </button>
+                    <button type="button" role="menuitem" onClick={() => exportEmployees("pdf")}>
+                      {t("employeesList.export.pdfAll", { defaultValue: "PDF — all employees" })}
+                    </button>
+                    <button type="button" role="menuitem" onClick={() => exportEmployees("pdf", true)}>
+                      {t("employeesList.export.pdfActive", { defaultValue: "PDF — active only" })}
                     </button>
                   </div>
                 </>
@@ -1332,6 +1437,7 @@ const filteredEmployees =
   </div>
 
 </div>
+        </header>
 
         {/* ================= TABLE ================= */}
 
@@ -1341,6 +1447,23 @@ const filteredEmployees =
             <h2>{t("employeesList.employeeList", { defaultValue: "Employee List" })}</h2>
           </div>
           <div className="employee-list-header-actions">
+            <div className="emp-tabs" role="tablist" aria-label={t("employeesList.archived.tabs", { defaultValue: "Employee list" })}>
+              {[
+                ["current", t("employeesList.archived.current", { defaultValue: "Current" }), tabEmployees.filter((employee) => String(employee.status || "Active") === "Active").length],
+                ["archived", t("employeesList.archived.archived", { defaultValue: "Archived" }), tabEmployees.filter((employee) => String(employee.status || "Active") !== "Active").length],
+              ].map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={listTab === key}
+                  className={listTab === key ? "active" : ""}
+                  onClick={() => { setListTab(key); setStatusFilter("All"); setCurrentPage(1); }}
+                >
+                  {label} <span>{count}</span>
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               className={`filter-toggle ${showFilters ? "active" : ""}`}
@@ -1349,42 +1472,56 @@ const filteredEmployees =
             >
               <SlidersHorizontal size={16} />
               {t("employeesList.filters.button", { defaultValue: "Filters" })}
-              <span className="filter-count">3</span>
+              {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
             </button>
           </div>
         </div>
 
         <div className="employee-table-container">
           {showFilters && (
-            <div className="employee-list-filters" aria-label={t("employeesList.filters.ariaLabel", { defaultValue: "Employee filters" })}>
-              <button
-                type="button"
-                className="clear-filters-button"
-                onClick={() => {
-                  setDateRangeFilter("all");
-                  setDesignationFilter("All");
-                  setStatusFilter("All");
-                  setCurrentPage(1);
-                  setShowFilters(false);
-                }}
-              >
-                {t("employeesList.filters.clear", { defaultValue: "Clear filters" })}
-              </button>
+            <div className="employee-list-filters emp-filters" aria-label={t("employeesList.filters.ariaLabel", { defaultValue: "Employee filters" })}>
               <div className="filter-field">
-                <span>{t("employeesList.filters.dateRange", { defaultValue: "Date range" })}</span>
-                <select value={dateRangeFilter} onChange={(e) => { setDateRangeFilter(e.target.value); setCurrentPage(1); setShowFilters(false); }}>
-                  <option value="all">{t("employeesList.filters.allDates", { defaultValue: "All dates" })}</option>
-                  <option value="7">{t("dashboard.last7Days", { defaultValue: "Last 7 days" })}</option>
-                  <option value="30">{t("employeesList.filters.last30Days", { defaultValue: "Last 30 days" })}</option>
+                <span>{t("profileEdit.fields.department", { defaultValue: "Department" })}</span>
+                <select value={departmentFilter} onChange={setFilter(setDepartmentFilter)}>
+                  <option value="All">{t("settings.shifts.bulk.allDepartments", { defaultValue: "All departments" })}</option>
+                  {departments.map((department) => <option key={department} value={department}>{department}</option>)}
                 </select>
               </div>
               <div className="filter-field">
                 <span>{t("employeesList.table.designation", { defaultValue: "Designation" })}</span>
-                <select value={designationFilter} onChange={(e) => { setDesignationFilter(e.target.value); setCurrentPage(1); setShowFilters(false); }}>
+                <select value={designationFilter} onChange={setFilter(setDesignationFilter)}>
                   <option value="All">{t("employeesList.filters.allDesignations", { defaultValue: "All designations" })}</option>
                   {designations.map((designation) => <option key={designation} value={designation}>{designation}</option>)}
                 </select>
               </div>
+              <div className="filter-field">
+                <span>{t("employeeProfile.basic.grade", { defaultValue: "Grade" })}</span>
+                <select value={gradeFilter} onChange={setFilter(setGradeFilter)}>
+                  <option value="All">{t("employeesList.filters.allGrades", { defaultValue: "All grades" })}</option>
+                  <option value="none">{t("employeesList.filters.noGrade", { defaultValue: "No grade yet" })}</option>
+                  {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                </select>
+              </div>
+              <div className="filter-field">
+                <span>{t("profileEdit.fields.employment_type", { defaultValue: "Employment Type" })}</span>
+                <select value={employmentTypeFilter} onChange={setFilter(setEmploymentTypeFilter)}>
+                  <option value="All">{t("employeesList.filters.allTypes", { defaultValue: "All types" })}</option>
+                  {employmentTypes.map((type) => <option key={type} value={type}>{valueLabel("employmentType", type)}</option>)}
+                </select>
+              </div>
+              <div className="filter-field">
+                <span>{t("employeesList.filters.joined", { defaultValue: "Joined" })}</span>
+                <select value={dateRangeFilter} onChange={setFilter(setDateRangeFilter)}>
+                  <option value="all">{t("employeesList.filters.anyTime", { defaultValue: "Any time" })}</option>
+                  <option value="7">{t("dashboard.last7Days", { defaultValue: "Last 7 days" })}</option>
+                  <option value="30">{t("employeesList.filters.last30Days", { defaultValue: "Last 30 days" })}</option>
+                  <option value="90">{t("employeesList.filters.last90Days", { defaultValue: "Last 90 days" })}</option>
+                  <option value="year">{t("employeesList.filters.thisYear", { defaultValue: "This year" })}</option>
+                </select>
+              </div>
+              <button type="button" className="clear-filters-button" onClick={clearFilters} disabled={activeFilterCount === 0}>
+                {t("employeesList.filters.clear", { defaultValue: "Clear filters" })}
+              </button>
             </div>
           )}
 
@@ -1418,7 +1555,7 @@ const filteredEmployees =
                   <option value="25">25</option>
                   <option value="50">50</option>
                 </select>
-                <select
+                {listTab === "archived" && <select
                   className="table-status-filter"
                   value={statusFilter}
                   onChange={(e) => {
@@ -1428,13 +1565,12 @@ const filteredEmployees =
                   aria-label={t("employeesList.filters.byStatus", { defaultValue: "Filter by status" })}
                 >
                   <option value="All">{t("employeesList.filters.allStatus", { defaultValue: "All status" })}</option>
-                  <option value="Active">{valueLabel("status", "Active")}</option>
                   <option value="Inactive">{valueLabel("status", "Inactive")}</option>
                   <option value="Resigned">{valueLabel("status", "Resigned")}</option>
                   <option value="Retired">{valueLabel("status", "Retired")}</option>
                   <option value="Dismissed">{valueLabel("status", "Dismissed")}</option>
                   <option value="Terminated">{valueLabel("status", "Terminated")}</option>
-                </select>
+                </select>}
               </div>
               {viewMode === "grid" ? (
                 <div className="employee-grid">
@@ -1547,20 +1683,23 @@ const filteredEmployees =
 
         {/* ================= MODAL ================= */}
 
-        <Modal
-          isOpen={isModalOpen}
-          closeOnOverlayClick={false}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingEmployeeId(null);
-            resetForm();
-          }}
-          title={
-            editingEmployeeId
-              ? t("employeesList.form.editTitle", { defaultValue: "Edit Employee" })
-              : t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })
-          }
-        >
+        {isModalOpen && (
+        <section className="emp-form-page" aria-labelledby="emp-form-title">
+          <header className="emp-form-head">
+            <button type="button" className="emp-form-back" onClick={closeEmployeeForm}>
+              <ArrowLeft size={16} aria-hidden="true" />
+              {t("employeeDetails.backToEmployees", { defaultValue: "Back to Employees" })}
+            </button>
+            <div>
+              <span className="emp-hero-kicker">{t("projects.kicker", { defaultValue: "Workforce" })}</span>
+              <h2 id="emp-form-title">
+                {editingEmployeeId
+                  ? t("employeesList.form.editTitle", { defaultValue: "Edit Employee" })
+                  : t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" })}
+              </h2>
+              <p>{t("employeesList.form.pageHint", { defaultValue: "Fields marked * are required." })}</p>
+            </div>
+          </header>
 
           <div className="employee-form">
 
@@ -2002,8 +2141,22 @@ const filteredEmployees =
                   {valueLabel("employmentType", "Intern")}
                 </option>
 
+                <option value="Other">
+                  {valueLabel("employmentType", "Other")}
+                </option>
+
               </select>
 
+            </div>
+
+            {/* Grade: decides the Annual Leave days */}
+
+            <div className="form-group">
+              <label>{t("employeeProfile.basic.grade", { defaultValue: "Grade" })}</label>
+              <select value={formData.grade || ""} onChange={(e) => setFormData({ ...formData, grade: e.target.value })}>
+                <option value="">{t("employeeProfile.basic.noGrade", { defaultValue: "No grade" })}</option>
+                {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+              </select>
             </div>
 
             {/* Status */}
@@ -2323,11 +2476,7 @@ const filteredEmployees =
               <Button
                 variant="secondary"
 
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingEmployeeId(null);
-                  resetForm();
-                }}
+                onClick={closeEmployeeForm}
               >
                 {t("profileEdit.cancel", { defaultValue: "Cancel" })}
               </Button>
@@ -2348,7 +2497,8 @@ const filteredEmployees =
 
           </div>
 
-        </Modal>
+        </section>
+        )}
 
         
       </div>

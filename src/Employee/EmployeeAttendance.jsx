@@ -73,7 +73,6 @@ function EmployeeAttendance({
                     <select value={attendanceStatus} onChange={(event) => { setAttendanceStatus(event.target.value); setAttendancePage(1); }}>
                         <option value="all">{t("employeeAttendance.selectStatus", { defaultValue: "Select Status" })}</option>
                         <option value="present">{attendanceStatusLabel("Present")}</option>
-                        <option value="late">{attendanceStatusLabel("Late")}</option>
                         <option value="absent">{attendanceStatusLabel("Absent")}</option>
                     </select>
                 </div>
@@ -86,7 +85,6 @@ function EmployeeAttendance({
                             <th>{t("employeeAttendance.table.checkIn", { defaultValue: "Check In" })}</th>
                             <th>{t("employeeAttendance.table.status", { defaultValue: "Status" })}</th>
                             <th>{t("employeeAttendance.table.checkOut", { defaultValue: "Check Out" })}</th>
-                            <th>{t("employeeAttendance.table.late", { defaultValue: "Late" })}</th>
                             <th>{t("employeeAttendance.table.overtime", { defaultValue: "Overtime" })}</th>
                             <th>{t("employeeAttendance.table.productionHours", { defaultValue: "Production Hours" })}</th>
                         </tr>
@@ -99,11 +97,10 @@ function EmployeeAttendance({
                             <td><span className="attendance-punch-in">{formatAttendanceTime(record.punch_in)}</span></td>
                             <td><span className={`attendance-status ${String(record.status || "").toLowerCase().replaceAll(" ", "-")}`}>{attendanceStatusLabel(record.status)}</span></td>
                             <td><span className="attendance-punch-out">{formatAttendanceTime(record.punch_out)}</span></td>
-                            <td><span className="attendance-duration late-duration">{record.late_minutes ? t("employeeAttendance.minutesValue", { value: record.late_minutes, defaultValue: "{{value}} min" }) : "-"}</span></td>
                             <td><span className="attendance-duration">{overtimeMinutes ? hoursText(overtimeMinutes / 60) : "-"}</span></td>
                             <td><span className={`production-hours ${workingMinutes >= 540 ? "good" : "low"}`}>{hoursText(workingMinutes / 60)}</span></td>
                         </tr>;
-                    }) : <tr><td colSpan="7" className="attendance-empty">{t("employeeAttendance.noRecords", { defaultValue: "No attendance records found." })}</td></tr>}</tbody>
+                    }) : <tr><td colSpan="6" className="attendance-empty">{t("employeeAttendance.noRecords", { defaultValue: "No attendance records found." })}</td></tr>}</tbody>
                 </table>
             </div>
             <div className="employee-attendance-footer">

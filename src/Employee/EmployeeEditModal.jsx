@@ -9,7 +9,7 @@ const roleDateFields = [["passport_exp_date", "Passport Exp Date"]];
 
 // Saved values (English). Only the text shown in the dropdown is translated.
 const GENDERS = ["Male", "Female", "Other"];
-const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Intern"];
+const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Intern", "Other"];
 const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"];
 const STATUSES = ["Active", "Inactive"];
 

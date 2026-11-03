@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    AlertCircle, Bell, Briefcase, CheckCircle2, DoorOpen, Eye, EyeOff, GitBranch, Globe2, KeyRound,
+    AlertCircle, Bell, Briefcase, CheckCircle2, Clock3, DoorOpen, Eye, EyeOff, GitBranch, Globe2, KeyRound,
     Loader2, Mail, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Timer,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -12,11 +12,12 @@ import { LANGUAGES, changeAppLanguage } from "../../i18n";
 import ApprovalWorkflowSettings from "./settings/ApprovalWorkflowSettings";
 import RecruitmentMastersSettings from "./settings/RecruitmentMastersSettings";
 import { ResignationNoticeSettings } from "./settings/ResignationSettings";
+import ShiftSettings from "./settings/ShiftSettings";
 import "./Settings.css";
 
 const SECTIONS = [
     { id: "workspace", labelKey: "settings.page.sectionWorkspace", groups: ["general", "regional", "notifications", "security"] },
-    { id: "operations", labelKey: "settings.page.sectionOperations", groups: ["approval", "recruitment", "resignation"] },
+    { id: "operations", labelKey: "settings.page.sectionOperations", groups: ["approval", "recruitment", "resignation", "shifts"] },
 ];
 
 const GROUP_ICONS = {
@@ -27,12 +28,13 @@ const GROUP_ICONS = {
     approval: GitBranch,
     recruitment: Briefcase,
     resignation: DoorOpen,
+    shifts: Clock3,
 };
 
 // Groups edited as one draft and saved with the Save bar; the others save themselves
 const DRAFT_GROUPS = ["general", "regional", "notifications", "security"];
 
-const TIMEZONES = ["Asia/Qatar", "Asia/Dubai", "Asia/Riyadh", "Asia/Kuwait", "Asia/Bahrain", "Asia/Muscat", "Asia/Kolkata", "Europe/London", "UTC"];
+const TIMEZONES = ["Asia/Qatar", "Asia/Dubai", "Asia/Riyadh", "Asia/Kuwait", "Asia/Bahrain", "Asia/Muscat", "Europe/London", "UTC"];
 
 const CURRENCIES = [
     { code: "QAR", name: "Qatari Riyal", symbol: "QR" },
@@ -169,6 +171,8 @@ function Settings() {
         body = <ApprovalWorkflowSettings />;
     } else if (activeGroup === "recruitment") {
         body = <RecruitmentMastersSettings />;
+    } else if (activeGroup === "shifts") {
+        body = <ShiftSettings />;
     } else {
         body = <ResignationNoticeSettings />;
     }

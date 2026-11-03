@@ -1,0 +1,287 @@
+/* =========================================
+   ATTENDANCE — same look as the Employees page
+   (dark banner with live clock and counts, orange accent, white cards).
+   Loaded after AttendanceModern.css.
+   ========================================= */
+
+.dashboard-content .attendance-page.att-v2 {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-content .attendance-page.att-v2 > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* ---------- banner ---------- */
+
+.dashboard-content .attendance-page.att-v2 .att-hero {
+  display: grid;
+  gap: 20px;
+  padding: 22px 24px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+  box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 28px;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-header {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-header > div:first-child {
+  padding: 0;
+}
+
+/* The shared theme draws a blue bar before page titles; the banner does not need it */
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-header > div:first-child::before {
+  display: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero-kicker {
+  display: block;
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-header h1 {
+  margin: 4px 0 8px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-header p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #d7e2ea !important;
+  font-size: 13.5px;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .employee-source-badge {
+  border-color: rgba(134, 239, 172, .35);
+  background: rgba(34, 197, 94, .14);
+  color: #bbf7d0;
+}
+
+/* Live clock on the right of the banner */
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-card {
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 260px;
+  padding: 0;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: end;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-card::after {
+  display: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-greeting {
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-time {
+  color: #ffffff;
+  font-size: clamp(28px, 3vw, 36px);
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-date {
+  color: #d7e2ea;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-shift {
+  align-self: flex-end;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border: 1px solid rgba(249, 115, 22, .35);
+  background: rgba(249, 115, 22, .14);
+  color: #ffedd5;
+}
+
+/* Counts as glass tiles; still click-to-filter */
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stats {
+  margin: 0;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat {
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .07);
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat:hover {
+  background: rgba(255, 255, 255, .12);
+  box-shadow: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat.is-active {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, .16);
+  box-shadow: none;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat-icon {
+  background: rgba(249, 115, 22, .2);
+  color: #fdba74;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat-count {
+  color: #ffffff;
+}
+
+.dashboard-content .attendance-page.att-v2 .att-hero .attendance-stat-label {
+  color: #d7e2ea;
+  font-size: 12.5px;
+}
+
+/* ---------- punch card ---------- */
+
+.dashboard-content .attendance-page.att-v2 .attendance-punch-section {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-actions--premium {
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-selector-label {
+  padding-inline-start: 10px;
+  border-inline-start: 3px solid #f97316;
+  color: #042330;
+}
+
+.dashboard-content .attendance-page.att-v2 .employee-id-input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-identity-card {
+  border-color: #fed7aa;
+  background: #fffaf5;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-identity-avatar {
+  background: #042330;
+  color: #ffffff;
+}
+
+/* ---------- list ---------- */
+
+.dashboard-content .attendance-page.att-v2 .attendance-list-heading h2 {
+  padding-inline-start: 10px;
+  border-inline-start: 3px solid #f97316;
+  color: #042330;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-list-heading span {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-tools {
+  border-color: #e3ecf2;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-tools :is(input, select):focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+  outline: 0;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-export-btn {
+  border-color: #f97316;
+  background: #f97316;
+  color: #ffffff;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-export-btn:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table-container {
+  border-color: #e3ecf2;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table tbody tr:nth-child(even) {
+  background: #ffffff;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table tbody td {
+  font-size: 14.5px;
+}
+
+/* Employee ID: plain dark text, like the Employees list */
+.dashboard-content .attendance-page.att-v2 .attendance-id-chip {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #042330;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.dashboard-content .attendance-page.att-v2 .hr-att-avatar {
+  background: #042330;
+  color: #ffffff;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-person-name {
+  color: #042330;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-card {
+    align-items: flex-start;
+    min-width: 0;
+    text-align: start;
+  }
+
+  .dashboard-content .attendance-page.att-v2 .att-hero .attendance-clock-shift {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-content .attendance-page.att-v2 .att-hero {
+    padding: 16px;
+  }
+}

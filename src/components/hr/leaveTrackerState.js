@@ -7,7 +7,7 @@
 // =========================================================
 import i18n from "i18next";
 
-export const DEFAULT_COMPANY_TIMEZONE = "Asia/Kolkata";
+export const DEFAULT_COMPANY_TIMEZONE = "Asia/Qatar";
 
 // Translated text (leaveManagement.tracker.*). Falls back to the English default with the
 // values filled in when i18n isn't running (e.g. this logic used on its own).

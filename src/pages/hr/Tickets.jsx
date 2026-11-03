@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Bell,
-    ChevronDown,
-    FileDown,
     Grid2X2,
     LayoutList,
     MessageSquare,
@@ -15,6 +13,8 @@ import {
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import ExportMenu from "../../components/common/ExportMenu";
+import { exportTable } from "../../utils/tableExport";
 import API_URL from "../../config/api";
 import "./Tickets.css";
 
@@ -183,7 +183,7 @@ function Tickets() {
         }
     };
 
-    const exportTickets = () => {
+    const exportTickets = (format) => {
         const headers = ["Ticket ID", "Raised By", "Assigned To", "Category", "Subject", "Priority", "Status", "Updated"];
         const rows = filteredTickets.map((ticket) => [
             ticket.ticket_code,
@@ -195,15 +195,7 @@ function Tickets() {
             ticket.status,
             new Date(ticket.updated_at).toLocaleString(),
         ]);
-        const csv = [headers, ...rows]
-            .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
-            .join("\n");
-        const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "tickets.csv";
-        link.click();
-        URL.revokeObjectURL(url);
+        exportTable(format, { fileName: "tickets", title: "Tickets", headers, rows });
     };
 
     const statCards = [
@@ -227,7 +219,7 @@ function Tickets() {
                     <div className="tickets-header-actions">
                         <button className={`ticket-icon-button ${!isCompact ? "active" : ""}`} aria-label={t("employeesList.listView", { defaultValue: "List view" })} onClick={() => setIsCompact(false)}><LayoutList size={16} /></button>
                         <button className="ticket-icon-button" aria-label={t("employeesList.gridView", { defaultValue: "Grid view" })} onClick={() => setIsCompact((value) => !value)}><Grid2X2 size={15} /></button>
-                        <button className="ticket-export-button" onClick={exportTickets}><FileDown size={15} /> {t("employeesList.export.button", { defaultValue: "Export" })} <ChevronDown size={14} /></button>
+                        <ExportMenu className="ticket-export-menu" disabled={!filteredTickets.length} onExport={exportTickets} />
                         <button className="add-ticket-button" onClick={openForm}><Plus size={15} /> {t("tickets.addTicket", { defaultValue: "Add Ticket" })}</button>
                     </div>
                 </header>

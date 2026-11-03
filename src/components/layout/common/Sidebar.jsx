@@ -10,7 +10,9 @@ import {
   Wallet,
   Ticket,
   FileText,
+  FolderKanban,
   Settings,
+  Award,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -88,6 +90,7 @@ function Sidebar({ collapsed, onToggle }) {
     ["/resignations", t("menu.resignation"), DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
     ["/payroll", t("menu.payroll"), Wallet],
     ["/tickets", t("menu.ticketing"), Ticket],
+    ["/projects", t("menu.projects", { defaultValue: "Projects" }), FolderKanban],
     // Any URL containing "report" or "accrual" (each report page) keeps Reports highlighted
     ["/reports", t("menu.reports"), FileText, 0, "", [/report/i, /accrual/i]],
   ];
@@ -129,10 +132,14 @@ function Sidebar({ collapsed, onToggle }) {
 
       <div className="sidebar-account">
         <div className="sidebar-section-title">{t("menu.account")}</div>
-        <button type="button" className="sidebar-link sidebar-button" onClick={() => navigate("/settings")}>
+        <NavLink to="/settings" end className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
           <Settings size={19} strokeWidth={2} />
           <span>{t("menu.settings")}</span>
-        </button>
+        </NavLink>
+        <NavLink to="/settings/grade-assignment" className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? " active" : ""}`}>
+          <Award size={18} strokeWidth={2} />
+          <span>{t("menu.gradeAssignment", { defaultValue: "Grade Assignment" })}</span>
+        </NavLink>
         <button
           type="button"
           className="sidebar-link sidebar-button"

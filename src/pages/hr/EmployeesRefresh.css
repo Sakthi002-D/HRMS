@@ -1,0 +1,788 @@
+/* =========================================
+   EMPLOYEES LIST — same look as the other HR pages
+   (dark banner, orange accent, white cards). Loaded after EmployeesModern.css.
+   ========================================= */
+
+.dashboard-content .employees-page.emp-v2 {
+  display: grid;
+  gap: 16px;
+}
+
+/* ---------- banner ---------- */
+
+.dashboard-content .emp-v2 .emp-hero {
+  display: grid;
+  gap: 20px;
+  padding: 22px 24px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+  box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+}
+
+.dashboard-content .emp-v2 .emp-hero .employees-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .employees-header::before,
+.dashboard-content .emp-v2 .emp-hero .employees-header::after {
+  display: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .emp-hero-copy {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The shared theme draws a blue bar before page titles; the banner does not need it */
+.dashboard-content .emp-v2 .emp-hero .emp-hero-copy::before {
+  display: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero-kicker {
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .emp-v2 .emp-hero h1 {
+  margin: 4px 0 8px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.dashboard-content .emp-v2 .emp-hero-copy p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #d7e2ea !important;
+  font-size: 13.5px;
+}
+
+.dashboard-content .emp-v2 .emp-hero .employee-source-badge {
+  border-color: rgba(134, 239, 172, .35);
+  background: rgba(34, 197, 94, .14);
+  color: #bbf7d0;
+}
+
+.dashboard-content .emp-v2 .emp-hero .header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Buttons on the dark banner */
+.dashboard-content .emp-v2 .emp-hero .view-toggle,
+.dashboard-content .emp-v2 .emp-hero .common-btn.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .08);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .view-toggle {
+  width: 40px;
+  padding: 0;
+}
+
+.dashboard-content .emp-v2 .emp-hero .view-toggle.active {
+  border-color: #f97316;
+  background: #f97316;
+  color: #ffffff;
+}
+
+.dashboard-content .emp-v2 .emp-hero .view-toggle:hover:not(.active),
+.dashboard-content .emp-v2 .emp-hero .common-btn.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .16);
+}
+
+.dashboard-content .emp-v2 .emp-hero .common-btn.primary {
+  min-height: 40px;
+  border: 1px solid #f97316;
+  border-radius: 9px;
+  background: #f97316;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .common-btn.primary:hover {
+  border-color: #ea580c;
+  background: #ea580c;
+}
+
+/* Counts inside the banner */
+.dashboard-content .emp-v2 .emp-hero .employee-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-card {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  height: auto;
+  min-height: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .07);
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-card::before,
+.dashboard-content .emp-v2 .emp-hero .stat-card::after {
+  display: none;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-card-content {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-card span {
+  color: #d7e2ea;
+  font-size: 12.5px;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-card strong {
+  position: static;
+  transform: none;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.dashboard-content .emp-v2 .emp-hero .stat-icon {
+  position: static;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  transform: none;
+  box-sizing: content-box;
+  padding: 7px;
+  border-radius: 9px;
+  background: rgba(249, 115, 22, .2);
+  color: #fdba74;
+}
+
+/* ---------- list card ---------- */
+
+.dashboard-content .emp-v2 .employee-list-header {
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px solid #e3ecf2;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #ffffff;
+}
+
+.dashboard-content .emp-v2 .employee-list-kicker {
+  color: #c2410c;
+}
+
+.dashboard-content .emp-v2 .employee-list-header h2 {
+  padding-inline-start: 10px;
+  border-inline-start: 3px solid #f97316;
+  color: #042330;
+}
+
+.dashboard-content .emp-v2 .filter-toggle.active,
+.dashboard-content .emp-v2 .filter-toggle:hover {
+  border-color: #f97316;
+}
+
+.dashboard-content .emp-v2 .filter-count {
+  background: #f97316;
+}
+
+.dashboard-content .emp-v2 .employee-table-container {
+  margin-top: -16px;
+  /* Wide tables scroll sideways inside the card instead of cutting off columns */
+  overflow-x: auto;
+  border: 1px solid #e3ecf2;
+  border-top: 1px solid #eef2f6;
+  border-radius: 0 0 12px 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .emp-v2 .employee-table-controls select:focus,
+.dashboard-content .emp-v2 .employee-table-controls input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+  outline: 0;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table th,
+.dashboard-content .emp-v2 .employee-table-container .common-table td {
+  width: auto;
+  min-width: 0;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table th:last-child,
+.dashboard-content .emp-v2 .employee-table-container .common-table td:last-child {
+  width: 1%;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table th:nth-child(5),
+.dashboard-content .emp-v2 .employee-table-container .common-table td:nth-child(5) {
+  width: 1%;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.dashboard-content .emp-v2 .emp-person {
+  display: inline-flex;
+  text-align: start;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-content .emp-v2 .emp-avatar {
+  width: 36px;
+  height: 36px;
+  background: #042330;
+  font-size: 12.5px;
+}
+
+.dashboard-content .emp-v2 .emp-person-text {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+}
+
+.dashboard-content .emp-v2 .emp-person-name {
+  color: #042330;
+  font-weight: 600;
+}
+
+.dashboard-content .emp-v2 .emp-id-chip {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11.5px;
+}
+
+.dashboard-content .emp-v2 .emp-contact {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.dashboard-content .emp-v2 .emp-phone,
+.dashboard-content .emp-v2 .emp-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: #042330;
+  font-size: 13px;
+}
+
+.dashboard-content .emp-v2 .emp-email {
+  color: #475569;
+  font-size: 12.5px;
+}
+
+.dashboard-content .emp-v2 .emp-phone svg,
+.dashboard-content .emp-v2 .emp-email svg {
+  color: #f97316;
+}
+
+.dashboard-content .emp-v2 .emp-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .employee-view-button,
+.dashboard-content .emp-v2 .emp-archive-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #e3ecf2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #042330;
+  cursor: pointer;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .employee-view-button:hover {
+  border-color: #f97316;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.dashboard-content .emp-v2 .emp-archive-button {
+  color: #dc2626;
+}
+
+.dashboard-content .emp-v2 .emp-archive-button:hover {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+/* Grid view cards */
+.dashboard-content .emp-v2 .employee-grid-card {
+  border-color: #e3ecf2;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .emp-v2 .employee-grid-card:hover {
+  border-color: #fed7aa;
+}
+
+.dashboard-content .emp-v2 .employee-grid-card .employee-avatar {
+  background: #042330;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-content .emp-v2 .emp-hero .employee-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-content .emp-v2 .emp-hero {
+    padding: 16px;
+  }
+
+  .dashboard-content .emp-v2 .emp-hero .employee-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-content .emp-v2 .emp-hero .header-actions {
+    width: 100%;
+  }
+}
+
+/* ---------- column alignment (this table only) ----------
+   Every column is centred under its header (headers and cells). */
+
+.dashboard-content .emp-v2 .employee-table-container .common-table :is(th, td) {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table :is(th, td):last-child {
+  text-align: center !important;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table th:first-child,
+.dashboard-content .emp-v2 .employee-table-container .common-table td:first-child {
+  width: 1%;
+  padding-inline-start: 22px;
+}
+
+.dashboard-content .emp-v2 .emp-grade {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-content .emp-v2 .emp-left {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+
+.dashboard-content .emp-v2 .emp-left > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #042330;
+  font-size: 13px;
+}
+
+.dashboard-content .emp-v2 .emp-left svg {
+  color: #dc2626;
+}
+
+.dashboard-content .emp-v2 .emp-left small {
+  font-size: 12px;
+}
+
+.dashboard-content .emp-v2 .emp-restore-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #16a34a;
+  cursor: pointer;
+}
+
+.dashboard-content .emp-v2 .emp-restore-button:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* Current / Archived tabs */
+.dashboard-content .emp-v2 .emp-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e3ecf2;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.dashboard-content .emp-v2 .emp-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #042330;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-content .emp-v2 .emp-tabs button span {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  font-size: 11.5px;
+}
+
+.dashboard-content .emp-v2 .emp-tabs button.active {
+  background: #042330;
+  color: #ffffff;
+}
+
+.dashboard-content .emp-v2 .emp-tabs button.active span {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.dashboard-content .emp-v2 .employee-list-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Bigger, easier-to-read table text */
+.dashboard-content .emp-v2 .employee-table-container .common-table th {
+  font-size: 14.5px !important;
+  padding: 15px 16px;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table td {
+  padding: 13px 16px;
+  font-size: 15px;
+  white-space: normal;
+}
+
+.dashboard-content .emp-v2 .employee-table-container .common-table th:last-child,
+.dashboard-content .emp-v2 .employee-table-container .common-table td:last-child {
+  padding-inline-end: 22px;
+  white-space: nowrap;
+}
+
+.dashboard-content .emp-v2 .emp-person-name {
+  font-size: 15px;
+}
+
+/* Employee ID: plain text, dark and semi-bold so it reads clearly */
+.dashboard-content .emp-v2 .employee-table-container .emp-id-chip {
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #042330;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.dashboard-content .emp-v2 .emp-phone {
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+
+.dashboard-content .emp-v2 .emp-email,
+.dashboard-content .emp-v2 .emp-left > span {
+  font-size: 14px;
+}
+
+.dashboard-content .emp-v2 .emp-left small {
+  font-size: 13px;
+}
+
+.dashboard-content .emp-v2 .emp-grade {
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
+/* =========================================
+   ADD / EDIT EMPLOYEE — full page, fields in columns
+   ========================================= */
+
+/* While the form is open it is the only thing on the page */
+.dashboard-content .employees-page.emp-form-open > :not(.emp-form-page) {
+  display: none !important;
+}
+
+.dashboard-content .emp-v2 .emp-form-page {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-content .emp-v2 .emp-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+  box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+}
+
+.dashboard-content .emp-v2 .emp-form-head h2 {
+  margin: 4px 0 4px;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.dashboard-content .emp-v2 .emp-form-head p {
+  margin: 0;
+  color: #d7e2ea !important;
+  font-size: 13.5px;
+}
+
+.dashboard-content .emp-v2 .emp-form-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .08);
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-content .emp-v2 .emp-form-back:hover {
+  background: rgba(255, 255, 255, .16);
+}
+
+html[dir="rtl"] .emp-v2 .emp-form-back svg {
+  transform: scaleX(-1);
+}
+
+/* Fields in three columns; section titles and buttons span the row */
+.dashboard-content .emp-v2 .emp-form-page .employee-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px 18px;
+  padding: 22px 24px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .emp-v2 .emp-form-page .employee-form > :not(.form-group) {
+  grid-column: 1 / -1;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .employee-form > h3 {
+  margin: 10px 0 0;
+  padding: 0 0 8px 10px;
+  border-bottom: 1px solid #eef2f6;
+  border-inline-start: 3px solid #f97316;
+  color: #042330;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .employee-form > h3:first-child {
+  margin-top: 0;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-group {
+  min-width: 0;
+  margin: 0;
+}
+
+/* Long fields get more room */
+.dashboard-content .emp-v2 .emp-form-page .form-group:has(textarea) {
+  grid-column: span 2;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-group :is(input, select, textarea) {
+  min-height: 42px;
+  border-radius: 9px;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-group :is(input, select, textarea):focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+  outline: 0;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #eef2f6;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-actions .common-btn.primary {
+  border-color: #f97316;
+  background: #f97316;
+}
+
+.dashboard-content .emp-v2 .emp-form-page .form-actions .common-btn.primary:hover {
+  background: #ea580c;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-content .emp-v2 .emp-form-page .employee-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-content .emp-v2 .emp-form-page .employee-form {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .dashboard-content .emp-v2 .emp-form-page .form-group:has(textarea) {
+    grid-column: auto;
+  }
+}
+
+/* ---------- Filters panel ---------- */
+.dashboard-content .emp-v2 .emp-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef2f6;
+  background: #fbfcfd;
+}
+
+.dashboard-content .emp-v2 .emp-filters .filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-content .emp-v2 .emp-filters .filter-field span {
+  color: #042330;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .emp-v2 .emp-filters select {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+  font-size: 14px;
+}
+
+.dashboard-content .emp-v2 .emp-filters select:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+  outline: 0;
+}
+
+.dashboard-content .emp-v2 .emp-filters .clear-filters-button {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #042330;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dashboard-content .emp-v2 .emp-filters .clear-filters-button:hover:not(:disabled) {
+  border-color: #f97316;
+  color: #c2410c;
+}
+
+.dashboard-content .emp-v2 .emp-filters .clear-filters-button:disabled {
+  cursor: default;
+  opacity: .5;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-content .emp-v2 .emp-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-content .emp-v2 .emp-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

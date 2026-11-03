@@ -1500,3 +1500,574 @@ body {
   background: #2564eb;
   content: "";
 }
+
+/* =========================================
+   DASHBOARD REFRESH
+   Same navy / cyan look as Leave Management. Uses its own dash-* class
+   names because stat-card, leave-card and welcome-card clash across pages.
+   ========================================= */
+
+.dash-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 20px 32px;
+  margin-bottom: 20px;
+  padding: 26px 28px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #11161f 0%, #1a2230 100%);
+  color: #ffffff;
+  filter: drop-shadow(0 12px 24px rgba(17, 22, 31, .22));
+}
+
+.dash-hero-copy {
+  min-width: 0;
+}
+
+.dash-hero-kicker {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  border: 1px solid rgba(125, 211, 252, .35);
+  border-radius: 999px;
+  background: rgba(3, 169, 244, .12);
+  color: #7dd3fc;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .dashboard-main .dash-hero h1 {
+  margin: 0 0 6px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.dashboard-content .dashboard-main .dash-hero p {
+  margin: 0;
+  color: #d7e3ec !important;
+  font-size: 14px;
+}
+
+.dash-hero p strong {
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.dash-hero .welcome-approvals-link {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.dash-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dash-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dash-hero-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #03a9f4;
+}
+
+.dash-hero-chip i.leave {
+  background: #a78bfa;
+}
+
+.dash-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dash-hero .notification-btn {
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .08);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.dash-hero .notification-btn:hover {
+  background: rgba(255, 255, 255, .16);
+  color: #ffffff;
+}
+
+.dash-hero .profile-info strong {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dashboard-content .dashboard-main .dash-hero .profile-info small {
+  color: #d7e3ec !important;
+}
+
+.dash-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dash-hero-actions a {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.dash-hero-actions a:hover {
+  background: rgba(255, 255, 255, .1);
+}
+
+.dash-hero-actions a.primary {
+  border-color: #03a9f4;
+  background: #03a9f4;
+}
+
+.dash-hero-actions a.primary:hover {
+  background: #0398db;
+}
+
+/* Tones shared by stat cards and quick actions */
+
+.tone-blue { --dash-tone: #03a9f4; --dash-soft: #e6f6fe; --dash-ink: #0277bd; }
+.tone-green { --dash-tone: #16a34a; --dash-soft: #dcfce7; --dash-ink: #15803d; }
+.tone-amber { --dash-tone: #f59e0b; --dash-soft: #fef3c7; --dash-ink: #b45309; }
+.tone-rose { --dash-tone: #e11d48; --dash-soft: #ffe4e6; --dash-ink: #be123c; }
+.tone-violet { --dash-tone: #7c3aed; --dash-soft: #ede9fe; --dash-ink: #6d28d9; }
+.tone-teal { --dash-tone: #0d9488; --dash-soft: #ccfbf1; --dash-ink: #0f766e; }
+.tone-indigo { --dash-tone: #2564eb; --dash-soft: #dbeafe; --dash-ink: #1d4ed8; }
+.tone-orange { --dash-tone: #ea580c; --dash-soft: #ffedd5; --dash-ink: #c2410c; }
+
+.dash-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--dash-soft);
+  color: var(--dash-ink);
+}
+
+/* Stat cards: two even rows of four */
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dash-stat {
+  position: relative;
+  display: flex;
+  grid-column: span 3;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e3ecf2;
+  border-left: 4px solid var(--dash-tone);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+  color: #042330;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dash-stat:hover {
+  box-shadow: 0 12px 24px rgba(17, 22, 31, .1);
+  transform: translateY(-2px);
+}
+
+.dash-stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dash-stat-label {
+  color: #000000;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dash-stat strong {
+  margin: 4px 0 2px;
+  color: #042330;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.dash-stat-note {
+  color: #000000;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dash-stat-arrow {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  color: #94a3b8;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.dash-stat:hover .dash-stat-arrow {
+  color: var(--dash-ink);
+  transform: translateX(2px);
+}
+
+/* Quick Actions row, then End of Service */
+
+.dash-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.dashboard-main .dash-columns .employee-request-review-panel,
+.dash-quick {
+  margin: 0;
+  padding: 20px 22px;
+  border: 1px solid #e3ecf2;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dash-columns .employee-request-review-heading h2,
+.dash-quick h2 {
+  margin: 0;
+  color: #042330;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.dash-quick {
+  order: -1;
+}
+
+.dash-quick h2 {
+  margin-bottom: 12px;
+}
+
+.dash-columns .employee-request-review-heading > span {
+  flex: none;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dash-columns .employee-request-review-item strong {
+  color: #042330;
+  font-weight: 600;
+}
+
+.dash-columns .review-request-button {
+  border-radius: 10px;
+  background: #03a9f4;
+  font-weight: 600;
+}
+
+.dash-quick-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dash-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  color: #042330;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.dash-quick-item:hover {
+  background: #f1f8fc;
+}
+
+.dash-quick-item .dash-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.dash-quick-item > svg {
+  margin-left: auto;
+  color: #94a3b8;
+}
+
+html[dir="rtl"] .dash-quick-item > svg {
+  margin-right: auto;
+  margin-left: 0;
+  transform: scaleX(-1);
+}
+
+html[dir="rtl"] .dash-stat {
+  border-right: 4px solid var(--dash-tone);
+  border-left: 1px solid #e3ecf2;
+}
+
+html[dir="rtl"] .dash-stat-arrow {
+  right: auto;
+  left: 14px;
+  transform: scaleX(-1);
+}
+
+/* Order on the page: Quick Actions, widgets, End of Service */
+
+.dash-columns .employee-request-review-panel {
+  order: 1;
+}
+
+/* =========================================
+   DASHBOARD WIDGETS
+   ========================================= */
+
+.hrw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.hrw-card {
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.hrw-wide {
+  grid-column: 1 / -1;
+}
+
+.hrw-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid #f97316;
+}
+
+.dashboard-content .dashboard-main .hrw-card-head h3 {
+  margin: 0;
+  color: #042330;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hrw-tag {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid #e3ecf2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #042330;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+a.hrw-tag:hover {
+  border-color: #f97316;
+}
+
+.dashboard-content .dashboard-main .hrw-empty {
+  margin: 0;
+  padding: 36px 0;
+  color: #000000 !important;
+  font-size: 13px;
+  text-align: center;
+}
+
+.hrw-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-bottom: 14px;
+}
+
+.hrw-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hrw-summary strong {
+  color: #042330;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hrw-summary span {
+  color: #000000;
+  font-size: 12.5px;
+}
+
+.hrw-chart {
+  position: relative;
+  height: 260px;
+  min-width: 0;
+}
+
+.hrw-pipeline {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.hrw-pipeline i {
+  flex-basis: 0;
+  min-width: 4px;
+  background: var(--hrw-stage);
+}
+
+.stage-new { --hrw-stage: #f97316; }
+.stage-shortlisted { --hrw-stage: #0c4a5e; }
+.stage-on-hold { --hrw-stage: #facc15; }
+.stage-hired { --hrw-stage: #22c55e; }
+.stage-rejected { --hrw-stage: #94a3b8; }
+
+.hrw-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px 14px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hrw-stages li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 9px;
+  border-left: 3px solid var(--hrw-stage);
+}
+
+.hrw-stages strong {
+  color: #042330;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hrw-stages span {
+  color: #000000;
+  font-size: 12px;
+}
+
+html[dir="rtl"] .hrw-card-head {
+  padding: 2px 12px 2px 0;
+  border-right: 3px solid #f97316;
+  border-left: 0;
+}
+
+html[dir="rtl"] .hrw-stages li {
+  padding-right: 9px;
+  padding-left: 0;
+  border-right: 3px solid var(--hrw-stage);
+  border-left: 0;
+}
+
+@media (max-width: 1000px) {
+  .hrw-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .dash-stat {
+    grid-column: span 6;
+  }
+
+  .dash-quick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-hero {
+    padding: 22px 20px;
+  }
+
+  .dash-hero-side {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .dash-stat {
+    grid-column: 1 / -1;
+  }
+
+  .dash-quick-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-stat,
+  .dash-stat-arrow {
+    transition: none;
+  }
+
+  .dash-stat:hover {
+    transform: none;
+  }
+}

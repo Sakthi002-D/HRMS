@@ -1,0 +1,285 @@
+/* =========================================
+   SETTINGS → GRADE ASSIGNMENT
+   ========================================= */
+
+.ga-page {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.ga-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 28px;
+  padding: 24px 26px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+  box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+}
+
+.ga-kicker {
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .ga-page .ga-hero h1 {
+  margin: 4px 0 6px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.dashboard-content .ga-page .ga-hero p {
+  margin: 0;
+  color: #d7e2ea !important;
+  font-size: 13.5px;
+}
+
+.ga-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.ga-hero-stats div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.ga-hero-stats strong {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.ga-hero-stats span {
+  color: #d7e2ea;
+  font-size: 12px;
+}
+
+.ga-card {
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.ga-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ga-search {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.ga-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #000000;
+  font: inherit;
+  font-size: 14px;
+}
+
+.ga-search:focus-within,
+.ga-toolbar > select:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+  outline: 0;
+}
+
+.ga-toolbar > select {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+  font-size: 14px;
+}
+
+.ga-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #042330;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ga-bulk-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  margin-inline-start: auto;
+  padding: 0 16px;
+  border: 1px solid #f97316;
+  border-radius: 9px;
+  background: #f97316;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ga-bulk-button:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.ga-bulk-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.ga-table {
+  overflow-x: auto;
+}
+
+.ga-person {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.ga-person strong {
+  color: #042330;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ga-grade-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ga-grade-cell select {
+  min-width: 112px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #042330;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ga-grade-cell select:focus {
+  border-color: #f97316;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.ga-grade-cell select:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.ga-grade-cell small {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dashboard-content .ga-page .ga-empty {
+  margin: 0;
+  padding: 30px 0;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.dashboard-content .ga-page .ga-empty.error {
+  color: #b42318 !important;
+}
+
+/* Assign Grade modal */
+
+.bulk-grade-field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bulk-grade-field select {
+  width: 100%;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+  font-size: 14px;
+}
+
+.bulk-grade-field select:focus {
+  border-color: #f97316;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.app-dialog-message .bulk-grade-days {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .ga-page {
+    padding: 16px;
+  }
+
+  .ga-hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .ga-bulk-button {
+    width: 100%;
+    justify-content: center;
+    margin-inline-start: 0;
+  }
+}

@@ -87,6 +87,8 @@
     "resignation": "Resignation",
     "payroll": "Payroll",
     "ticketing": "Ticketing",
+    "projects": "Projects",
+    "gradeAssignment": "Grade Assignment",
     "reports": "Reports",
     "settings": "Settings",
     "logout": "Logout",
@@ -135,6 +137,10 @@
         "resignation": {
           "title": "Resignation",
           "desc": "Notice periods and approval steps"
+        },
+        "shifts": {
+          "title": "Shifts",
+          "desc": "Working hours, breaks and Ramadan timing"
         }
       },
       "groupDesc": {
@@ -144,7 +150,8 @@
         "security": "Protect HR accounts with an inactivity timeout and a strong password.",
         "approval": "Set who approves manpower requests and in which order.",
         "recruitment": "Maintain the lists used in manpower requests.",
-        "resignation": "Define notice periods and the resignation approval chain."
+        "resignation": "Define notice periods and the resignation approval chain.",
+        "shifts": "Create the shifts employees work. Punch in after the start plus 10 minutes is late; punch out before the end is early leave."
       },
       "companyNameHint": "Shown in the browser tab title and in the sender name of emails.",
       "supportEmail": "Support Email",
@@ -498,12 +505,20 @@
     "Maternity Leave": "Maternity Leave",
     "Paternity Leave": "Paternity Leave",
     "Hajj Leave": "Hajj Leave",
+    "Umrah Leave": "Umrah Leave",
     "Emergency Leave": "Emergency Leave",
     "Unpaid Leave (LOP)": "Unpaid Leave (LOP)",
     "Compensatory Off": "Compensatory Off",
     "Bereavement Leave": "Bereavement Leave"
   },
   "leavePolicy": {
+    "daysPerYear": "{{count}} days per year",
+    "workingDaysPerYear": "{{count}} working days per year",
+    "daysPerRequest": "Up to {{count}} days per request",
+    "calendarDaysPerRequest": "{{count}} calendar days",
+    "sickYearlyDetail": "{{count}} days per calendar year, medical certificate required",
+    "casualDetail": "For short personal needs.",
+    "umrahDetail": "Religious leave for Umrah, subject to approval.",
     "hrPolicy": "HR policy",
     "hrApproval": "HR approval",
     "managerApproval": "Manager approval",
@@ -604,6 +619,9 @@
       "gender": "Gender",
       "birthday": "Birthday",
       "joiningDate": "Joining Date",
+      "yearsOfService": "Years of Service",
+      "serviceLength": "{{years}} years {{months}} months",
+      "officeLocation": "Office Location",
       "employmentType": "Employment Type",
       "address": "Address"
     },
@@ -690,7 +708,7 @@
       "gender": { "male": "Male", "female": "Female", "other": "Other" },
       "educationType": { "full_time": "Full Time", "part_time": "Part Time", "distance": "Distance" },
       "maritalStatus": { "single": "Single", "married": "Married", "divorced": "Divorced", "widowed": "Widowed" },
-      "employmentType": { "full_time": "Full Time", "part_time": "Part Time", "contract": "Contract", "temporary": "Temporary", "intern": "Intern", "internship": "Internship" },
+      "employmentType": { "full_time": "Full Time", "part_time": "Part Time", "contract": "Contract", "temporary": "Temporary", "intern": "Intern", "internship": "Internship", "other": "Other" },
       "workerType": { "employee": "Employee", "contractor": "Contractor" }
     }
   },
@@ -1739,7 +1757,7 @@
     },
     "policy": {
       "title": "Leave Policy Setup",
-      "description": "Configure the annual leave allowance used for employee reviews.",
+      "description": "Set up leave types, allowances and holidays. Employees see these when they apply.",
       "close": "Close leave policy setup",
       "annualEntitlement": "Annual Leave Yearly Entitlement",
       "perYearAccrues": "days per year • accrues {{rate}} days/month",
@@ -2254,6 +2272,23 @@
     "noAssetsHint": "Company assets assigned to this employee will appear here.",
     "editProjects": "Edit projects",
     "editTitle": "Edit Employee Details",
+    "edit": {
+      "back": "Back to profile",
+      "selfNote": "Fields in grey are managed by HR. Contact HR if they need to change.",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "addExperience": "+ Add Experience",
+      "newRecord": "New record",
+      "empty": {
+        "education": "No education added yet",
+        "experience": "No experience added yet"
+      },
+      "select": "Select",
+      "changed": "Changed",
+      "saved": "Employee details saved",
+      "discard": "Discard your unsaved changes?",
+      "d365Note": "This employee is linked to D365. Name, department, designation, joining date and status come from D365, so changes to them here are replaced at the next sync."
+    },
     "editSection": "Edit {{section}} Details",
     "unableToSave": "Unable to save changes",
     "experience": {
