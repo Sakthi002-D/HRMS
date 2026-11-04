@@ -13,6 +13,7 @@ import {
     formatMoney,
     getCompanyCurrency,
     mprStatusLabel,
+    NEW_HEADCOUNT_TYPES,
     recruitmentActionLabel,
     recruitmentRoleLabel,
     recruitmentValueLabel,
@@ -115,7 +116,7 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                             {mpr.job_id && <span className="mpr-chip">{t("recruitment.detail.jobChip", { id: mpr.job_id, defaultValue: "Job {{id}}" })}</span>}
                         </div>
 
-                        {mpr.request_type === "New Position" && mpr.budget_snapshot && (
+                        {NEW_HEADCOUNT_TYPES.includes(mpr.request_type) && mpr.budget_snapshot && (
                             <section className="mpr-budget-summary">
                                 <BudgetStatusPill budget={mpr.budget_snapshot} />
                                 <BudgetDetails budget={mpr.budget_snapshot} currency={currency} audience="approver" />

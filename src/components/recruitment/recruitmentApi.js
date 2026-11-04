@@ -21,6 +21,10 @@ export async function api(path, { method = "GET", body } = {}) {
     return data;
 }
 
+// MPR request types that add headcount: budget-checked like New Position (Replacement isn't).
+// Same list as NEW_HEADCOUNT_TYPES in backend/services/manpowerWorkflow.js.
+export const NEW_HEADCOUNT_TYPES = ["New Position", "Project Expansion", "Temporary / Contract"];
+
 // Translated labels for values the backend sends in English ("Pending HR" → recruitment.statuses.pending_hr).
 // Only the shown text changes: filters, CSS tones and comparisons keep using the English value.
 const valueKey = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");

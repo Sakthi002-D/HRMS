@@ -267,7 +267,7 @@
     },
     "workflows": {
       "loading": "Loading approval workflows...",
-      "saved": "Approval workflows saved. New submissions use these steps; MPRs already in approval keep theirs.",
+      "saved": "Approval steps saved successfully.",
       "mprSteps": "Manpower Request approval steps",
       "mprStepsHint": "Approvers act in this order. \"COO/CTO\" is picked per department below.",
       "moveUp": "Move up",
@@ -1656,7 +1656,9 @@
       },
       "requestType": {
         "new_position": "New Position",
-        "replacement": "Replacement"
+        "replacement": "Replacement",
+        "project_expansion": "Project Expansion",
+        "temporary_contract": "Temporary / Contract"
       },
       "source": {
         "company_website": "Company website",

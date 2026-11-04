@@ -13,7 +13,7 @@ import CustomOptionSelect, { OTHER_OPTION } from "./CustomOptionSelect";
 import DesignationSelect from "./DesignationSelect";
 import EmployeeSearchSelect from "./EmployeeSearchSelect";
 import { BUILT_IN_DEPARTMENTS, CUSTOM_DEPARTMENTS_KEY, readCustomDepartments } from "./departments";
-import { api, getCompanyCurrency, isBudgetException } from "./recruitmentApi";
+import { api, getCompanyCurrency, isBudgetException, NEW_HEADCOUNT_TYPES } from "./recruitmentApi";
 
 const JOB_CATEGORIES = ["Site Engineering", "Civil", "Electrical", "Mechanical", "Plumbing", "HVAC", "HSE / Safety", "Surveying", "Equipment Operator", "General Labour"];
 const QUALIFICATIONS = ["School Certificate", "ITI / Trade Certificate", "Diploma", "Bachelor's Degree", "Master's Degree", "Professional Certification"];
@@ -194,7 +194,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     // "Today" in the company timezone from HR Settings (computed by the server)
     const today = meta.today;
 
-    const isNewPosition = ["New Position", "Project Expansion", "Temporary / Contract"].includes(form.request_type);
+    const isNewPosition = NEW_HEADCOUNT_TYPES.includes(form.request_type);
     const isReplacement = form.request_type === "Replacement";
     const lockedDepartment = mpr?.status === "Sent Back";
 
@@ -208,11 +208,11 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         return () => { ignore = true; };
     }, [isReplacement, employees.loaded]);
 
-    // Budget check (New Position only): on leaving No. of Openings / Maximum Salary,
+    // Budget check (new headcount; not Replacement): on leaving No. of Openings / Maximum Salary,
     // on Department change and on Submit. Never on each keystroke.
     const budgetKeyFor = (values) => {
         const openings = Number(values.openings);
-        if (values.request_type !== "New Position" || !values.department || !(openings > 0)) return null;
+        if (!NEW_HEADCOUNT_TYPES.includes(values.request_type) || !values.department || !(openings > 0)) return null;
         const year = String(values.application_start_date || meta.today || "").slice(0, 4);
         return `${values.department}|${year}|${openings}|${Number(values.salary_max) || 0}`;
     };

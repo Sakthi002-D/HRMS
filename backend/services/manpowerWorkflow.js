@@ -33,7 +33,12 @@ export const DEPARTMENT_SCOPED_ROLES = ["DEPT_COORDINATOR", "DEPT_HEAD", "LINE_M
 // Roles used only by the Resignation workflow; they don't make someone an MPR approver
 export const NON_MPR_ROLES = ["DEPT_COORDINATOR", "LINE_MANAGER", "PAYROLL"];
 export const WORKFLOW_STEP_ROLES = ["DEPT_HEAD", "HR", "EXEC", "FINANCE", "CEO"];
-export const REQUEST_TYPES = ["Replacement", "New Position"];
+export const REQUEST_TYPES = ["Replacement", "New Position", "Project Expansion", "Temporary / Contract"];
+// New headcount: budget-checked and counted against the department budget (Replacement isn't)
+export const NEW_HEADCOUNT_TYPES = ["New Position", "Project Expansion", "Temporary / Contract"];
+export const needsBudgetCheck = (requestType) => NEW_HEADCOUNT_TYPES.includes(requestType);
+const FALLBACK_WORKFLOW_TYPE = "New Position";
+const sqlList = (values) => values.map((value) => `'${value.replace(/'/g, "''")}'`).join(", ");
 export const ASSET_OPTIONS = ["Laptop", "Mobile", "SIM", "Vehicle", "Access Card", "Other"];
 export const SOURCING_OPTIONS = ["Agency", "Internal", "Both"];
 export const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Other"];
@@ -43,6 +48,8 @@ export const DEFAULT_RECRUITMENT_SETTINGS = {
     workflows: {
         Replacement: ["DEPT_HEAD", "HR", "EXEC", "FINANCE", "CEO"],
         "New Position": ["HR", "FINANCE", "EXEC", "CEO"],
+        "Project Expansion": ["HR", "EXEC", "CEO"],
+        "Temporary / Contract": ["HR", "EXEC", "CEO"],
     },
     execByDepartment: { IT: "CTO" },
     defaultExec: "COO",
@@ -146,7 +153,7 @@ export async function ensureManpowerSchema(db = pool) {
         CREATE TABLE IF NOT EXISTS manpower_requests (
             id BIGSERIAL PRIMARY KEY,
             mpr_no TEXT UNIQUE,
-            request_type TEXT NOT NULL CHECK (request_type IN ('Replacement', 'New Position')),
+            request_type TEXT NOT NULL CHECK (request_type IN (${sqlList(REQUEST_TYPES)})),
             status TEXT NOT NULL DEFAULT 'Draft',
             workflow_steps JSONB,
             current_step INTEGER,
@@ -296,11 +303,20 @@ export async function getRecruitmentToday(db = pool) {
     return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
-// Workflow for a request, with COO/CTO resolved by department
-export const resolveWorkflowSteps = (settings, requestType, department) =>
-    (settings.workflows[requestType] || []).map((step) =>
+// Workflow for a request, with COO/CTO resolved by department. A type with no steps
+// falls back to the New Position steps so the MPR never gets stuck.
+export const resolveWorkflowSteps = (settings, requestType, department) => {
+    let steps = settings.workflows[requestType];
+    if (!Array.isArray(steps) || steps.length === 0) {
+        console.warn(`MPR workflow: no approval steps for "${requestType}", using the ${FALLBACK_WORKFLOW_TYPE} steps`);
+        steps = settings.workflows[FALLBACK_WORKFLOW_TYPE]?.length
+            ? settings.workflows[FALLBACK_WORKFLOW_TYPE]
+            : DEFAULT_RECRUITMENT_SETTINGS.workflows[FALLBACK_WORKFLOW_TYPE];
+    }
+    return steps.map((step) =>
         step === "EXEC" ? lookupByDepartment(settings.execByDepartment, department) || settings.defaultExec : step
     );
+};
 
 export async function getActor(db, employeeId) {
     if (!employeeId) throw new WorkflowError("Sign in again: your employee ID is missing", 401);
@@ -343,11 +359,11 @@ const canRaiseFor = (roles, department) =>
     isHR(roles) || roles.some((item) => item.role === "DEPT_COORDINATOR" && sameText(item.department, department));
 
 // =====================================================
-// BUDGET CHECK (New Position)
+// BUDGET CHECK (new headcount: New Position, Project Expansion, Temporary / Contract)
 // =====================================================
 
-// Budget check for a New Position MPR (Replacement MPRs skip it). Existing employees are NOT counted:
-//   available       = budgeted positions − openings of OTHER New Position MPRs (Pending / Approved)
+// Budget check for a new-headcount MPR (Replacement MPRs skip it). Existing employees are NOT counted:
+//   available       = budgeted positions − openings of OTHER new-headcount MPRs (Pending / Approved)
 //   salaryAvailable = annual salary budget − yearly cost of those MPRs (max salary × 12 × openings)
 // status: "match" (requested = available), "under" (fewer), "exceeded" (more positions, or cost over
 // the salary available), "no_budget" (no row for the department + year).
@@ -373,12 +389,12 @@ export async function computeBudget(db, { department, year, openings, salaryMax,
                COALESCE(SUM(COALESCE(salary_max, 0) * 12 * COALESCE(openings, 0)), 0)::float AS cost
         FROM manpower_requests
         WHERE LOWER(department) = LOWER($1)
-          AND request_type = 'New Position'
+          AND request_type = ANY($4::text[])
           AND (status = 'Approved' OR status LIKE 'Pending %')
           AND EXTRACT(YEAR FROM COALESCE(application_start_date, required_by, created_at::date)) = $2
           AND ($3::bigint IS NULL OR id <> $3)
         `,
-        [department, year, excludeMprId]
+        [department, year, excludeMprId, NEW_HEADCOUNT_TYPES]
     );
     const alreadyUsed = usedResult.rows[0].positions;
     const salaryUsed = roundMoney(usedResult.rows[0].cost);
@@ -592,7 +608,7 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
     if (action === "submit") {
         await validateForSubmit(db, input, today);
 
-        if (input.request_type === "New Position") {
+        if (needsBudgetCheck(input.request_type)) {
             budget = await computeBudget(db, {
                 department: input.department,
                 year: budgetYear(input.application_start_date, today),

@@ -378,7 +378,7 @@ router.get("/mprs/summary", handle(async (req, res) => {
     res.json(await getRecruitmentSummary());
 }));
 
-// Budget check while filling the form (New Position only)
+// Budget check while filling the form (new headcount types only; see needsBudgetCheck)
 router.get("/mprs/budget-preview", handle(async (req, res) => {
     const { department, start_date: startDate, openings, salary_max: salaryMax, mpr_id: mprId } = req.query;
     if (!department) throw new WorkflowError("Department is required");

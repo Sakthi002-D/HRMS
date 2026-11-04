@@ -149,12 +149,14 @@ const toPublicJob = (row) => ({
     apply_by: row.apply_by,
     job_description: row.job_description,
     skills: row.skills,
+    qualification: row.qualification || null,
 });
 
 // An Open job counts only if it is legacy (no MPR) or its MPR was approved
 const PUBLIC_JOB_SELECT = `
     SELECT j.id, j.job_id, j.title, j.department, j.location, j.employment_type, j.experience, j.openings,
            j.job_description, j.skills, j.status, j.mpr_id,
+           to_jsonb(m) ->> 'required_qualification' AS qualification, -- column not in every DB
            TO_CHAR(j.created_at, 'YYYY-MM-DD') AS posted_on,
            TO_CHAR(j.application_deadline, 'YYYY-MM-DD') AS apply_by,
            (j.application_deadline IS NOT NULL AND j.application_deadline < $1::date) AS deadline_passed,
