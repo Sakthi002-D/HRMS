@@ -2,7 +2,7 @@
 // balance checks, Shelter Assistant).
 //
 // A leave day is a working day: Friday and Saturday (Qatar weekend) and the
-// Qatar public holidays from leave_policy_settings.qatarHolidayCalendar are not counted.
+// public holidays from leave_policy_settings are not counted.
 //
 // Holiday `date` formats understood (each holiday covers `days` consecutive days):
 //   "2027-03-10"                 exact date (use this for Eid and other Islamic-calendar holidays)
@@ -128,15 +128,64 @@ export async function findOverlappingLeave(employeeId, fromDate, toDate, db = po
     ) || null;
 }
 
+// ─── Holiday calendar fetchers ──────────────────────────────────────────────
+
+/**
+ * Returns the Qatar public holiday calendar from leave_policy_settings.
+ * (Legacy default — most employee leave uses Qatar calendar.)
+ */
 export async function getHolidayCalendar(db = pool) {
-    const result = await db.query("SELECT policy->'qatarHolidayCalendar' AS calendar FROM leave_policy_settings WHERE id = 1");
+    const result = await db.query(
+        "SELECT policy->'qatarHolidayCalendar' AS calendar FROM leave_policy_settings WHERE id = 1"
+    );
     const calendar = result.rows[0]?.calendar;
     return Array.isArray(calendar) ? calendar : [];
 }
 
-// { days } on success, or { error } when the range is invalid or has no working days
-export async function calculateLeaveDays(fromDate, toDate, db = pool) {
-    const days = countLeaveWorkingDays(fromDate, toDate, await getHolidayCalendar(db));
+/**
+ * Returns the holiday calendar for a specific country code.
+ *   countryCode = "QA"  → Qatar holiday calendar
+ *   countryCode = "RW"  → Rwanda holiday calendar
+ *   anything else       → falls back to Qatar calendar
+ */
+export async function getHolidayCalendarByCountry(countryCode = "QA", db = pool) {
+    const key = String(countryCode).toUpperCase() === "RW"
+        ? "rwandaHolidayCalendar"
+        : "qatarHolidayCalendar";
+
+    const result = await db.query(
+        `SELECT policy->'${key}' AS calendar FROM leave_policy_settings WHERE id = 1`
+    );
+    const calendar = result.rows[0]?.calendar;
+    return Array.isArray(calendar) ? calendar : [];
+}
+
+/**
+ * Returns BOTH Qatar and Rwanda calendars merged into one array.
+ * Useful when checking leaves for employees whose country is unknown.
+ */
+export async function getAllHolidayCalendars(db = pool) {
+    const result = await db.query(
+        `SELECT
+            COALESCE(policy->'qatarHolidayCalendar', '[]'::jsonb)  AS qatar,
+            COALESCE(policy->'rwandaHolidayCalendar', '[]'::jsonb) AS rwanda
+         FROM leave_policy_settings WHERE id = 1`
+    );
+    const row = result.rows[0] ?? {};
+    const qatar  = Array.isArray(row.qatar)  ? row.qatar  : [];
+    const rwanda = Array.isArray(row.rwanda) ? row.rwanda : [];
+    return [...qatar, ...rwanda];
+}
+
+// ─── Calculate ───────────────────────────────────────────────────────────────
+
+/**
+ * { days } on success, or { error } when the range is invalid or has no working days.
+ * Pass countryCode = "RW" for Rwanda employees.
+ */
+export async function calculateLeaveDays(fromDate, toDate, db = pool, countryCode = "QA") {
+    const calendar = await getHolidayCalendarByCountry(countryCode, db);
+    const days = countLeaveWorkingDays(fromDate, toDate, calendar);
     if (days === null) return { error: "Invalid date range" };
     if (days === 0) return { error: NO_WORKING_DAYS_MESSAGE };
     return { days };

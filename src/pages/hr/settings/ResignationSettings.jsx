@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { api, getSessionEmployeeId, recruitmentRoleLabel } from "../../../components/recruitment/recruitmentApi";
 import "./RecruitmentSettings.css";
 
-const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract"];
+const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Other"];
 
 function useResignationSettings() {
     const [data, setData] = useState(null);

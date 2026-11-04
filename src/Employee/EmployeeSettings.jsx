@@ -82,7 +82,6 @@ function EmployeeSettings({ employee, notificationsEnabled, setNotificationsEnab
                         <div><strong>{t("employeeSettings.timeZone")}</strong><small>{t("employeeSettings.timeZoneHint")}</small></div>
                         <select className="settings-select" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>
                             <option value="Asia/Qatar">{t("employeeSettings.tzQatar")}</option>
-                            <option value="Asia/Kolkata">{t("employeeSettings.tzIndia")}</option>
                             <option value="Asia/Dubai">{t("employeeSettings.tzDubai")}</option>
                         </select>
                     </div>

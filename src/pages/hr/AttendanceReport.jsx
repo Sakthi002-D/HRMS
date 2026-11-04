@@ -33,7 +33,7 @@ const formatHours = (minutes) => {
     return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, "0")}m`;
 };
 
-const STATUS_TONE = { present: "green", late: "amber", absent: "rose" };
+const STATUS_TONE = { present: "green", absent: "rose" };
 
 function AttendanceReport() {
     const { t } = useTranslation();
@@ -60,11 +60,9 @@ function AttendanceReport() {
         const stats = new Map();
         attendanceData.forEach((item) => {
             if (!item.department) return;
-            const entry = stats.get(item.department) || { present: 0, late: 0, absent: 0, total: 0 };
-            const status = statusOf(item);
-            if (status === "present") entry.present += 1;
-            else if (status === "late") entry.late += 1;
-            else if (status === "absent") entry.absent += 1;
+            const entry = stats.get(item.department) || { present: 0, absent: 0, total: 0 };
+            if (isPresent(item)) entry.present += 1;
+            else if (statusOf(item) === "absent") entry.absent += 1;
             entry.total += 1;
             stats.set(item.department, entry);
         });
@@ -174,7 +172,6 @@ function AttendanceReport() {
                     labels={departmentStats.map(([department]) => department)}
                     series={[
                         { name: statusLabel("present"), color: "#2f9e52", values: departmentStats.map(([, entry]) => entry.present) },
-                        { name: statusLabel("late"), color: "#e3a21a", values: departmentStats.map(([, entry]) => entry.late) },
                         { name: statusLabel("absent"), color: "#e0476f", values: departmentStats.map(([, entry]) => entry.absent) },
                     ]}
                 />

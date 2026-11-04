@@ -16,13 +16,19 @@ import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
 import { ensureNotificationSchema, getInbox, inboxKind, sendQueuedEmails } from "./services/notificationService.js";
 import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
-import { getCompanyToday, validateLeaveDates, getAttendanceTimezone } from "./services/leaveDateRules.js";
+import { getCompanyToday, validateLeaveDates } from "./services/leaveDateRules.js";
 import { ensureCareerSchema } from "./services/careerApplications.js";
 
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
 import { OVERLAPPING_LEAVE_MESSAGE, calculateLeaveDays, findOverlappingLeave } from "./services/leaveDayCount.js";
-import { D365Error, findD365Employee, getD365Employees } from "./services/d365Employees.js";
-import { getAttendanceCounts } from "./services/attendanceCounts.js";
+import { CALENDAR_DAY_LEAVE_TYPES, leaveLimitError, leaveLimitFor, leaveRulesFromPolicy, mergeLeaveTypes } from "./services/leavePolicy.js";
+import { defaultGradeEntitlements, normalizeGrade } from "./services/grades.js";
+import { D365Error, findD365Employee, getD365Employees, warmD365Employees } from "./services/d365Employees.js";
+import { getAttendanceCounts, withoutLate } from "./services/attendanceCounts.js";
+import { DATABASE_BUSY_MESSAGE, isDatabaseBusyError } from "./services/dbErrors.js";
+import { listEmployeeProjects, listProjectAssignments, listProjects, projectDbError, validateProject, validateProjectAssignment } from "./services/projects.js";
+import { earlyLeaveMinutes, findLinkedEmployeeId, getShiftForEmployee, listEmployeeShifts, listShiftEmployees, listShifts, planAssignment, shiftSnapshot, validateShift } from "./services/shifts.js";
+import { getAttendanceTrend, getDepartmentDistribution, getRecruitmentStats } from "./services/dashboardWidgets.js";
 import {
     ensureAnnualLeaveAccrualSchema,
     exportAnnualLeaveAccrualForFinance,
@@ -35,6 +41,7 @@ import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHand
 import { setAccountPassword } from "./services/accountCredentials.js";
 import { findPasswordIdentity, createResetPasswordHandler } from "./services/passwordRecovery.js";
 import { runFullSync, syncSingleEmployee, pushEmployeeToD365, startD365SyncScheduler } from "./services/d365EmployeeSync.js";
+import { syncD365Holidays } from "./services/d365HolidaySync.js";
 
 
 const app = express();
@@ -186,7 +193,37 @@ app.post("/api/d365/sync/:employeeId", requireAuth(pool), requireHR, async (req,
         res.json({ message: "Employee synced from D365", ...result });
     } catch (error) {
         console.error(`D365 single sync failed for ${req.params.employeeId}:`, error.message);
+        if (error?.name === "TimeoutError") {
+            return res.status(504).json({ message: "D365 is responding slowly. Please try again in a few minutes." });
+        }
         res.status(502).json({ message: "D365 sync failed" });
+    }
+});
+
+// D365 Holiday Calendar Sync — READ-ONLY from D365, HR-only.
+// Reads WorkCalendarDates from D365 and updates leave_policy_settings.
+// Body: { calendarId: string, year?: number, countryCalendar?: "qatar"|"rwanda", mergeMode?: "replace-year"|"replace-all" }
+app.post("/api/sync/d365-holidays", requireAuth(pool), requireHR, async (req, res) => {
+    const { calendarId, year, countryCalendar, mergeMode } = req.body ?? {};
+    try {
+        const result = await syncD365Holidays({
+            calendarId: calendarId ? String(calendarId).trim() : undefined,
+            year: Number.isFinite(Number(year)) ? Number(year) : undefined,
+            countryCalendar: countryCalendar === "rwanda" ? "rwanda" : "qatar",
+            mergeMode: mergeMode === "replace-all" ? "replace-all" : "replace-year",
+        });
+        res.json({ message: "D365 holidays synced successfully", ...result });
+    } catch (error) {
+        if (error instanceof D365Error) {
+            console.error(`D365 holiday sync error [stage=${error.stage}]:`, error.message);
+            res.status(error.httpStatus ?? 502).json({
+                message: error.message,
+                stage: error.stage,
+            });
+        } else {
+            console.error("D365 holiday sync unexpected error:", error?.message);
+            res.status(500).json({ message: "Failed to sync holidays from D365" });
+        }
     }
 });
 
@@ -218,6 +255,39 @@ const resolveD365Identity = async (body, res) => {
     }
 };
 
+// Worked minutes: punch out may be after midnight (evening shift); the unpaid break is not work time.
+// Normal time is the shift's work length (9 h when the row has no shift).
+const workedMinutesSql = (p = "") => `GREATEST(ROUND(EXTRACT(EPOCH FROM (${p}punch_out - ${p}punch_in
+    + CASE WHEN ${p}punch_out < ${p}punch_in THEN INTERVAL '24 hours' ELSE INTERVAL '0 hours' END)) / 60) - COALESCE(${p}break_minutes, 0), 0)`;
+const attendanceHoursSql = (p = "") => `
+    CASE WHEN ${p}punch_out IS NOT NULL THEN ${workedMinutesSql(p)} END AS working_minutes,
+    CASE WHEN ${p}punch_out IS NOT NULL THEN LEAST(${workedMinutesSql(p)}, COALESCE(${p}shift_work_minutes, 540)) END AS normal_working_minutes,
+    CASE WHEN ${p}punch_out IS NOT NULL THEN GREATEST(${workedMinutesSql(p)} - COALESCE(${p}shift_work_minutes, 540), 0) END AS overtime_minutes,
+    ${p}shift_id,
+    COALESCE(${p}early_leave_minutes, 0) AS early_leave_minutes`;
+
+const ATTENDANCE_NOW = "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Qatar')";
+const attendanceClock = async () => (await pool.query(
+    `SELECT TO_CHAR(${ATTENDANCE_NOW}, 'YYYY-MM-DD') AS today, ${ATTENDANCE_NOW}::time AS current_time`
+)).rows[0];
+
+// Today's row, or yesterday's still-open row when that shift runs past midnight
+const OPEN_ATTENDANCE_DATE = `(attendance_date = ${ATTENDANCE_NOW}::date
+    OR (attendance_date = ${ATTENDANCE_NOW}::date - 1 AND punch_out IS NULL AND shift_end < shift_start))`;
+
+const insertAttendance = (values) => {
+    const columns = Object.keys(values);
+    return pool.query(
+        `INSERT INTO attendance (${columns.join(", ")}) VALUES (${columns.map((_, i) => `$${i + 1}`).join(", ")}) RETURNING *`,
+        Object.values(values)
+    );
+};
+
+const finishPunchOut = async (attendance, punchOut) => pool.query(
+    `UPDATE attendance SET punch_out = $1::time, early_leave_minutes = $2 WHERE id = $3 RETURNING *`,
+    [punchOut, earlyLeaveMinutes(attendance, punchOut), attendance.id]
+);
+
 const D365_ATTENDANCE_WHERE = `personnel_number = $1
     AND employment_legal_entity_id = $2
     AND employment_id = $3
@@ -227,12 +297,7 @@ const handleD365PunchIn = async (req, res) => {
     const employee = await resolveD365Identity(req.body, res);
     if (!employee) return;
 
-    const timeResult = await pool.query(`
-        SELECT
-            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date AS today,
-            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time AS current_time
-    `);
-    const { today, current_time: punchTime } = timeResult.rows[0];
+    const { today, current_time: punchTime } = await attendanceClock();
     const identity = [employee.personnelNumber, employee.employmentLegalEntityId, employee.employmentId];
 
     const existing = await pool.query(`SELECT * FROM attendance WHERE ${D365_ATTENDANCE_WHERE}`, [...identity, today]);
@@ -243,19 +308,22 @@ const handleD365PunchIn = async (req, res) => {
         });
     }
 
-    const [hours, minutes] = punchTime.toString().substring(0, 5).split(":").map(Number);
-    const lateMinutes = Math.max(0, hours * 60 + minutes - 9 * 60);
-
     try {
-        const result = await pool.query(
-            `INSERT INTO attendance
-                (employee_id, attendance_date, punch_in, status, late_minutes, shift, project,
-                 personnel_number, employment_legal_entity_id, employment_id,
-                 employee_name_snapshot, d365_sync_status)
-             VALUES (NULL, $1, $2, $3, $4, '09:00 - 18:00', 'HRMS Portal', $5, $6, $7, $8, 'verified')
-             RETURNING *`,
-            [today, punchTime, lateMinutes > 0 ? "Late" : "Present", lateMinutes, ...identity, employee.name]
-        );
+        const shift = await getShiftForEmployee(pool, await findLinkedEmployeeId(pool, ...identity), today);
+        // Late is kept as minutes only: the status stays Present
+        const result = await insertAttendance({
+            employee_id: null,
+            attendance_date: today,
+            punch_in: punchTime,
+            status: "Present",
+            project: "HRMS Portal",
+            personnel_number: identity[0],
+            employment_legal_entity_id: identity[1],
+            employment_id: identity[2],
+            employee_name_snapshot: employee.name,
+            d365_sync_status: "verified",
+            ...shiftSnapshot(shift, punchTime),
+        });
 
         res.status(201).json({
             message: "Punch In successful",
@@ -277,7 +345,9 @@ const handleD365PunchOut = async (req, res) => {
     const identity = [employee.personnelNumber, employee.employmentLegalEntityId, employee.employmentId];
     const existing = await pool.query(
         `SELECT * FROM attendance
-         WHERE ${D365_ATTENDANCE_WHERE.replace("$4::date", "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date")}`,
+         WHERE ${D365_ATTENDANCE_WHERE.replace("AND attendance_date = $4::date", `AND ${OPEN_ATTENDANCE_DATE}`)}
+         ORDER BY attendance_date DESC
+         LIMIT 1`,
         identity
     );
 
@@ -291,13 +361,8 @@ const handleD365PunchOut = async (req, res) => {
         });
     }
 
-    const result = await pool.query(
-        `UPDATE attendance
-         SET punch_out = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
-         WHERE id = $1
-         RETURNING *`,
-        [existing.rows[0].id]
-    );
+    const { current_time: punchOut } = await attendanceClock();
+    const result = await finishPunchOut(existing.rows[0], punchOut);
 
     res.json({
         message: "Punch Out successful",
@@ -321,51 +386,22 @@ app.get("/api/attendance", async (req, res) => {
                     e.employee_id,
                     e.name AS employee_name,
                     e.department,
-                    COALESCE(a.attendance_date, COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)) AS attendance_date,
+                    TO_CHAR(COALESCE(a.attendance_date, COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Qatar')::date)), 'YYYY-MM-DD') AS attendance_date,
                     a.punch_in,
-                    CASE
-                        WHEN a.status IS NOT NULL THEN a.status
-                        WHEN COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date) < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date THEN 'Absent'
-                        ELSE 'Absent'
-                    END AS status,
+                    COALESCE(a.status, 'Present') AS status,
                     a.punch_out,
                     COALESCE(a.late_minutes, 0) AS late_minutes,
                     COALESCE(a.shift, '09:00 - 18:00') AS shift,
                     a.project,
 
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN ROUND(
-                            EXTRACT(
-                                EPOCH FROM (a.punch_out - a.punch_in)
-                            ) / 60
-                        )
-                        ELSE NULL
-                    END AS working_minutes,
-
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN LEAST(ROUND(EXTRACT(EPOCH FROM (a.punch_out - a.punch_in)) / 60), 540)
-                        ELSE NULL
-                    END AS normal_working_minutes,
-
-                    CASE
-                        WHEN a.punch_out IS NOT NULL
-                        THEN GREATEST(ROUND(EXTRACT(EPOCH FROM (a.punch_out - a.punch_in)) / 60) - 540, 0)
-                        ELSE NULL
-                    END AS overtime_minutes
+                    ${attendanceHoursSql("a.")}
 
                 FROM employees e
-                LEFT JOIN attendance a
+                JOIN attendance a
                     ON a.employee_id = e.employee_id
-                    AND a.attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)
+                    AND a.attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Qatar')::date)
                 WHERE LOWER(COALESCE(e.status, 'active')) = 'active'
-                  AND (
-                      a.id IS NOT NULL
-                      OR COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date) < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
-                      OR (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time >= TIME '18:00'
-                  )
-                ORDER BY a.id DESC NULLS LAST, e.name ASC
+                ORDER BY a.id DESC, e.name ASC
             `;
         const values = [requestedDate || null];
 
@@ -381,29 +417,24 @@ app.get("/api/attendance", async (req, res) => {
                 employment_id,
                 COALESCE(employee_name_snapshot, '') AS employee_name,
                 COALESCE(department_snapshot, '') AS department,
-                attendance_date,
+                TO_CHAR(attendance_date, 'YYYY-MM-DD') AS attendance_date,
                 punch_in,
                 COALESCE(status, 'Present') AS status,
                 punch_out,
                 COALESCE(late_minutes, 0) AS late_minutes,
                 COALESCE(shift, '09:00 - 18:00') AS shift,
                 project,
-                CASE WHEN punch_out IS NOT NULL
-                    THEN ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60) END AS working_minutes,
-                CASE WHEN punch_out IS NOT NULL
-                    THEN LEAST(ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60), 540) END AS normal_working_minutes,
-                CASE WHEN punch_out IS NOT NULL
-                    THEN GREATEST(ROUND(EXTRACT(EPOCH FROM (punch_out - punch_in)) / 60) - 540, 0) END AS overtime_minutes
+                ${attendanceHoursSql()}
              FROM attendance
              WHERE employee_id IS NULL
                AND personnel_number IS NOT NULL
-               AND attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date)`,
+               AND attendance_date = COALESCE($1::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Qatar')::date)`,
             values
         );
 
         const punched = [...d365Result.rows, ...result.rows.filter((row) => row.id != null)]
             .sort((a, b) => b.id - a.id);
-        res.json([...punched, ...result.rows.filter((row) => row.id == null)]);
+        res.json([...punched, ...result.rows.filter((row) => row.id == null)].map(withoutLate));
 
     } catch (error) {
         console.error("Error fetching attendance:", error);
@@ -420,13 +451,9 @@ app.get("/api/attendance/employee/:employeeId/summary", async (req, res) => {
         const result = await pool.query(
             `SELECT
                 COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(status, '')) IN ('present', 'on time')
-                      AND COALESCE(late_minutes, 0) = 0
+                    WHERE LOWER(COALESCE(status, '')) IN ('present', 'on time', 'late')
                 ) AS on_time,
-                COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(status, '')) = 'late'
-                       OR COALESCE(late_minutes, 0) > 0
-                ) AS late_attendance,
+                0 AS late_attendance,
                 COUNT(*) FILTER (
                     WHERE LOWER(COALESCE(status, '')) IN ('work from home', 'wfh')
                 ) AS work_from_home,
@@ -454,10 +481,351 @@ app.get("/api/attendance/employee/:employeeId", async (req, res) => {
              ORDER BY attendance_date DESC, id DESC`,
             [req.params.employeeId, req.query.date || null]
         );
-        res.json(result.rows);
+        res.json(result.rows.map(withoutLate));
     } catch (error) {
         console.error("Error fetching employee attendance:", error);
         res.status(500).json({ message: "Failed to fetch employee attendance" });
+    }
+});
+
+// =========================
+// SHIFTS
+// =========================
+
+const sendShiftError = (res, error, action) => {
+    if (error.code === "23505") return res.status(409).json({ message: "A shift with this name already exists" });
+    console.error(`Error ${action} shift:`, error);
+    res.status(500).json({ message: `Failed to ${action} shift` });
+};
+
+app.get("/api/shifts", requireAuth(pool), async (req, res) => {
+    try {
+        res.json(await listShifts(pool));
+    } catch (error) {
+        sendShiftError(res, error, "load");
+    }
+});
+
+app.post("/api/shifts", requireAuth(pool), requireHR, async (req, res) => {
+    const { shift, error } = validateShift(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        const result = await pool.query(
+            `INSERT INTO shifts (name, start_time, end_time, break_minutes, shift_type) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [shift.name, shift.start_time, shift.end_time, shift.break_minutes, shift.shift_type]
+        );
+        res.status(201).json({ id: result.rows[0].id, ...shift });
+    } catch (dbError) {
+        sendShiftError(res, dbError, "create");
+    }
+});
+
+// Changing a shift only affects punches from now on: attendance keeps the times it was punched against
+app.put("/api/shifts/:shiftId", requireAuth(pool), requireHR, async (req, res) => {
+    const { shift, error } = validateShift(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        const result = await pool.query(
+            `UPDATE shifts SET name = $1, start_time = $2, end_time = $3, break_minutes = $4, shift_type = $5, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $6 RETURNING id`,
+            [shift.name, shift.start_time, shift.end_time, shift.break_minutes, shift.shift_type, req.params.shiftId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Shift not found" });
+        res.json({ id: result.rows[0].id, ...shift });
+    } catch (dbError) {
+        sendShiftError(res, dbError, "update");
+    }
+});
+
+app.get("/api/shifts/:shiftId/employees", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.json(await listShiftEmployees(pool, Number(req.params.shiftId) || 0));
+    } catch (error) {
+        sendShiftError(res, error, "load employees for");
+    }
+});
+
+app.delete("/api/shifts/:shiftId", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await pool.query("DELETE FROM shifts WHERE id = $1 RETURNING id", [req.params.shiftId]);
+        if (!result.rows.length) return res.status(404).json({ message: "Shift not found" });
+        res.json({ id: result.rows[0].id });
+    } catch (error) {
+        if (error.code === "23503") {
+            return res.status(409).json({ message: "This shift is assigned to employees. Change their shift first." });
+        }
+        sendShiftError(res, error, "delete");
+    }
+});
+
+app.get("/api/employees/:employeeId/shifts", requireAuth(pool), requireSelfOrHR, async (req, res) => {
+    try {
+        res.json(await listEmployeeShifts(pool, req.params.employeeId));
+    } catch (error) {
+        console.error("Error loading employee shifts:", error);
+        res.status(500).json({ message: "Failed to load employee shifts" });
+    }
+});
+
+const EMPLOYEE_SHIFT_ROWS = `SELECT id, employee_id, shift_id,
+    TO_CHAR(effective_from, 'YYYY-MM-DD') AS effective_from, TO_CHAR(effective_to, 'YYYY-MM-DD') AS effective_to
+    FROM employee_shifts`;
+
+// Writes what planAssignment decided: end the running shift, add the new one, continue the old one after it
+const applyShiftPlan = async (client, employeeId, shiftId, plan) => {
+    if (plan.close) {
+        await client.query("UPDATE employee_shifts SET effective_to = $1 WHERE id = $2", [plan.close.effective_to, plan.close.id]);
+    }
+    const insert = "INSERT INTO employee_shifts (employee_id, shift_id, effective_from, effective_to) VALUES ($1, $2, $3, $4)";
+    await client.query(insert, [employeeId, shiftId, plan.assignment.effective_from, plan.assignment.effective_to]);
+    if (plan.reopen) {
+        await client.query(insert, [employeeId, plan.reopen.shift_id, plan.reopen.effective_from, plan.reopen.effective_to]);
+    }
+};
+
+// The shift a selected employee works today (HRMS employee_id, or a D365 identity)
+app.get("/api/attendance/shift", requireAuth(pool), async (req, res) => {
+    try {
+        const { employee_id: employeeId, personnelNumber, employmentLegalEntityId, employmentId } = req.query;
+        const linkedId = employeeId || (personnelNumber
+            ? await findLinkedEmployeeId(pool, String(personnelNumber), String(employmentLegalEntityId || ""), String(employmentId || ""))
+            : null);
+        const { today } = await attendanceClock();
+        res.json({ shift: await getShiftForEmployee(pool, linkedId, today) });
+    } catch (error) {
+        console.error("Error loading employee shift:", error);
+        res.status(500).json({ message: "Failed to load employee shift" });
+    }
+});
+
+/*
+  Bulk assign (Ramadan, summer): one shift for many employees over the same dates.
+  Each employee is planned like a single assignment; anyone with an overlapping period is
+  skipped with the reason, and the others are still assigned.
+*/
+// Body: { shiftId, employeeIds: [], effectiveFrom, effectiveTo? }
+app.post("/api/shifts/bulk-assign", requireAuth(pool), requireHR, async (req, res) => {
+    const { shiftId, effectiveFrom, effectiveTo } = req.body || {};
+    const employeeIds = [...new Set((Array.isArray(req.body?.employeeIds) ? req.body.employeeIds : []).map((id) => String(id).trim()).filter(Boolean))];
+    if (!employeeIds.length || employeeIds.length > 2000) {
+        return res.status(400).json({ message: "Choose between 1 and 2000 employees" });
+    }
+    const period = { effective_from: effectiveFrom, effective_to: effectiveTo || null };
+    const dates = planAssignment([], period);
+    if (dates.error) return res.status(400).json({ message: dates.error });
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const shift = await client.query("SELECT id FROM shifts WHERE id = $1", [Number(shiftId) || 0]);
+        if (!shift.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ message: "Shift not found" });
+        }
+
+        const employees = (await client.query(
+            "SELECT employee_id, name FROM employees WHERE employee_id = ANY($1::text[]) ORDER BY employee_id FOR UPDATE",
+            [employeeIds]
+        )).rows;
+        const existing = (await client.query(`${EMPLOYEE_SHIFT_ROWS} WHERE employee_id = ANY($1::text[])`, [employeeIds])).rows;
+
+        const assigned = [];
+        const skipped = employeeIds
+            .filter((id) => !employees.some((employee) => employee.employee_id === id))
+            .map((id) => ({ employee_id: id, name: null, reason: "Employee not found" }));
+        for (const employee of employees) {
+            const plan = planAssignment(existing.filter((row) => row.employee_id === employee.employee_id), period);
+            if (plan.error) {
+                skipped.push({ employee_id: employee.employee_id, name: employee.name, reason: plan.error });
+                continue;
+            }
+            await applyShiftPlan(client, employee.employee_id, shift.rows[0].id, plan);
+            assigned.push(employee.employee_id);
+        }
+
+        await client.query("COMMIT");
+        res.json({ assigned, skipped });
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Error bulk assigning shift:", error);
+        res.status(500).json({ message: "Failed to assign the shift" });
+    } finally {
+        client.release();
+    }
+});
+
+// Assigning a shift: see planAssignment for how it fits the employee's other shifts
+app.post("/api/employees/:employeeId/shifts", requireAuth(pool), requireHR, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const { employeeId } = req.params;
+        const employee = await client.query("SELECT employee_id FROM employees WHERE employee_id = $1 FOR UPDATE", [employeeId]);
+        if (!employee.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ message: "Employee not found" });
+        }
+        const shift = await client.query("SELECT id FROM shifts WHERE id = $1", [req.body?.shift_id]);
+        if (!shift.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ message: "Choose a shift" });
+        }
+
+        const existing = (await client.query(
+            `${EMPLOYEE_SHIFT_ROWS} WHERE employee_id = $1`,
+            [employeeId]
+        )).rows;
+        const plan = planAssignment(existing, req.body);
+        if (plan.error) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ message: plan.error });
+        }
+
+        await applyShiftPlan(client, employeeId, shift.rows[0].id, plan);
+        await client.query("COMMIT");
+        res.status(201).json(await listEmployeeShifts(pool, employeeId));
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Error assigning shift:", error);
+        res.status(500).json({ message: "Failed to assign shift" });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete("/api/employees/:employeeId/shifts/:assignmentId", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await pool.query(
+            "DELETE FROM employee_shifts WHERE id = $1 AND employee_id = $2 RETURNING id",
+            [req.params.assignmentId, req.params.employeeId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Shift assignment not found" });
+        res.json(await listEmployeeShifts(pool, req.params.employeeId));
+    } catch (error) {
+        console.error("Error removing shift assignment:", error);
+        res.status(500).json({ message: "Failed to remove shift assignment" });
+    }
+});
+
+// =========================
+// PROJECTS
+// =========================
+
+const sendProjectError = (res, error, action) => {
+    const known = projectDbError(error);
+    if (known) return res.status(known[0]).json({ message: known[1] });
+    console.error(`Error ${action}:`, error);
+    res.status(500).json({ message: `Failed to ${action}` });
+};
+
+app.get("/api/projects", requireAuth(pool), async (req, res) => {
+    try {
+        res.json(await listProjects(pool));
+    } catch (error) {
+        sendProjectError(res, error, "load projects");
+    }
+});
+
+app.post("/api/projects", requireAuth(pool), requireHR, async (req, res) => {
+    const { project, error } = validateProject(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        const result = await pool.query(
+            `INSERT INTO projects (name, description, client, start_date, end_date, status)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+            [project.name, project.description, project.client, project.start_date, project.end_date, project.status]
+        );
+        res.status(201).json({ id: result.rows[0].id, ...project });
+    } catch (dbError) {
+        sendProjectError(res, dbError, "create project");
+    }
+});
+
+app.put("/api/projects/:projectId", requireAuth(pool), requireHR, async (req, res) => {
+    const { project, error } = validateProject(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        const result = await pool.query(
+            `UPDATE projects
+             SET name = $1, description = $2, client = $3, start_date = $4, end_date = $5, status = $6, updated_at = CURRENT_TIMESTAMP
+             WHERE id = $7 RETURNING id`,
+            [project.name, project.description, project.client, project.start_date, project.end_date, project.status, req.params.projectId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Project not found" });
+        res.json({ id: result.rows[0].id, ...project });
+    } catch (dbError) {
+        sendProjectError(res, dbError, "update project");
+    }
+});
+
+// Deleting a project also removes its assignments
+app.delete("/api/projects/:projectId", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await pool.query("DELETE FROM projects WHERE id = $1 RETURNING id", [req.params.projectId]);
+        if (!result.rows.length) return res.status(404).json({ message: "Project not found" });
+        res.json({ id: result.rows[0].id });
+    } catch (error) {
+        sendProjectError(res, error, "delete project");
+    }
+});
+
+app.get("/api/projects/:projectId/assignments", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.json(await listProjectAssignments(pool, req.params.projectId));
+    } catch (error) {
+        sendProjectError(res, error, "load project team");
+    }
+});
+
+app.post("/api/projects/:projectId/assignments", requireAuth(pool), requireHR, async (req, res) => {
+    const { assignment, error } = validateProjectAssignment(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        await pool.query(
+            `INSERT INTO project_assignments (employee_id, project_id, role, assigned_from, assigned_to)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [assignment.employee_id, req.params.projectId, assignment.role, assignment.assigned_from, assignment.assigned_to]
+        );
+        res.status(201).json(await listProjectAssignments(pool, req.params.projectId));
+    } catch (dbError) {
+        sendProjectError(res, dbError, "assign employee");
+    }
+});
+
+app.put("/api/projects/:projectId/assignments/:assignmentId", requireAuth(pool), requireHR, async (req, res) => {
+    const { assignment, error } = validateProjectAssignment(req.body);
+    if (error) return res.status(400).json({ message: error });
+    try {
+        const result = await pool.query(
+            `UPDATE project_assignments SET role = $1, assigned_from = $2, assigned_to = $3
+             WHERE id = $4 AND project_id = $5 RETURNING id`,
+            [assignment.role, assignment.assigned_from, assignment.assigned_to, req.params.assignmentId, req.params.projectId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Assignment not found" });
+        res.json(await listProjectAssignments(pool, req.params.projectId));
+    } catch (dbError) {
+        sendProjectError(res, dbError, "update assignment");
+    }
+});
+
+app.delete("/api/projects/:projectId/assignments/:assignmentId", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await pool.query(
+            "DELETE FROM project_assignments WHERE id = $1 AND project_id = $2 RETURNING id",
+            [req.params.assignmentId, req.params.projectId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Assignment not found" });
+        res.json(await listProjectAssignments(pool, req.params.projectId));
+    } catch (error) {
+        sendProjectError(res, error, "remove assignment");
+    }
+});
+
+app.get("/api/employees/:employeeId/projects", requireAuth(pool), requireSelfOrHR, async (req, res) => {
+    try {
+        res.json(await listEmployeeProjects(pool, req.params.employeeId));
+    } catch (error) {
+        sendProjectError(res, error, "load employee projects");
     }
 });
 
@@ -547,15 +915,8 @@ app.post("/api/attendance/punch-in", async (req, res) => {
 
         const employee = employeeResult.rows[0];
 
-        // Get current India date and time
-        const timeResult = await pool.query(`
-            SELECT
-                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date AS today,
-                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time AS current_time
-        `);
-
-        const today = timeResult.rows[0].today;
-        const punchTime = timeResult.rows[0].current_time;
+        // Current India date and time
+        const { today, current_time: punchTime } = await attendanceClock();
 
         // Check whether employee already punched in today
         const existingResult = await pool.query(
@@ -573,58 +934,16 @@ app.post("/api/attendance/punch-in", async (req, res) => {
             });
         }
 
-        // Calculate late minutes from 09:00 AM
-        const [hours, minutes] = punchTime
-            .toString()
-            .substring(0, 5)
-            .split(":")
-            .map(Number);
-
-        const punchTotalMinutes = hours * 60 + minutes;
-        const shiftStartMinutes = 9 * 60;
-
-        let lateMinutes = 0;
-
-        if (punchTotalMinutes > shiftStartMinutes) {
-            lateMinutes =
-                punchTotalMinutes - shiftStartMinutes;
-        }
-
-        // Status based on late minutes
-        const status =
-            lateMinutes > 0 ? "Late" : "Present";
-
-        // Insert attendance
-       const result = await pool.query(
-    `INSERT INTO attendance
-    (
-        employee_id,
-        attendance_date,
-        punch_in,
-        status,
-        late_minutes,
-        shift,
-        project
-    )
-    VALUES
-    (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        '09:00 - 18:00',
-        'HRMS Portal'
-    )
-    RETURNING *`,
-    [
-        employee_id,
-        today,
-        punchTime,
-        status,
-        lateMinutes
-    ]
-);
+        // Late is kept as minutes only: the status stays Present
+        const shift = await getShiftForEmployee(pool, employee_id, today);
+        const result = await insertAttendance({
+            employee_id,
+            attendance_date: today,
+            punch_in: punchTime,
+            status: "Present",
+            project: "HRMS Portal",
+            ...shiftSnapshot(shift, punchTime),
+        });
 
         res.status(201).json({
             message: "Punch In successful",
@@ -680,13 +999,14 @@ app.post("/api/attendance/punch-out", async (req, res) => {
 
         const employee = employeeResult.rows[0];
 
-        // Find today's attendance - India timezone
+        // Today's attendance - India timezone (or last night's, for a shift past midnight)
         const attendanceResult = await pool.query(
             `SELECT *
              FROM attendance
              WHERE employee_id = $1
-               AND attendance_date =
-               (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date`,
+               AND ${OPEN_ATTENDANCE_DATE}
+             ORDER BY attendance_date DESC
+             LIMIT 1`,
             [employee_id]
         );
 
@@ -705,19 +1025,7 @@ app.post("/api/attendance/punch-out", async (req, res) => {
             });
         }
 
-        const result = await pool.query(
-            `UPDATE attendance
-             SET punch_out = COALESCE(
-                 $1::time,
-                 (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::time
-             )
-             WHERE id = $2
-             RETURNING *`,
-            [
-                punch_out || null,
-                attendance.id
-            ]
-        );
+        const result = await finishPunchOut(attendance, punch_out || (await attendanceClock()).current_time);
 
         res.json({
             message: "Punch Out successful",
@@ -789,6 +1097,8 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
                 e.qid_copy_url,
                 e.passport_copy_url,
                 e.joining_date,
+                e.grade,
+                e.work_location,
                 e.employment_type,
                 e.status,
                 e.emergency_contact,
@@ -1191,8 +1501,56 @@ app.post("/api/verify-otp", async (req, res) => {
 app.post("/api/reset-password", createResetPasswordHandler(pool));
 
 // Add New Employees
+// Grade is HR-owned: "" clears it, anything outside the company grade list is refused
+const saveEmployeeGrade = async (employeeId, row, input) => {
+    if (input === undefined) return row;
+    const grade = normalizeGrade(input);
+    const result = await pool.query("UPDATE employees SET grade = $1 WHERE employee_id = $2 RETURNING grade", [grade, employeeId]);
+    return { ...row, grade: result.rows[0]?.grade ?? null };
+};
+const gradeError = (input) => (input !== undefined && normalizeGrade(input) === undefined ? "Choose a grade from the company grade list" : null);
+
+// One employee's grade from Settings → Grade Assignment: { grade }; "" clears it
+app.patch("/api/employees/:employeeId", requireAuth(pool), requireHR, async (req, res) => {
+    if (!req.body || !("grade" in req.body)) return res.status(400).json({ message: "Only grade can be changed here" });
+    const grade = normalizeGrade(req.body.grade);
+    if (grade === undefined) return res.status(400).json({ message: "Choose a grade from the company grade list" });
+    try {
+        const result = await pool.query(
+            "UPDATE employees SET grade = $1 WHERE employee_id = $2 AND LOWER(COALESCE(role, 'employee')) <> 'hr' RETURNING employee_id, grade",
+            [grade, req.params.employeeId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Employee not found" });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating grade:", error);
+        res.status(500).json({ message: "Failed to update the grade" });
+    }
+});
+
+// Bulk grade from Settings → Grade Assignment: { employeeIds: [], grade }. HR accounts are never changed.
+app.post("/api/employees/bulk-grade", requireAuth(pool), requireHR, async (req, res) => {
+    const employeeIds = [...new Set((Array.isArray(req.body?.employeeIds) ? req.body.employeeIds : []).map((id) => String(id).trim()).filter(Boolean))];
+    const grade = normalizeGrade(req.body?.grade);
+    if (!employeeIds.length || employeeIds.length > 5000) return res.status(400).json({ message: "Choose between 1 and 5000 employees" });
+    if (!grade) return res.status(400).json({ message: "Choose a grade from the company grade list" });
+    try {
+        const result = await pool.query(
+            `UPDATE employees SET grade = $1
+             WHERE employee_id = ANY($2::text[]) AND LOWER(COALESCE(role, 'employee')) <> 'hr'
+             RETURNING employee_id`,
+            [grade, employeeIds]
+        );
+        res.json({ grade, updated: result.rows.length, employeeIds: result.rows.map((row) => row.employee_id) });
+    } catch (error) {
+        console.error("Error assigning grade:", error);
+        res.status(500).json({ message: "Failed to assign the grade" });
+    }
+});
+
 app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
     try {
+        if (gradeError(req.body?.grade)) return res.status(400).json({ message: gradeError(req.body.grade) });
         const {
             employee_id,
             name,
@@ -1299,7 +1657,7 @@ app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
             ]
         );
 
-        res.status(201).json(stripPassword(result.rows[0]));
+        res.status(201).json(stripPassword(await saveEmployeeGrade(employee_id, result.rows[0], req.body?.grade)));
 
     } catch (error) {
         console.error("Error adding employee", error);
@@ -1377,6 +1735,7 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
             };
         }
         const pick = (field, submitted) => (field in master ? master[field] : submitted);
+        if (req.auth.role === "hr" && gradeError(req.body?.grade)) return res.status(400).json({ message: gradeError(req.body.grade) });
 
         const previous = (await pool.query("SELECT * FROM employees WHERE employee_id = $1", [employeeId])).rows[0] || null;
 
@@ -1468,7 +1827,8 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
             })
             .catch((error) => console.error(`D365 push failed for ${employeeId}:`, error.message));
 
-        res.json(stripPassword(result.rows[0]));
+        const saved = req.auth.role === "hr" ? await saveEmployeeGrade(employeeId, result.rows[0], req.body?.grade) : result.rows[0];
+        res.json(stripPassword(saved));
 
     } catch (error) {
         console.error("Error updating employee:", error);
@@ -1910,6 +2270,24 @@ app.delete("/api/payroll/:id", async (req, res) => {
 });
 
 
+// Restore an archived employee: Active again, leaving date and reason cleared
+app.post("/api/employees/:employeeId/restore", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE employees
+             SET status = 'Active', termination_reason = NULL, last_date_worked = NULL
+             WHERE employee_id = $1 AND LOWER(COALESCE(status, 'active')) <> 'active'
+             RETURNING *`,
+            [req.params.employeeId]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: "Archived employee not found" });
+        res.json({ message: "Employee restored", employee: stripPassword(result.rows[0]) });
+    } catch (error) {
+        console.error("Error restoring employee:", error);
+        res.status(500).json({ message: "Failed to restore employee" });
+    }
+});
+
 // Archive Employee while preserving the employee and related history.
 app.patch("/api/employees/:employeeId/status", requireAuth(pool), requireHR, async (req, res) => {
     try {
@@ -1984,6 +2362,7 @@ app.get("/api/leaves", async (req, res) => {
                 l.id,
                 l.employee_id,
                 e.name AS employee_name,
+                e.department,
                 l.leave_type,
                 l.from_date,
                 l.to_date,
@@ -2048,7 +2427,7 @@ app.put("/api/leaves/:id/status", async (req, res) => {
 
         if (status === "Approved") {
             const leaveResult = await pool.query(
-                `SELECT TO_CHAR(from_date, 'YYYY-MM-DD') AS from_day,
+                `SELECT leave_type, TO_CHAR(from_date, 'YYYY-MM-DD') AS from_day,
                         TO_CHAR(to_date, 'YYYY-MM-DD') AS to_day
                  FROM leaves
                  WHERE id = $1`,
@@ -2061,7 +2440,7 @@ app.put("/api/leaves/:id/status", async (req, res) => {
                 });
             }
 
-            const leaveDays = await calculateLeaveDays(leaveResult.rows[0].from_day, leaveResult.rows[0].to_day);
+            const leaveDays = await countRequestedLeaveDays(leaveResult.rows[0].leave_type, leaveResult.rows[0].from_day, leaveResult.rows[0].to_day);
 
             if (leaveDays.error) {
                 return res.status(400).json({
@@ -2241,9 +2620,12 @@ app.put("/api/leaves/:id/cancel", async (req, res) => {
 // EMPLOYEE - APPLY LEAVE
 // =====================================================
 
-const LEAVE_RULES = {
-    sickEligibleMonths: 3,
-    sickTotalDays: 84,
+// 14 + 28 + 42 days; the other limits come from Leave Policy Setup
+// Maternity and paternity count every calendar day; other types count working days
+const countRequestedLeaveDays = async (leaveType, fromDay, toDay) => {
+    if (!CALENDAR_DAY_LEAVE_TYPES.includes(leaveType)) return calculateLeaveDays(fromDay, toDay);
+    const days = Math.round((new Date(`${toDay}T00:00:00Z`) - new Date(`${fromDay}T00:00:00Z`)) / 86_400_000) + 1;
+    return days > 0 ? { days } : { error: "To Date must be after or equal to From Date" };
 };
 
 const parseDateOnly = (value) => {
@@ -2433,8 +2815,8 @@ app.post("/api/leaves", async (req, res) => {
         }
 
 
-        // Working days only: Fri/Sat weekend and Qatar public holidays are excluded
-        const leaveDays = await calculateLeaveDays(from_date, to_date);
+        // Working days (Fri/Sat weekend and Qatar public holidays excluded), or calendar days for maternity/paternity
+        const leaveDays = await countRequestedLeaveDays(leave_type, from_date, to_date);
 
         if (leaveDays.error) {
             return res.status(400).json({
@@ -2454,15 +2836,20 @@ app.post("/api/leaves", async (req, res) => {
             });
         }
 
+        // Sick and Casual Leave are limited per year; the other limits apply to each request
         const approvedTakenResult = await pool.query(
             `SELECT COALESCE(SUM(days), 0)::numeric AS total_days
              FROM leaves
              WHERE employee_id = $1
                AND status = 'Approved'
-                             AND leave_type = $2`,
-            [employee_id, leave_type]
+               AND leave_type = $2
+               AND ($3::int IS NULL OR EXTRACT(YEAR FROM from_date) = $3)`,
+            [employee_id, leave_type, leaveLimitFor(leave_type, leaveRulesFromPolicy())?.perYear ? Number(from_date.slice(0, 4)) : null]
         );
         const approvedTaken = Number(approvedTakenResult.rows[0].total_days || 0);
+
+        const policyResult = await pool.query("SELECT policy FROM leave_policy_settings WHERE id = 1");
+        const leaveRules = leaveRulesFromPolicy(policyResult.rows[0]?.policy);
 
         if (leave_type === ANNUAL_LEAVE_TYPE) {
             const annualError = await checkAnnualLeaveRequest(employee_id, difference);
@@ -2475,33 +2862,17 @@ app.post("/api/leaves", async (req, res) => {
 
         if (leave_type === "Sick Leave") {
             const serviceMonths = completedMonthsBetween(joiningDate, today);
-            const remainingDays = Math.max(0, LEAVE_RULES.sickTotalDays - approvedTaken);
-            if (serviceMonths < LEAVE_RULES.sickEligibleMonths) {
+            if (serviceMonths < leaveRules.sickEligibleMonths) {
                 return res.status(400).json({
-                    message: "Sick Leave is available after completing 3 months of service",
+                    message: `Sick Leave is available after completing ${leaveRules.sickEligibleMonths} months of service`,
                     completed_months: serviceMonths,
-                });
-            }
-            if (difference > remainingDays) {
-                return res.status(400).json({
-                    message: `Only ${remainingDays} Sick Leave day(s) remaining`,
-                    remaining_days: remainingDays,
                 });
             }
         }
 
-        const fixedEntitlements = {
-            "Maternity Leave": 50,
-            "Bereavement Leave": 3,
-        };
-        if (fixedEntitlements[leave_type] !== undefined) {
-            const remainingDays = Math.max(0, fixedEntitlements[leave_type] - approvedTaken);
-            if (difference > remainingDays) {
-                return res.status(400).json({
-                    message: `Only ${remainingDays} ${leave_type} day(s) remaining`,
-                    remaining_days: remainingDays,
-                });
-            }
+        const limitError = leaveLimitError(leave_type, difference, leaveRules, approvedTaken);
+        if (limitError) {
+            return res.status(400).json({ message: limitError.message, remaining_days: limitError.remaining });
         }
 
 
@@ -2596,6 +2967,7 @@ const DEFAULT_LEAVE_POLICY = {
         "Paternity Leave",
         "Maternity Leave",
         "Hajj Leave",
+        "Umrah Leave",
         "Bereavement Leave",
         "Emergency Leave",
         "Compensatory Off",
@@ -2604,11 +2976,13 @@ const DEFAULT_LEAVE_POLICY = {
     // FRD SHELTER-HCM-LA-15-001: accrual_rate = yearly_entitlement_days ÷ 12
     annualLeave: {
         yearly_entitlement_days: 30,
-        grade_overrides: {},
+        // Company grade table; employees without a grade get yearly_entitlement_days
+        grade_overrides: defaultGradeEntitlements(),
     },
     leave_accrual_salary_basis: "total",
     sickLeave: {
         eligibleAfterMonths: 3,
+        yearlyDays: 14,
         medicalCertificateRequired: true,
         salaryBands: [
             { days: 14, pay: "100%" },
@@ -2623,9 +2997,15 @@ const DEFAULT_LEAVE_POLICY = {
         medicalCertificateRequired: true,
     },
     bereavementLeave: {
-        immediateFamilyDays: 3,
+        immediateFamilyDays: 14,
+        pay: "Full Pay",
         approval: "Manager",
     },
+    // Limits per request (calendar days for paternity) or per year (casual)
+    paternityLeave: { days: 3, pay: "Full Pay" },
+    casualLeave: { days: 2, pay: "Full Pay" },
+    umrahLeave: { days: 7, pay: "Unpaid" },
+    hajjLeave: { days: 14, pay: "Unpaid" },
     compensatoryOff: {
         eligibility: ["Worked on public holiday", "Worked on weekend"],
         validityDays: 90,
@@ -2682,6 +3062,23 @@ app.put("/api/leave-policies", async (req, res) => {
 // =========================
 // HR DASHBOARD API
 // =========================
+
+// Dashboard widgets: a widget that fails shows its own message, the page keeps working
+const dashboardWidgetRoute = (path, load) => {
+    app.get(path, requireAuth(pool), requireHR, async (req, res) => {
+        try {
+            res.set("Cache-Control", "no-store");
+            res.json(await load());
+        } catch (error) {
+            console.error(`Error loading ${path}:`, error);
+            res.status(500).json({ message: "Failed to load dashboard data" });
+        }
+    });
+};
+
+dashboardWidgetRoute("/api/dashboard/attendance-trend", () => getAttendanceTrend(pool));
+dashboardWidgetRoute("/api/dashboard/department-distribution", () => getDepartmentDistribution(pool));
+dashboardWidgetRoute("/api/dashboard/recruitment-stats", () => getRecruitmentStats(pool, FILLED_APPLICATION_STATUSES));
 
 app.get("/api/dashboard", async (req, res) => {
     try {
@@ -3040,12 +3437,15 @@ const ensureLeavePolicyTable = async () => {
          ON CONFLICT (id) DO NOTHING`,
         [JSON.stringify(DEFAULT_LEAVE_POLICY)]
     );
+    const savedTypes = await pool.query(
+        "SELECT policy->'leaveTypes' AS leave_types FROM leave_policy_settings WHERE id = 1"
+    );
     await pool.query(
         `UPDATE leave_policy_settings
          SET policy = policy || jsonb_build_object('leaveTypes', $1::jsonb),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = 1`,
-        [JSON.stringify(DEFAULT_LEAVE_POLICY.leaveTypes)]
+        [JSON.stringify(mergeLeaveTypes(DEFAULT_LEAVE_POLICY.leaveTypes, savedTypes.rows[0]?.leave_types))]
     );
 };
 
@@ -3082,6 +3482,18 @@ const ensureEmployeeRequestsTable = async () => {
     await pool.query(`CREATE INDEX IF NOT EXISTS employee_requests_status_idx ON employee_requests(status)`);
 };
 
+
+// Errors no route handled. A full connection pool gets 503 and a clear message, not a crash or raw error.
+app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    if (isDatabaseBusyError(error)) {
+        console.warn(`Database busy on ${req.method} ${req.path}: ${error.message}`);
+        return res.status(503).set("Retry-After", "5").json({ message: DATABASE_BUSY_MESSAGE });
+    }
+    console.error(`Unhandled error on ${req.method} ${req.path}:`, error);
+    res.status(error.status || 500).json({ message: "Something went wrong. Please try again." });
+});
+
 ensureEmployeePersonalInfoColumns()
     .then(ensurePasswordResetTable)
     .then(ensureLeavePolicyTable)
@@ -3097,6 +3509,8 @@ ensureEmployeePersonalInfoColumns()
     .then(() => ensureCareerSchema())
     .then(() => ensureEmployeeDocumentSchema())
     .then(() => {
+        // D365 can take minutes to answer after being idle, so the employee list is loaded early
+        warmD365Employees();
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`HRMS Backend running on port ${PORT}`);
         });

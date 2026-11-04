@@ -4,8 +4,10 @@ import { CalendarDays, ChevronDown, Clock3, Download, LogIn, LogOut, Plane, Sear
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DatePicker from "../../components/layout/common/DatePicker";
 import API_URL from "../../config/api";
+import { exportTable } from "../../utils/tableExport";
 import "./Attendance.css";
 import "./AttendanceModern.css";
+import "./AttendanceRefresh.css";
 
 // Fixed messages the backend sends for Punch In / Punch Out → translation keys.
 // Any other message is shown as the backend sent it.
@@ -48,6 +50,8 @@ function Attendance() {
     const [loading, setLoading] = useState(false);
     const [isExportOpen, setIsExportOpen] = useState(false);
     const [now, setNow] = useState(() => new Date());
+    // { key, shift } for the employee it was loaded for; a different key means still loading
+    const [loadedShift, setLoadedShift] = useState(null);
 
     useEffect(() => {
         const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -62,6 +66,18 @@ function Attendance() {
         employmentLegalEntityId: employee.employmentLegalEntityId,
         employmentId: employee.employmentId,
     });
+
+    // The banner shows the selected employee's shift for today
+    useEffect(() => {
+        if (!selectedEmployee) return undefined;
+        let ignore = false;
+        const key = getEmployeeOptionLabel(selectedEmployee);
+        fetch(`${API_URL}/api/attendance/shift?${new URLSearchParams(getPunchPayload(selectedEmployee))}`)
+            .then((response) => (response.ok ? response.json() : { shift: null }))
+            .then((data) => !ignore && setLoadedShift({ key, shift: data.shift }))
+            .catch(() => !ignore && setLoadedShift({ key, shift: null }));
+        return () => { ignore = true; };
+    }, [selectedEmployee]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -179,7 +195,8 @@ const fetchAttendance = async () => {
             normalWorkingMinutes,
             overtimeMinutes,
             lateMinutes: Number(item.late_minutes) || 0,
-            shift: item.shift || "09:00 - 18:00"
+            earlyLeaveMinutes: Number(item.early_leave_minutes) || 0,
+            shift: item.shift || "-"
             };
         });
 
@@ -324,11 +341,7 @@ const fetchAttendance = async () => {
                 .toLowerCase()
                 .includes(searchValue);
 
-        const employeeDate = employee.date
-            ? new Date(employee.date).toLocaleDateString("en-CA", {
-                  timeZone: "Asia/Kolkata",
-              })
-            : "";
+        const employeeDate = employee.date ? String(employee.date).slice(0, 10) : "";
 
         const matchesDate =
             selectedDate === "" ||
@@ -347,7 +360,6 @@ const fetchAttendance = async () => {
     const summaryCards = [
         { key: "all", tone: "total", icon: Users, count: baseFilteredAttendance.length, label: t("hrAttendance.summary.total", { defaultValue: "Total Records" }) },
         { key: "Present", tone: "present", icon: UserCheck, count: countByStatus("Present"), label: statusLabel("Present") },
-        { key: "Late", tone: "late", icon: Clock3, count: countByStatus("Late"), label: statusLabel("Late") },
         { key: "Absent", tone: "absent", icon: UserX, count: countByStatus("Absent"), label: statusLabel("Absent") },
         { key: "On Leave", tone: "leave", icon: Plane, count: countByStatus("On Leave"), label: statusLabel("On Leave") },
     ];
@@ -355,11 +367,12 @@ const fetchAttendance = async () => {
     const initialsOf = (name) =>
         String(name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
 
-    const clockTime = now.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-    const clockDate = now.toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    const todayIso = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const clockTime = now.toLocaleTimeString("en-IN", { timeZone: "Asia/Qatar", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    const clockDate = now.toLocaleDateString("en-GB", { timeZone: "Asia/Qatar", weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    const todayIso = now.toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
+    const selectedShift = selectedEmployee && loadedShift?.key === getEmployeeOptionLabel(selectedEmployee) ? loadedShift.shift : undefined;
     const greeting = (() => {
-        const hour = Number(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }).slice(0, 2));
+        const hour = Number(now.toLocaleTimeString("en-GB", { timeZone: "Asia/Qatar", hour: "2-digit", hour12: false }).slice(0, 2));
         if (hour < 12) return t("hrAttendance.greeting.morning", { defaultValue: "Good Morning" });
         if (hour < 17) return t("hrAttendance.greeting.afternoon", { defaultValue: "Good Afternoon" });
         return t("hrAttendance.greeting.evening", { defaultValue: "Good Evening" });
@@ -368,7 +381,7 @@ const fetchAttendance = async () => {
     const selectedTodayRecord = selectedEmployee
         ? attendanceData.find((record) => {
             const recordDate = record.date
-                ? new Date(record.date).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+                ? String(record.date).slice(0, 10)
                 : "";
             const id = String(record.employeeID || "").toUpperCase();
             const personnel = String(selectedEmployee.personnelNumber || "").toUpperCase();
@@ -383,7 +396,7 @@ const fetchAttendance = async () => {
 
         const headers = [
             "Employee ID", "Employee Name", "Department", "Date", "Punch In",
-            "Status", "Punch Out", "Shift", "Overtime", "Late", "Working Hours",
+            "Status", "Punch Out", "Shift", "Late (min)", "Early Leave (min)", "Overtime", "Working Hours",
         ];
         const rows = filteredAttendance.map((employee) => [
             employee.employeeID,
@@ -394,25 +407,12 @@ const fetchAttendance = async () => {
             employee.status,
             formatAttendanceTime(employee.punchOut),
             employee.shift,
+            employee.lateMinutes,
+            employee.earlyLeaveMinutes,
             employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes),
-            formatWorkingHours(employee.lateMinutes),
             employee.punchOut === "-" ? "-" : formatWorkingHours(employee.workingMinutes),
         ]);
-        const escapeValue = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-        const csv = [headers, ...rows]
-            .map((row) => row.map(escapeValue).join(","))
-            .join("\n");
-        const content = format === "excel"
-            ? `<table><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr>${rows.map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join("")}</tr>`).join("")}</table>`
-            : csv;
-        const url = URL.createObjectURL(new Blob([content], {
-            type: format === "excel" ? "application/vnd.ms-excel" : "text/csv;charset=utf-8;",
-        }));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `attendance.${format === "excel" ? "xls" : "csv"}`;
-        link.click();
-        URL.revokeObjectURL(url);
+        exportTable(format, { fileName: `attendance-${todayIso}`, title: "Attendance", headers, rows });
         setIsExportOpen(false);
     };
 
@@ -422,11 +422,14 @@ const fetchAttendance = async () => {
 
     return (
         <DashboardLayout>
-            <div className="attendance-page">
+            <div className="attendance-page att-v2">
 
+                <header className="att-hero">
+                <div className="att-hero-top">
                 {/* Page Header */}
                 <div className="attendance-header">
                     <div className="attendance-header-text">
+                        <span className="att-hero-kicker">{t("projects.kicker", { defaultValue: "Workforce" })}</span>
                         <h1>{t("menu.attendance", { defaultValue: "Attendance" })}</h1>
                         <p>
                             {t("hrAttendance.subtitle", { defaultValue: "Manage Employee Attendance" })}
@@ -440,9 +443,6 @@ const fetchAttendance = async () => {
                         </p>
                     </div>
                 </div>
-
-                {/* Punch In / Punch Out */}
-                <div className="attendance-punch-section">
                 <article className="attendance-clock-card" aria-live="off">
                     <span className="attendance-clock-greeting">{greeting}</span>
                     <strong className="attendance-clock-time" dir="ltr">{clockTime}</strong>
@@ -450,10 +450,38 @@ const fetchAttendance = async () => {
                         <CalendarDays size={15} aria-hidden="true" /> {clockDate}
                     </span>
                     <span className="attendance-clock-shift" dir="ltr">
-                        <Clock3 size={14} aria-hidden="true" /> {t("hrAttendance.clock.shift", { defaultValue: "Shift" })} 09:00 - 18:00
+                        <Clock3 size={14} aria-hidden="true" />
+                        {!selectedEmployee
+                            ? t("hrAttendance.clock.pickEmployee", { defaultValue: "Select an employee to see their shift" })
+                            : selectedShift === undefined
+                                ? t("hrAttendance.clock.loadingShift", { defaultValue: "Loading shift..." })
+                                : selectedShift
+                                    ? <><bdi dir="auto">{selectedShift.name}</bdi> · {selectedShift.start_time} - {selectedShift.end_time}</>
+                                    : t("hrAttendance.clock.noShift", { defaultValue: "No shift set" })}
                     </span>
                 </article>
+                </div>
+                {/* Summary */}
+                <div className="attendance-stats">
+                    {summaryCards.map(({ key, tone, icon: Icon, count, label }) => (
+                        <button
+                            type="button"
+                            key={key}
+                            className={`attendance-stat attendance-stat--${tone}${selectedStatus === key ? " is-active" : ""}`}
+                            onClick={() => setSelectedStatus(key)}
+                        >
+                            <span className="attendance-stat-icon" aria-hidden="true"><Icon size={18} /></span>
+                            <span className="attendance-stat-body">
+                                <span className="attendance-stat-count">{count}</span>
+                                <span className="attendance-stat-label">{label}</span>
+                            </span>
+                        </button>
+                    ))}
+                </div>
+                </header>
 
+                {/* Punch In / Punch Out */}
+                <div className="attendance-punch-section">
                 <div className="attendance-actions attendance-actions--premium">
 
                     <div className="attendance-punch-fields">
@@ -592,24 +620,6 @@ const fetchAttendance = async () => {
                 </div>
                 </div>
 
-                {/* Summary */}
-                <div className="attendance-stats">
-                    {summaryCards.map(({ key, tone, icon: Icon, count, label }) => (
-                        <button
-                            type="button"
-                            key={key}
-                            className={`attendance-stat attendance-stat--${tone}${selectedStatus === key ? " is-active" : ""}`}
-                            onClick={() => setSelectedStatus(key)}
-                        >
-                            <span className="attendance-stat-icon" aria-hidden="true"><Icon size={18} /></span>
-                            <span className="attendance-stat-body">
-                                <span className="attendance-stat-count">{count}</span>
-                                <span className="attendance-stat-label">{label}</span>
-                            </span>
-                        </button>
-                    ))}
-                </div>
-
                 <div className="attendance-list-heading">
                     <h2>{t("hrAttendance.listTitle", { defaultValue: "Punch In / Punch Out List" })}</h2>
                     <span>{filteredAttendance.length}</span>
@@ -654,10 +664,6 @@ const fetchAttendance = async () => {
                             {statusLabel("Absent")}
                         </option>
 
-                        <option value="Late">
-                            {statusLabel("Late")}
-                        </option>
-
                         <option value="On Leave">
                             {statusLabel("On Leave")}
                         </option>
@@ -678,8 +684,8 @@ const fetchAttendance = async () => {
 
                         {isExportOpen && (
                             <div className="attendance-export-options">
-                                <button type="button" onClick={() => exportAttendance("excel")}>Excel</button>
-                                <button type="button" onClick={() => exportAttendance("csv")}>CSV</button>
+                                <button type="button" onClick={() => exportAttendance("excel")}>{t("export.excel", { defaultValue: "Excel" })}</button>
+                                <button type="button" onClick={() => exportAttendance("pdf")}>{t("export.pdf", { defaultValue: "PDF" })}</button>
                             </div>
                         )}
                     </div>
@@ -696,11 +702,11 @@ const fetchAttendance = async () => {
                                 <th>{t("employeeSettings.employeeId", { defaultValue: "Employee ID" })}</th>
                                 <th>{t("hrAttendance.table.employeeName", { defaultValue: "Employee Name" })}</th>
                                 <th>{t("employeeAttendance.table.date", { defaultValue: "Date" })}</th>
+                                <th>{t("hrAttendance.table.shift", { defaultValue: "Shift" })}</th>
                                 <th>{t("employeeAttendance.punchIn", { defaultValue: "Punch In" })}</th>
                                 <th>{t("employeeAttendance.table.status", { defaultValue: "Status" })}</th>
                                 <th>{t("employeeAttendance.punchOut", { defaultValue: "Punch Out" })}</th>
                                 <th>{t("employeeAttendance.table.overtime", { defaultValue: "Overtime" })}</th>
-                                <th>{t("employeeAttendance.table.late", { defaultValue: "Late" })}</th>
                                 <th>{t("employeeAttendance.workingHours", { defaultValue: "Working Hours" })}</th>
                             </tr>
                         </thead>
@@ -729,7 +735,7 @@ const fetchAttendance = async () => {
                                     <td>
                                         <span dir="ltr">
                                             {new Date(
-                                                employee.date
+                                                `${String(employee.date).slice(0, 10)}T00:00:00`
                                             ).toLocaleDateString(
                                                 "en-GB",
                                                 {
@@ -742,9 +748,19 @@ const fetchAttendance = async () => {
                                     </td>
 
                                     <td>
+                                        <span className="attendance-shift-name" dir="auto">{employee.shift}</span>
+                                    </td>
+
+                                    {/* Late / early leave are shown as notes; the status stays Present */}
+                                    <td>
                                         <span className="punch-in-time" dir="ltr">
                                             {formatAttendanceTime(employee.punchIn)}
                                         </span>
+                                        {employee.lateMinutes > 0 && (
+                                            <small className="attendance-flag late">
+                                                {t("hrAttendance.lateBy", { minutes: employee.lateMinutes, defaultValue: "Late {{minutes}} min" })}
+                                            </small>
+                                        )}
                                     </td>
 
                                     <td>
@@ -761,14 +777,15 @@ const fetchAttendance = async () => {
                                         <span className="punch-out-time" dir="ltr">
                                             {formatAttendanceTime(employee.punchOut)}
                                         </span>
+                                        {employee.earlyLeaveMinutes > 0 && (
+                                            <small className="attendance-flag early">
+                                                {t("hrAttendance.earlyBy", { minutes: employee.earlyLeaveMinutes, defaultValue: "Left {{minutes}} min early" })}
+                                            </small>
+                                        )}
                                     </td>
 
                                     <td className="overtime-hours">
                                         <span dir="ltr">{employee.punchOut === "-" ? "-" : formatWorkingHours(employee.overtimeMinutes)}</span>
-                                    </td>
-
-                                    <td className="late-duration">
-                                        <span dir="ltr">{formatWorkingHours(employee.lateMinutes)}</span>
                                     </td>
 
                                     <td className="working-hours total-working-hours">
@@ -780,7 +797,7 @@ const fetchAttendance = async () => {
 
                             {!filteredAttendance.length && (
                                 <tr className="attendance-empty-row">
-                                    <td colSpan={8}>
+                                    <td colSpan={9}>
                                         <div className="hr-att-empty">
                                             <CalendarDays size={34} aria-hidden="true" />
                                             <strong>{t("hrAttendance.empty.title", { defaultValue: "No attendance records found" })}</strong>

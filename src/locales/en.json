@@ -87,6 +87,8 @@
     "resignation": "Resignation",
     "payroll": "Payroll",
     "ticketing": "Ticketing",
+    "projects": "Projects",
+    "gradeAssignment": "Grade Assignment",
     "reports": "Reports",
     "settings": "Settings",
     "logout": "Logout",
@@ -131,9 +133,14 @@
         "recruitment": {
           "title": "Recruitment Masters",
           "desc": "Locations, agencies, budgets"
-        },        "resignation": {
+        },
+        "resignation": {
           "title": "Resignation",
           "desc": "Notice periods and approval steps"
+        },
+        "shifts": {
+          "title": "Shifts",
+          "desc": "Working hours, breaks and Ramadan timing"
         }
       },
       "groupDesc": {
@@ -142,7 +149,9 @@
         "notifications": "Choose which alerts and emails the HRMS sends.",
         "security": "Protect HR accounts with an inactivity timeout and a strong password.",
         "approval": "Set who approves manpower requests and in which order.",
-        "recruitment": "Maintain the lists used in manpower requests.",        "resignation": "Define notice periods and the resignation approval chain."
+        "recruitment": "Maintain the lists used in manpower requests.",
+        "resignation": "Define notice periods and the resignation approval chain.",
+        "shifts": "Create the shifts employees work. Punch in after the start plus 10 minutes is late; punch out before the end is early leave."
       },
       "companyNameHint": "Shown in the browser tab title and in the sender name of emails.",
       "supportEmail": "Support Email",
@@ -496,12 +505,20 @@
     "Maternity Leave": "Maternity Leave",
     "Paternity Leave": "Paternity Leave",
     "Hajj Leave": "Hajj Leave",
+    "Umrah Leave": "Umrah Leave",
     "Emergency Leave": "Emergency Leave",
     "Unpaid Leave (LOP)": "Unpaid Leave (LOP)",
     "Compensatory Off": "Compensatory Off",
     "Bereavement Leave": "Bereavement Leave"
   },
   "leavePolicy": {
+    "daysPerYear": "{{count}} days per year",
+    "workingDaysPerYear": "{{count}} working days per year",
+    "daysPerRequest": "Up to {{count}} days per request",
+    "calendarDaysPerRequest": "{{count}} calendar days",
+    "sickYearlyDetail": "{{count}} days per calendar year, medical certificate required",
+    "casualDetail": "For short personal needs.",
+    "umrahDetail": "Religious leave for Umrah, subject to approval.",
     "hrPolicy": "HR policy",
     "hrApproval": "HR approval",
     "managerApproval": "Manager approval",
@@ -602,6 +619,9 @@
       "gender": "Gender",
       "birthday": "Birthday",
       "joiningDate": "Joining Date",
+      "yearsOfService": "Years of Service",
+      "serviceLength": "{{years}} years {{months}} months",
+      "officeLocation": "Office Location",
       "employmentType": "Employment Type",
       "address": "Address"
     },
@@ -688,7 +708,7 @@
       "gender": { "male": "Male", "female": "Female", "other": "Other" },
       "educationType": { "full_time": "Full Time", "part_time": "Part Time", "distance": "Distance" },
       "maritalStatus": { "single": "Single", "married": "Married", "divorced": "Divorced", "widowed": "Widowed" },
-      "employmentType": { "full_time": "Full Time", "part_time": "Part Time", "contract": "Contract", "temporary": "Temporary", "intern": "Intern", "internship": "Internship" },
+      "employmentType": { "full_time": "Full Time", "part_time": "Part Time", "contract": "Contract", "temporary": "Temporary", "intern": "Intern", "internship": "Internship", "other": "Other" },
       "workerType": { "employee": "Employee", "contractor": "Contractor" }
     }
   },
@@ -1256,8 +1276,6 @@
       "approved": "Approved",
       "cancelled": "Cancelled",
       "created": "Created",
-      "interview_scheduled": "Interview Scheduled",
-
       "job_opening_created": "Job opening created",
       "notified": "Notified",
       "put_on_hold": "Put on hold",
@@ -1319,64 +1337,14 @@
       "lastRemark": "Last remark:",
       "legacyResume": "Resume (uploaded before the Careers page)",
       "linkedin": "LinkedIn",
+      "nextPhaseNote": "Interview scheduling (FRD 1.2) comes in the next phase.",
+      "nextPhaseTitle": "Coming in the next phase (FRD 1.2)",
       "noCv": "No CV was uploaded with this application.",
       "noFurtherActions": "No further review actions: this application is {{status}}.",
       "noSkills": "No skills listed.",
       "percentageCgpa": "Percentage / CGPA",
       "preview": "Preview",
       "remarkPlaceholder": "Remarks (required to reject)",
-      "interview": {
-        "sending": "Sending...",
-        "selectTime": "Select time",
-        "chooseModeFirst": "Choose a mode first",
-        "locationPlaceholder": "e.g. Shelter Group Head Office, Doha",
-        "notesPlaceholder": "e.g. Bring QID copy and original certificates",
-        "errorDate": "Choose the interview date",
-        "errorDatePast": "Interview date can't be in the past",
-        "errorTime": "Choose the interview time",
-        "errorMode": "Choose the interview mode",
-        "errorPlace": "{{label}} is required",
-        "errorLink": "Enter a meeting link starting with https://",
-        "errorInterviewer": "Enter the interviewer's name",
-
-        "title": "Interview",
-
-        "date": "Interview Date",
-
-        "time": "Time",
-
-        "mode": "Mode",
-
-
-        "location": "Interview Location",
-
-        "meetingLink": "Meeting Link",
-
-        "phoneNumber": "Phone Number",
-
-        "locationOrLink": "Location or Meeting Link",
-
-        "interviewer": "Interviewer Name",
-
-        "notes": "Notes",
-
-        "save": "Save & Send Invitation",
-
-
-        "emailSent": "Interview scheduled and invitation sent to {{email}}",
-
-        "emailFailed": "Interview saved, but the email could not be sent: {{reason}}",
-
-        "emailStatus": "Invitation Email",
-
-        "sentOn": "Sent {{date}}",
-
-        "notSent": "Not sent: {{reason}}",
-
-        "shortlistedOnly": "Available when the application is Shortlisted"
-
-      },
-
       "scheduleInterview": "Schedule Interview",
       "skillsCover": "Skills & Cover Letter",
       "submittedVia": "Submitted via",
@@ -1390,7 +1358,6 @@
       "yearOfPassing": "Year of Passing"
     },
     "applicationStatuses": {
-      "interview_scheduled": "Interview Scheduled",
       "new": "New",
       "on_hold": "On Hold",
       "rejected": "Rejected",
@@ -1504,9 +1471,6 @@
       "accommodation": "Accommodation",
       "action": "Action",
       "airTicket": "Air Ticket",
-      "grade": "Grade",
-      "gradePosition": "Position",
-      "designation": "Designation",
       "allowances": "Allowances",
       "applicationDeadline": "Application Deadline",
       "applicationEndDate": "Application End Date",
@@ -1682,16 +1646,6 @@
         "90_days": "90 days",
         "immediate": "Immediate"
       },
-      "interviewMode": {
-
-        "in_person": "In-person",
-
-        "online": "Online",
-
-        "phone": "Phone"
-
-      },
-
       "qualification": {
         "bachelor_s_degree": "Bachelor's Degree",
         "diploma": "Diploma",
@@ -1803,7 +1757,7 @@
     },
     "policy": {
       "title": "Leave Policy Setup",
-      "description": "Configure the annual leave allowance used for employee reviews.",
+      "description": "Set up leave types, allowances and holidays. Employees see these when they apply.",
       "close": "Close leave policy setup",
       "annualEntitlement": "Annual Leave Yearly Entitlement",
       "perYearAccrues": "days per year • accrues {{rate}} days/month",
@@ -2318,6 +2272,23 @@
     "noAssetsHint": "Company assets assigned to this employee will appear here.",
     "editProjects": "Edit projects",
     "editTitle": "Edit Employee Details",
+    "edit": {
+      "back": "Back to profile",
+      "selfNote": "Fields in grey are managed by HR. Contact HR if they need to change.",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "addExperience": "+ Add Experience",
+      "newRecord": "New record",
+      "empty": {
+        "education": "No education added yet",
+        "experience": "No experience added yet"
+      },
+      "select": "Select",
+      "changed": "Changed",
+      "saved": "Employee details saved",
+      "discard": "Discard your unsaved changes?",
+      "d365Note": "This employee is linked to D365. Name, department, designation, joining date and status come from D365, so changes to them here are replaced at the next sync."
+    },
     "editSection": "Edit {{section}} Details",
     "unableToSave": "Unable to save changes",
     "experience": {

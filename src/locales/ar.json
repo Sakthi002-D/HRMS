@@ -99,6 +99,8 @@
     "resignation": "الاستقالة",
     "payroll": "الرواتب",
     "ticketing": "التذاكر",
+    "projects": "المشاريع",
+    "gradeAssignment": "تعيين الدرجات",
     "reports": "التقارير",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
@@ -143,9 +145,14 @@
         "recruitment": {
           "title": "البيانات الأساسية للتوظيف",
           "desc": "المواقع والوكالات والميزانيات"
-        },        "resignation": {
+        },
+        "resignation": {
           "title": "الاستقالة",
           "desc": "فترات الإشعار وخطوات الموافقة"
+        },
+        "shifts": {
+          "title": "الورديات",
+          "desc": "ساعات العمل والاستراحات وتوقيت رمضان"
         }
       },
       "groupDesc": {
@@ -154,7 +161,9 @@
         "notifications": "اختر التنبيهات ورسائل البريد التي يرسلها النظام.",
         "security": "احمِ حسابات الموارد البشرية بمهلة عدم نشاط وكلمة مرور قوية.",
         "approval": "حدد من يوافق على طلبات القوى العاملة وبأي ترتيب.",
-        "recruitment": "حافظ على القوائم المستخدمة في طلبات القوى العاملة.",        "resignation": "حدد فترات الإشعار وسلسلة الموافقة على الاستقالة."
+        "recruitment": "حافظ على القوائم المستخدمة في طلبات القوى العاملة.",
+        "resignation": "حدد فترات الإشعار وسلسلة الموافقة على الاستقالة.",
+        "shifts": "أنشئ الورديات التي يعمل بها الموظفون. تسجيل الدخول بعد البداية بأكثر من 10 دقائق يعد تأخيراً، والخروج قبل النهاية يعد مغادرة مبكرة."
       },
       "companyNameHint": "يظهر في عنوان تبويب المتصفح وفي اسم المرسل لرسائل البريد.",
       "supportEmail": "بريد الدعم",
@@ -524,12 +533,20 @@
     "Maternity Leave": "إجازة أمومة",
     "Paternity Leave": "إجازة أبوة",
     "Hajj Leave": "إجازة الحج",
+    "Umrah Leave": "إجازة العمرة",
     "Emergency Leave": "إجازة طارئة",
     "Unpaid Leave (LOP)": "إجازة بدون أجر",
     "Compensatory Off": "إجازة تعويضية",
     "Bereavement Leave": "إجازة وفاة"
   },
   "leavePolicy": {
+    "daysPerYear": "{{count}} يومًا في السنة",
+    "workingDaysPerYear": "{{count}} أيام عمل في السنة",
+    "daysPerRequest": "حتى {{count}} يومًا لكل طلب",
+    "calendarDaysPerRequest": "{{count}} يومًا تقويميًا",
+    "sickYearlyDetail": "{{count}} يومًا في السنة التقويمية، مع شهادة طبية",
+    "casualDetail": "للاحتياجات الشخصية القصيرة.",
+    "umrahDetail": "إجازة دينية لأداء العمرة، وفق الموافقة.",
     "hrPolicy": "حسب سياسة الموارد البشرية",
     "hrApproval": "موافقة الموارد البشرية",
     "managerApproval": "موافقة المدير",
@@ -634,6 +651,9 @@
       "gender": "الجنس",
       "birthday": "تاريخ الميلاد",
       "joiningDate": "تاريخ الانضمام",
+      "yearsOfService": "سنوات الخدمة",
+      "serviceLength": "{{years}} سنة و{{months}} شهر",
+      "officeLocation": "موقع المكتب",
       "employmentType": "نوع التوظيف",
       "address": "العنوان"
     },
@@ -720,7 +740,7 @@
       "gender": { "male": "ذكر", "female": "أنثى", "other": "آخر" },
       "educationType": { "full_time": "دوام كامل", "part_time": "دوام جزئي", "distance": "تعليم عن بُعد" },
       "maritalStatus": { "single": "أعزب", "married": "متزوج", "divorced": "مطلق", "widowed": "أرمل" },
-      "employmentType": { "full_time": "دوام كامل", "part_time": "دوام جزئي", "contract": "عقد", "temporary": "مؤقت", "intern": "متدرب", "internship": "تدريب" },
+      "employmentType": { "full_time": "دوام كامل", "part_time": "دوام جزئي", "contract": "عقد", "temporary": "مؤقت", "intern": "متدرب", "internship": "تدريب", "other": "أخرى" },
       "workerType": { "employee": "موظف", "contractor": "مقاول" }
     }
   },
@@ -1216,6 +1236,23 @@
     },
     "form": {
       "editTitle": "تعديل بيانات الموظف",
+    "edit": {
+      "back": "العودة إلى الملف الشخصي",
+      "selfNote": "الحقول الرمادية تتم إدارتها من قبل الموارد البشرية. تواصل معهم إذا كانت بحاجة إلى تغيير.",
+      "collapseAll": "طي الكل",
+      "expandAll": "توسيع الكل",
+      "addExperience": "+ إضافة خبرة",
+      "newRecord": "سجل جديد",
+      "empty": {
+        "education": "لم تتم إضافة مؤهلات بعد",
+        "experience": "لم تتم إضافة خبرات بعد"
+      },
+      "select": "اختر",
+      "changed": "تم التغيير",
+      "saved": "تم حفظ بيانات الموظف",
+      "discard": "هل تريد تجاهل التغييرات غير المحفوظة؟",
+      "d365Note": "هذا الموظف مرتبط بنظام D365. الاسم والقسم والمسمى الوظيفي وتاريخ الالتحاق والحالة تأتي من D365، لذا يتم استبدال أي تغييرات عليها هنا عند المزامنة التالية."
+    },
       "personalDetails": "البيانات الشخصية",
       "enterEmployeeId": "أدخل رقم الموظف",
       "title": "اللقب",
@@ -1309,8 +1346,6 @@
       "approved": "تمت الموافقة",
       "cancelled": "تم الإلغاء",
       "created": "تم الإنشاء",
-      "interview_scheduled": "تمت جدولة المقابلة",
-
       "job_opening_created": "تم إنشاء الوظيفة الشاغرة",
       "notified": "تم الإشعار",
       "put_on_hold": "تم التعليق",
@@ -1372,64 +1407,14 @@
       "lastRemark": "آخر ملاحظة:",
       "legacyResume": "السيرة الذاتية (مرفوعة قبل إطلاق صفحة الوظائف)",
       "linkedin": "LinkedIn",
+      "nextPhaseNote": "جدولة المقابلات (FRD 1.2) متاحة في المرحلة القادمة.",
+      "nextPhaseTitle": "متاح في المرحلة القادمة (FRD 1.2)",
       "noCv": "لم تُرفع سيرة ذاتية مع هذا الطلب.",
       "noFurtherActions": "لا توجد إجراءات مراجعة أخرى: حالة هذا الطلب {{status}}.",
       "noSkills": "لم تُذكر مهارات.",
       "percentageCgpa": "النسبة / المعدل التراكمي",
       "preview": "معاينة",
       "remarkPlaceholder": "ملاحظات (مطلوبة للرفض)",
-      "interview": {
-        "sending": "جارٍ الإرسال...",
-        "selectTime": "اختر الوقت",
-        "chooseModeFirst": "اختر الطريقة أولاً",
-        "locationPlaceholder": "مثال: المكتب الرئيسي لمجموعة شلتر، الدوحة",
-        "notesPlaceholder": "مثال: يرجى إحضار نسخة من البطاقة القطرية والشهادات الأصلية",
-        "errorDate": "اختر تاريخ المقابلة",
-        "errorDatePast": "لا يمكن أن يكون تاريخ المقابلة في الماضي",
-        "errorTime": "اختر وقت المقابلة",
-        "errorMode": "اختر طريقة المقابلة",
-        "errorPlace": "{{label}} مطلوب",
-        "errorLink": "أدخل رابط اجتماع يبدأ بـ https://",
-        "errorInterviewer": "أدخل اسم المُقابِل",
-
-        "title": "المقابلة",
-
-        "date": "تاريخ المقابلة",
-
-        "time": "الوقت",
-
-        "mode": "طريقة المقابلة",
-
-
-        "location": "موقع المقابلة",
-
-        "meetingLink": "رابط الاجتماع",
-
-        "phoneNumber": "رقم الهاتف",
-
-        "locationOrLink": "الموقع أو رابط الاجتماع",
-
-        "interviewer": "اسم المُقابِل",
-
-        "notes": "ملاحظات",
-
-        "save": "حفظ وإرسال الدعوة",
-
-
-        "emailSent": "تمت جدولة المقابلة وأُرسلت الدعوة إلى {{email}}",
-
-        "emailFailed": "تم حفظ المقابلة، لكن تعذّر إرسال البريد الإلكتروني: {{reason}}",
-
-        "emailStatus": "بريد الدعوة",
-
-        "sentOn": "أُرسل في {{date}}",
-
-        "notSent": "لم يُرسل: {{reason}}",
-
-        "shortlistedOnly": "متاح عندما يكون الطلب في القائمة المختصرة"
-
-      },
-
       "scheduleInterview": "جدولة مقابلة",
       "skillsCover": "المهارات وخطاب التقديم",
       "submittedVia": "طريقة التقديم",
@@ -1443,7 +1428,6 @@
       "yearOfPassing": "سنة التخرج"
     },
     "applicationStatuses": {
-      "interview_scheduled": "تمت جدولة المقابلة",
       "new": "جديد",
       "on_hold": "معلّق",
       "rejected": "مرفوض",
@@ -1578,9 +1562,6 @@
       "accommodation": "السكن",
       "action": "الإجراء",
       "airTicket": "تذكرة الطيران",
-      "grade": "الدرجة",
-      "gradePosition": "المنصب",
-      "designation": "المسمى الوظيفي",
       "allowances": "البدلات",
       "applicationDeadline": "آخر موعد للتقديم",
       "applicationEndDate": "تاريخ انتهاء التقديم",
@@ -1770,16 +1751,6 @@
         "90_days": "90 يومًا",
         "immediate": "فوري"
       },
-      "interviewMode": {
-
-        "in_person": "حضوريًا",
-
-        "online": "عبر الإنترنت",
-
-        "phone": "عبر الهاتف"
-
-      },
-
       "qualification": {
         "bachelor_s_degree": "بكالوريوس",
         "diploma": "دبلوم",
@@ -1899,7 +1870,7 @@
     },
     "policy": {
       "title": "إعداد سياسة الإجازات",
-      "description": "اضبط رصيد الإجازة السنوية المستخدم عند مراجعة طلبات الموظفين.",
+      "description": "اضبط أنواع الإجازات والأرصدة والعطلات. يراها الموظفون عند تقديم الطلب.",
       "close": "إغلاق إعداد سياسة الإجازات",
       "annualEntitlement": "الاستحقاق السنوي للإجازة السنوية",
       "perYearAccrues": "يوم في السنة • يُستحق {{rate}} يوم شهريًا",
@@ -2821,5 +2792,53 @@
             "failed": "فشل تغيير كلمة المرور",
             "unable": "تعذّر تغيير كلمة المرور"
         }
+    },
+  "projects": {
+    "kicker": "القوى العاملة",
+    "title": "المشاريع",
+    "subtitle": "أنشئ المشاريع واختر من يعمل عليها ولأي فترة.",
+    "total": "المشاريع",
+    "search": "ابحث في المشاريع أو العملاء",
+    "allStatuses": "كل الحالات",
+    "newProject": "مشروع جديد",
+    "editProject": "تعديل المشروع",
+    "deleteProject": "حذف المشروع",
+    "loading": "جارٍ تحميل المشاريع...",
+    "none": "لا توجد مشاريع بعد. أنشئ أول مشروع.",
+    "noMatch": "لا توجد مشاريع مطابقة لبحثك.",
+    "noClient": "بدون عميل",
+    "pickTitle": "اختر مشروعاً",
+    "pickHint": "اعرض تفاصيله وفريقه، أو أنشئ مشروعاً جديداً.",
+    "team": "الفريق",
+    "noTeam": "لم يتم تعيين أحد في هذا المشروع بعد.",
+    "assign": "إضافة",
+    "employeePlaceholder": "اكتب اسماً أو رقماً",
+    "unknownEmployee": "لا يوجد موظف بهذا الرقم",
+    "ongoing": "مستمر",
+    "noRole": "عضو في الفريق",
+    "noneForEmployee": "غير معيّن في أي مشروع بعد.",
+    "saved": "تم حفظ المشروع",
+    "deleted": "تم حذف المشروع",
+    "assigned": "تمت إضافة الموظف إلى المشروع",
+    "assignmentSaved": "تم تحديث التعيين",
+    "removed": "تمت إزالة الموظف من المشروع",
+    "editAssignment": "تعديل التعيين",
+    "removeAssignment": "إزالة من المشروع",
+    "confirmDelete": "حذف {{name}}؟ سيتم حذف تعيينات الفريق أيضاً.",
+    "confirmRemove": "إزالة {{name}} من هذا المشروع؟",
+    "statuses": { "active": "نشط", "completed": "مكتمل", "on_hold": "معلّق" },
+    "fields": {
+      "name": "اسم المشروع",
+      "client": "العميل",
+      "status": "الحالة",
+      "start": "تاريخ البدء",
+      "end": "تاريخ الانتهاء",
+      "description": "الوصف",
+      "employee": "الموظف",
+      "role": "الدور",
+      "from": "من",
+      "to": "إلى (اختياري)"
     }
+  },
+  "export": { "excel": "Excel", "pdf": "PDF" }
 }

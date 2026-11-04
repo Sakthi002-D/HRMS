@@ -13,24 +13,6 @@ export const isValidTimeZone = (timeZone) => {
     }
 };
 
-export const getAttendanceTimezone = async (db) => {
-    if (process.env.COMPANY_TIMEZONE && isValidTimeZone(process.env.COMPANY_TIMEZONE)) {
-        return process.env.COMPANY_TIMEZONE.trim();
-    }
-    if (db) {
-        try {
-            const result = await db.query("SELECT settings->>'timezone' AS tz FROM recruitment_settings WHERE id = 1");
-            const tz = result.rows[0]?.tz;
-            if (tz && isValidTimeZone(tz) && tz !== "Asia/Kolkata") {
-                return tz.trim();
-            }
-        } catch {
-            // fallback to default
-        }
-    }
-    return COMPANY_TIMEZONE;
-};
-
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const getCompanyToday = () =>

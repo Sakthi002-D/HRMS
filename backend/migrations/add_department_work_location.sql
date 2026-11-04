@@ -1,0 +1,2 @@
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS work_location TEXT;

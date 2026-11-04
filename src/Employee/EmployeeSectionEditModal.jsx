@@ -17,7 +17,7 @@ const titles = { about: "About Employee", bank: "Bank Information", family: "Fam
 const yearOptions = Array.from({ length: 81 }, (_, index) => String(new Date().getFullYear() - index));
 
 // Saved values (English). Only the text shown in the dropdown is translated.
-const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Internship"];
+const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Internship", "Other"];
 const EDUCATION_TYPES = ["Full Time", "Part Time", "Distance"];
 
 function EmployeeSectionEditModal({ section, form, updateForm, onSubmit, loading, onClose }) {
