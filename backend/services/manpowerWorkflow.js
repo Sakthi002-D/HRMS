@@ -41,7 +41,8 @@ const FALLBACK_WORKFLOW_TYPE = "New Position";
 const sqlList = (values) => values.map((value) => `'${value.replace(/'/g, "''")}'`).join(", ");
 export const ASSET_OPTIONS = ["Laptop", "Mobile", "SIM", "Vehicle", "Access Card", "Other"];
 export const SOURCING_OPTIONS = ["Agency", "Internal", "Both"];
-export const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Other"];
+// The MPR form offers the first five; "Other" stays valid for older MPRs
+export const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Temporary", "Project-based", "Other"];
 export const FILLED_APPLICATION_STATUSES = ["hired", "joined"];
 
 export const DEFAULT_RECRUITMENT_SETTINGS = {
@@ -359,42 +360,59 @@ const canRaiseFor = (roles, department) =>
     isHR(roles) || roles.some((item) => item.role === "DEPT_COORDINATOR" && sameText(item.department, department));
 
 // =====================================================
-// BUDGET CHECK (new headcount: New Position, Project Expansion, Temporary / Contract)
+// BUDGET CHECK (new headcount: New Position, Project Expansion, Temporary / Contract),
+// per Headcount Budget line: year + grade + position + designation
 // =====================================================
 
-// Budget check for a new-headcount MPR (Replacement MPRs skip it). Existing employees are NOT counted:
-//   available       = budgeted positions − openings of OTHER new-headcount MPRs (Pending / Approved)
+// MPRs (alias m) that use up a budget line: new-headcount, Approved or Pending, same year + grade +
+// position + designation. ref = SQL for each value: query parameters ("$1") or budget columns ("b.year").
+export const budgetLineUsageWhere = (ref) => `
+    m.request_type = ANY(${ref.types}::text[])
+    AND (m.status = 'Approved' OR m.status LIKE 'Pending %')
+    AND EXTRACT(YEAR FROM COALESCE(m.application_start_date, m.required_by, m.created_at::date)) = ${ref.year}
+    AND LOWER(m.grade) = LOWER(${ref.grade})
+    AND LOWER(m.position) = LOWER(${ref.position})
+    AND LOWER(m.designation) = LOWER(${ref.designation})
+`;
+
+// "2026 · 4-B · Senior Engineer · Senior Civil Engineer"
+export const budgetLineLabel = ({ year, grade, position, designation }) =>
+    [year, grade, position, designation].filter(Boolean).join(" · ");
+
+// Budget check for a new-headcount MPR (Replacement MPRs skip it), against the Headcount Budget line
+// for year + grade + position + designation. Existing employees are NOT counted:
+//   available       = budgeted positions − openings of OTHER MPRs on the same line (Pending / Approved)
 //   salaryAvailable = annual salary budget − yearly cost of those MPRs (max salary × 12 × openings)
 // status: "match" (requested = available), "under" (fewer), "exceeded" (more positions, or cost over
-// the salary available), "no_budget" (no row for the department + year).
-export async function computeBudget(db, { department, year, openings, salaryMax, excludeMprId = null }) {
+// the salary available), "no_budget" (no matching line).
+export async function computeBudget(db, { year, grade, position, designation, openings, salaryMax, excludeMprId = null }) {
     const requested = Math.max(0, Math.trunc(Number(openings) || 0));
     const monthlyMax = Math.max(0, Number(salaryMax) || 0);
     const requestCost = roundMoney(monthlyMax * 12 * requested);
-    const base = { department, year, requested, salaryMax: monthlyMax, requestCost };
+    const line = { year, grade: grade || "", position: position || "", designation: designation || "" };
+    const base = { ...line, line: budgetLineLabel(line), requested, salaryMax: monthlyMax, requestCost };
+    const noBudget = { ...base, status: "no_budget", reason: `No budget set for ${base.line}. Set it in Settings → Recruitment Masters.` };
+    if (!line.grade || !line.position || !line.designation) return noBudget;
 
     const budgetResult = await db.query(
         `SELECT headcount AS budgeted_positions, salary_budget::float AS salary_budget
-         FROM department_headcount_budgets WHERE LOWER(department) = LOWER($1) AND year = $2`,
-        [department, year]
+         FROM department_headcount_budgets
+         WHERE grade IS NOT NULL AND year = $1
+           AND LOWER(grade) = LOWER($2) AND LOWER(position) = LOWER($3) AND LOWER(designation) = LOWER($4)`,
+        [year, line.grade, line.position, line.designation]
     );
-    if (budgetResult.rows.length === 0) {
-        return { ...base, status: "no_budget", reason: `No budget set for ${department} (${year}). Set it in Settings → Recruitment Masters.` };
-    }
+    if (budgetResult.rows.length === 0) return noBudget;
 
     const { budgeted_positions: budgetedPositions, salary_budget: salaryBudget } = budgetResult.rows[0];
     const usedResult = await db.query(
         `
-        SELECT COALESCE(SUM(COALESCE(openings, 0)), 0)::int AS positions,
-               COALESCE(SUM(COALESCE(salary_max, 0) * 12 * COALESCE(openings, 0)), 0)::float AS cost
-        FROM manpower_requests
-        WHERE LOWER(department) = LOWER($1)
-          AND request_type = ANY($4::text[])
-          AND (status = 'Approved' OR status LIKE 'Pending %')
-          AND EXTRACT(YEAR FROM COALESCE(application_start_date, required_by, created_at::date)) = $2
-          AND ($3::bigint IS NULL OR id <> $3)
+        SELECT COALESCE(SUM(COALESCE(m.openings, 0)), 0)::int AS positions,
+               COALESCE(SUM(COALESCE(m.salary_max, 0) * 12 * COALESCE(m.openings, 0)), 0)::float AS cost
+        FROM manpower_requests m
+        WHERE ${budgetLineUsageWhere({ year: "$1", grade: "$2", position: "$3", designation: "$4", types: "$5" })}
+          AND ($6::bigint IS NULL OR m.id <> $6)
         `,
-        [department, year, excludeMprId, NEW_HEADCOUNT_TYPES]
+        [year, line.grade, line.position, line.designation, NEW_HEADCOUNT_TYPES, excludeMprId]
     );
     const alreadyUsed = usedResult.rows[0].positions;
     const salaryUsed = roundMoney(usedResult.rows[0].cost);
@@ -488,8 +506,25 @@ const normalizeInput = (body) => {
         employee_category: shortText(body.employee_category),
         // Company currency from HR portal → Settings (falls back to the server copy)
         currency: String(body.currency || "").trim().slice(0, 8) || null,
+        // Project, qualification, timeline and pay basis (sections 01–04 of the form)
+        project_name: shortText(body.project_name, 200),
+        project_code: shortText(body.project_code, 60),
+        qualification: shortText(body.qualification),
+        required_joining_date: String(body.required_joining_date || "").slice(0, 10) || null,
+        project_start_date: String(body.project_start_date || "").slice(0, 10) || null,
+        deployment_timeline: shortText(body.deployment_timeline, 60),
+        shift_schedule: shortText(body.shift_schedule, 60),
+        pay_basis: shortText(body.pay_basis, 20),
+        ppe_required: yesNo(body.ppe_required),
     };
 };
+
+// Optional dates are stored only if they are real calendar dates (a bad value would fail the INSERT)
+function validateOptionalDates(input) {
+    [["required_joining_date", "Required Joining Date"], ["project_start_date", "Project Start Date"]].forEach(([name, label]) => {
+        if (input[name] && !isDateKey(input[name])) throw new WorkflowError(`${label} is not a valid date`);
+    });
+}
 
 // Format always (drafts too); start ≥ today and end ≥ start
 function validateApplicationPeriod(input, today) {
@@ -605,13 +640,16 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
     let status = existing?.status || "Draft";
 
     const today = await getRecruitmentToday(db);
+    validateOptionalDates(input);
     if (action === "submit") {
         await validateForSubmit(db, input, today);
 
         if (needsBudgetCheck(input.request_type)) {
             budget = await computeBudget(db, {
-                department: input.department,
                 year: budgetYear(input.application_start_date, today),
+                grade: input.grade,
+                position: input.position,
+                designation: input.designation,
                 openings: input.openings,
                 salaryMax: input.salary_max,
                 excludeMprId: id,
@@ -644,6 +682,8 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
         JSON.stringify(input.assets), input.asset_other, input.replaced_employee_id, input.replacement_reason,
         budgetStatusFor(budget), budget ? JSON.stringify(budget) : null,
         input.grade, input.position, input.designation, input.employee_category,
+        input.project_name, input.project_code, input.qualification, input.required_joining_date, input.project_start_date,
+        input.deployment_timeline, input.shift_schedule, input.pay_basis, input.ppe_required,
     ];
 
     let mpr;
@@ -658,10 +698,12 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 assets = $20::jsonb, asset_other = $21, replaced_employee_id = $22, replacement_reason = $23,
                 budget_status = $24, budget_snapshot = $25::jsonb,
                 grade = $26, position = $27, designation = $28, employee_category = $29,
+                project_name = $30, project_code = $31, required_qualification = $32, required_joining_date = $33,
+                project_start_date = $34, deployment_timeline = $35, shift_schedule = $36, pay_basis = $37, ppe_required = $38,
                 resume_step = CASE WHEN $2 LIKE 'Pending %' THEN NULL ELSE resume_step END,
                 submitted_at = CASE WHEN $2 LIKE 'Pending %' THEN CURRENT_TIMESTAMP ELSE submitted_at END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $30
+            WHERE id = $39
             RETURNING *
             `,
             [...values, id]
@@ -679,11 +721,15 @@ export async function saveMpr(db, { id = null, body, actorId, action }) {
                 assets, asset_other, replaced_employee_id, replacement_reason,
                 budget_status, budget_snapshot,
                 grade, position, designation, employee_category,
+                project_name, project_code, required_qualification, required_joining_date,
+                project_start_date, deployment_timeline, shift_schedule, pay_basis, ppe_required,
                 mpr_no, requested_by, submitted_at
             ) VALUES (
                 $1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
                 $16::jsonb, $17, $18, $19, $20::jsonb, $21, $22, $23, $24, $25::jsonb,
-                $26, $27, $28, $29, $30, $31,
+                $26, $27, $28, $29,
+                $30, $31, $32, $33, $34, $35, $36, $37, $38,
+                $39, $40,
                 CASE WHEN $2 LIKE 'Pending %' THEN CURRENT_TIMESTAMP END
             )
             RETURNING *
@@ -902,6 +948,9 @@ const MPR_SELECT = `
     SELECT m.*, TO_CHAR(m.required_by, 'YYYY-MM-DD') AS required_by,
            TO_CHAR(m.application_start_date, 'YYYY-MM-DD') AS application_start_date,
            TO_CHAR(m.application_end_date, 'YYYY-MM-DD') AS application_end_date,
+           TO_CHAR(m.required_joining_date, 'YYYY-MM-DD') AS required_joining_date,
+           TO_CHAR(m.project_start_date, 'YYYY-MM-DD') AS project_start_date,
+           m.required_qualification AS qualification,
            m.salary_min::float AS salary_min, m.salary_max::float AS salary_max,
            r.name AS requested_by_name, x.name AS replaced_employee_name
     FROM manpower_requests m

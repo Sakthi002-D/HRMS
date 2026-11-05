@@ -229,7 +229,7 @@
 
 .date-picker-popup.is-floating {
     position: fixed;
-    z-index: calc(var(--z-dialog) - 10);
+    z-index: var(--z-popover); /* above modals, below confirm dialogs */
     top: 0;
     left: 0;
     max-width: calc(100vw - 16px);

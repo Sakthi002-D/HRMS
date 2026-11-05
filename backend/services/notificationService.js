@@ -68,15 +68,27 @@ export async function createNotifications(db, recipientIds, { type = "general", 
 // HR Settings apply: "Email Notifications" off skips emails to staff (applicant emails
 // are replies to a form they submitted, so they still go out), the company name appears
 // in the sender / signature and the support email becomes the Reply-To address.
+export const escapeHtml = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+
+// Optional mail.html (already escaped body, e.g. the offer letter's Accept / Decline buttons):
+// wrapped in the same greeting, help line and signature as the text version.
 const buildMail = (mail, settings) => {
     const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
     const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
+    const signature = mail.signature || `${company} HRMS`;
     return {
         from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
         ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
         to: mail.to,
         subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
-        text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${mail.signature || `${company} HRMS`}`,
+        text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${signature}`,
+        ...(mail.html ? {
+            html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1e293b">`
+                + `<p>Hello ${escapeHtml(mail.name)},</p>${mail.html}`
+                + (settings.supportEmail ? `<p>Need help? Contact <a href="mailto:${escapeHtml(settings.supportEmail)}">${escapeHtml(settings.supportEmail)}</a>.</p>` : "")
+                + `<p>Regards,<br>${escapeHtml(signature).replace(/\n/g, "<br>")}</p></div>`,
+        } : {}),
     };
 };
 

@@ -1189,3 +1189,124 @@
 .mpr-dept-menu.career-option-menu .mpr-dept-option:hover { background: #f0faf9; }
 .mpr-dept-menu.career-option-menu .mpr-dept-option.is-selected { background: #e6f5f4; color: #0f8b83; }
 .mpr-dept-menu.career-option-menu .mpr-dept-option.is-other { color: #0f8b83; }
+
+/* ---------- Offer letter page (/offer/:token) ---------- */
+
+.offer-card {
+    padding: 32px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.offer-card h1 {
+    margin: 0 0 8px;
+    color: #0b3154;
+    font-size: clamp(24px, 3vw, 32px);
+}
+
+.offer-greeting {
+    margin: 0 0 20px;
+    color: #475569;
+    font-size: 16px;
+}
+
+.offer-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 24px;
+    margin: 0 0 20px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fbfb;
+}
+
+.offer-summary dt {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.offer-summary dd {
+    margin: 3px 0 0;
+    color: #0b3154;
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.offer-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.offer-buttons .career-apply-btn {
+    min-width: 170px;
+    min-height: 50px;
+    font-size: 16px;
+}
+
+.career-apply-btn.offer-decline-btn {
+    background: #ffffff;
+    border: 1px solid #d43b3b;
+    color: #b91c1c;
+}
+
+.career-apply-btn.offer-decline-btn:hover {
+    background: #fff0f0;
+}
+
+.offer-decline {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.offer-decline label {
+    color: #0b3154;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.offer-decline textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font: inherit;
+    resize: vertical;
+}
+
+.offer-decline textarea:focus {
+    border-color: #0f8b83;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(15, 139, 131, 0.15);
+}
+
+.offer-message svg {
+    color: #0f8b83;
+}
+
+.offer-message.closed svg {
+    color: #d43b3b;
+}
+
+@media (max-width: 600px) {
+    .offer-card {
+        padding: 22px 18px;
+    }
+
+    .offer-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .offer-buttons .career-apply-btn {
+        flex: 1 1 100%;
+    }
+}

@@ -1090,7 +1090,7 @@
 
 .mpr-dept-menu {
     position: fixed;
-    z-index: 100000;
+    z-index: var(--z-popover); /* above the MPR form, below confirm dialogs */
     box-sizing: border-box;
     overflow-y: auto;
     padding: 4px;
@@ -1512,29 +1512,6 @@
 .mpr-grade-step.is-done .mpr-step-number { border-color: #245fe8; background: #245fe8; color: #fff; }
 .dashboard-content .mpr-step-hint, .mpr-step-hint { display: block; color: #64748b !important; font-size: 12px; line-height: 1.5; }
 
-/* Selectable pill buttons (Experience) */
-.mpr-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
-.mpr-pill-group.is-invalid .mpr-pill { border-color: #f1a7a7; }
-.mpr-accordion-form .mpr-pill {
-    min-height: 34px;
-    padding: 6px 13px;
-    border: 1px solid #cbd8e6;
-    border-radius: 999px;
-    background: #fff;
-    color: #244b77;
-    font: inherit;
-    font-size: 12.5px;
-    font-weight: 600;
-    line-height: 1.3;
-    text-align: start;
-    cursor: pointer;
-    box-shadow: none;
-    transition: background .15s ease, border-color .15s ease, color .15s ease;
-}
-.mpr-accordion-form .mpr-pill:hover { border-color: #8fb1f8; background: #f3f7ff; }
-.mpr-accordion-form .mpr-pill:focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; }
-.mpr-accordion-form .mpr-pill.is-selected { border-color: #245fe8; background: #245fe8; color: #fff; }
-
 /* Role card under the picker */
 .mpr-role-card {
     display: flex;
@@ -1693,3 +1670,574 @@
     .mpr-grade-panel { padding: 12px; }
     .mpr-role-card { flex-wrap: wrap; }
     .mpr-role-category { align-items: flex-start; max-width: 100%; text-align: start; }}
+
+/* =========================================================
+   Recruitment → Hiring tab + side panel
+========================================================= */
+
+.hiring-cards {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.recruitment-page .recruitment-card.hiring-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 12px 14px;
+}
+
+.hiring-card .recruitment-stat-icon {
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+    border-radius: 9px;
+}
+
+.hiring-card .recruitment-card-content strong {
+    font-size: 24px;
+}
+
+.recruitment-stat-icon.hire-amber { background: #fff3d8; color: #b45309; }
+.recruitment-stat-icon.hire-violet { background: #ede9fe; color: #6d28d9; }
+.recruitment-stat-icon.hire-sky { background: #e0f2fe; color: #0369a1; }
+.recruitment-stat-icon.hire-teal { background: #e6f5f4; color: #0f766e; }
+.recruitment-stat-icon.hire-orange { background: #ffedd5; color: #c2410c; }
+
+@media (max-width: 1400px) {
+    .hiring-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+@media (max-width: 800px) {
+    .hiring-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+    .hiring-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mpr-status.hired { background: #12304a; color: #ffffff; }
+
+.hiring-table td {
+    vertical-align: top;
+}
+
+.hiring-row-new td {
+    background: #f4f8ff;
+}
+
+.hiring-row-new td:first-child {
+    box-shadow: inset 3px 0 0 #2564eb;
+}
+
+.hiring-new-badge {
+    display: inline-block;
+    margin-inline-start: 8px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #2564eb;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    vertical-align: 1px;
+    white-space: nowrap;
+}
+
+.hiring-next {
+    color: #334155;
+    font-size: 13px;
+}
+
+/* ---------- Side panel ---------- */
+
+.hiring-panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.hiring-panel {
+    display: flex;
+    flex-direction: column;
+    width: min(780px, 100%);
+    height: 100%;
+    overflow-y: auto;
+    background: #ffffff;
+    box-shadow: -12px 0 40px rgba(15, 23, 42, 0.25);
+    animation: hiring-slide-in 0.2s ease-out;
+}
+
+@keyframes hiring-slide-in {
+    from { transform: translateX(40px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+[dir="rtl"] .hiring-panel-overlay { justify-content: flex-start; }
+
+.hiring-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.hiring-panel-header h2 {
+    margin: 0 0 4px;
+    color: #102f4a;
+    font-size: 22px;
+}
+
+.hiring-panel-header span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.hiring-panel-body {
+    padding: 18px 24px 28px;
+}
+
+.hiring-panel-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+/* Progress steps */
+
+.hiring-steps {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+}
+
+.hiring-step {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.hiring-step::before {
+    content: "";
+    position: absolute;
+    top: 13px;
+    inset-inline-start: -50%;
+    width: 100%;
+    height: 2px;
+    background: #dbe3ec;
+}
+
+.hiring-step:first-child::before { display: none; }
+.hiring-step.done::before,
+.hiring-step.current::before,
+.hiring-step.stopped::before { background: #2564eb; }
+
+.hiring-step-dot {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 2px solid #dbe3ec;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.hiring-step.done .hiring-step-dot { border-color: #2564eb; background: #2564eb; color: #ffffff; }
+.hiring-step.current .hiring-step-dot { border-color: #2564eb; color: #2564eb; box-shadow: 0 0 0 4px rgba(37, 100, 235, 0.15); }
+.hiring-step.stopped .hiring-step-dot { border-color: #d43b3b; background: #d43b3b; color: #ffffff; font-size: 16px; }
+
+.hiring-step-label {
+    color: #64748b;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.hiring-step.current .hiring-step-label { color: #12304a; }
+.hiring-step.stopped .hiring-step-label { color: #d43b3b; }
+
+/* Action box */
+
+.hiring-box {
+    margin: 0 0 18px;
+    padding: 18px 20px;
+    border: 1px solid #bfd3ef;
+    border-radius: 12px;
+    background: #f7faff;
+}
+
+.hiring-box h3 {
+    margin: 0 0 12px;
+    color: #12304a;
+    font-size: 17px;
+}
+
+.hiring-box textarea,
+.hiring-box input[type="text"],
+.hiring-box input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+}
+
+.hiring-box textarea { resize: vertical; }
+
+.hiring-box textarea:focus,
+.hiring-box input:focus {
+    border-color: #2564eb;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, 0.14);
+}
+
+.hiring-box input.field-invalid { border-color: #d43b3b; }
+
+.hiring-label {
+    display: block;
+    margin: 12px 0 6px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.hiring-label small {
+    display: block;
+    margin-top: 2px;
+    color: #b45309;
+    font-weight: 600;
+}
+
+.hiring-hint {
+    display: block;
+    margin: 0 0 6px;
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+.hiring-decisions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.hiring-decision {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.hiring-decision.success.active { border-color: #198754; background: #e7f7ee; color: #07804b; }
+.hiring-decision.info.active { border-color: #2564eb; background: #eaf1fe; color: #1d4ed8; }
+.hiring-decision.warning.active { border-color: #fdba74; background: #fff7ed; color: #c2410c; }
+.hiring-decision.danger.active { border-color: #f1baba; background: #fff0f0; color: #d43b3b; }
+
+.hiring-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.hiring-actions .mpr-btn,
+.hiring-hire .mpr-btn,
+.hiring-hired .mpr-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    text-decoration: none;
+}
+
+.hiring-actions .mpr-btn.success,
+.hiring-hire .mpr-btn.success { border-color: #198754; background: #198754; color: #ffffff; }
+.hiring-actions .mpr-btn.danger { border-color: #f1baba; background: #fff0f0; color: #d43b3b; }
+
+.hiring-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0 0 8px;
+}
+
+.hiring-facts > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px 11px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.hiring-facts > div.full { grid-column: 1 / -1; }
+
+.hiring-facts span {
+    color: #64748b;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.hiring-facts strong {
+    color: #12304a;
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
+}
+
+.hiring-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.hiring-range-warning {
+    margin: 6px 0 0;
+    color: #d43b3b;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+/* Offer letter preview */
+
+.offer-preview {
+    overflow: hidden;
+    border: 1px solid #dbe3ec;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.offer-preview-subject {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #12304a;
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.offer-preview-subject span {
+    margin-inline-end: 8px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.offer-preview-body {
+    padding: 14px 18px;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.offer-preview-body p { margin: 0 0 10px; }
+
+.offer-preview-body table {
+    margin: 4px 0 12px;
+    border-collapse: collapse;
+}
+
+.offer-preview-body td {
+    padding: 4px 18px 4px 0;
+    vertical-align: top;
+}
+
+.offer-preview-body td:first-child { color: #64748b; }
+.offer-preview-body td:last-child { font-weight: 600; }
+
+.offer-preview-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 10px;
+}
+
+.offer-preview-buttons span {
+    padding: 10px 20px;
+    border-radius: 8px;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.offer-preview-buttons .accept { background: #0f8b83; }
+.offer-preview-buttons .decline { background: #b91c1c; }
+
+.offer-preview-muted {
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+/* Pre-joining + hire */
+
+.hiring-progress {
+    margin: 14px 0 10px;
+}
+
+.hiring-progress-text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: #12304a;
+    font-size: 13.5px;
+}
+
+.hiring-progress-text span { color: #64748b; font-weight: 600; }
+
+.hiring-progress-bar {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #e2e8f0;
+}
+
+.hiring-progress-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: #198754;
+    transition: width 0.2s ease;
+}
+
+.hiring-checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.hiring-checklist label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13.5px;
+    cursor: pointer;
+}
+
+.hiring-checklist label.done {
+    border-color: #b7e4c7;
+    background: #f1fbf4;
+}
+
+.hiring-checklist input {
+    width: 17px;
+    height: 17px;
+    accent-color: #198754;
+}
+
+.hiring-hire {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.hiring-hire > div { flex: 1 1 200px; }
+.hiring-hire .hiring-label { margin-top: 0; }
+
+.hiring-hired {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #12304a;
+    color: #ffffff;
+}
+
+.hiring-hired > div {
+    display: grid;
+    flex: 1;
+    gap: 2px;
+}
+
+.hiring-hired span { color: #cbd5e1; font-size: 13px; }
+
+/* Sections below the action box */
+
+.candidate-section.hiring-section {
+    margin: 0 0 16px;
+    padding: 16px 18px;
+}
+
+.hiring-rounds {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.hiring-rounds li {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13.5px;
+}
+
+.hiring-round-result em {
+    font-style: normal;
+    font-weight: 700;
+    color: #12304a;
+}
+
+@media (max-width: 700px) {
+    .hiring-panel-header,
+    .hiring-panel-body { padding-inline: 16px; }
+    .hiring-decisions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hiring-form-grid,
+    .hiring-checklist { grid-template-columns: 1fr; }
+    .hiring-step-label { font-size: 10px; }
+}

@@ -5,6 +5,7 @@ import EmployeeDashboard from "./Employee/EmployeeDashboard";
 import EmployeeDetails from "./pages/hr/EmployeeDetails";
 import Careers from "./pages/Careers";
 import CareerJobDetail from "./pages/CareerJobDetail";
+import OfferResponse from "./pages/OfferResponse";
 
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
@@ -109,6 +110,12 @@ function App() {
         <Route
           path="/careers/:jobId"
           element={<CareerJobDetail />}
+        />
+
+        {/* Offer letter: candidate accepts / declines from the emailed link (no login) */}
+        <Route
+          path="/offer/:token"
+          element={<OfferResponse />}
         />
 
         {/* Old Careers link */}

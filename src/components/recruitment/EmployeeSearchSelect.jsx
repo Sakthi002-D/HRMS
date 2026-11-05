@@ -2,6 +2,7 @@
 // (mpr-dept-* classes in recruitment.css). The menu is drawn in document.body so nothing can clip it.
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isDialogOpen, useCloseOnDialog } from "../common/dialog/closeMenus";
 
 const optionLabel = (employee) => {
     const details = [employee.designation, employee.department].filter(Boolean).join(" · ");
@@ -14,6 +15,7 @@ function EmployeeSearchSelect({ value, onChange, employees, loading = false, loa
     const [menuStyle, setMenuStyle] = useState(null);
     const buttonRef = useRef(null);
     const menuRef = useRef(null);
+    useCloseOnDialog(open, setOpen);
 
     const sorted = useMemo(() => [...employees].sort((a, b) => String(a.name).localeCompare(String(b.name))), [employees]);
     const search = query.trim().toLowerCase();
@@ -90,6 +92,7 @@ function EmployeeSearchSelect({ value, onChange, employees, loading = false, loa
     }, [open]);
 
     const toggle = () => {
+        if (isDialogOpen()) return;
         setQuery("");
         setOpen((current) => !current);
     };

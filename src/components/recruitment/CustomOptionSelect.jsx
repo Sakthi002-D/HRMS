@@ -3,6 +3,7 @@
 // Same look and behaviour as the MPR Department dropdown (mpr-dept-* classes in recruitment.css).
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isDialogOpen, useCloseOnDialog } from "../common/dialog/closeMenus";
 
 export const OTHER_OPTION = "Other";
 
@@ -24,6 +25,7 @@ function CustomOptionSelect({ id, menuClassName = "", value, onChange, options, 
     const [menuStyle, setMenuStyle] = useState(null);
     const buttonRef = useRef(null);
     const menuRef = useRef(null);
+    useCloseOnDialog(open, setOpen);
 
     const hasValue = Boolean(value) && value !== OTHER_OPTION;
     // A saved MPR (draft / Sent Back) may use a custom option this browser doesn't know yet: still list it
@@ -161,7 +163,7 @@ function CustomOptionSelect({ id, menuClassName = "", value, onChange, options, 
                     id={id}
                     type="button"
                     className={`mpr-dept-field${hasValue ? "" : " is-placeholder"}${open ? " is-open" : ""}`}
-                    onClick={() => setOpen((current) => !current)}
+                    onClick={() => !isDialogOpen() && setOpen((current) => !current)}
                     disabled={disabled}
                     aria-expanded={open}
                 >

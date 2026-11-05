@@ -101,7 +101,18 @@ export const notifyApplicationsChanged = () => window.dispatchEvent(new Event(AP
 
 // CSS modifier for a job application status pill (mpr-status classes)
 export const applicationTone = (status = "") =>
-    ({ New: "info", Shortlisted: "done", "Interview Scheduled": "pending", "On Hold": "warning", Rejected: "danger" })[status] || "muted";
+    ({
+        New: "info",
+        Shortlisted: "done",
+        "Interview Scheduled": "pending",
+        "On Hold": "warning",
+        Rejected: "danger",
+        Selected: "info",
+        "Offer Sent": "pending",
+        "Offer Accepted": "done",
+        "Offer Declined": "danger",
+        Hired: "hired",
+    })[status] || "muted";
 
 // Candidate's CV (HR only; there is no public URL) as an object URL
 export async function fetchApplicationCv(applicationId, actorId) {

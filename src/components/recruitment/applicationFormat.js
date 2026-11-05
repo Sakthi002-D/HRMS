@@ -2,7 +2,7 @@
 import i18n from "i18next";
 import { formatMoney, recruitmentValueLabel } from "./recruitmentApi";
 
-export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected"];
+export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected", "Selected", "Offer Sent", "Offer Accepted", "Offer Declined", "Hired"];
 export const INTERVIEW_MODES = ["In-person", "Online", "Phone"];
 
 // Mode → [t("recruitment.applicationDetail.interview.<key>"), English label]

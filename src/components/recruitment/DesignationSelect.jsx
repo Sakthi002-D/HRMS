@@ -2,6 +2,7 @@
 // (mpr-dept-* classes in recruitment.css). The menu is drawn in document.body so nothing can clip it.
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isDialogOpen, useCloseOnDialog } from "../common/dialog/closeMenus";
 
 function DesignationSelect({ value, onChange, options, disabled = false, placeholder, invalid = false }) {
     const [query, setQuery] = useState("");
@@ -9,6 +10,7 @@ function DesignationSelect({ value, onChange, options, disabled = false, placeho
     const [menuStyle, setMenuStyle] = useState(null);
     const buttonRef = useRef(null);
     const menuRef = useRef(null);
+    useCloseOnDialog(open, setOpen);
 
     const search = query.trim().toLowerCase();
     const matches = search ? options.filter((name) => name.toLowerCase().includes(search)) : options;
@@ -78,6 +80,7 @@ function DesignationSelect({ value, onChange, options, disabled = false, placeho
     }, [open]);
 
     const toggle = () => {
+        if (isDialogOpen()) return;
         setQuery("");
         setOpen((current) => !current);
     };

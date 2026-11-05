@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { isDialogOpen, useCloseOnDialog } from "../../common/dialog/closeMenus";
 import "./DatePicker.css";
 
 const POPUP_GAP = 8;
@@ -46,6 +47,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
   const popupRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [yearPickerOpen, setYearPickerOpen] = useState(false);
+  useCloseOnDialog(open, setOpen);
   const normalizedValue = normalizeDateValue(value);
   const todayKey = normalizeDateValue(today) || toDateKey(new Date());
   const minKey = normalizeDateValue(minDate);
@@ -144,6 +146,7 @@ function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", minDate, toda
   }, [open, autoPosition, yearPickerOpen]);
 
   const togglePicker = () => {
+    if (!open && isDialogOpen()) return;
     if (!open && minMonthIndex !== null && visibleMonthIndex < minMonthIndex) {
       setVisibleMonth(new Date(minDateObject.getFullYear(), minDateObject.getMonth(), 1));
     }

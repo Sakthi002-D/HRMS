@@ -28,7 +28,7 @@ export const QUALIFICATIONS = ["High School", "Diploma", "Bachelor's Degree", "M
 export const SOURCES = ["Company website", "LinkedIn", "NaukriGulf", "Recruitment agency", "Employee referral", "Other"];
 export const NOTICE_PERIODS = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
 export const SALARY_CURRENCIES = ["QAR", "INR", "USD", "EUR", "GBP", "AED", "SAR", "KWD", "OMR", "BHD"];
-export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected"];
+export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected", "Selected", "Offer Sent", "Offer Accepted", "Offer Declined", "Hired"];
 export const INTERVIEW_MODES = ["In-person", "Online", "Phone"];
 
 export const CV_MAX_BYTES = 5 * 1024 * 1024;
@@ -473,7 +473,7 @@ async function nextApplicationNo(db, year) {
     return `APP-${year}-${String(result.rows[0].next).padStart(4, "0")}`;
 }
 
-async function logApplicationAction(db, applicationDbId, { action, from = null, to = null, actor = null, remark = null }) {
+export async function logApplicationAction(db, applicationDbId, { action, from = null, to = null, actor = null, remark = null }) {
     await db.query(
         `INSERT INTO job_application_actions (application_db_id, action, from_status, to_status, actor_id, actor_name, remark)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -723,7 +723,7 @@ export async function actOnApplication(db, { id, action, actorId, remark }) {
 const INTERVIEW_PLACE_LABELS = { "In-person": "Interview Location", Online: "Meeting Link", Phone: "Phone Number" };
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-async function interviewTableExists(db) {
+export async function interviewTableExists(db) {
     const result = await db.query(`SELECT to_regclass('public.job_application_interviews') AS name`);
     return Boolean(result.rows[0].name);
 }
@@ -739,7 +739,7 @@ const companyClock = (timeZone) => {
 };
 
 // Follows the date format chosen in HR Settings
-const formatDateKey = (value, dateFormat) => {
+export const formatDateKey = (value, dateFormat) => {
     const [year, month, day] = value.split("-");
     return (dateFormat || "DD-MM-YYYY").replace("YYYY", year).replace("MM", month).replace("DD", day);
 };

@@ -343,8 +343,8 @@
       "contact": "جهة الاتصال",
       "noAgencies": "لا توجد وكالات بعد.",
       "deleteAgencyLabel": "حذف الوكالة {{name}}",
-      "budget": "ميزانية عدد موظفي القسم",
-      "budgetHint": "المناصب المعتمدة في الميزانية هي عدد الموظفين الجدد الذين توافق عليهم الموارد البشرية للقسم والسنة، وميزانية الرواتب السنوية ({{currency}}) هي إجمالي المبلغ السنوي المخصص لهم. تُراجع طلبات القوى العاملة للمناصب الجديدة مقابلها (لا يُحتسب الموظفون الحاليون). حفظ قسم وسنة موجودين يحدّث الميزانية.",
+      "budget": "ميزانية عدد الموظفين",
+      "budgetHint": "عدد الموظفين الجدد الذين توافق عليهم الموارد البشرية لكل مسمى وظيفي في السنة، وميزانية الرواتب السنوية المخصصة لهم. تُراجع طلبات المناصب الجديدة مقابل البند المطابق.",
       "departmentRequired": "القسم *",
       "year": "السنة",
       "budgetedPositions": "المناصب المعتمدة في الميزانية",
@@ -352,8 +352,33 @@
       "salaryBudget": "ميزانية الرواتب السنوية",
       "salaryBudgetRequired": "ميزانية الرواتب السنوية ({{currency}}) *",
       "salaryBudgetColumn": "ميزانية الرواتب السنوية ({{currency}})",
-      "noBudgets": "لا توجد ميزانيات بعد. بدون ميزانية، يظهر في طلب القوى العاملة لمنصب جديد \"لم تُحدَّد ميزانية\" ويتطلب مبررًا.",
-      "deleteBudget": "حذف الميزانية"
+      "noBudgets": "لا توجد بنود ميزانية بعد. أضف البند الأول أعلاه.",
+      "noBudgetMatches": "لا توجد بنود ميزانية تطابق عامل التصفية.",
+      "deleteBudget": "حذف الميزانية",
+      "position": "المنصب",
+      "designation": "المسمى الوظيفي",
+      "used": "المستخدم",
+      "usage": "المستخدم / المعتمد",
+      "filterYear": "التصفية حسب السنة",
+      "allYears": "كل السنوات",
+      "searchBudget": "ابحث بالدرجة أو المنصب أو المسمى الوظيفي",
+      "groupTotals": "{{positions}} منصب · {{currency}} {{salary}}",
+      "groupTotals_one": "منصب واحد · {{currency}} {{salary}}",
+      "groupTotals_two": "منصبان · {{currency}} {{salary}}",
+      "groupTotals_few": "{{positions}} مناصب · {{currency}} {{salary}}",
+      "groupTotals_many": "{{positions}} منصبًا · {{currency}} {{salary}}",
+      "groupTotals_other": "{{positions}} منصب · {{currency}} {{salary}}",
+      "budgeted": "المعتمد",
+      "salaryBudgetShort": "ميزانية الرواتب ({{currency}})",
+      "deleteBudgetLine": "حذف بند الميزانية",
+      "errors": {
+        "grade": "اختر الدرجة.",
+        "position": "اختر المنصب.",
+        "designation": "اختر المسمى الوظيفي.",
+        "year": "أدخل سنة من 2000 فما بعد.",
+        "budgetedPositions": "أدخل عددًا صحيحًا، 0 أو أكثر.",
+        "salaryBudget": "أدخل مبلغًا، 0 أو أكثر."
+      }
     },
     "resignation": {
       "noticeDays": "فترة الإشعار (بالأيام)",
@@ -1428,9 +1453,15 @@
       "yearOfPassing": "سنة التخرج"
     },
     "applicationStatuses": {
+      "hired": "تم التعيين",
+      "interview_scheduled": "تمت جدولة المقابلة",
       "new": "جديد",
+      "offer_accepted": "تم قبول العرض",
+      "offer_declined": "تم رفض العرض",
+      "offer_sent": "تم إرسال العرض",
       "on_hold": "معلّق",
       "rejected": "مرفوض",
+      "selected": "تم الاختيار",
       "shortlisted": "في القائمة المختصرة"
     },
     "applications": {
@@ -1497,6 +1528,8 @@
       "morePositions_zero": "لا يمكن شغل وظائف إضافية ضمن هذه الميزانية.",
       "noBudget": "لا توجد ميزانية محددة",
       "noBudgetReason": "لا توجد ميزانية محددة لقسم {{department}} ({{year}}). حدّدها من الإعدادات ← بيانات التوظيف الرئيسية.",
+      "noBudgetLineReason": "لا توجد ميزانية محددة للبند {{line}}. حدّدها من الإعدادات ← بيانات التوظيف الرئيسية.",
+      "budgetLine": "بند الميزانية",
       "positionsExceededReason_few": "طُلبت {{count}} وظائف، المتاح {{available}} (يتجاوز بمقدار {{exceededBy}})",
       "positionsExceededReason_many": "طُلبت {{count}} وظيفة، المتاح {{available}} (يتجاوز بمقدار {{exceededBy}})",
       "positionsExceededReason_one": "طُلبت وظيفة واحدة، المتاح {{available}} (يتجاوز بمقدار {{exceededBy}})",
@@ -1717,6 +1750,7 @@
     },
     "tabs": {
       "applications": "طلبات التوظيف",
+      "hiring": "التعيين",
       "jobs": "الوظائف الشاغرة",
       "manpower": "طلبات القوى العاملة"
     },
@@ -1758,6 +1792,9 @@
         "high_school": "الثانوية العامة",
         "master_s_degree": "ماجستير",
         "other": "أخرى"
+      },
+      "employmentType": {
+        "project_based": "مرتبط بمشروع"
       },
       "requestType": {
         "new_position": "وظيفة جديدة",

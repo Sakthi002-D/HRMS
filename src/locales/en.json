@@ -315,8 +315,8 @@
       "contact": "Contact",
       "noAgencies": "No agencies yet.",
       "deleteAgencyLabel": "Delete agency {{name}}",
-      "budget": "Department Headcount Budget",
-      "budgetHint": "Budgeted Positions is the number of NEW people HR approves for the department and year; the Annual Salary Budget ({{currency}}) is the total yearly amount for them. New Position MPRs are checked against it (existing employees aren't counted). Saving an existing department + year updates it.",
+      "budget": "Headcount Budget",
+      "budgetHint": "Number of new people HR approves for each designation in a year, and the yearly salary budget for them. New Position requests are checked against the matching line.",
       "departmentRequired": "Department *",
       "year": "Year",
       "budgetedPositions": "Budgeted Positions",
@@ -324,8 +324,29 @@
       "salaryBudget": "Annual Salary Budget",
       "salaryBudgetRequired": "Annual Salary Budget ({{currency}}) *",
       "salaryBudgetColumn": "Annual Salary Budget ({{currency}})",
-      "noBudgets": "No budgets yet. Without one, a New Position MPR shows \"No budget set\" and needs a justification.",
-      "deleteBudget": "Delete budget"
+      "noBudgets": "No budget lines yet. Add the first one above.",
+      "noBudgetMatches": "No budget lines match the filter.",
+      "deleteBudget": "Delete budget",
+      "position": "Position",
+      "designation": "Designation",
+      "used": "Used",
+      "usage": "Used / Budgeted",
+      "filterYear": "Filter by year",
+      "allYears": "All years",
+      "searchBudget": "Search grade, position or designation",
+      "groupTotals_one": "{{positions}} position · {{currency}} {{salary}}",
+      "groupTotals_other": "{{positions}} positions · {{currency}} {{salary}}",
+      "budgeted": "Budgeted",
+      "salaryBudgetShort": "Salary Budget ({{currency}})",
+      "deleteBudgetLine": "Delete budget line",
+      "errors": {
+        "grade": "Choose the Grade.",
+        "position": "Choose the Position.",
+        "designation": "Choose the Designation.",
+        "year": "Enter a year from 2000 onwards.",
+        "budgetedPositions": "Enter a whole number, 0 or more.",
+        "salaryBudget": "Enter an amount, 0 or more."
+      }
     },
     "resignation": {
       "noticeDays": "Notice period (days)",
@@ -1358,9 +1379,15 @@
       "yearOfPassing": "Year of Passing"
     },
     "applicationStatuses": {
+      "hired": "Hired",
+      "interview_scheduled": "Interview Scheduled",
       "new": "New",
+      "offer_accepted": "Offer Accepted",
+      "offer_declined": "Offer Declined",
+      "offer_sent": "Offer Sent",
       "on_hold": "On Hold",
       "rejected": "Rejected",
+      "selected": "Selected",
       "shortlisted": "Shortlisted"
     },
     "applications": {
@@ -1612,6 +1639,7 @@
     },
     "tabs": {
       "applications": "Job Applications",
+      "hiring": "Hiring",
       "jobs": "Job Openings",
       "manpower": "Manpower Requests"
     },
@@ -1653,6 +1681,9 @@
         "high_school": "High School",
         "master_s_degree": "Master's Degree",
         "other": "Other"
+      },
+      "employmentType": {
+        "project_based": "Project-based"
       },
       "requestType": {
         "new_position": "New Position",

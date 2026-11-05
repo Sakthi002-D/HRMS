@@ -63,8 +63,8 @@ export const isPublicApiRequest = (req) => {
     const path = req.path;
     const method = req.method.toUpperCase();
     if (method === "POST" && ["/login", "/forgot-password", "/verify-otp", "/reset-password"].includes(path)) return true;
-    return (method === "GET" && /^\/careers\/(meta|jobs(?:\/[^/]+)?)$/.test(path))
-        || (method === "POST" && /^\/careers\/jobs\/[^/]+\/apply$/.test(path));
+    return (method === "GET" && /^\/careers\/(meta|jobs(?:\/[^/]+)?|offers\/[^/]+)$/.test(path))
+        || (method === "POST" && /^\/careers\/(jobs\/[^/]+\/apply|offers\/[^/]+\/respond)$/.test(path));
 };
 
 const EMPLOYEE_SELF_PATHS = [

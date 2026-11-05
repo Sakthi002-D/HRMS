@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Award, BriefcaseBusiness, CalendarDays, Minus, Plus, Wrench } from "lucide-react";
+import { isDialogOpen, useCloseOnDialog } from "../common/dialog/closeMenus";
 import { useConfirm } from "../common/dialog/dialogContext";
 import DatePicker from "../layout/common/DatePicker";
 import SkillTagInput from "../careers/SkillTagInput";
@@ -10,24 +11,15 @@ import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { BudgetBadge, BudgetDetails } from "./MprBudget";
 import CustomOptionSelect, { OTHER_OPTION } from "./CustomOptionSelect";
-import DesignationSelect from "./DesignationSelect";
 import EmployeeSearchSelect from "./EmployeeSearchSelect";
+import GradePicker from "./GradePicker";
 import { BUILT_IN_DEPARTMENTS, CUSTOM_DEPARTMENTS_KEY, readCustomDepartments } from "./departments";
 import { api, getCompanyCurrency, isBudgetException, NEW_HEADCOUNT_TYPES } from "./recruitmentApi";
 
-const JOB_CATEGORIES = ["Site Engineering", "Civil", "Electrical", "Mechanical", "Plumbing", "HVAC", "HSE / Safety", "Surveying", "Equipment Operator", "General Labour"];
 const QUALIFICATIONS = ["School Certificate", "ITI / Trade Certificate", "Diploma", "Bachelor's Degree", "Master's Degree", "Professional Certification"];
 const EXPERIENCE_OPTIONS = ["Fresher", "0–2 years", "2–5 years", "5–10 years", "10+ years"];
 
-// Grade Master grades grouped by band, in master order (for the Grade <optgroup>s)
-const groupByBand = (grades) => grades.reduce((groups, grade) => {
-    const group = groups.find((item) => item.band === grade.band);
-    if (group) group.grades.push(grade);
-    else groups.push({ band: grade.band, grades: [grade] });
-    return groups;
-}, []);
-
-// A value saved on an older MPR that is no longer in the master stays selectable
+// A value saved on an older MPR that is no longer in the list stays selectable
 const withSaved = (names, saved) => (saved && !names.includes(saved) ? [...names, saved] : names);
 
 const splitSkills = (skills) => [...new Set(String(skills || "").split(",").map((skill) => skill.trim()).filter(Boolean))];
@@ -41,7 +33,6 @@ const emptyForm = (department) => ({
     department: department || "",
     project_name: "",
     project_code: "",
-    job_category: "",
     employee_category: "",
     grade: "",
     position: "",
@@ -97,6 +88,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const [departmentMenuStyle, setDepartmentMenuStyle] = useState(null);
     const departmentButtonRef = useRef(null);
     const departmentMenuRef = useRef(null);
+    useCloseOnDialog(departmentDropdownOpen, setDepartmentDropdownOpen);
 
     useEffect(() => {
         localStorage.setItem(
@@ -208,13 +200,14 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         return () => { ignore = true; };
     }, [isReplacement, employees.loaded]);
 
-    // Budget check (new headcount; not Replacement): on leaving No. of Openings / Maximum Salary,
-    // on Department change and on Submit. Never on each keystroke.
+    // Budget check (new headcount; not Replacement) against the Headcount Budget line
+    // (year + grade + position + designation): on leaving No. of Openings / Maximum Salary,
+    // when the Designation is chosen or changed, and on Submit. Never on each keystroke.
     const budgetKeyFor = (values) => {
         const openings = Number(values.openings);
-        if (!NEW_HEADCOUNT_TYPES.includes(values.request_type) || !values.department || !(openings > 0)) return null;
+        if (!NEW_HEADCOUNT_TYPES.includes(values.request_type) || !values.designation || !(openings > 0)) return null;
         const year = String(values.application_start_date || meta.today || "").slice(0, 4);
-        return `${values.department}|${year}|${openings}|${Number(values.salary_max) || 0}`;
+        return [year, values.grade, values.position, values.designation, openings, Number(values.salary_max) || 0].join("|");
     };
 
     const currentBudgetKey = budgetKeyFor(form);
@@ -238,7 +231,9 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
         checkingRef.current = true;
         try {
             const params = new URLSearchParams({
-                department: values.department,
+                grade: values.grade,
+                position: values.position,
+                designation: values.designation,
                 openings: values.openings,
                 salary_max: values.salary_max || 0,
                 start_date: values.application_start_date || "",
@@ -270,7 +265,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                 return runBudgetCheck(changed, { fromSubmit }); // the new number may break the salary budget
             }
 
-            // Exceeded, or no budget for the department + year
+            // Exceeded, or no budget line for year + grade + position + designation
             const noBudget = result.status === "no_budget";
             const carryOn = await confirm({
                 variant: noBudget ? "warning" : "danger",
@@ -315,36 +310,19 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     const setBenefit = (name, value) => setForm((current) => ({ ...current, benefits: { ...current.benefits, [name]: value } }));
     const handleChange = (event) => set(event.target.name, event.target.value);
 
-    // Grade → Position → Designation (Settings → Grade Master). Changing a level clears the levels below it;
-    // a level with only one choice is picked automatically.
-    const grades = meta.grades || [];
-    const gradeGroups = groupByBand(grades);
-    const selectedGrade = grades.find((grade) => grade.code === form.grade) || null;
-    const gradePositions = selectedGrade?.positions || [];
-    const selectedPosition = gradePositions.find((position) => position.name === form.position) || null;
-    const positionNames = withSaved(gradePositions.map((position) => position.name), form.position);
-    const designationNames = withSaved((selectedPosition?.designations || []).map((designation) => designation.name), form.designation);
-
-    // Designation picked: fills Job Title / Trade (still editable) and the Employee Category (= the grade's band)
-    const designationPatch = (grade, name) => (name
-        ? { designation: name, title: name, employee_category: grade?.band || form.employee_category }
-        : { designation: "", employee_category: "" });
-
-    const onlyDesignation = (position) => (position?.designations.length === 1 ? position.designations[0].name : "");
-
-    const chooseGrade = (code) => {
-        const grade = grades.find((item) => item.code === code) || null;
-        const position = grade?.positions.length === 1 ? grade.positions[0] : null;
-        updateFields({ grade: code, position: position?.name || "", ...designationPatch(grade, onlyDesignation(position)) });
+    // Grade → Position → Designation (GradePicker). A chosen Designation fills Job Title / Trade
+    // (still editable) and the Employee Category (= the grade's band), and runs the budget check.
+    const handleGradeChange = (patch, grade) => {
+        const next = {
+            ...form,
+            ...patch,
+            ...(patch.designation
+                ? { title: patch.designation, employee_category: grade?.band || form.employee_category }
+                : { employee_category: "" }),
+        };
+        updateFields({ ...patch, title: next.title, employee_category: next.employee_category });
+        if (patch.designation && patch.designation !== form.designation) runBudgetCheck(next);
     };
-
-    const choosePosition = (name) => {
-        if (name === form.position) return;
-        const position = gradePositions.find((item) => item.name === name) || null;
-        updateFields({ position: name, ...designationPatch(selectedGrade, onlyDesignation(position)) });
-    };
-
-    const chooseDesignation = (name) => updateFields(designationPatch(selectedGrade, name));
 
     const skillList = splitSkills(form.skills);
     const experienceOptions = withSaved(EXPERIENCE_OPTIONS, form.experience);
@@ -380,16 +358,10 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
     };
 
     const handleDepartmentChange = (department) => {
-        const next = { ...form, department };
-
-        setForm(next);
+        setForm((current) => ({ ...current, department }));
         setError("");
         clearFieldErrors(["department"]);
         setDepartmentDropdownOpen(false);
-
-        if (department && department !== "Other") {
-            runBudgetCheck(next);
-        }
     };
 
     const addCustomDepartment = () => {
@@ -467,7 +439,6 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
             ["grade", "Grade", "position"],
             ["position", "Position", "position"],
             ["designation", "Designation", "position"],
-            ["job_category", "Job Category", "position"],
             ["qualification", "Required Qualification", "position"],
             ["experience", "Experience", "position"],
             ["skills", "Technical / Trade Skills", "position"],
@@ -556,7 +527,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                         type="button"
                                         className={`mpr-dept-field${form.department && form.department !== "Other" ? "" : " is-placeholder"}${departmentDropdownOpen ? " is-open" : ""}`}
                                         onClick={() =>
-                                            setDepartmentDropdownOpen((open) => !open)
+                                            !isDialogOpen() && setDepartmentDropdownOpen((open) => !open)
                                         }
                                         disabled={lockedDepartment}
                                         aria-expanded={departmentDropdownOpen}
@@ -709,45 +680,13 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                         <div className="mpr-field-group">
                             <h4 className="mpr-group-title"><Award size={15} aria-hidden="true" /> Grade &amp; Designation</h4>
                             <div className="mpr-grade-panel">
-                                <div className="mpr-grade-steps">
-                                    <div className={`form-group mpr-grade-step${form.grade ? " is-done" : ""}`}>
-                                        <label htmlFor="mpr-grade"><span className="mpr-step-number">1</span> Grade *</label>
-                                        <select id="mpr-grade" value={form.grade || ""} onChange={(event) => chooseGrade(event.target.value)} aria-invalid={Boolean(fieldErrors.grade)} className={fieldErrors.grade ? "is-invalid" : ""}>
-                                            <option value="">Select grade</option>
-                                            {form.grade && !selectedGrade && <option value={form.grade}>{form.grade} (saved)</option>}
-                                            {gradeGroups.map((group) => (
-                                                <optgroup key={group.band} label={group.band}>
-                                                    {group.grades.map((grade) => <option key={grade.id} value={grade.code}>Grade {grade.code}</option>)}
-                                                </optgroup>
-                                            ))}
-                                        </select>
-                                        {grades.length === 0 && <small className="mpr-step-hint">No grades found.</small>}
-                                        {fieldError("grade")}
-                                    </div>
-
-                                    <div className={`form-group mpr-grade-step${form.position ? " is-done" : ""}`}>
-                                        <label htmlFor="mpr-position"><span className="mpr-step-number">2</span> Position *</label>
-                                        <select id="mpr-position" value={form.position || ""} onChange={(event) => choosePosition(event.target.value)} disabled={!form.grade} aria-invalid={Boolean(fieldErrors.position)} className={fieldErrors.position ? "is-invalid" : ""}>
-                                            <option value="">{form.grade ? "Select position" : "Choose a grade first"}</option>
-                                            {positionNames.map((name) => <option key={name} value={name}>{name}</option>)}
-                                        </select>
-                                        {form.grade && positionNames.length === 0 && <small className="mpr-step-hint">This grade has no active positions.</small>}
-                                        {fieldError("position")}
-                                    </div>
-
-                                    <div className={`form-group mpr-grade-step${form.designation ? " is-done" : ""}`}>
-                                        <label><span className="mpr-step-number">3</span> Designation *</label>
-                                        <DesignationSelect
-                                            value={form.designation}
-                                            onChange={chooseDesignation}
-                                            options={designationNames}
-                                            disabled={!form.position}
-                                            invalid={Boolean(fieldErrors.designation)}
-                                            placeholder={form.position ? "Select designation" : "Choose a position first"}
-                                        />
-                                        {fieldError("designation")}
-                                    </div>
-                                </div>
+                                <GradePicker
+                                    grades={meta.grades || []}
+                                    value={form}
+                                    onChange={handleGradeChange}
+                                    errors={fieldErrors}
+                                    idPrefix="mpr"
+                                />
                             </div>
 
                             {form.grade && (
@@ -772,18 +711,12 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                     <input type="text" name="title" value={form.title} onChange={handleChange} placeholder="e.g. Civil Site Engineer, Mason, Electrician" required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Job Category *</label>
-                                    <CustomOptionSelect
-                                        value={form.job_category || ""}
-                                        onChange={(value) => set("job_category", value)}
-                                        options={JOB_CATEGORIES}
-                                        storageKey="mprCustomJobCategories"
-                                        placeholder="Select job category"
-                                        otherPlaceholder="Enter job category"
-                                        itemLabel="job category"
-                                        onError={setError}
-                                    />
-                                    {fieldError("job_category")}
+                                    <label htmlFor="mpr-experience">{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
+                                    <select id="mpr-experience" name="experience" value={form.experience || ""} onChange={handleChange} aria-invalid={Boolean(fieldErrors.experience)} className={fieldErrors.experience ? "is-invalid" : ""}>
+                                        <option value="">Select experience</option>
+                                        {experienceOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                                    </select>
+                                    {fieldError("experience")}
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="mpr-openings">{t("recruitment.fields.openingsCount", { defaultValue: "Number of Openings" })} *</label>
@@ -806,15 +739,6 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                                         onError={setError}
                                     />
                                     {fieldError("qualification")}
-                                </div>
-                                <div className="form-group mpr-full">
-                                    <label id="mpr-experience-label">{t("recruitment.fields.experience", { defaultValue: "Experience" })} *</label>
-                                    <div className={`mpr-pill-group${fieldErrors.experience ? " is-invalid" : ""}`} role="radiogroup" aria-labelledby="mpr-experience-label">
-                                        {experienceOptions.map((item) => (
-                                            <button key={item} type="button" role="radio" aria-checked={form.experience === item} className={`mpr-pill${form.experience === item ? " is-selected" : ""}`} onClick={() => set("experience", item)}>{item}</button>
-                                        ))}
-                                    </div>
-                                    {fieldError("experience")}
                                 </div>
                             </div>
                         </div>
@@ -957,7 +881,7 @@ function MprForm({ meta, actorId, mpr = null, onClose, onSaved }) {
                     </button>
                     {expandedSections.summary && <div className="mpr-accordion-content">
                         <div className="mpr-summary-grid">
-                            {[["Request Type", form.request_type], ["Department", form.department], ["Project", form.project_name], ["Project Code", form.project_code], ["Job Title", form.title], ["Grade", form.grade], ["Position", form.position], ["Designation", form.designation], ["Employee Category", form.employee_category], ["Job Category", form.job_category], ["Openings", form.openings], ["Qualification", form.qualification], ["Joining Date", form.required_joining_date], ["Site", form.location], ["Employment", form.employment_type], ["Salary Range", form.salary_min || form.salary_max ? `${form.salary_min || "—"} – ${form.salary_max || "—"} ${currency}` : "—"]].map(([label, value]) => <div className="mpr-summary-item" key={label}><span>{label}</span><strong>{value && value !== OTHER_OPTION ? value : "—"}</strong></div>)}
+                            {[["Request Type", form.request_type], ["Department", form.department], ["Project", form.project_name], ["Project Code", form.project_code], ["Job Title", form.title], ["Grade", form.grade], ["Position", form.position], ["Designation", form.designation], ["Employee Category", form.employee_category], ["Openings", form.openings], ["Qualification", form.qualification], ["Joining Date", form.required_joining_date], ["Site", form.location], ["Employment", form.employment_type], ["Salary Range", form.salary_min || form.salary_max ? `${form.salary_min || "—"} – ${form.salary_max || "—"} ${currency}` : "—"]].map(([label, value]) => <div className="mpr-summary-item" key={label}><span>{label}</span><strong>{value && value !== OTHER_OPTION ? value : "—"}</strong></div>)}
                         </div>
                     </div>}
                 </section>

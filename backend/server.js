@@ -9,6 +9,7 @@ import recruitmentRouter from "./routes/recruitment.js";
 import ticketsRouter from "./routes/tickets.js";
 import resignationsRouter from "./routes/resignations.js";
 import careersRouter from "./routes/careers.js";
+import hiringRouter from "./routes/hiring.js";
 import appSettingsRouter from "./routes/appSettings.js";
 import { ensureAppSettingsSchema } from "./services/appSettings.js";
 import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/employeeDocuments.js";
@@ -69,6 +70,8 @@ app.use("/api", ticketsRouter);
 app.use("/api", resignationsRouter);
 // Public Careers page + HR Recruitment → Job Applications
 app.use("/api", careersRouter);
+// HR Recruitment → Hiring (interview result, offer letter, pre-joining, hire) + public /offer/:token answers
+app.use("/api", hiringRouter);
 // Workspace settings (company name, date format, session timeout, notification switches)
 app.use("/api", appSettingsRouter);
 // Employee documents: HR uploads Contract / Offer Letter / QID, employee uploads Visa / Passport
