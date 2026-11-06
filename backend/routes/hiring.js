@@ -107,10 +107,18 @@ setInterval(() => {
 
 const noIndex = (res) => res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex", "Referrer-Policy": "no-referrer" });
 
-router.get("/careers/offers/:token", rateLimitOffer, handle(async (req, res) => {
+// A failure here is logged in full; the candidate only gets a friendly message with the
+// company support email (HR Settings) to contact.
+router.get("/careers/offers/:token", rateLimitOffer, async (req, res) => {
     noIndex(res);
-    res.json(await getPublicOffer(pool, req.params.token, await getAppSettingsSafe()));
-}));
+    const settings = await getAppSettingsSafe();
+    try {
+        res.json(await getPublicOffer(pool, req.params.token, settings));
+    } catch (error) {
+        console.error("Public offer page error:", error);
+        res.status(500).json({ message: "We couldn't load your offer.", supportEmail: settings.supportEmail || "" });
+    }
+});
 
 router.post("/careers/offers/:token/respond", rateLimitOffer, handle(async (req, res) => {
     noIndex(res);

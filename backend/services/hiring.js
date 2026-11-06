@@ -21,9 +21,21 @@ import {
     requireHRActor,
 } from "./careerApplications.js";
 import { normalizeGrade } from "./grades.js";
+import {
+    OFFER_ACCEPT_LABEL,
+    OFFER_CURRENCY,
+    OFFER_DECLINE_LABEL,
+    OFFER_LINK_NOTE,
+    OFFER_REPLY_PREFIX,
+    OFFER_VALID_DAYS,
+    formatOfferDate,
+    offerIntro,
+    offerRows,
+    offerSignature,
+    offerSubject,
+} from "./offerLetterContent.js";
 
-export const OFFER_CURRENCY = "QAR";
-const OFFER_VALID_DAYS = 14;
+export { OFFER_CURRENCY };
 const MAX_PROBATION_MONTHS = 6; // Qatar Labour Law
 
 // Interview decision → new application status
@@ -44,7 +56,6 @@ const text = (value, max) => String(value ?? "").trim().slice(0, max);
 const isDateKey = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
 const money = (value) => Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const companyOf = (settings) => String(settings?.companyName || "Shelter Group");
-const yesNo = (value) => (value ? "Provided" : "Not provided");
 
 const hashToken = (token) => createHash("sha256").update(String(token)).digest("hex");
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -318,56 +329,43 @@ export async function recordResultEmail(db, interviewId, { sent, reason }) {
 // OFFER LETTER
 // =====================================================
 
-// Rows of the letter (same order as the preview in src/components/recruitment/OfferLetterPreview.jsx)
-const offerRows = (context, offer, settings) => [
-    ["Position", context.position || context.job_title],
-    ["Designation", context.designation || context.job_title],
-    ...(context.grade ? [["Grade", context.grade]] : []),
-    ["Department", context.department || "—"],
-    ["Site", context.site || "—"],
-    ["Monthly salary", `${offer.currency || OFFER_CURRENCY} ${money(offer.salary)}`],
-    ["Joining date", formatDateKey(offer.joining_date, settings.dateFormat)],
-    ["Probation", `${offer.probation_months} month${Number(offer.probation_months) === 1 ? "" : "s"}`],
-    ["Accommodation", yesNo(context.accommodation)],
-    ["Transport", yesNo(context.transport)],
-];
-
 const formatExpiry = (expiresAt, settings) => {
     const timeZone = settings.timezone || "Asia/Qatar";
     const key = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(expiresAt));
-    return formatDateKey(key, settings.dateFormat);
+    return formatOfferDate(key, settings.dateFormat);
 };
 
+// Offer letter email. The wording lives in offerLetterContent.js, which the HR preview also uses.
 const offerEmail = (context, offer, token, settings) => {
     const company = companyOf(settings);
     const link = `${publicOfferUrl()}/offer/${token}`;
     const rows = offerRows(context, offer, settings);
     const expiry = formatExpiry(offer.token_expires_at, settings);
-    const intro = `We are pleased to offer you the position of ${context.designation || context.job_title} at ${company}.`;
+    const intro = offerIntro(context, company);
     const button = (label, href, color) =>
         `<a href="${escapeHtml(href)}" style="display:inline-block;margin:0 10px 10px 0;padding:14px 28px;border-radius:8px;background:${color};color:#ffffff;font-size:16px;font-weight:700;text-decoration:none">${label}</a>`;
 
     return {
         to: context.email,
         name: context.candidate_name,
-        subject: `Offer Letter – ${context.job_title} – ${company}`,
+        subject: offerSubject(context, company),
         plainSubject: true,
-        signature: `HR Team\n${company}`,
+        signature: offerSignature(company),
         text:
             `${intro}\n\n` +
             rows.map(([label, value]) => `${label}: ${value}`).join("\n") +
-            `\n\nPlease accept or decline this offer by ${expiry}:\n` +
-            `Accept offer: ${link}?answer=accept\n` +
-            `Decline offer: ${link}?answer=decline\n\n` +
-            "This link is personal to you; please do not forward it.",
+            `\n\n${OFFER_REPLY_PREFIX} ${expiry}:\n` +
+            `${OFFER_ACCEPT_LABEL}: ${link}?answer=accept\n` +
+            `${OFFER_DECLINE_LABEL}: ${link}?answer=decline\n\n` +
+            OFFER_LINK_NOTE,
         html:
             `<p>${escapeHtml(intro)}</p>` +
             `<table style="border-collapse:collapse;margin:12px 0 18px">` +
             rows.map(([label, value]) => `<tr><td style="padding:6px 18px 6px 0;color:#64748b">${escapeHtml(label)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(value)}</td></tr>`).join("") +
             `</table>` +
-            `<p>Please accept or decline this offer by <strong>${escapeHtml(expiry)}</strong>.</p>` +
-            `<p>${button("Accept offer", `${link}?answer=accept`, "#0f8b83")}${button("Decline offer", `${link}?answer=decline`, "#b91c1c")}</p>` +
-            `<p style="color:#64748b;font-size:13px">This link is personal to you; please do not forward it.</p>`,
+            `<p>${OFFER_REPLY_PREFIX} <strong>${escapeHtml(expiry)}</strong>.</p>` +
+            `<p>${button(OFFER_ACCEPT_LABEL, `${link}?answer=accept`, "#0f8b83")}${button(OFFER_DECLINE_LABEL, `${link}?answer=decline`, "#b91c1c")}</p>` +
+            `<p style="color:#64748b;font-size:13px">${OFFER_LINK_NOTE}</p>`,
     };
 };
 

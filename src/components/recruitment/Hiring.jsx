@@ -128,7 +128,11 @@ function Hiring({ actorId, rows, loading, error, onChanged }) {
                                     <small className="app-sub">{row.job_title || "—"}</small>
                                     <small className="app-sub" dir="ltr">{t("recruitment.hiring.filled", { filled: row.filled ?? 0, openings: row.openings ?? "—", defaultValue: "{{filled}} / {{openings}} filled" })}</small>
                                 </td>
-                                <td>{[row.grade, row.designation].filter(Boolean).join(" · ") || "—"}</td>
+                                <td>
+                                    {/* Older jobs have no grade */}
+                                    {row.grade || <span className="hiring-no-grade">{t("recruitment.hiring.noGrade", { defaultValue: "No grade" })}</span>}
+                                    {row.designation && ` · ${row.designation}`}
+                                </td>
                                 <td>
                                     {row.interview_date ? (
                                         <>

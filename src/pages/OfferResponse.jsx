@@ -1,13 +1,28 @@
 // Public offer page (/offer/:token, no login): the candidate accepts or declines their offer.
 // Shows only this candidate's offer summary; the link works once and expires (backend/services/hiring.js).
+// Opening the link never saves an answer (email scanners open links automatically):
+// ?answer=accept / ?answer=decline only pre-selects the choice, and the candidate must confirm it.
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { CircleCheck, CircleX, Clock3, Lock } from "lucide-react";
 import CareersHeader from "../components/careers/CareersHeader";
 import CareersFooter from "../components/careers/CareersFooter";
 import API_URL from "../config/api";
-import { careersApi } from "../components/careers/careersApi";
 import "./Careers.css";
+
+// Load the offer. Any failure becomes one friendly message; the real error is logged by the backend.
+async function loadOffer(token) {
+    let data = {};
+    try {
+        const response = await fetch(`${API_URL}/api/careers/offers/${encodeURIComponent(token || "")}`, { cache: "no-store" });
+        data = await response.json().catch(() => ({}));
+        if (response.ok) return data;
+    } catch {
+        // network error: same friendly message below
+    }
+    const contact = data.supportEmail || "our HR team";
+    throw new Error(`We couldn't load your offer. Please try again later or contact ${contact}.`);
+}
 
 const MESSAGES = {
     invalid: { icon: Lock, tone: "closed", title: "This link is not valid", text: "Please use the link in your offer email exactly as it was sent, or contact our HR team." },
@@ -43,7 +58,8 @@ function OfferResponse() {
     const { token } = useParams();
     const [searchParams] = useSearchParams();
     const [state, setState] = useState({ loading: true, data: null, error: "" });
-    const [declining, setDeclining] = useState(searchParams.get("answer") === "decline");
+    // "accept" | "decline" | "" — pre-selected from the email button, saved only on Confirm
+    const [choice, setChoice] = useState(["accept", "decline"].includes(searchParams.get("answer")) ? searchParams.get("answer") : "");
     const [reason, setReason] = useState("");
     const [busy, setBusy] = useState(false);
     const [result, setResult] = useState("");
@@ -51,7 +67,7 @@ function OfferResponse() {
 
     useEffect(() => {
         let ignore = false;
-        careersApi(`/api/careers/offers/${encodeURIComponent(token || "")}`)
+        loadOffer(token)
             .then((data) => !ignore && setState({ loading: false, data, error: "" }))
             .catch((err) => !ignore && setState({ loading: false, data: null, error: err.message }));
         return () => { ignore = true; };
@@ -92,7 +108,18 @@ function OfferResponse() {
                 </dl>
                 <p className="careers-muted">Please respond by <strong>{offer.expires_on}</strong>. You can answer only once.</p>
 
-                {declining ? (
+                {choice === "accept" && (
+                    <div className="offer-decline">
+                        <p className="careers-muted">You are accepting this offer. Click the button below to confirm.</p>
+                        <div className="offer-buttons">
+                            <button type="button" className="career-apply-btn" onClick={() => answer("accept")} disabled={busy}>
+                                {busy ? "Saving..." : "Confirm acceptance"}
+                            </button>
+                            <button type="button" className="careers-clear" onClick={() => setChoice("")} disabled={busy}>Back</button>
+                        </div>
+                    </div>
+                )}
+                {choice === "decline" && (
                     <div className="offer-decline">
                         <label htmlFor="offer-decline-reason">Reason for declining (optional)</label>
                         <textarea id="offer-decline-reason" rows="3" maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} />
@@ -100,17 +127,14 @@ function OfferResponse() {
                             <button type="button" className="career-apply-btn offer-decline-btn" onClick={() => answer("decline")} disabled={busy}>
                                 {busy ? "Saving..." : "Confirm decline"}
                             </button>
-                            <button type="button" className="careers-clear" onClick={() => setDeclining(false)} disabled={busy}>Back</button>
+                            <button type="button" className="careers-clear" onClick={() => setChoice("")} disabled={busy}>Back</button>
                         </div>
                     </div>
-                ) : (
+                )}
+                {!choice && (
                     <div className="offer-buttons">
-                        <button type="button" className="career-apply-btn" onClick={() => answer("accept")} disabled={busy}>
-                            {busy ? "Saving..." : "Accept offer"}
-                        </button>
-                        <button type="button" className="career-apply-btn offer-decline-btn" onClick={() => setDeclining(true)} disabled={busy}>
-                            Decline offer
-                        </button>
+                        <button type="button" className="career-apply-btn" onClick={() => setChoice("accept")}>Accept offer</button>
+                        <button type="button" className="career-apply-btn offer-decline-btn" onClick={() => setChoice("decline")}>Decline offer</button>
                     </div>
                 )}
                 {error && <p className="careers-state error" role="alert">{error}</p>}

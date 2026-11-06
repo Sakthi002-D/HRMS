@@ -1,9 +1,31 @@
-// HR → Recruitment → Hiring: side panel for one candidate. Progress steps, the action box for the
-// current status (interview result, offer, pre-joining, hire), application details and history.
-import { useCallback, useEffect, useState } from "react";
+// HR → Recruitment → Hiring: centred modal for one candidate. Progress steps, then two columns:
+// the action card for the current status (interview result, offer, pre-joining, hire) on the left,
+// and Details / Interviews / History tabs on the right.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { CalendarPlus, Check, ExternalLink, FileText, Mail, RefreshCw, TriangleAlert, UserCheck, UserX } from "lucide-react";
+import {
+    BadgeCheck,
+    CalendarPlus,
+    Check,
+    ChevronDown,
+    CircleCheck,
+    CirclePause,
+    ClipboardCheck,
+    ClipboardList,
+    Clock3,
+    ExternalLink,
+    FileText,
+    Mail,
+    Minus,
+    Plus,
+    RefreshCw,
+    Send,
+    TriangleAlert,
+    UserCheck,
+    UserX,
+} from "lucide-react";
+import { probationText } from "../../../backend/services/offerLetterContent.js";
 import DatePicker from "../layout/common/DatePicker";
 import { useConfirm } from "../common/dialog/dialogContext";
 import { getAppSettings } from "../../utils/appSettings";
@@ -62,15 +84,6 @@ const employeeSlug = (name = "") => name.toLowerCase().trim().replace(/\s+/g, "-
 
 const show = (value) => (value === null || value === undefined || value === "" ? "—" : value);
 
-function Item({ label, children, full = false }) {
-    return (
-        <div className={full ? "full-width" : ""}>
-            <label>{label}</label>
-            <p>{children}</p>
-        </div>
-    );
-}
-
 function Progress({ application }) {
     const { t } = useTranslation();
     const { current, stoppedAt } = progressFor(application.status, application.interviews);
@@ -93,15 +106,67 @@ const emailNotice = (t, email, sentText) => (email?.sent
     ? { tone: "success", text: sentText }
     : { tone: "warning", text: t("recruitment.hiring.emailFailed", { reason: email?.reason, defaultValue: "Saved, but the email could not be sent: {{reason}}" }) });
 
+// ===================== STEP CARD =====================
+
+// One shell for every step: banner, icon + title + description, body, footer row (note left,
+// buttons right) and optional content after the footer (the offer letter preview).
+function StepCard({ icon: Icon, tone = "info", title, description, notice, onNoticeClear, footer, after, className = "", children }) {
+    return (
+        <section className={`hiring-card ${className}`} aria-labelledby="hiring-card-title">
+            {notice && <PanelNotice key={notice.id} notice={notice} onClear={onNoticeClear} />}
+            <header className="hiring-card-head">
+                <span className={`hiring-card-icon ${tone}`} aria-hidden="true"><Icon size={18} /></span>
+                <div>
+                    <h3 id="hiring-card-title">{title}</h3>
+                    {description && <p>{description}</p>}
+                </div>
+            </header>
+            {children && <div className="hiring-card-body">{children}</div>}
+            {footer && <footer className="hiring-card-footer">{footer}</footer>}
+            {after}
+        </section>
+    );
+}
+
+function CardFooter({ note, noteId, children }) {
+    return (
+        <>
+            <p className="hiring-card-note" id={noteId}>{note}</p>
+            <div className="hiring-card-buttons">{children}</div>
+        </>
+    );
+}
+
 // ===================== INTERVIEW RESULT =====================
 
-function ResultBox({ application, onDone }) {
+const DECISION_HINTS = { Selected: "Go to offer", "Next round": "Schedule again", "On hold": "Decide later", Rejected: "Reason needed" };
+
+function ResultBox({ application, onDone, card }) {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const [decision, setDecision] = useState("");
     const [feedback, setFeedback] = useState("");
     const [reason, setReason] = useState("");
     const [errors, setErrors] = useState({});
+    const [saving, setSaving] = useState(false);
+    const decisionRefs = useRef([]);
+
+    const reset = () => {
+        setDecision("");
+        setFeedback("");
+        setReason("");
+        setErrors({});
+    };
+
+    // Radio group: arrow keys move and select, like native radio buttons
+    const onDecisionKey = (event, index) => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const next = (index + step + DECISIONS.length) % DECISIONS.length;
+        setDecision(DECISIONS[next].value);
+        decisionRefs.current[next]?.focus();
+    };
 
     const submit = async () => {
         const found = {};
@@ -124,78 +189,289 @@ function ResultBox({ application, onDone }) {
             confirmText: t("recruitment.hiring.result.save", { defaultValue: "Save & email candidate" }),
             loadingText: t("recruitment.common.saving", { defaultValue: "Saving..." }),
             onConfirm: async () => {
-                const result = await api(`/api/hr/hiring/${application.id}/result`, {
-                    method: "POST",
-                    body: { decision, feedback: feedback.trim(), reason: reason.trim() },
-                });
-                onDone(result.application, emailNotice(t, result.email, t("recruitment.hiring.result.saved", { email: application.email, defaultValue: "Result saved and emailed to {{email}}" })));
+                setSaving(true);
+                try {
+                    const result = await api(`/api/hr/hiring/${application.id}/result`, {
+                        method: "POST",
+                        body: { decision, feedback: feedback.trim(), reason: reason.trim() },
+                    });
+                    onDone(result.application, emailNotice(t, result.email, t("recruitment.hiring.result.saved", { email: application.email, defaultValue: "Result saved and emailed to {{email}}" })));
+                } finally {
+                    setSaving(false);
+                }
             },
         });
     };
 
+    const ready = feedback.trim() && decision;
+    const internalOnly = t("recruitment.hiring.internalOnly", { defaultValue: "Internal only – never sent to the candidate" });
+
     return (
-        <>
-            <p className="hiring-hint">{t("recruitment.hiring.result.hint", { defaultValue: "Record how the interview went. The candidate is emailed the decision only." })}</p>
+        <StepCard
+            {...card}
+            icon={ClipboardCheck}
+            title={t("recruitment.hiring.box.result", { defaultValue: "Interview result" })}
+            description={t("recruitment.hiring.result.hint", { defaultValue: "Record how the interview went. The candidate is emailed the decision only." })}
+            footer={(
+                <CardFooter note={t("recruitment.hiring.result.footer", { defaultValue: "The candidate gets an email with the decision" })}>
+                    <button type="button" className="hiring-btn ghost" onClick={reset} disabled={saving || (!feedback && !decision && !reason)}>
+                        {t("recruitment.common.cancel", { defaultValue: "Cancel" })}
+                    </button>
+                    <button type="button" className="hiring-btn primary" onClick={submit} disabled={!ready || saving}>
+                        <Mail size={16} aria-hidden="true" />
+                        {saving ? t("recruitment.common.saving", { defaultValue: "Saving..." }) : t("recruitment.hiring.result.save", { defaultValue: "Save & email candidate" })}
+                    </button>
+                </CardFooter>
+            )}
+        >
             <label className="hiring-label" htmlFor="hiring-feedback">
                 {t("recruitment.hiring.result.feedback", { defaultValue: "Interview feedback" })} <span className="required-mark">*</span>
-                <small>{t("recruitment.hiring.internalOnly", { defaultValue: "Internal only – never sent to the candidate" })}</small>
+                <small>{internalOnly}</small>
             </label>
-            <textarea id="hiring-feedback" rows="4" maxLength={3000} value={feedback} onChange={(event) => setFeedback(event.target.value)} aria-invalid={Boolean(errors.feedback)} />
+            <textarea
+                id="hiring-feedback"
+                className="hiring-feedback"
+                rows="4"
+                maxLength={3000}
+                value={feedback}
+                placeholder={t("recruitment.hiring.result.feedbackPlaceholder", { defaultValue: "Technical skills, site experience, communication…" })}
+                onChange={(event) => setFeedback(event.target.value)}
+                aria-invalid={Boolean(errors.feedback)}
+            />
             {errors.feedback && <p className="mpr-form-error">{errors.feedback}</p>}
 
-            <span className="hiring-label">{t("recruitment.hiring.result.decision", { defaultValue: "Decision" })} <span className="required-mark">*</span></span>
-            <div className="hiring-decisions" role="radiogroup" aria-label={t("recruitment.hiring.result.decision", { defaultValue: "Decision" })}>
-                {DECISIONS.map(({ value, label, tone, icon: Icon }) => (
-                    <button
-                        key={value}
-                        type="button"
-                        role="radio"
-                        aria-checked={decision === value}
-                        className={`hiring-decision ${tone}${decision === value ? " active" : ""}`}
-                        onClick={() => setDecision(value)}
-                    >
-                        <Icon size={16} aria-hidden="true" /> {t(`recruitment.hiring.result.decisions.${value.replace(" ", "_").toLowerCase()}`, { defaultValue: label })}
-                    </button>
-                ))}
+            <span className="hiring-label" id="hiring-decision-label">{t("recruitment.hiring.result.decision", { defaultValue: "Decision" })} <span className="required-mark">*</span></span>
+            <div className="hiring-decisions" role="radiogroup" aria-labelledby="hiring-decision-label">
+                {DECISIONS.map(({ value, label, tone, icon: Icon }, index) => {
+                    const active = decision === value;
+                    return (
+                        <button
+                            key={value}
+                            ref={(element) => { decisionRefs.current[index] = element; }}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            tabIndex={active || (!decision && index === 0) ? 0 : -1}
+                            className={`hiring-decision ${tone}${active ? " active" : ""}`}
+                            onClick={() => setDecision(value)}
+                            onKeyDown={(event) => onDecisionKey(event, index)}
+                        >
+                            <span className="hiring-decision-icon" aria-hidden="true"><Icon size={18} /></span>
+                            <strong>{t(`recruitment.hiring.result.decisions.${value.replace(" ", "_").toLowerCase()}`, { defaultValue: label })}</strong>
+                            <small>{t(`recruitment.hiring.result.decisionHints.${value.replace(" ", "_").toLowerCase()}`, { defaultValue: DECISION_HINTS[value] })}</small>
+                        </button>
+                    );
+                })}
             </div>
             {errors.decision && <p className="mpr-form-error">{errors.decision}</p>}
-            {decision === "Next round" && <p className="hiring-hint">{t("recruitment.hiring.result.nextRoundHint", { defaultValue: "The application goes back to Shortlisted so you can schedule the next interview." })}</p>}
+            {decision === "Next round" && <p className="hiring-hint hiring-after-decisions">{t("recruitment.hiring.result.nextRoundHint", { defaultValue: "The application goes back to Shortlisted so you can schedule the next interview." })}</p>}
 
             {decision === "Rejected" && (
-                <>
+                <div className="hiring-reject-reason">
                     <label className="hiring-label" htmlFor="hiring-reason">
                         {t("recruitment.hiring.result.reason", { defaultValue: "Reason for rejecting" })} <span className="required-mark">*</span>
-                        <small>{t("recruitment.hiring.internalOnly", { defaultValue: "Internal only – never sent to the candidate" })}</small>
+                        <small>{internalOnly}</small>
                     </label>
                     <textarea id="hiring-reason" rows="3" maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} aria-invalid={Boolean(errors.reason)} />
                     {errors.reason && <p className="mpr-form-error">{errors.reason}</p>}
-                </>
+                </div>
             )}
-
-            <div className="hiring-actions">
-                <button type="button" className="mpr-btn success" onClick={submit}>
-                    <Mail size={15} aria-hidden="true" /> {t("recruitment.hiring.result.save", { defaultValue: "Save & email candidate" })}
-                </button>
-            </div>
-        </>
+        </StepCard>
     );
 }
 
 // ===================== OFFER =====================
 
-function OfferBox({ application, onDone }) {
+// "12500.5" → "12,500.5" (the form keeps the plain number; this is only what the field shows)
+const groupDigits = (raw) => {
+    const [whole, decimals] = String(raw).split(".");
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return decimals === undefined ? grouped : `${grouped}.${decimals}`;
+};
+
+// Salary field with the currency inside it and thousands separators while typing
+function SalaryInput({ id, value, onChange, currency, invalid, describedBy }) {
+    const ref = useRef(null);
+    const caret = useRef(null); // digits before the caret, restored after the commas move
+
+    useLayoutEffect(() => {
+        const input = ref.current;
+        if (caret.current === null || !input || document.activeElement !== input) return;
+        let digits = 0;
+        let position = 0;
+        while (position < input.value.length && digits < caret.current) {
+            if (input.value[position] !== ",") digits += 1;
+            position += 1;
+        }
+        input.setSelectionRange(position, position);
+        caret.current = null;
+    });
+
+    const change = (event) => {
+        const typed = event.target.value;
+        let raw = typed.replace(/[^\d.]/g, "");
+        const dot = raw.indexOf(".");
+        if (dot !== -1) raw = `${raw.slice(0, dot + 1)}${raw.slice(dot + 1).replace(/\./g, "").slice(0, 2)}`;
+        raw = raw.replace(/^0+(?=\d)/, "");
+        if (raw.split(".")[0].length > 8) return; // the backend accepts up to 99,999,999
+        caret.current = Math.min(typed.slice(0, event.target.selectionStart ?? typed.length).replace(/[^\d.]/g, "").length, raw.length);
+        onChange(raw);
+    };
+
+    return (
+        <div className={`offer-money${invalid ? " invalid" : ""}`} dir="ltr">
+            <span className="offer-money-currency" aria-hidden="true">{currency}</span>
+            <input
+                ref={ref}
+                id={id}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="0"
+                value={groupDigits(value)}
+                onChange={change}
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+            />
+        </div>
+    );
+}
+
+// MPR salary range as a bar, with a marker at the salary entered (warning only; sending is allowed)
+function SalaryRange({ min, max, salary, currency }) {
+    const { t } = useTranslation();
+    const span = max - min || Math.max(max * 0.2, 1);
+    const low = min - span * 0.35;
+    const high = max + span * 0.35;
+    const at = (value) => Math.min(100, Math.max(0, ((value - low) / (high - low)) * 100));
+    const entered = salary > 0;
+    const inside = entered && salary >= min && salary <= max;
+    const range = `${currency} ${formatMoney(min)} – ${formatMoney(max)}`;
+
+    return (
+        <div className={`offer-range${entered ? (inside ? " inside" : " outside") : ""}`} dir="ltr">
+            <div className="offer-range-track" aria-hidden="true">
+                <span className="offer-range-band" style={{ left: `${at(min)}%`, width: `${at(max) - at(min)}%` }} />
+                {entered && <span className="offer-range-marker" style={{ left: `${at(salary)}%` }} />}
+            </div>
+            <div className="offer-range-scale">
+                <span>{t("recruitment.hiring.offer.rangeLabel", { defaultValue: "MPR range" })}</span>
+                <span>{range}</span>
+            </div>
+            {entered && !inside && (
+                <p className="offer-range-message" role="status">
+                    <TriangleAlert size={14} aria-hidden="true" />
+                    {t("recruitment.hiring.offer.outsideRange", { range, defaultValue: "Outside the MPR range ({{range}})" })}
+                </p>
+            )}
+        </div>
+    );
+}
+
+// − / + months picker; empty until HR chooses (probation has no default)
+function MonthsStepper({ id, labelId, value, onChange, max, invalid, describedBy }) {
+    const { t } = useTranslation();
+    const months = value === "" ? null : Number(value);
+    const set = (next) => onChange(String(Math.min(max, Math.max(1, next))));
+    const monthsText = (count) => t("recruitment.hiring.offer.monthsCount", { count, defaultValue: probationText(count) });
+
+    const onKeyDown = (event) => {
+        const keys = {
+            ArrowUp: () => set((months ?? 0) + 1),
+            ArrowRight: () => set((months ?? 0) + 1),
+            ArrowDown: () => months !== null && set(months - 1),
+            ArrowLeft: () => months !== null && set(months - 1),
+            Home: () => set(1),
+            End: () => set(max),
+        };
+        const digit = Number(event.key);
+        if (keys[event.key]) keys[event.key]();
+        else if (Number.isInteger(digit) && digit >= 1 && digit <= max) set(digit);
+        else return;
+        event.preventDefault();
+    };
+
+    return (
+        <div className={`offer-stepper${invalid ? " invalid" : ""}`} dir="ltr">
+            <button type="button" onClick={() => set(months - 1)} disabled={months === null || months <= 1} aria-label={t("recruitment.hiring.offer.fewerMonths", { defaultValue: "One month less" })}>
+                <Minus size={16} aria-hidden="true" />
+            </button>
+            <div
+                id={id}
+                role="spinbutton"
+                tabIndex={0}
+                className={months === null ? "empty" : ""}
+                aria-labelledby={labelId}
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                aria-required="true"
+                aria-valuemin={1}
+                aria-valuemax={max}
+                aria-valuenow={months ?? undefined}
+                aria-valuetext={months === null ? t("recruitment.hiring.offer.notSet", { defaultValue: "Not set" }) : monthsText(months)}
+                onKeyDown={onKeyDown}
+            >
+                {months === null ? t("recruitment.hiring.offer.choose", { defaultValue: "Select" }) : monthsText(months)}
+            </div>
+            <button type="button" onClick={() => set((months ?? 0) + 1)} disabled={months !== null && months >= max} aria-label={t("recruitment.hiring.offer.moreMonths", { defaultValue: "One month more" })}>
+                <Plus size={16} aria-hidden="true" />
+            </button>
+        </div>
+    );
+}
+
+// Read-only job + MPR values the offer takes, as one strip of chips
+function OfferRole({ job }) {
+    const { t } = useTranslation();
+    const yes = t("employeeProfile.values.yes", { defaultValue: "Yes" });
+    const no = t("employeeProfile.values.no", { defaultValue: "No" });
+    const chips = [
+        [t("recruitment.fields.position", { defaultValue: "Position" }), job.position],
+        [t("recruitment.fields.designation", { defaultValue: "Designation" }), job.designation],
+        [t("profileEdit.fields.department", { defaultValue: "Department" }), job.department],
+        [t("recruitment.hiring.site", { defaultValue: "Site" }), job.site],
+        [t("recruitment.fields.accommodation", { defaultValue: "Accommodation" }), job.accommodation ? yes : no],
+        [t("recruitment.hiring.transport", { defaultValue: "Transport" }), job.transport ? yes : no],
+    ];
+    return (
+        <section className="offer-role" aria-labelledby="offer-role-title">
+            <div className="offer-role-head">
+                <h4 id="offer-role-title">{t("recruitment.hiring.offer.roleFromMpr", { defaultValue: "Role from the MPR" })}</h4>
+                {job.mpr_no && <span className="offer-role-mpr" dir="ltr">{job.mpr_no}</span>}
+            </div>
+            <ul className="offer-role-chips">
+                <li className={`offer-grade${job.grade ? "" : " none"}`}>
+                    <span className="sr-only">{t("recruitment.fields.grade", { defaultValue: "Grade" })}: </span>
+                    {job.grade || t("recruitment.hiring.noGrade", { defaultValue: "No grade" })}
+                </li>
+                {chips.map(([label, value]) => (
+                    <li key={label}>
+                        <span>{label}</span>
+                        <strong className={value ? "" : "empty"}>{show(value)}</strong>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function OfferBox({ application, onDone, card }) {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const { job } = application;
     const currency = application.offer_currency || "QAR";
     const today = application.company_today;
+    const maxProbation = application.max_probation_months || 6;
     const [form, setForm] = useState({ salary: "", joining_date: "", probation_months: "" });
     const [errors, setErrors] = useState({});
+    const [sending, setSending] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
     const set = (field) => (value) => setForm((current) => ({ ...current, [field]: value }));
 
     const salary = Number(form.salary);
     const hasRange = job.salary_min !== null && job.salary_max !== null;
     const outsideRange = form.salary !== "" && salary > 0 && hasRange && (salary < job.salary_min || salary > job.salary_max);
+    const missing = form.salary === "" || !form.joining_date || form.probation_months === "";
 
     const submit = async () => {
         const found = {};
@@ -223,67 +499,107 @@ function OfferBox({ application, onDone }) {
             confirmText: t("recruitment.hiring.offer.send", { defaultValue: "Send offer letter" }),
             loadingText: t("recruitment.hiring.sending", { defaultValue: "Sending..." }),
             onConfirm: async () => {
-                const result = await api(`/api/hr/hiring/${application.id}/offer`, {
-                    method: "POST",
-                    body: { salary: form.salary, joining_date: form.joining_date, probation_months: form.probation_months },
-                });
-                onDone(result.application, emailNotice(t, result.email, t("recruitment.hiring.offer.sent", { email: application.email, defaultValue: "Offer letter sent to {{email}}" })));
+                setSending(true);
+                try {
+                    const result = await api(`/api/hr/hiring/${application.id}/offer`, {
+                        method: "POST",
+                        body: { salary: form.salary, joining_date: form.joining_date, probation_months: form.probation_months },
+                    });
+                    onDone(result.application, emailNotice(t, result.email, t("recruitment.hiring.offer.sent", { email: application.email, defaultValue: "Offer letter sent to {{email}}" })));
+                } finally {
+                    setSending(false);
+                }
             },
         });
     };
 
     return (
-        <>
-            {!application.offer_link_ready && (
-                <p className="app-interview-notice warning">{t("recruitment.hiring.offer.noPublicUrl", { defaultValue: "Offer letters need APP_PUBLIC_URL in backend/.env for the Accept / Decline link. Ask your administrator to add it and restart the backend." })}</p>
+        <StepCard
+            {...card}
+            className="offer-step"
+            icon={FileText}
+            title={t("recruitment.hiring.box.offer", { defaultValue: "Offer letter" })}
+            description={<>{t("recruitment.hiring.offer.emailedTo", { defaultValue: "Emailed to" })} <span dir="ltr">{application.email}</span></>}
+            footer={(
+                <CardFooter
+                    noteId={missing ? "offer-send-hint" : undefined}
+                    note={missing
+                        ? t("recruitment.hiring.offer.sendHint", { defaultValue: "Enter salary, joining date and probation to send the offer." })
+                        : t("recruitment.hiring.offer.footer", { defaultValue: "The candidate gets the offer letter with Accept and Decline buttons" })}
+                >
+                    <button
+                        type="button"
+                        className="hiring-btn primary large"
+                        onClick={submit}
+                        disabled={missing || sending || !application.offer_link_ready}
+                        aria-describedby={missing ? "offer-send-hint" : undefined}
+                    >
+                        <Send size={17} aria-hidden="true" />
+                        {sending ? t("recruitment.hiring.sending", { defaultValue: "Sending..." }) : t("recruitment.hiring.offer.send", { defaultValue: "Send offer letter" })}
+                    </button>
+                </CardFooter>
             )}
-            <div className="hiring-facts">
-                {[
-                    [t("recruitment.fields.grade", { defaultValue: "Grade" }), job.grade],
-                    [t("recruitment.fields.position", { defaultValue: "Position" }), job.position],
-                    [t("recruitment.fields.designation", { defaultValue: "Designation" }), job.designation],
-                    [t("profileEdit.fields.department", { defaultValue: "Department" }), job.department],
-                    [t("recruitment.hiring.site", { defaultValue: "Site" }), job.site],
-                    [t("recruitment.fields.accommodation", { defaultValue: "Accommodation" }), job.accommodation ? t("employeeProfile.values.yes", { defaultValue: "Yes" }) : t("employeeProfile.values.no", { defaultValue: "No" })],
-                    [t("recruitment.hiring.transport", { defaultValue: "Transport" }), job.transport ? t("employeeProfile.values.yes", { defaultValue: "Yes" }) : t("employeeProfile.values.no", { defaultValue: "No" })],
-                ].map(([label, value]) => (
-                    <div key={label}><span>{label}</span><strong>{show(value)}</strong></div>
-                ))}
-            </div>
-            <small className="hiring-hint">{t("recruitment.hiring.offer.fromMpr", { mpr: job.mpr_no || "—", defaultValue: "From MPR {{mpr}} (read-only)" })}</small>
-
-            <div className="hiring-form-grid">
-                <div>
-                    <label className="hiring-label" htmlFor="offer-salary">{t("recruitment.hiring.offer.salary", { currency, defaultValue: "Monthly salary ({{currency}})" })} <span className="required-mark">*</span></label>
-                    <input id="offer-salary" type="number" min="1" step="any" inputMode="decimal" value={form.salary} onChange={(event) => set("salary")(event.target.value)} aria-invalid={Boolean(errors.salary) || outsideRange} className={outsideRange ? "field-invalid" : ""} />
-                    {outsideRange && (
-                        <p className="hiring-range-warning">
-                            {t("recruitment.hiring.offer.outsideRange", { range: `${job.currency || currency} ${formatMoney(job.salary_min)} – ${formatMoney(job.salary_max)}`, defaultValue: "Outside the MPR range ({{range}})" })}
-                        </p>
-                    )}
-                    {errors.salary && <p className="mpr-form-error">{errors.salary}</p>}
+            after={(
+                <div className={`offer-preview-wrap${previewOpen ? " open" : ""}`}>
+                    <button type="button" className="offer-preview-toggle" aria-expanded={previewOpen} aria-controls="offer-preview-region" onClick={() => setPreviewOpen((open) => !open)}>
+                        {t("recruitment.hiring.offer.preview", { defaultValue: "Preview offer letter" })}
+                        <ChevronDown size={16} aria-hidden="true" />
+                    </button>
+                    <div id="offer-preview-region" className="offer-preview-collapse" inert={!previewOpen}>
+                        <div className="offer-preview-inner">
+                            <OfferLetterPreview candidateName={application.candidate_name} company={getAppSettings().companyName} job={job} form={form} currency={currency} today={today} />
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <span className="hiring-label">{t("recruitment.hiring.offer.joiningDate", { defaultValue: "Joining date" })} <span className="required-mark">*</span></span>
-                    <DatePicker value={form.joining_date} onChange={set("joining_date")} minDate={today} today={today} autoPosition />
-                    {errors.joining_date && <p className="mpr-form-error">{errors.joining_date}</p>}
-                </div>
-                <div>
-                    <label className="hiring-label" htmlFor="offer-probation">{t("recruitment.hiring.offer.probation", { defaultValue: "Probation (months)" })} <span className="required-mark">*</span></label>
-                    <input id="offer-probation" type="number" min="1" max={application.max_probation_months || 6} step="1" inputMode="numeric" value={form.probation_months} onChange={(event) => set("probation_months")(event.target.value)} aria-invalid={Boolean(errors.probation_months)} aria-describedby="offer-probation-hint" />
-                    <small id="offer-probation-hint" className="hiring-hint">{t("recruitment.hiring.offer.probationHint", { defaultValue: "Qatar Labour Law allows up to 6 months" })}</small>
-                    {errors.probation_months && <p className="mpr-form-error">{errors.probation_months}</p>}
-                </div>
-            </div>
+            )}
+        >
+            {!application.offer_link_ready && (
+                <p className="hiring-notice warning" role="status">
+                    <TriangleAlert size={16} aria-hidden="true" />
+                    <span>{t("recruitment.hiring.offer.noPublicUrl", { defaultValue: "Offer letters need APP_PUBLIC_URL in backend/.env for the Accept / Decline link. Ask your administrator to add it and restart the backend." })}</span>
+                </p>
+            )}
 
-            <OfferLetterPreview candidateName={application.candidate_name} company={getAppSettings().companyName} job={job} form={form} currency={currency} today={today} />
+            <OfferRole job={job} />
 
-            <div className="hiring-actions">
-                <button type="button" className="mpr-btn success" onClick={submit} disabled={!application.offer_link_ready}>
-                    <Mail size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.send", { defaultValue: "Send offer letter" })}
-                </button>
-            </div>
-        </>
+            <section className="offer-details" aria-labelledby="offer-details-title">
+                <h4 id="offer-details-title">{t("recruitment.hiring.offer.details", { defaultValue: "Offer details" })}</h4>
+                <div className="hiring-form-grid">
+                    <div className="offer-field">
+                        <label className="hiring-label" htmlFor="offer-salary">{t("recruitment.hiring.offer.salaryShort", { defaultValue: "Monthly salary" })} <span className="required-mark">*</span></label>
+                        <SalaryInput
+                            id="offer-salary"
+                            value={form.salary}
+                            onChange={set("salary")}
+                            currency={currency}
+                            invalid={Boolean(errors.salary) || outsideRange}
+                            describedBy={errors.salary ? "offer-salary-error" : undefined}
+                        />
+                        {errors.salary && <p id="offer-salary-error" className="mpr-form-error">{errors.salary}</p>}
+                        {hasRange && <SalaryRange min={job.salary_min} max={job.salary_max} salary={salary} currency={job.currency || currency} />}
+                    </div>
+                    <div className="offer-field">
+                        <span className="hiring-label">{t("recruitment.hiring.offer.joiningDate", { defaultValue: "Joining date" })} <span className="required-mark">*</span></span>
+                        <DatePicker value={form.joining_date} onChange={set("joining_date")} minDate={today} today={today} autoPosition />
+                        {errors.joining_date && <p className="mpr-form-error">{errors.joining_date}</p>}
+                    </div>
+                    <div className="offer-field">
+                        <span className="hiring-label" id="offer-probation-label">{t("recruitment.hiring.offer.probationShort", { defaultValue: "Probation" })} <span className="required-mark">*</span></span>
+                        <MonthsStepper
+                            id="offer-probation"
+                            labelId="offer-probation-label"
+                            value={form.probation_months}
+                            onChange={set("probation_months")}
+                            max={maxProbation}
+                            invalid={Boolean(errors.probation_months)}
+                            describedBy="offer-probation-hint"
+                        />
+                        <small id="offer-probation-hint" className="hiring-hint">{t("recruitment.hiring.offer.probationHint", { defaultValue: "Qatar Labour Law allows up to 6 months" })}</small>
+                        {errors.probation_months && <p className="mpr-form-error">{errors.probation_months}</p>}
+                    </div>
+                </div>
+            </section>
+        </StepCard>
     );
 }
 
@@ -319,7 +635,7 @@ function OfferSummary({ offer }) {
     );
 }
 
-function OfferSentBox({ application, onDone }) {
+function OfferSentBox({ application, onDone, card }) {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const [declining, setDeclining] = useState(false);
@@ -354,8 +670,28 @@ function OfferSentBox({ application, onDone }) {
     });
 
     return (
-        <>
-            <p className="hiring-hint">{t("recruitment.hiring.offer.waiting", { defaultValue: "Waiting for the candidate to accept or decline from the offer email." })}</p>
+        <StepCard
+            {...card}
+            icon={Clock3}
+            title={t("recruitment.hiring.box.waiting", { defaultValue: "Waiting for the candidate's answer" })}
+            description={t("recruitment.hiring.offer.waiting", { defaultValue: "Waiting for the candidate to accept or decline from the offer email." })}
+            footer={(
+                <CardFooter note={t("recruitment.hiring.offer.recordHint", { defaultValue: "Record the answer here if the candidate replies by phone or in person" })}>
+                    <button type="button" className="hiring-btn ghost" onClick={resend}><RefreshCw size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.resend", { defaultValue: "Resend offer email" })}</button>
+                    {declining ? (
+                        <>
+                            <button type="button" className="hiring-btn ghost" onClick={() => { setDeclining(false); setReason(""); }}>{t("recruitment.common.cancel", { defaultValue: "Cancel" })}</button>
+                            <button type="button" className="hiring-btn danger" onClick={() => record("Declined")}><UserX size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.recordDecline", { defaultValue: "Record decline" })}</button>
+                        </>
+                    ) : (
+                        <>
+                            <button type="button" className="hiring-btn danger" onClick={() => setDeclining(true)}><UserX size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.candidateDeclined", { defaultValue: "Candidate declined" })}</button>
+                            <button type="button" className="hiring-btn primary" onClick={() => record("Accepted")}><UserCheck size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.candidateAccepted", { defaultValue: "Candidate accepted" })}</button>
+                        </>
+                    )}
+                </CardFooter>
+            )}
+        >
             <OfferSummary offer={application.offer} />
             {declining && (
                 <>
@@ -363,21 +699,13 @@ function OfferSentBox({ application, onDone }) {
                     <textarea id="hiring-decline-reason" rows="2" maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} />
                 </>
             )}
-            <div className="hiring-actions">
-                <button type="button" className="mpr-btn" onClick={resend}><RefreshCw size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.resend", { defaultValue: "Resend offer email" })}</button>
-                {!declining && <button type="button" className="mpr-btn success" onClick={() => record("Accepted")}><UserCheck size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.candidateAccepted", { defaultValue: "Candidate accepted" })}</button>}
-                {declining
-                    ? <button type="button" className="mpr-btn danger" onClick={() => record("Declined")}><UserX size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.recordDecline", { defaultValue: "Record decline" })}</button>
-                    : <button type="button" className="mpr-btn danger" onClick={() => setDeclining(true)}><UserX size={15} aria-hidden="true" /> {t("recruitment.hiring.offer.candidateDeclined", { defaultValue: "Candidate declined" })}</button>}
-                {declining && <button type="button" className="mpr-btn" onClick={() => { setDeclining(false); setReason(""); }}>{t("recruitment.common.cancel", { defaultValue: "Cancel" })}</button>}
-            </div>
-        </>
+        </StepCard>
     );
 }
 
 // ===================== PRE-JOINING + HIRE =====================
 
-function PrejoiningBox({ application, onDone, onChecklist }) {
+function PrejoiningBox({ application, onDone, onChecklist, card }) {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const items = application.prejoining_items || [];
@@ -435,7 +763,24 @@ function PrejoiningBox({ application, onDone, onChecklist }) {
     };
 
     return (
-        <>
+        <StepCard
+            {...card}
+            icon={ClipboardList}
+            title={t("recruitment.hiring.box.prejoining", { defaultValue: "Pre-joining" })}
+            description={t("recruitment.hiring.prejoining.hint", { defaultValue: "Tick each document as it arrives, then add the candidate to Employees." })}
+            footer={(
+                <CardFooter
+                    noteId="hire-note"
+                    note={complete
+                        ? t("recruitment.hiring.hire.footer", { defaultValue: "The new employee gets a welcome email" })
+                        : t("recruitment.hiring.hire.notReady", { defaultValue: "Tick every required pre-joining item first" })}
+                >
+                    <button type="button" className="hiring-btn primary" onClick={hire} disabled={!complete} aria-describedby="hire-note">
+                        <UserCheck size={16} aria-hidden="true" /> {t("recruitment.hiring.hire.button", { defaultValue: "Mark as hired" })}
+                    </button>
+                </CardFooter>
+            )}
+        >
             <OfferSummary offer={application.offer} />
             <div className="hiring-progress">
                 <div className="hiring-progress-text">
@@ -459,84 +804,249 @@ function PrejoiningBox({ application, onDone, onChecklist }) {
             {error && <p className="mpr-form-error">{error}</p>}
 
             <div className="hiring-hire">
-                <div>
-                    <label className="hiring-label" htmlFor="hire-employee-id">{t("employeeSettings.employeeId", { defaultValue: "Employee ID" })} <span className="required-mark">*</span></label>
-                    <input id="hire-employee-id" type="text" maxLength={30} value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} dir="ltr" />
-                    <small className="hiring-hint">{t("recruitment.hiring.hire.idHint", { defaultValue: "Next free EMP number; you can change it." })}</small>
-                </div>
-                <button type="button" className="mpr-btn success" onClick={hire} disabled={!complete} title={complete ? undefined : t("recruitment.hiring.hire.notReady", { defaultValue: "Tick every required pre-joining item first" })}>
-                    <UserCheck size={15} aria-hidden="true" /> {t("recruitment.hiring.hire.button", { defaultValue: "Mark as hired" })}
-                </button>
+                <label className="hiring-label" htmlFor="hire-employee-id">{t("employeeSettings.employeeId", { defaultValue: "Employee ID" })} <span className="required-mark">*</span></label>
+                <input id="hire-employee-id" type="text" maxLength={30} value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} dir="ltr" />
+                <small className="hiring-hint">{t("recruitment.hiring.hire.idHint", { defaultValue: "Next free EMP number; you can change it." })}</small>
             </div>
-        </>
+        </StepCard>
     );
 }
 
-function HiredBox({ application }) {
+function HiredBox({ application, card }) {
     const { t } = useTranslation();
     const employee = application.employee;
     const employeeId = employee?.employee_id || application.hired_employee_id;
     return (
-        <>
-            <OfferSummary offer={application.offer} />
-            <div className="hiring-hired">
-                <UserCheck size={22} aria-hidden="true" />
-                <div>
-                    <strong>{t("recruitment.hiring.hire.employeeId", { id: employeeId || "—", defaultValue: "Employee ID: {{id}}" })}</strong>
-                    {employee?.probation_end_date && <span>{t("recruitment.hiring.hire.probationUntil", { date: formatDate(employee.probation_end_date), defaultValue: "On probation until {{date}}" })}</span>}
-                </div>
-                {employee && (
-                    <Link className="mpr-btn" to={`/employees/employeedetails/${employeeSlug(employee.name)}`}>
+        <StepCard
+            {...card}
+            icon={BadgeCheck}
+            tone="success"
+            title={t("recruitment.hiring.box.hired", { defaultValue: "Hired" })}
+            description={(
+                <>
+                    {t("recruitment.hiring.hire.employeeId", { id: employeeId || "—", defaultValue: "Employee ID: {{id}}" })}
+                    {employee?.probation_end_date && <> · {t("recruitment.hiring.hire.probationUntil", { date: formatDate(employee.probation_end_date), defaultValue: "On probation until {{date}}" })}</>}
+                </>
+            )}
+            footer={employee && (
+                <CardFooter note={t("recruitment.hiring.hire.addedNote", { defaultValue: "Added to Employees" })}>
+                    <Link className="hiring-btn ghost" to={`/employees/employeedetails/${employeeSlug(employee.name)}`}>
                         <ExternalLink size={15} aria-hidden="true" /> {t("recruitment.hiring.hire.openEmployee", { defaultValue: "Open employee record" })}
                     </Link>
-                )}
-            </div>
-        </>
+                </CardFooter>
+            )}
+        >
+            <OfferSummary offer={application.offer} />
+        </StepCard>
     );
 }
 
-function ActionBox({ application, onDone, onChecklist, onSchedule }) {
+function ActionBox({ application, onDone, onChecklist, onSchedule, card }) {
     const { t } = useTranslation();
     const actions = application.hiring_actions || [];
-    const titles = {
-        "Shortlisted": t("recruitment.hiring.box.schedule", { defaultValue: "Next: schedule the interview" }),
-        "Interview Scheduled": t("recruitment.hiring.box.result", { defaultValue: "Interview result" }),
-        "On Hold": t("recruitment.hiring.box.result", { defaultValue: "Interview result" }),
-        Selected: t("recruitment.hiring.box.offer", { defaultValue: "Offer letter" }),
-        "Offer Sent": t("recruitment.hiring.box.offerSent", { defaultValue: "Offer sent" }),
-        "Offer Accepted": t("recruitment.hiring.box.prejoining", { defaultValue: "Pre-joining" }),
-        Hired: t("recruitment.hiring.box.hired", { defaultValue: "Hired" }),
-        "Offer Declined": t("recruitment.hiring.box.declined", { defaultValue: "Offer declined" }),
+
+    if (actions.includes("result")) return <ResultBox application={application} onDone={onDone} card={card} />;
+    if (actions.includes("schedule")) {
+        return (
+            <StepCard
+                {...card}
+                icon={CalendarPlus}
+                title={t("recruitment.hiring.box.schedule", { defaultValue: "Next: schedule the interview" })}
+                description={t("recruitment.hiring.schedule.hint", { defaultValue: "Pick the date, time, mode and interviewer for this candidate." })}
+                footer={(
+                    <CardFooter note={t("recruitment.hiring.schedule.footer", { defaultValue: "The candidate gets an invitation email" })}>
+                        <button type="button" className="hiring-btn primary" onClick={onSchedule}>
+                            <CalendarPlus size={16} aria-hidden="true" /> {t("recruitment.applicationDetail.scheduleInterview", { defaultValue: "Schedule Interview" })}
+                        </button>
+                    </CardFooter>
+                )}
+            />
+        );
+    }
+    if (actions.includes("offer")) return <OfferBox application={application} onDone={onDone} card={card} />;
+    if (actions.includes("record")) return <OfferSentBox application={application} onDone={onDone} card={card} />;
+    if (actions.includes("hire")) return <PrejoiningBox application={application} onDone={onDone} onChecklist={onChecklist} card={card} />;
+    if (application.status === "Hired" || application.hired_employee_id) return <HiredBox application={application} card={card} />;
+
+    // Closed or waiting outside Hiring: Rejected, Offer Declined, On Hold before an interview…
+    const closed = {
+        Rejected: { icon: UserX, tone: "danger", text: t("recruitment.hiring.box.rejectedHint", { defaultValue: "This application is closed. The candidate was sent a polite regret email." }) },
+        "Offer Declined": { icon: UserX, tone: "danger", title: t("recruitment.hiring.box.declined", { defaultValue: "Offer declined" }), text: t("recruitment.hiring.box.declinedHint", { defaultValue: "The candidate declined the offer. This application is closed." }) },
+        "On Hold": { icon: CirclePause, tone: "warning", text: t("recruitment.hiring.box.holdNoInterview", { defaultValue: "On hold before any interview. Shortlist it from Job Applications to continue." }) },
+    }[application.status] || {
+        icon: CircleCheck,
+        tone: "info",
+        text: t("recruitment.applicationDetail.noFurtherActions", { status: applicationStatusLabel(application.status), defaultValue: "No further review actions: this application is {{status}}." }),
     };
-    let body;
-    if (actions.includes("result")) body = <ResultBox application={application} onDone={onDone} />;
-    else if (actions.includes("schedule")) body = (
-        <div className="hiring-actions">
-            <button type="button" className="mpr-btn success" onClick={onSchedule}><CalendarPlus size={15} aria-hidden="true" /> {t("recruitment.applicationDetail.scheduleInterview", { defaultValue: "Schedule Interview" })}</button>
-        </div>
+    return (
+        <StepCard {...card} icon={closed.icon} tone={closed.tone} title={closed.title || applicationStatusLabel(application.status)} description={closed.text}>
+            {application.status === "Offer Declined" && <OfferSummary offer={application.offer} />}
+        </StepCard>
     );
-    else if (actions.includes("offer")) body = <OfferBox application={application} onDone={onDone} />;
-    else if (actions.includes("record")) body = <OfferSentBox application={application} onDone={onDone} />;
-    else if (actions.includes("hire")) body = <PrejoiningBox application={application} onDone={onDone} onChecklist={onChecklist} />;
-    else if (application.status === "Hired" || application.hired_employee_id) body = <HiredBox application={application} />;
-    else if (application.status === "Offer Declined") body = <OfferSummary offer={application.offer} />;
-    else body = (
-        <p className="mpr-muted">
-            {application.status === "On Hold"
-                ? t("recruitment.hiring.box.holdNoInterview", { defaultValue: "On hold before any interview. Shortlist it from Job Applications to continue." })
-                : t("recruitment.applicationDetail.noFurtherActions", { status: applicationStatusLabel(application.status), defaultValue: "No further review actions: this application is {{status}}." })}
+}
+
+// Initials for the header avatar ("Mohammed Al Thani" → "MA")
+const initialsOf = (name = "") => String(name).trim().split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((word) => Array.from(word)[0]).join("").toUpperCase() || "?";
+
+// Slim banner at the top of the action card; fades out after 5 seconds
+const NOTICE_MS = 5000;
+const NOTICE_FADE_MS = 400;
+
+function PanelNotice({ notice, onClear }) {
+    const [fading, setFading] = useState(false);
+    const success = notice.tone === "success";
+
+    useEffect(() => {
+        const fade = setTimeout(() => setFading(true), NOTICE_MS - NOTICE_FADE_MS);
+        const clear = setTimeout(() => onClear(null), NOTICE_MS);
+        return () => {
+            clearTimeout(fade);
+            clearTimeout(clear);
+        };
+    }, [onClear]);
+
+    const Icon = success ? CircleCheck : TriangleAlert;
+    return (
+        <p className={`hiring-notice ${success ? "success" : "error"}${fading ? " fading" : ""}`} role={success ? "status" : "alert"}>
+            <Icon size={16} aria-hidden="true" />
+            <span>{notice.text}</span>
         </p>
     );
+}
+
+// ===================== RIGHT COLUMN: DETAILS / INTERVIEWS / HISTORY =====================
+
+function SideTabs({ application, onOpenFull }) {
+    const { t } = useTranslation();
+    const [tab, setTab] = useState("details");
+    const tabRefs = useRef({});
+    const tabs = [
+        { id: "details", label: t("recruitment.hiring.tabs.details", { defaultValue: "Details" }) },
+        { id: "interviews", label: t("recruitment.hiring.interviews", { defaultValue: "Interviews" }), count: application.interviews.length },
+        { id: "history", label: t("recruitment.hiring.tabs.history", { defaultValue: "History" }), count: application.actions.length },
+    ];
+
+    // Arrow keys / Home / End move between tabs (WAI-ARIA tabs pattern)
+    const onTabKey = (event, index) => {
+        const target = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 }[event.key];
+        if (target === undefined) return;
+        event.preventDefault();
+        const next = tabs[(target + tabs.length) % tabs.length].id;
+        setTab(next);
+        tabRefs.current[next]?.focus();
+    };
+
+    const details = [
+        [t("profileEdit.fields.email", { defaultValue: "Email" }), <a href={`mailto:${application.email}`} dir="ltr">{application.email}</a>, true],
+        [t("profileEdit.fields.phone", { defaultValue: "Phone" }), <span dir="ltr">{show(application.phone)}</span>],
+        [t("recruitment.applications.appliedOn", { defaultValue: "Applied On" }), <span dir="ltr" className="ltr-text">{formatDateTime(application.applied_at)}</span>],
+        [t("recruitment.applications.sourceAgency", { defaultValue: "Source / Agency" }), sourceText(application)],
+        [t("recruitment.fields.experience", { defaultValue: "Experience" }), experienceText(application)],
+        [t("recruitment.applicationDetail.expectedSalary", { defaultValue: "Expected Monthly Salary" }), <span dir="ltr">{salaryText(application.expected_salary, application.salary_currency, application.expected_ctc)}</span>],
+        [t("profileEdit.fields.nationality", { defaultValue: "Nationality" }), show(application.nationality)],
+        [t("recruitment.applicationDetail.currentLocation", { defaultValue: "Current Location" }), show(application.location)],
+    ];
 
     return (
-        <section className="hiring-box">
-            <h3>{titles[application.status] || applicationStatusLabel(application.status)}</h3>
-            {body}
+        <section className="hiring-side-card">
+            <div className="hiring-tabs" role="tablist" aria-label={t("recruitment.hiring.tabs.label", { defaultValue: "Candidate information" })}>
+                {tabs.map(({ id, label, count }, index) => (
+                    <button
+                        key={id}
+                        ref={(element) => { tabRefs.current[id] = element; }}
+                        type="button"
+                        role="tab"
+                        id={`hiring-tab-${id}`}
+                        aria-selected={tab === id}
+                        aria-controls={`hiring-tabpanel-${id}`}
+                        tabIndex={tab === id ? 0 : -1}
+                        className={tab === id ? "active" : ""}
+                        onClick={() => setTab(id)}
+                        onKeyDown={(event) => onTabKey(event, index)}
+                    >
+                        {label}
+                        {count > 0 && <span className="hiring-tab-count">{count}</span>}
+                    </button>
+                ))}
+            </div>
+
+            <div className="hiring-tabpanel" role="tabpanel" id={`hiring-tabpanel-${tab}`} aria-labelledby={`hiring-tab-${tab}`} tabIndex={0}>
+                {tab === "details" && (
+                    <>
+                        <dl className="hiring-details">
+                            {details.map(([label, value, full]) => (
+                                <div key={label} className={full ? "full" : ""}>
+                                    <dt>{label}</dt>
+                                    <dd>{value}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <button type="button" className="hiring-btn ghost block" onClick={onOpenFull}>
+                            <FileText size={15} aria-hidden="true" /> {t("recruitment.hiring.fullApplication", { defaultValue: "Full application & CV" })}
+                        </button>
+                    </>
+                )}
+
+                {tab === "interviews" && (application.interviews.length === 0
+                    ? <p className="hiring-empty">{t("recruitment.hiring.noInterviews", { defaultValue: "No interviews yet." })}</p>
+                    : (
+                        <>
+                            <ol className="hiring-rounds">
+                                {application.interviews.map((round, index) => (
+                                    <li key={round.id}>
+                                        <div className="hiring-round-head">
+                                            <strong>{t("recruitment.hiring.round", { number: index + 1, defaultValue: "Round {{number}}" })}</strong>
+                                            {round.result
+                                                ? <span className="hiring-round-result">{round.result}</span>
+                                                : <span className="hiring-round-result pending">{t("recruitment.hiring.noResult", { defaultValue: "No result yet" })}</span>}
+                                        </div>
+                                        <span dir="ltr" className="ltr-text">{formatDate(round.interview_date)} · {formatInterviewTime(round.interview_time)}</span>
+                                        <span>{recruitmentValueLabel("interviewMode", round.mode)}</span>
+                                        <span className="hiring-round-muted">{round.interviewer_name}</span>
+                                        {(round.feedback || round.reject_reason) && (
+                                            <p className="hiring-round-feedback">
+                                                {round.feedback}
+                                                {round.reject_reason ? ` (${t("recruitment.hiring.result.reasonShort", { defaultValue: "reason" })}: ${round.reject_reason})` : ""}
+                                            </p>
+                                        )}
+                                    </li>
+                                ))}
+                            </ol>
+                            <small className="hiring-hint">{t("recruitment.hiring.internalOnly", { defaultValue: "Internal only – never sent to the candidate" })}</small>
+                        </>
+                    ))}
+
+                {tab === "history" && (application.actions.length === 0
+                    ? <p className="hiring-empty">{t("recruitment.log.noApplicationEntries", { defaultValue: "No tracking entries (application received before tracking was added)." })}</p>
+                    : (
+                        <ol className="hiring-timeline">
+                            {[...application.actions].reverse().map((action) => (
+                                <li key={action.id}>
+                                    <span className="hiring-timeline-dot" aria-hidden="true" />
+                                    <div>
+                                        <strong>{recruitmentActionLabel(action.action)}</strong>
+                                        {action.from_status && action.to_status && <small> · {t("recruitment.log.statusChange", { from: applicationStatusLabel(action.from_status), to: applicationStatusLabel(action.to_status), defaultValue: "{{from}} → {{to}}" })}</small>}
+                                        <span className="hiring-timeline-meta">
+                                            {action.actor_name || (action.action === "Applied"
+                                                ? t("recruitment.applications.candidate", { defaultValue: "Candidate" })
+                                                : t("recruitment.log.system", { defaultValue: "System" }))}
+                                            {" · "}<span dir="ltr" className="ltr-text">{formatDateTime(action.created_at)}</span>
+                                        </span>
+                                        {action.remark && <span className="hiring-timeline-remark">{action.remark}</span>}
+                                    </div>
+                                </li>
+                            ))}
+                        </ol>
+                    ))}
+            </div>
         </section>
     );
 }
 
-// ===================== PANEL =====================
+// ===================== MODAL =====================
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function HiringPanel({ applicationId, actorId, newResponse = false, onClose, onChanged }) {
     const { t } = useTranslation();
@@ -544,6 +1054,7 @@ function HiringPanel({ applicationId, actorId, newResponse = false, onClose, onC
     const [notice, setNotice] = useState(null);
     const [scheduling, setScheduling] = useState(false);
     const [fullOpen, setFullOpen] = useState(false);
+    const dialogRef = useRef(null);
 
     const load = useCallback(() => api(`/api/hr/hiring/${applicationId}`)
         .then((application) => setLoaded({ id: applicationId, application, error: "" }))
@@ -571,11 +1082,43 @@ function HiringPanel({ applicationId, actorId, newResponse = false, onClose, onC
         return () => window.removeEventListener("keydown", onKey);
     }, [onClose, scheduling, fullOpen]);
 
+    // While open: the page behind doesn't scroll, focus starts in the modal and returns on close
+    useEffect(() => {
+        const previous = document.activeElement;
+        const overflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        dialogRef.current?.focus();
+        return () => {
+            document.body.style.overflow = overflow;
+            if (previous instanceof HTMLElement) previous.focus();
+        };
+    }, []);
+
+    // Tab / Shift+Tab wrap around inside the modal
+    const trapFocus = (event) => {
+        const dialog = dialogRef.current;
+        if (event.key !== "Tab" || !dialog?.contains(event.target)) return;
+        const items = [...dialog.querySelectorAll(FOCUSABLE)].filter((element) => !element.closest("[inert]") && element.getClientRects().length > 0);
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
+
     const application = loaded.id === applicationId ? loaded.application : null;
+
+    // Each notice gets an id so a repeat message restarts its 5-second timer
+    const showNotice = (next) => setNotice(next ? { ...next, id: Date.now() } : null);
 
     const changed = (updated, nextNotice) => {
         setLoaded({ id: applicationId, application: updated, error: "" });
-        setNotice(nextNotice || null);
+        showNotice(nextNotice);
         notifyApplicationsChanged();
         onChanged?.();
     };
@@ -583,7 +1126,7 @@ function HiringPanel({ applicationId, actorId, newResponse = false, onClose, onC
     const interviewSaved = ({ email }) => {
         setScheduling(false);
         load();
-        setNotice(email.sent
+        showNotice(email.sent
             ? { tone: "success", text: t("recruitment.applicationDetail.interview.emailSent", { email: application.email, defaultValue: "Interview scheduled and invitation sent to {{email}}" }) }
             : { tone: "warning", text: t("recruitment.applicationDetail.interview.emailFailed", { reason: email.reason, defaultValue: "Interview saved, but the email could not be sent: {{reason}}" }) });
         notifyApplicationsChanged();
@@ -592,115 +1135,64 @@ function HiringPanel({ applicationId, actorId, newResponse = false, onClose, onC
 
     return (
         <>
-            <div className="hiring-panel-overlay" onClick={onClose}>
-                <aside className="hiring-panel" role="dialog" aria-modal="true" aria-label={t("recruitment.hiring.panelLabel", { defaultValue: "Hiring details" })} onClick={(event) => event.stopPropagation()}>
-                    <header className="hiring-panel-header">
-                        <div>
-                            <h2>{application ? application.candidate_name : t("recruitment.hiring.title", { defaultValue: "Hiring" })}</h2>
+            <div className="candidate-modal-overlay hiring-modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
+                <div
+                    ref={dialogRef}
+                    className="candidate-modal hiring-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="hiring-modal-title"
+                    tabIndex={-1}
+                    onKeyDown={trapFocus}
+                >
+                    <header className="hiring-modal-header">
+                        {application && <span className="hiring-avatar" aria-hidden="true">{initialsOf(application.candidate_name)}</span>}
+                        <div className="hiring-modal-title">
+                            <h2 id="hiring-modal-title">{application ? application.candidate_name : t("recruitment.hiring.title", { defaultValue: "Hiring" })}</h2>
                             {application && (
-                                <span>
-                                    <span dir="ltr" className="ltr-text">{application.application_id}</span> · <span dir="ltr" className="ltr-text">{application.job_id}</span> {application.job_title}
-                                </span>
+                                <p>
+                                    <span dir="ltr" className="ltr-text">{application.application_id}</span>
+                                    {" · "}<span dir="ltr" className="ltr-text">{application.job_id}</span>
+                                    {application.job_title && <>{" · "}{application.job_title}</>}
+                                </p>
                             )}
                         </div>
+                        {application && (
+                            <div className="hiring-modal-meta">
+                                <span className={`mpr-status ${applicationTone(application.status)}`}>{applicationStatusLabel(application.status)}</span>
+                                <span className="mpr-chip" dir="ltr">
+                                    {t("recruitment.hiring.filledChip", { filled: application.job.filled ?? 0, openings: application.job.openings ?? "—", defaultValue: "Filled {{filled}} / {{openings}}" })}
+                                </span>
+                            </div>
+                        )}
                         <button type="button" className="candidate-modal-close" onClick={onClose} aria-label={t("recruitment.common.close", { defaultValue: "Close" })}>×</button>
                     </header>
 
-                    {!application && !loaded.error && <p className="mpr-muted app-pad">{t("recruitment.common.loading", { defaultValue: "Loading..." })}</p>}
-                    {loaded.error && !application && <p className="mpr-form-error app-pad">{loaded.error}</p>}
+                    <div className="hiring-modal-scroll">
+                        {!application && !loaded.error && <p className="mpr-muted hiring-modal-state">{t("recruitment.common.loading", { defaultValue: "Loading..." })}</p>}
+                        {loaded.error && !application && <p className="mpr-form-error hiring-modal-state">{loaded.error}</p>}
 
-                    {application && (
-                        <div className="hiring-panel-body">
-                            <div className="hiring-panel-status">
-                                <span className={`mpr-status ${applicationTone(application.status)}`}>{applicationStatusLabel(application.status)}</span>
-                                {application.job.grade && <span className="mpr-chip">{application.job.grade}{application.job.designation ? ` · ${application.job.designation}` : ""}</span>}
-                                {application.job.mpr_no && <span className="mpr-chip" dir="ltr">MPR {application.job.mpr_no}</span>}
-                                <span className="mpr-chip" dir="ltr">{t("recruitment.jobs.filledOpenings", { defaultValue: "Filled / Openings" })}: {application.job.filled ?? 0}/{application.job.openings ?? "—"}</span>
-                            </div>
-
-                            <Progress application={application} />
-
-                            {notice && <p className={`app-interview-notice ${notice.tone}`} role="status">{notice.text}</p>}
-
-                            <ActionBox
-                                application={application}
-                                onDone={changed}
-                                onChecklist={(updated) => changed(updated, null)}
-                                onSchedule={() => setScheduling(true)}
-                            />
-
-                            {application.interviews.length > 0 && (
-                                <section className="candidate-section hiring-section">
-                                    <h3>{t("recruitment.hiring.interviews", { defaultValue: "Interviews" })}</h3>
-                                    <ol className="hiring-rounds">
-                                        {application.interviews.map((round, index) => (
-                                            <li key={round.id}>
-                                                <strong>{t("recruitment.hiring.round", { number: index + 1, defaultValue: "Round {{number}}" })}</strong>
-                                                <span dir="ltr" className="ltr-text">{formatDate(round.interview_date)} · {formatInterviewTime(round.interview_time)}</span>
-                                                <span>{recruitmentValueLabel("interviewMode", round.mode)} · {round.interviewer_name}</span>
-                                                {round.result
-                                                    ? <span className="hiring-round-result"><em>{round.result}</em>{round.feedback ? ` – ${round.feedback}` : ""}{round.reject_reason ? ` (${t("recruitment.hiring.result.reasonShort", { defaultValue: "reason" })}: ${round.reject_reason})` : ""}</span>
-                                                    : <span className="mpr-muted">{t("recruitment.hiring.noResult", { defaultValue: "No result yet" })}</span>}
-                                            </li>
-                                        ))}
-                                    </ol>
-                                    <small className="hiring-hint">{t("recruitment.hiring.internalOnly", { defaultValue: "Internal only – never sent to the candidate" })}</small>
-                                </section>
-                            )}
-
-                            <section className="candidate-section hiring-section">
-                                <h3>{t("recruitment.applicationDetail.application", { defaultValue: "Application" })}</h3>
-                                <div className="candidate-grid">
-                                    <Item label={t("profileEdit.fields.email", { defaultValue: "Email" })}><a href={`mailto:${application.email}`} dir="ltr">{application.email}</a></Item>
-                                    <Item label={t("profileEdit.fields.phone", { defaultValue: "Phone" })}><span dir="ltr">{show(application.phone)}</span></Item>
-                                    <Item label={t("recruitment.applications.appliedOn", { defaultValue: "Applied On" })}><span dir="ltr" className="ltr-text">{formatDateTime(application.applied_at)}</span></Item>
-                                    <Item label={t("recruitment.applications.sourceAgency", { defaultValue: "Source / Agency" })}>{sourceText(application)}</Item>
-                                    <Item label={t("recruitment.fields.experience", { defaultValue: "Experience" })}>{experienceText(application)}</Item>
-                                    <Item label={t("recruitment.applicationDetail.expectedSalary", { defaultValue: "Expected Monthly Salary" })}><span dir="ltr">{salaryText(application.expected_salary, application.salary_currency, application.expected_ctc)}</span></Item>
-                                    <Item label={t("profileEdit.fields.nationality", { defaultValue: "Nationality" })}>{show(application.nationality)}</Item>
-                                    <Item label={t("recruitment.applicationDetail.currentLocation", { defaultValue: "Current Location" })}>{show(application.location)}</Item>
+                        {application && (
+                            <>
+                                <div className="hiring-steps-bar"><Progress application={application} /></div>
+                                <div className="hiring-modal-body">
+                                    <div className="hiring-main">
+                                        <ActionBox
+                                            application={application}
+                                            onDone={changed}
+                                            onChecklist={(updated) => changed(updated, null)}
+                                            onSchedule={() => setScheduling(true)}
+                                            card={{ notice, onNoticeClear: setNotice }}
+                                        />
+                                    </div>
+                                    <aside className="hiring-side">
+                                        <SideTabs application={application} onOpenFull={() => setFullOpen(true)} />
+                                    </aside>
                                 </div>
-                                <div className="hiring-actions">
-                                    <button type="button" className="mpr-btn" onClick={() => setFullOpen(true)}>
-                                        <FileText size={15} aria-hidden="true" /> {t("recruitment.hiring.fullApplication", { defaultValue: "Full application & CV" })}
-                                    </button>
-                                </div>
-                            </section>
-
-                            <section className="candidate-section hiring-section">
-                                <h3>{t("recruitment.log.title", { defaultValue: "Tracking details" })}</h3>
-                                <table className="jobs-table mpr-log">
-                                    <thead>
-                                        <tr>
-                                            <th>{t("recruitment.log.date", { defaultValue: "Date" })}</th>
-                                            <th>{t("recruitment.fields.action", { defaultValue: "Action" })}</th>
-                                            <th>{t("recruitment.log.by", { defaultValue: "By" })}</th>
-                                            <th>{t("recruitment.log.remark", { defaultValue: "Remark" })}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {application.actions.length === 0 && (
-                                            <tr><td colSpan="4">{t("recruitment.log.noApplicationEntries", { defaultValue: "No tracking entries (application received before tracking was added)." })}</td></tr>
-                                        )}
-                                        {[...application.actions].reverse().map((action) => (
-                                            <tr key={action.id}>
-                                                <td><span dir="ltr" className="ltr-text">{formatDateTime(action.created_at)}</span></td>
-                                                <td>
-                                                    <strong>{recruitmentActionLabel(action.action)}</strong>
-                                                    {action.from_status && action.to_status && <small> · {t("recruitment.log.statusChange", { from: applicationStatusLabel(action.from_status), to: applicationStatusLabel(action.to_status), defaultValue: "{{from}} → {{to}}" })}</small>}
-                                                </td>
-                                                <td>{action.actor_name || (action.action === "Applied"
-                                                    ? t("recruitment.applications.candidate", { defaultValue: "Candidate" })
-                                                    : t("recruitment.log.system", { defaultValue: "System" }))}</td>
-                                                <td>{action.remark || "—"}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </section>
-                        </div>
-                    )}
-                </aside>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
             {scheduling && application && (
                 <InterviewScheduleModal application={application} actorId={actorId} onClose={() => setScheduling(false)} onSaved={interviewSaved} />

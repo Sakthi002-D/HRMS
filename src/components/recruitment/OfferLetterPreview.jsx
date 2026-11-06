@@ -1,6 +1,19 @@
-// Live preview of the offer letter email (same rows and wording as offerEmail in backend/services/hiring.js).
+// Live preview of the offer letter, laid out like a letter. The wording comes from
+// backend/services/offerLetterContent.js, the same module the email uses, so the two never differ.
 import { useTranslation } from "react-i18next";
-import { formatDate, formatMoney } from "./recruitmentApi";
+import {
+    OFFER_ACCEPT_LABEL,
+    OFFER_DECLINE_LABEL,
+    OFFER_LINK_NOTE,
+    OFFER_REPLY_PREFIX,
+    OFFER_VALID_DAYS,
+    formatOfferDate,
+    offerIntro,
+    offerRows,
+    offerSignature,
+    offerSubject,
+} from "../../../backend/services/offerLetterContent.js";
+import { getAppSettings } from "../../utils/appSettings";
 
 const addDays = (dateKey, days) => {
     const date = new Date(`${dateKey}T00:00:00Z`);
@@ -8,51 +21,67 @@ const addDays = (dateKey, days) => {
     return date.toISOString().slice(0, 10);
 };
 
-const offerLetterRows = (job, form, currency) => [
-    ["Position", job.position || job.title],
-    ["Designation", job.designation || job.title],
-    ...(job.grade ? [["Grade", job.grade]] : []),
-    ["Department", job.department || "—"],
-    ["Site", job.site || "—"],
-    ["Monthly salary", form.salary ? `${currency} ${formatMoney(form.salary)}` : "—"],
-    ["Joining date", form.joining_date ? formatDate(form.joining_date) : "—"],
-    ["Probation", form.probation_months ? `${form.probation_months} month${Number(form.probation_months) === 1 ? "" : "s"}` : "—"],
-    ["Accommodation", job.accommodation ? "Provided" : "Not provided"],
-    ["Transport", job.transport ? "Provided" : "Not provided"],
-];
+// Same rule as issueToken in backend/services/hiring.js: the link expires 14 days after sending
+// or at the end of the joining date (midnight that night), whichever is first. The email prints
+// the date of that moment, so this assumes the offer is sent today.
+const expiryKey = (today, joiningDate) => {
+    if (!today || !joiningDate) return "";
+    const limit = addDays(today, OFFER_VALID_DAYS);
+    return limit <= joiningDate ? limit : addDays(joiningDate, 1);
+};
 
-function OfferLetterPreview({ candidateName, company, job, form, currency, today }) {
+function OfferLetterPreview({ candidateName, company: companyName, job, form, currency, today }) {
     const { t } = useTranslation();
-    // The link expires 14 days after sending or at the end of the joining date, whichever is first
-    const expires = form.joining_date && today
-        ? (addDays(today, 14) < form.joining_date ? addDays(today, 14) : form.joining_date)
-        : "";
+    const company = String(companyName || "Shelter Group"); // same fallback as the email
+    // Same date formatter and HR Settings date format as the email and the public offer page
+    const { dateFormat } = getAppSettings();
+    const formatDate = (key) => formatOfferDate(key, dateFormat);
+    const role = { ...job, job_title: job.title };
+    const offer = { ...form, currency };
+    const expiry = expiryKey(today, form.joining_date);
+    const [regards, ...signature] = ["Regards,", ...offerSignature(company).split("\n")];
 
     return (
-        <div className="offer-preview" aria-label={t("recruitment.hiring.offer.previewLabel", { defaultValue: "Offer letter preview" })}>
-            <div className="offer-preview-subject">
-                <span>{t("recruitment.hiring.offer.subject", { defaultValue: "Subject" })}</span>
-                Offer Letter – {job.title} – {company}
+        <article className="offer-letter" lang="en" dir="ltr" aria-label={t("recruitment.hiring.offer.previewLabel", { defaultValue: "Offer letter preview" })}>
+            <header className="offer-letter-head">
+                <span className="offer-letter-mark">{String(company).toUpperCase()}</span>
+                <span className="offer-letter-date">{formatDate(today)}</span>
+            </header>
+
+            <p className="offer-letter-subject"><span>Subject:</span> {offerSubject(role, company)}</p>
+            <p>Hello {candidateName},</p>
+            <p>{offerIntro(role, company)}</p>
+
+            <dl className="offer-letter-table">
+                {offerRows(role, offer, { dateFormat }).map(([label, value]) => (
+                    <div key={label}>
+                        <dt>{label}</dt>
+                        <dd className={value === null || value === "—" ? "empty" : ""}>
+                            {value === null ? t("recruitment.hiring.offer.notEntered", { defaultValue: "Not entered yet" }) : value}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+
+            {/* Before a joining date is entered the real date isn't known yet */}
+            <p>
+                {expiry
+                    ? <>{OFFER_REPLY_PREFIX} <strong>{formatDate(expiry)}</strong>.</>
+                    : <>Please accept or decline this offer <strong>within {OFFER_VALID_DAYS} days</strong>.</>}
+            </p>
+            <div className="offer-letter-buttons">
+                <span className="accept" aria-disabled="true">{OFFER_ACCEPT_LABEL}</span>
+                <span className="decline" aria-disabled="true">{OFFER_DECLINE_LABEL}</span>
             </div>
-            <div className="offer-preview-body">
-                <p>Hello {candidateName},</p>
-                <p>We are pleased to offer you the position of {job.designation || job.title} at {company}.</p>
-                <table>
-                    <tbody>
-                        {offerLetterRows(job, form, currency).map(([label, value]) => (
-                            <tr key={label}><td>{label}</td><td>{value}</td></tr>
-                        ))}
-                    </tbody>
-                </table>
-                <p>Please accept or decline this offer by <strong>{expires ? formatDate(expires) : "—"}</strong>.</p>
-                <div className="offer-preview-buttons" aria-hidden="true">
-                    <span className="accept">Accept offer</span>
-                    <span className="decline">Decline offer</span>
-                </div>
-                <p className="offer-preview-muted">This link is personal to you; please do not forward it.</p>
-                <p>Regards,<br />HR Team<br />{company}</p>
-            </div>
-        </div>
+            <p className="offer-letter-note">
+                {t("recruitment.hiring.offer.buttonsNote", { defaultValue: "These buttons work in the candidate's email." })} {OFFER_LINK_NOTE}
+            </p>
+
+            <p className="offer-letter-sign">
+                {regards}
+                {signature.map((line) => <span key={line}><br />{line}</span>)}
+            </p>
+        </article>
     );
 }
 
