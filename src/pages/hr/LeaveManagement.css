@@ -3923,3 +3923,11 @@ button.leave-hero-chip:hover {
     color: #042330;
     font-weight: 600;
 }
+
+/* Link to Settings → Grade Master under the grade table */
+.leave-page .leave-policy-grade-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    text-decoration: none;
+}

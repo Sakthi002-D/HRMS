@@ -6,7 +6,7 @@ import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
 import { useConfirm } from "../../components/common/dialog/dialogContext";
 import { toDateInput } from "../../utils/dateInput";
-import { GRADES } from "../../utils/grades";
+import useGrades from "../../hooks/useGrades";
 import { employeeSectionFields, employeeValueLabel } from "./employeeProfileData";
 import "./EmployeeEditPage.css";
 
@@ -35,7 +35,7 @@ const SELECT_OPTIONS = {
   status: ["status", ["Active", "Inactive", "Resigned", "Retired", "Dismissed", "Terminated"]],
   marital_status: ["maritalStatus", ["Single", "Married", "Divorced", "Widowed"]],
   education_type: ["educationType", ["Full Time", "Part Time", "Distance"]],
-  grade: ["grade", GRADES],
+  grade: ["grade", []], // choices come from Grade Master (useGrades)
 };
 
 // Sections holding several records; "current" hides the end field while it is ticked
@@ -115,6 +115,8 @@ const readError = async (response, fallback) => {
 
 function EmployeeEditPage({ employee, initialSection, selfService = false, onClose, onSaved }) {
   const { t } = useTranslation();
+  // Employees see their grade read-only and can't read the grade list
+  const { codes: gradeCodes } = useGrades({ enabled: !selfService });
   const sectionFields = employeeSectionFields(t);
   const valueLabel = (group, value) => employeeValueLabel(t, group, value);
   const sections = SECTIONS.filter(({ key }) => !selfService || !HR_ONLY_SECTIONS.includes(key));
@@ -215,7 +217,8 @@ function EmployeeEditPage({ employee, initialSection, selfService = false, onClo
     }
     // `status` is also a free-text project field, and only the employee one has fixed choices
     if (SELECT_OPTIONS[name] && form !== "project") {
-      const [group, choices] = SELECT_OPTIONS[name];
+      const [group, listed] = SELECT_OPTIONS[name];
+      const choices = name === "grade" ? gradeCodes : listed;
       // A saved value outside the list (e.g. "Full-time") must stay selectable
       const shownChoices = [...new Set([value, ...choices])].filter(Boolean);
       return (

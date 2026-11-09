@@ -22,7 +22,8 @@ import { ensureCareerSchema } from "./services/careerApplications.js";
 import { ANNUAL_LEAVE_TYPE, checkAnnualLeaveRequest, getAnnualLeaveBalance } from "./services/annualLeaveBalance.js";
 import { OVERLAPPING_LEAVE_MESSAGE, calculateLeaveDays, findOverlappingLeave } from "./services/leaveDayCount.js";
 import { CALENDAR_DAY_LEAVE_TYPES, leaveLimitError, leaveLimitFor, leaveRulesFromPolicy, mergeLeaveTypes } from "./services/leavePolicy.js";
-import { defaultGradeEntitlements, normalizeGrade } from "./services/grades.js";
+import { defaultGradeEntitlements } from "./services/grades.js";
+import { GradeError, createGrade, deleteGrade, listGrades, normalizeGradeFromDb, updateGrade } from "./services/gradeMaster.js";
 import { D365Error, findD365Employee, getD365Employees, warmD365Employees } from "./services/d365Employees.js";
 import { getAttendanceCounts, withoutLate } from "./services/attendanceCounts.js";
 import { DATABASE_BUSY_MESSAGE, isDatabaseBusyError } from "./services/dbErrors.js";
@@ -38,9 +39,10 @@ import {
 } from "./services/annualLeaveAccrual.js";
 import { randomBytes, randomInt } from "node:crypto";
 import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHandler, requireAuth, requireHR, requireSelfOrHR, signToken, stripPassword } from "./middleware/auth.js";
-import { setAccountPassword } from "./services/accountCredentials.js";
+import { setAccountPassword, createHrmsEmployeeLogin } from "./services/accountCredentials.js";
 import { findPasswordIdentity, createResetPasswordHandler } from "./services/passwordRecovery.js";
-import { runFullSync, syncSingleEmployee, pushEmployeeToD365, startD365SyncScheduler } from "./services/d365EmployeeSync.js";
+import { runFullSync, syncSingleEmployee, pushEmployeeToD365, startD365SyncScheduler, isPushEnabled } from "./services/d365EmployeeSync.js";
+import { createEmployeeInD365 } from "./services/d365EmployeeProvisioning.js";
 import { syncD365Holidays } from "./services/d365HolidaySync.js";
 
 
@@ -186,6 +188,19 @@ const SINGLE_SYNC_ERRORS = {
 app.post("/api/d365/sync/:employeeId", requireAuth(pool), requireHR, async (req, res) => {
     try {
         const result = await syncSingleEmployee(pool, req.params.employeeId);
+        // Not in D365 yet (added in HRMS while D365 was down): create it there now
+        if (!result.synced && result.reason === "not-linked" && isPushEnabled()) {
+            const created = await createEmployeeInD365(pool, req.params.employeeId);
+            if (created.created) {
+                return res.json({ message: "Employee created in D365", created: true, ...created });
+            }
+            if (created.reason === "d365-refused") {
+                return res.status(502).json({ message: `D365 did not accept this employee: ${created.message}`, reason: created.reason });
+            }
+            if (created.reason === "needs-first-and-last-name") {
+                return res.status(400).json({ message: "D365 needs a first and last name. Add the full name and try again.", reason: created.reason });
+            }
+        }
         if (!result.synced) {
             const [status, message] = SINGLE_SYNC_ERRORS[result.reason] || [502, "D365 sync failed"];
             return res.status(status).json({ message, reason: result.reason });
@@ -445,6 +460,15 @@ app.get("/api/attendance", async (req, res) => {
     }
 });
 
+// An employee's rows: saved with their employee_id, or D365 punches (no employee_id)
+// whose personnel number / legal entity / employment match their linked D365 record
+const EMPLOYEE_ATTENDANCE_ROWS = `(a.employee_id = $1 OR EXISTS (
+    SELECT 1 FROM employee_d365_mapping m
+    WHERE m.employee_id = $1 AND m.link_status = 'linked'
+      AND m.personnel_number = a.personnel_number
+      AND m.employment_legal_entity_id = a.employment_legal_entity_id
+      AND m.employment_id = a.employment_id))`;
+
 // Employee attendance summary for dashboard charts
 app.get("/api/attendance/employee/:employeeId/summary", async (req, res) => {
     try {
@@ -460,8 +484,8 @@ app.get("/api/attendance/employee/:employeeId/summary", async (req, res) => {
                 COUNT(*) FILTER (
                     WHERE LOWER(COALESCE(status, '')) = 'absent'
                 ) AS absent
-             FROM attendance
-             WHERE employee_id = $1`,
+             FROM attendance a
+             WHERE ${EMPLOYEE_ATTENDANCE_ROWS}`,
             [req.params.employeeId]
         );
 
@@ -474,11 +498,19 @@ app.get("/api/attendance/employee/:employeeId/summary", async (req, res) => {
 
 app.get("/api/attendance/employee/:employeeId", async (req, res) => {
     try {
+        // working_minutes is empty on D365 punches: punch in to punch out (past midnight wraps)
         const result = await pool.query(
-            `SELECT * FROM attendance
-             WHERE employee_id = $1
-               AND ($2::date IS NULL OR attendance_date = $2::date)
-             ORDER BY attendance_date DESC, id DESC`,
+            `SELECT a.*,
+                    -- Plain YYYY-MM-DD: a Date object would shift to the previous day in JSON (UTC)
+                    TO_CHAR(a.attendance_date, 'YYYY-MM-DD') AS attendance_date,
+                    COALESCE(a.working_minutes,
+                        CASE WHEN a.punch_in IS NOT NULL AND a.punch_out IS NOT NULL
+                             THEN MOD(FLOOR(EXTRACT(EPOCH FROM (a.punch_out - a.punch_in)) / 60)::int + 1440, 1440)
+                        END) AS working_minutes
+             FROM attendance a
+             WHERE ${EMPLOYEE_ATTENDANCE_ROWS}
+               AND ($2::date IS NULL OR a.attendance_date = $2::date)
+             ORDER BY a.attendance_date DESC, a.id DESC`,
             [req.params.employeeId, req.query.date || null]
         );
         res.json(result.rows.map(withoutLate));
@@ -586,7 +618,9 @@ const applyShiftPlan = async (client, employeeId, shiftId, plan) => {
 // The shift a selected employee works today (HRMS employee_id, or a D365 identity)
 app.get("/api/attendance/shift", requireAuth(pool), async (req, res) => {
     try {
-        const { employee_id: employeeId, personnelNumber, employmentLegalEntityId, employmentId } = req.query;
+        const { personnelNumber, employmentLegalEntityId, employmentId } = req.query;
+        // An employee can only look up their own shift
+        const employeeId = req.auth?.identityType === "employee" ? req.auth.employeeId : req.query.employee_id;
         const linkedId = employeeId || (personnelNumber
             ? await findLinkedEmployeeId(pool, String(personnelNumber), String(employmentLegalEntityId || ""), String(employmentId || ""))
             : null);
@@ -1501,21 +1535,63 @@ app.post("/api/verify-otp", async (req, res) => {
 app.post("/api/reset-password", createResetPasswordHandler(pool));
 
 // Add New Employees
-// Grade is HR-owned: "" clears it, anything outside the company grade list is refused
+// Grade is HR-owned: "" clears it, anything outside Settings → Grade Master is refused
+const GRADE_LIST_MESSAGE = "Choose a grade from Settings → Grade Master";
 const saveEmployeeGrade = async (employeeId, row, input) => {
     if (input === undefined) return row;
-    const grade = normalizeGrade(input);
+    const grade = await normalizeGradeFromDb(pool, input);
     const result = await pool.query("UPDATE employees SET grade = $1 WHERE employee_id = $2 RETURNING grade", [grade, employeeId]);
     return { ...row, grade: result.rows[0]?.grade ?? null };
 };
-const gradeError = (input) => (input !== undefined && normalizeGrade(input) === undefined ? "Choose a grade from the company grade list" : null);
+const gradeError = async (input) => (input !== undefined && (await normalizeGradeFromDb(pool, input)) === undefined ? GRADE_LIST_MESSAGE : null);
+
+// ===============================
+// GRADE MASTER (Settings → Grade Master)
+// ===============================
+const sendGradeError = (res, error, fallback) => {
+    if (error instanceof GradeError) return res.status(error.status).json({ message: error.message, ...error.extra });
+    console.error(`${fallback}:`, error);
+    return res.status(500).json({ message: fallback });
+};
+
+app.get("/api/grades", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.json(await listGrades(pool));
+    } catch (error) {
+        sendGradeError(res, error, "Failed to load grades");
+    }
+});
+
+app.post("/api/grades", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.status(201).json(await createGrade(pool, req.body));
+    } catch (error) {
+        sendGradeError(res, error, "Failed to add the grade");
+    }
+});
+
+app.put("/api/grades/:code", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.json(await updateGrade(pool, req.params.code, req.body));
+    } catch (error) {
+        sendGradeError(res, error, "Failed to update the grade");
+    }
+});
+
+app.delete("/api/grades/:code", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.json(await deleteGrade(pool, req.params.code));
+    } catch (error) {
+        sendGradeError(res, error, "Failed to delete the grade");
+    }
+});
 
 // One employee's grade from Settings → Grade Assignment: { grade }; "" clears it
 app.patch("/api/employees/:employeeId", requireAuth(pool), requireHR, async (req, res) => {
     if (!req.body || !("grade" in req.body)) return res.status(400).json({ message: "Only grade can be changed here" });
-    const grade = normalizeGrade(req.body.grade);
-    if (grade === undefined) return res.status(400).json({ message: "Choose a grade from the company grade list" });
     try {
+        const grade = await normalizeGradeFromDb(pool, req.body.grade);
+        if (grade === undefined) return res.status(400).json({ message: GRADE_LIST_MESSAGE });
         const result = await pool.query(
             "UPDATE employees SET grade = $1 WHERE employee_id = $2 AND LOWER(COALESCE(role, 'employee')) <> 'hr' RETURNING employee_id, grade",
             [grade, req.params.employeeId]
@@ -1531,10 +1607,10 @@ app.patch("/api/employees/:employeeId", requireAuth(pool), requireHR, async (req
 // Bulk grade from Settings → Grade Assignment: { employeeIds: [], grade }. HR accounts are never changed.
 app.post("/api/employees/bulk-grade", requireAuth(pool), requireHR, async (req, res) => {
     const employeeIds = [...new Set((Array.isArray(req.body?.employeeIds) ? req.body.employeeIds : []).map((id) => String(id).trim()).filter(Boolean))];
-    const grade = normalizeGrade(req.body?.grade);
     if (!employeeIds.length || employeeIds.length > 5000) return res.status(400).json({ message: "Choose between 1 and 5000 employees" });
-    if (!grade) return res.status(400).json({ message: "Choose a grade from the company grade list" });
     try {
+        const grade = await normalizeGradeFromDb(pool, req.body?.grade);
+        if (!grade) return res.status(400).json({ message: GRADE_LIST_MESSAGE });
         const result = await pool.query(
             `UPDATE employees SET grade = $1
              WHERE employee_id = ANY($2::text[]) AND LOWER(COALESCE(role, 'employee')) <> 'hr'
@@ -1550,7 +1626,8 @@ app.post("/api/employees/bulk-grade", requireAuth(pool), requireHR, async (req, 
 
 app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
     try {
-        if (gradeError(req.body?.grade)) return res.status(400).json({ message: gradeError(req.body.grade) });
+        const gradeProblem = await gradeError(req.body?.grade);
+        if (gradeProblem) return res.status(400).json({ message: gradeProblem });
         const {
             employee_id,
             name,
@@ -1657,7 +1734,19 @@ app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
             ]
         );
 
-        res.status(201).json(stripPassword(await saveEmployeeGrade(employee_id, result.rows[0], req.body?.grade)));
+        const saved = stripPassword(await saveEmployeeGrade(employee_id, result.rows[0], req.body?.grade));
+        // Employee portal login: EMP<employee ID>, temporary password = the username
+        const loginUsername = await createHrmsEmployeeLogin(pool, employee_id)
+            .catch((error) => { console.error(`Login for ${employee_id} not created:`, error.message); return null; });
+        saved.login_username = loginUsername;
+        // D365 can take minutes to wake up, so the worker is created there in the background;
+        // "Sync this employee" retries if it fails
+        const d365 = isPushEnabled() ? "creating" : "push-disabled";
+        res.status(201).json({ ...saved, d365 });
+        if (d365 === "creating") {
+            createEmployeeInD365(pool, employee_id)
+                .catch((error) => console.error(`D365 create ${employee_id} failed:`, error.message));
+        }
 
     } catch (error) {
         console.error("Error adding employee", error);
@@ -1735,7 +1824,8 @@ app.put("/api/employees/:employeeId", requireAuth(pool), requireSelfOrHR, async 
             };
         }
         const pick = (field, submitted) => (field in master ? master[field] : submitted);
-        if (req.auth.role === "hr" && gradeError(req.body?.grade)) return res.status(400).json({ message: gradeError(req.body.grade) });
+        const gradeProblem = req.auth.role === "hr" ? await gradeError(req.body?.grade) : null;
+        if (gradeProblem) return res.status(400).json({ message: gradeProblem });
 
         const previous = (await pool.query("SELECT * FROM employees WHERE employee_id = $1", [employeeId])).rows[0] || null;
 
@@ -2712,6 +2802,26 @@ app.post("/api/annual-leave-accrual/run", async (req, res) => {
     }
 });
 
+// Apply Leave preview: the same day count POST /api/leaves will save (working days, or calendar days for maternity/paternity)
+app.get("/api/leaves/day-count", async (req, res) => {
+    try {
+        const { leave_type: leaveType, from, to } = req.query;
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!leaveType || !datePattern.test(String(from || "")) || !datePattern.test(String(to || ""))) {
+            return res.status(400).json({ message: "leave_type, from and to (YYYY-MM-DD) are required" });
+        }
+        if (to < from) {
+            return res.json({ days: 0, error: "To Date must be after or equal to From Date" });
+        }
+        const result = await countRequestedLeaveDays(leaveType, from, to);
+        res.set("Cache-Control", "no-store");
+        res.json(result.error ? { days: 0, error: result.error } : { days: result.days });
+    } catch (error) {
+        console.error("Error counting leave days:", error);
+        res.status(500).json({ message: "Failed to count leave days" });
+    }
+});
+
 app.post("/api/leaves", async (req, res) => {
     try {
         const {
@@ -3080,15 +3190,28 @@ dashboardWidgetRoute("/api/dashboard/attendance-trend", () => getAttendanceTrend
 dashboardWidgetRoute("/api/dashboard/department-distribution", () => getDepartmentDistribution(pool));
 dashboardWidgetRoute("/api/dashboard/recruitment-stats", () => getRecruitmentStats(pool, FILLED_APPLICATION_STATUSES));
 
+// HR login accounts live in employees too but are not staff in the counts
+const NOT_HR_ACCOUNT = "LOWER(COALESCE(role, 'employee')) <> 'hr'";
+
 app.get("/api/dashboard", async (req, res) => {
     try {
+        // Active = status Active; every other status (Resigned, Terminated, ...) is Inactive.
+        // HR login accounts are not counted, same as the Employees list.
         const employeesResult = await pool.query(`
-            SELECT COUNT(*)::int AS total_employees
+            SELECT COUNT(*) FILTER (WHERE status = 'Active')::int AS total_employees,
+                   COUNT(*) FILTER (WHERE status IS DISTINCT FROM 'Active')::int AS inactive_employees
             FROM employees
-            WHERE status = 'Active'
+            WHERE ${NOT_HR_ACCOUNT}
         `);
 
         const attendanceCounts = await getAttendanceCounts(pool);
+
+        // Only a saved Absent row counts; not punching in yet is not Absent
+        const absentResult = await pool.query(`
+            SELECT COUNT(DISTINCT COALESCE(employee_id::text, personnel_number))::int AS absent
+            FROM attendance
+            WHERE attendance_date = CURRENT_DATE AND LOWER(status) = 'absent'
+        `);
 
         const leavesResult = await pool.query(`
             SELECT COUNT(*)::int AS pending_leaves
@@ -3107,7 +3230,7 @@ app.get("/api/dashboard", async (req, res) => {
         const newJoinersResult = await pool.query(`
             SELECT COUNT(*)::int AS new_joiners
             FROM employees
-            WHERE status = 'Active'
+            WHERE status = 'Active' AND ${NOT_HR_ACCOUNT}
               AND joining_date >= DATE_TRUNC('month', CURRENT_DATE)
               AND joining_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
         `);
@@ -3115,7 +3238,7 @@ app.get("/api/dashboard", async (req, res) => {
         const departmentsResult = await pool.query(`
             SELECT COUNT(DISTINCT department)::int AS departments
             FROM employees
-            WHERE status = 'Active'
+            WHERE status = 'Active' AND ${NOT_HR_ACCOUNT}
               AND department IS NOT NULL
               AND TRIM(department) <> ''
         `);
@@ -3154,7 +3277,9 @@ app.get("/api/dashboard", async (req, res) => {
 
         res.json({
             totalEmployees: employeesResult.rows[0].total_employees,
+            inactiveEmployees: employeesResult.rows[0].inactive_employees,
             presentToday: attendanceCounts.present,
+            absentToday: absentResult.rows[0].absent,
             onLeave: onLeaveResult.rows[0].on_leave,
             pendingLeaves: leavesResult.rows[0].pending_leaves,
             openTickets: openTickets,
@@ -3180,7 +3305,7 @@ app.get("/api/dashboard/departments", async (req, res) => {
                 COALESCE(NULLIF(TRIM(department), ''), 'Unassigned') AS department,
                 COUNT(*)::int AS employee_count
             FROM employees
-            WHERE status = 'Active'
+            WHERE status = 'Active' AND ${NOT_HR_ACCOUNT}
             GROUP BY COALESCE(NULLIF(TRIM(department), ''), 'Unassigned')
             ORDER BY employee_count DESC, department ASC
         `);

@@ -38,7 +38,7 @@
 
 .rs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .rs-chips button { padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 20px; background: #f1f5f9; color: #94a3b8; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.rs-chips button.active { border-color: #b3e5fc; background: #e1f5fe; color: #0277bd; }
+.rs-chips button.active { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
 
 .rs-toggle { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 20px; background: #f1f5f9; color: #64748b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .rs-toggle.on { border-color: #bbf7d0; background: #e7f7ee; color: #07804b; }

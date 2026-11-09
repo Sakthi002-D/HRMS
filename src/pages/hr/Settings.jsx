@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    AlertCircle, Bell, Briefcase, CheckCircle2, Clock3, DoorOpen, Eye, EyeOff, GitBranch, Globe2, KeyRound,
+    AlertCircle, Award, Bell, Briefcase, CheckCircle2, Clock3, DoorOpen, Eye, EyeOff, GitBranch, Globe2, KeyRound,
     Loader2, Mail, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Timer,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -13,11 +13,12 @@ import ApprovalWorkflowSettings from "./settings/ApprovalWorkflowSettings";
 import RecruitmentMastersSettings from "./settings/RecruitmentMastersSettings";
 import { ResignationNoticeSettings } from "./settings/ResignationSettings";
 import ShiftSettings from "./settings/ShiftSettings";
+import { GradeMasterPanel } from "./settings/GradeMaster";
 import "./Settings.css";
 
 const SECTIONS = [
     { id: "workspace", labelKey: "settings.page.sectionWorkspace", groups: ["general", "regional", "notifications", "security"] },
-    { id: "operations", labelKey: "settings.page.sectionOperations", groups: ["approval", "recruitment", "resignation", "shifts"] },
+    { id: "operations", labelKey: "settings.page.sectionOperations", groups: ["approval", "recruitment", "resignation", "shifts", "grades"] },
 ];
 
 const GROUP_ICONS = {
@@ -29,6 +30,7 @@ const GROUP_ICONS = {
     recruitment: Briefcase,
     resignation: DoorOpen,
     shifts: Clock3,
+    grades: Award,
 };
 
 // Groups edited as one draft and saved with the Save bar; the others save themselves
@@ -173,6 +175,8 @@ function Settings() {
         body = <RecruitmentMastersSettings />;
     } else if (activeGroup === "shifts") {
         body = <ShiftSettings />;
+    } else if (activeGroup === "grades") {
+        body = <GradeMasterPanel />;
     } else {
         body = <ResignationNoticeSettings />;
     }
@@ -182,8 +186,8 @@ function Settings() {
             <div className="settings-page st-page">
                 <header className="st-hero">
                     <div className="st-hero-main">
-                        <span className="st-hero-logo" aria-hidden="true">{(shown.companyName || "H").trim().charAt(0).toUpperCase()}</span>
                         <div>
+                            <span className="st-hero-kicker">{t("settings.configuration", { defaultValue: "Configuration" })}</span>
                             <h1>{t("settings.title", { defaultValue: "Settings" })}</h1>
                             <p>{t("settings.subtitle", { defaultValue: "Manage your HRMS preferences and application configuration." })}</p>
                         </div>

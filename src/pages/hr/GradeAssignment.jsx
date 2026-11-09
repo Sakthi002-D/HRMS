@@ -7,7 +7,7 @@ import { Pagination } from "../../components/common/TablePagination";
 import { DocumentToast } from "../../components/documents/EmployeeDocumentOverlays";
 import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
-import { GRADES, GRADE_LEAVE_BANDS, gradesInBand } from "../../utils/grades";
+import useGrades from "../../hooks/useGrades";
 import BulkGradeModal from "./BulkGradeModal";
 import "./GradeAssignment.css";
 
@@ -28,15 +28,15 @@ const request = async (path, options = {}) => {
     return data;
 };
 
-// Company table, replaced by what HR saved in Leave Policy
-const DEFAULT_GRADE_DAYS = Object.fromEntries(GRADE_LEAVE_BANDS.flatMap((band) => gradesInBand(band).map((grade) => [grade, band.days])));
-
 function GradeAssignment() {
     const { t } = useTranslation();
     const [employees, setEmployees] = useState(null);
     const [loadError, setLoadError] = useState("");
-    const [gradeDays, setGradeDays] = useState({ byGrade: DEFAULT_GRADE_DAYS, fallback: 30 });
+    // Grade list and leave days from Settings → Grade Master; employees without a grade get the Leave Policy default
+    const { codes: gradeList, leaveDaysFor: gradeLeaveDays } = useGrades();
+    const [defaultLeaveDays, setDefaultLeaveDays] = useState(30);
     const [department, setDepartment] = useState("all");
+    const [designation, setDesignation] = useState("all");
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [savingId, setSavingId] = useState(null);
@@ -55,26 +55,27 @@ function GradeAssignment() {
                 setLoadError(error.message);
             });
         request("/api/leave-policies")
-            .then((data) => {
-                const annual = (data.policy || data).annualLeave || {};
-                const saved = Object.fromEntries(Object.entries(annual.grade_overrides || {}).map(([grade, days]) => [grade.trim().toUpperCase(), Number(days)]));
-                setGradeDays({
-                    byGrade: Object.keys(saved).length ? saved : DEFAULT_GRADE_DAYS,
-                    fallback: Number(annual.yearly_entitlement_days) || 30,
-                });
-            })
+            .then((data) => setDefaultLeaveDays(Number((data.policy || data).annualLeave?.yearly_entitlement_days) || 30))
             .catch(() => {});
     }, []);
 
-    const leaveDaysFor = (grade) => gradeDays.byGrade[grade] ?? gradeDays.fallback;
+    const leaveDaysFor = (grade) => gradeLeaveDays(grade) ?? defaultLeaveDays;
 
     const departments = useMemo(
         () => [...new Set((employees || []).map((row) => row.department).filter(Boolean))].sort(),
         [employees]
     );
+    // Designations of the chosen department only
+    const designations = useMemo(
+        () => [...new Set((employees || [])
+            .filter((row) => department === "all" || row.department === department)
+            .map((row) => row.designation).filter(Boolean))].sort(),
+        [employees, department]
+    );
     const query = search.trim().toLowerCase();
     const filtered = (employees || []).filter((row) => (department === "all" || row.department === department)
-        && (!query || [row.name, row.id].some((value) => String(value || "").toLowerCase().includes(query))));
+        && (designation === "all" || row.designation === designation)
+        && (!query || [row.name, row.id, row.designation].some((value) => String(value || "").toLowerCase().includes(query))));
     const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const currentPage = Math.min(page, pageCount);
     const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -150,7 +151,7 @@ function GradeAssignment() {
                     >
                         <option value="">{t("employeeProfile.basic.noGrade", { defaultValue: "No grade" })}</option>
                         {/* A grade saved before the company list stays selectable */}
-                        {[...new Set([row.grade, ...GRADES])].filter(Boolean).map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                        {[...new Set([row.grade, ...gradeList])].filter(Boolean).map((grade) => <option key={grade} value={grade}>{grade}</option>)}
                     </select>
                     <small>
                         {savingId === row.id
@@ -191,11 +192,19 @@ function GradeAssignment() {
                         </label>
                         <select
                             value={department}
-                            onChange={({ target }) => { setDepartment(target.value); setPage(1); }}
+                            onChange={({ target }) => { setDepartment(target.value); setDesignation("all"); setPage(1); }}
                             aria-label={t("profileEdit.fields.department", { defaultValue: "Department" })}
                         >
                             <option value="all">{t("settings.shifts.bulk.allDepartments", { defaultValue: "All departments" })}</option>
                             {departments.map((name) => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <select
+                            value={designation}
+                            onChange={({ target }) => { setDesignation(target.value); setPage(1); }}
+                            aria-label={t("employeesList.table.designation", { defaultValue: "Designation" })}
+                        >
+                            <option value="all">{t("employeesList.filters.allDesignations", { defaultValue: "All designations" })}</option>
+                            {designations.map((name) => <option key={name} value={name}>{name}</option>)}
                         </select>
                         <span className="ga-count">
                             <Users size={15} aria-hidden="true" />
@@ -227,7 +236,7 @@ function GradeAssignment() {
             </div>
 
             {bulkOpen && (
-                <BulkGradeModal count={filtered.length} leaveDaysFor={leaveDaysFor} onCancel={() => setBulkOpen(false)} onConfirm={assignToFiltered} />
+                <BulkGradeModal count={filtered.length} grades={gradeList} leaveDaysFor={leaveDaysFor} onCancel={() => setBulkOpen(false)} onConfirm={assignToFiltered} />
             )}
             <DocumentToast toast={toast} onClose={closeToast} />
         </DashboardLayout>

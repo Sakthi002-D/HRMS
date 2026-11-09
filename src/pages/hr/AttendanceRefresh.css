@@ -285,3 +285,96 @@
     padding: 16px;
   }
 }
+
+/* =========================================
+   PROFESSIONAL TABLE (same as the Employees list):
+   light header, left-aligned, quiet rows. Overrides index.css for this table only.
+   ========================================= */
+
+.dashboard-content .attendance-page.att-v2 .attendance-table {
+  border-collapse: collapse;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table thead th {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f3f5f8 !important;
+  color: #111827 !important;
+  font-size: 14px !important;
+  font-weight: 600;
+  text-align: start !important;
+  white-space: nowrap;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef0f3;
+  color: #374151;
+  font-size: 14.5px;
+  text-align: start !important;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-id-chip {
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Name: avatar, name, department underneath */
+.dashboard-content .attendance-page.att-v2 .attendance-person {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.dashboard-content .attendance-page.att-v2 .hr-att-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 13px;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-person-text {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-person-name {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-person-dept {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Punch times as plain text; the late / early notes stay underneath */
+.dashboard-content .attendance-page.att-v2 .attendance-table :is(.punch-in-time, .punch-out-time) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table .attendance-shift-name {
+  color: #374151;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table .attendance-flag {
+  margin-top: 4px;
+}
+
+.dashboard-content .attendance-page.att-v2 .attendance-table .total-working-hours span,
+.dashboard-content .attendance-page.att-v2 .attendance-table .overtime-hours span {
+  color: #111827;
+  font-weight: 500;
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./Employees.css";
 import "./EmployeesModern.css";
@@ -36,7 +36,7 @@ import { Pagination } from "../../components/common/TablePagination";
 import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
 import { exportTable } from "../../utils/tableExport";
-import { GRADES } from "../../utils/grades";
+import useGrades from "../../hooks/useGrades";
 
 const PHONE_COUNTRIES = [
   { code: "+974", groupSize: 4, length: 8 },
@@ -99,6 +99,7 @@ const fileToDataUrl = (file) => {
 
 function Employees() {
   const { t } = useTranslation();
+  const { codes: gradeCodes } = useGrades();
   const showAppAlert = useAlert();
   const confirm = useConfirm();
   // "current" = Active employees; "archived" = everyone archived (Resigned, Inactive, ...)
@@ -124,6 +125,7 @@ function Employees() {
   };
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   // =========================
   // EMPLOYEES
   // =========================
@@ -246,7 +248,8 @@ useEffect(() => {
   // MODAL
   // =========================
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // The dashboard "Add Employee" action links here with ?add=1
+  const [isModalOpen, setIsModalOpen] = useState(() => searchParams.get("add") === "1");
 
 
   // null = Add mode
@@ -439,6 +442,16 @@ const resetForm = () => {
     setEditingEmployeeId(null);
     resetForm();
   };
+
+  // Drop ?add=1 once the form is open, so a refresh after saving does not open it again
+  useEffect(() => {
+    if (searchParams.get("add") !== "1") return;
+    setSearchParams((params) => {
+      params.delete("add");
+      return params;
+    }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // The form replaces the list, so start it at the top of the page
   useEffect(() => {
@@ -811,7 +824,15 @@ const employeeData = {
       // Get the latest data from the database
       await fetchEmployees();
 
-      showAlert({ variant: "success", message: t("employeesList.success.added", { defaultValue: "Employee added successfully!" }) });
+      const addedMessage = data?.d365 === "creating"
+        ? t("employeesList.success.addedD365", { defaultValue: "Employee added. Creating them in D365 now; if D365 is offline, use \"Sync this employee\" on their page later." })
+        : t("employeesList.success.added", { defaultValue: "Employee added successfully!" });
+      showAlert({
+        variant: "success",
+        message: data?.login_username
+          ? `${addedMessage} ${t("employeesList.success.loginCreated", { username: data.login_username, defaultValue: "Login: {{username}} (temporary password is the same as the username)." })}`
+          : addedMessage,
+      });
 
       setIsModalOpen(false);
       setEditingEmployeeId(null);
@@ -1113,21 +1134,26 @@ const updateEmployee = async () => {
           <span className="emp-avatar" aria-hidden="true">
             {String(employee.name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("")}
           </span>
-          <span className="emp-person-name">{employee.name}</span>
+          <span className="emp-person-text">
+            <span className="emp-person-name">{employee.name}</span>
+            <span className="emp-person-role">{employee.designation || t("employeesList.grid.noDesignation", { defaultValue: "Employee" })}</span>
+          </span>
         </span>
       ),
-    },
-
-    {
-      key: "designation",
-      label: t("employeesList.table.designation", { defaultValue: "Designation" }),
-      render: (employee) => employee.designation || <span className="emp-muted">-</span>,
     },
 
     {
       key: "department",
       label: t("profileEdit.fields.department", { defaultValue: "Department" }),
       render: (employee) => employee.department || <span className="emp-muted">-</span>,
+    },
+
+    {
+      key: "joined",
+      label: t("employeeProfile.basic.joiningDate", { defaultValue: "Joining Date" }),
+      render: (employee) => employee.joiningDate
+        ? <span dir="ltr">{formatAppDate(new Date(`${toDateInput(employee.joiningDate)}T00:00:00`))}</span>
+        : <span className="emp-muted">-</span>,
     },
 
     {
@@ -1499,7 +1525,7 @@ const filteredEmployees =
                 <select value={gradeFilter} onChange={setFilter(setGradeFilter)}>
                   <option value="All">{t("employeesList.filters.allGrades", { defaultValue: "All grades" })}</option>
                   <option value="none">{t("employeesList.filters.noGrade", { defaultValue: "No grade yet" })}</option>
-                  {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                  {gradeCodes.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
                 </select>
               </div>
               <div className="filter-field">
@@ -2155,7 +2181,7 @@ const filteredEmployees =
               <label>{t("employeeProfile.basic.grade", { defaultValue: "Grade" })}</label>
               <select value={formData.grade || ""} onChange={(e) => setFormData({ ...formData, grade: e.target.value })}>
                 <option value="">{t("employeeProfile.basic.noGrade", { defaultValue: "No grade" })}</option>
-                {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                {gradeCodes.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
               </select>
             </div>
 

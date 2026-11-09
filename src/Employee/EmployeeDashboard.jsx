@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { clearPortalLanguage, usePortalLanguage } from "../i18n";
-import { Bell, CalendarDays, Check, ChevronDown, Clock3, ClipboardList, FileText, Hourglass, KeyRound, Moon, Settings as SettingsIcon, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { Bell, CalendarDays, Check, Clock3, ClipboardList, FileText, Hourglass, Timer, Trash2, UserCheck, Wallet, X } from "lucide-react";
 import DatePicker from "../components/layout/common/DatePicker";
 import { purgeAllChatStorage } from "../components/assistant/HRAssistant";
 import "./EmployeeDashboard.css";
 import ApplyLeaveModal from "./ApplyLeaveModal";
 import ChangePasswordModal from "./ChangePasswordModal";
 import EmployeeAttendance from "./EmployeeAttendance";
+import EmployeeLeaveOverview from "./EmployeeLeaveOverview";
 import EmployeeEditModal from "./EmployeeEditModal";
 import EmployeeProfile from "./EmployeeProfile";
 import EmployeePayroll from "./EmployeePayroll";
@@ -26,6 +27,7 @@ import EmployeeSidebar from "./EmployeeSidebar";
 import API_URL from "../config/api";
 import { toDateInput } from "../utils/dateInput";
 import { authHeaders } from "../utils/auth";
+import { shiftWorkMinutes } from "../pages/hr/settings/shiftUtils";
 
 const DEFAULT_QATAR_HOLIDAYS = [
     { name: "National Day", date: "18 December", days: 1 },
@@ -47,6 +49,28 @@ const parseDateOnly = (value) => {
     const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
     const date = new Date(year, month - 1, day);
     return Number.isNaN(date.getTime()) ? null : date;
+};
+// The same moment as wall-clock time in a time zone (Qatar by default), so getHours(),
+// getDate() and the date keys follow company time instead of the computer's clock
+const inTimeZone = (date, timeZone) => {
+    try {
+        const zoned = new Date(date.toLocaleString("en-US", { timeZone }));
+        return Number.isNaN(zoned.getTime()) ? date : zoned;
+    } catch {
+        return date;
+    }
+};
+// Time zones offered on the Settings page
+const EMPLOYEE_TIME_ZONES = ["Asia/Qatar", "Asia/Dubai"];
+// Settings page preferences, kept per employee on this device
+const preferencesKey = (employeeId) => `hrms-employee-preferences-${employeeId || "guest"}`;
+const readPreferences = () => {
+    try {
+        const employeeId = JSON.parse(sessionStorage.getItem("loggedInEmployee") || "null")?.employee_id;
+        return JSON.parse(localStorage.getItem(preferencesKey(employeeId)) || "{}") || {};
+    } catch {
+        return {};
+    }
 };
 const localDateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const normalizeAttendanceSearchDate = (value) => {
@@ -98,7 +122,7 @@ const formatAttendanceTime = (time) => {
 
 function EmployeeDashboard() {
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     // Employee portal language (separate from the HR portal; Login stays English)
     usePortalLanguage("employee");
 
@@ -119,7 +143,10 @@ function EmployeeDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [monthlyAttendance, setMonthlyAttendance] = useState([]);
     const [holidays, setHolidays] = useState(DEFAULT_QATAR_HOLIDAYS);
-    const [holidaysExpanded, setHolidaysExpanded] = useState(true);
+    // The shift the employee works today (assigned shift, or the company's standard shift)
+    const [todayShift, setTodayShift] = useState(null);
+    // Leave Policy Setup as HR saved it (read-only on the Leave page)
+    const [leavePolicyInfo, setLeavePolicyInfo] = useState({ policy: null, updatedAt: null });
     const [openTrackingId, setOpenTrackingId] = useState(null);
     const [cancelLeaveId, setCancelLeaveId] = useState(null);
     const [liveNow, setLiveNow] = useState(new Date());
@@ -135,10 +162,10 @@ function EmployeeDashboard() {
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", repeat_password: "" });
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-    const [compactMode, setCompactMode] = useState(false);
-    const [language, setLanguage] = useState("English");
-    const [timeZone, setTimeZone] = useState("Asia/Qatar");
+    const [savedPreferences] = useState(readPreferences);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(savedPreferences.leaveUpdates !== false);
+    const [compactMode, setCompactMode] = useState(savedPreferences.compactMode === true);
+    const [timeZone, setTimeZone] = useState(EMPLOYEE_TIME_ZONES.includes(savedPreferences.timeZone) ? savedPreferences.timeZone : "Asia/Qatar");
     const [profileDraft, setProfileDraft] = useState(null);
     const [sectionEditor, setSectionEditor] = useState(null);
     const [educationEditorId, setEducationEditorId] = useState(null);
@@ -192,6 +219,44 @@ function EmployeeDashboard() {
 
     const [loading, setLoading] = useState(false);
     const [appAlert, setAppAlert] = useState(null);
+
+    useEffect(() => {
+        if (!employee?.employee_id) return undefined;
+        let ignore = false;
+        fetch(`${API_URL}/api/attendance/shift?employee_id=${encodeURIComponent(employee.employee_id)}`, { headers: authHeaders(), cache: "no-store" })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => { if (!ignore) setTodayShift(data?.shift || null); })
+            .catch(() => {});
+        return () => { ignore = true; };
+    }, [employee?.employee_id]);
+
+    useEffect(() => {
+        if (!employee?.employee_id) return;
+        try {
+            localStorage.setItem(preferencesKey(employee.employee_id), JSON.stringify({ leaveUpdates: notificationsEnabled, compactMode, timeZone }));
+        } catch {
+            // Private window or blocked storage: preferences last for this visit only
+        }
+    }, [employee?.employee_id, notificationsEnabled, compactMode, timeZone]);
+
+    // Apply Leave: the day count the server will save (working days; calendar days for maternity/paternity)
+    const [dayCount, setDayCount] = useState(null);
+    const dayCountKey = formData.leave_type && formData.from_date && formData.to_date
+        ? new URLSearchParams({ leave_type: formData.leave_type, from: formData.from_date, to: formData.to_date }).toString()
+        : "";
+    useEffect(() => {
+        if (!showApplyLeave || !dayCountKey) return undefined;
+        let ignore = false;
+        // A failed count shows its error instead of "Counting..." forever
+        const failed = (message) => ({ days: 0, error: message || t("applyLeave.countFailed", { defaultValue: "Could not count the leave days. Please try again." }), key: dayCountKey });
+        fetch(`${API_URL}/api/leaves/day-count?${dayCountKey}`, { cache: "no-store" })
+            .then(async (response) => {
+                const data = await response.json().catch(() => null);
+                if (!ignore) setDayCount(response.ok && data ? { ...data, key: dayCountKey } : failed(data?.message));
+            })
+            .catch(() => { if (!ignore) setDayCount(failed()); });
+        return () => { ignore = true; };
+    }, [showApplyLeave, dayCountKey, t]);
 
     const showAlert = (message, type = "error") => {
         setAppAlert({
@@ -353,6 +418,7 @@ function EmployeeDashboard() {
             const response = await fetch(`${API_URL}/api/leave-policies`);
             if (!response.ok) return;
             const data = await response.json();
+            setLeavePolicyInfo({ policy: data.policy || null, updatedAt: data.updated_at || null });
             const configuredHolidays = data.policy?.qatarHolidayCalendar;
             if (Array.isArray(configuredHolidays) && configuredHolidays.length > 0) {
                 setHolidays(configuredHolidays);
@@ -482,6 +548,12 @@ function EmployeeDashboard() {
             return;
         }
 
+        // e.g. a range that is only weekend days or public holidays
+        if (serverDayCount?.error) {
+            showAlert(serverDayCount.error);
+            return;
+        }
+
         if (!selectedLeaveInfo.eligible) {
             showAlert(t("leaveDetails.notEligible", { type: t(`leaveTypes.${formData.leave_type}`, { defaultValue: formData.leave_type }) }));
             return;
@@ -493,7 +565,7 @@ function EmployeeDashboard() {
                 showAlert(t("leaveDetails.availableToApply", { count: selectedLeaveInfo.available }));
                 return;
             }
-        } else if (selectedLeaveInfo.calendarDays && selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
+        } else if (serverDayCount && selectedLeaveInfo.remaining !== null && requestedDays > selectedLeaveInfo.remaining) {
             showAlert(t("leaveDetails.onlyRemaining", { count: selectedLeaveInfo.remaining, type: t(`leaveTypes.${formData.leave_type}`, { defaultValue: formData.leave_type }) }));
             return;
         }
@@ -576,6 +648,12 @@ function EmployeeDashboard() {
     };
 
     const openLeaveDetails = () => {
+        // Fresh policy and balance every time, so HR changes show straight away
+        fetchHolidayPolicy();
+        if (employee?.employee_id) {
+            fetchAnnualBalance(employee.employee_id);
+            fetchLeaves(employee.employee_id);
+        }
         setActiveSection("leave");
         setShowApplyLeave(false);
     };
@@ -800,11 +878,6 @@ function EmployeeDashboard() {
         (leave) => leave.status?.trim().toLowerCase() === "approved"
     );
 
-    const approvedLeaves = approvedLeaveRequests.length;
-
-    const rejectedLeaves = leaves.filter(
-        (leave) => leave.status?.trim().toLowerCase() === "rejected"
-    ).length;
 
     const profileValue = (value) => value || "-";
     const formatProfileDate = (value) => {
@@ -815,15 +888,8 @@ function EmployeeDashboard() {
             : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     };
 
-    const currentDate = new Date();
+    const currentDate = inTimeZone(new Date(), timeZone);
     const currentYear = currentDate.getFullYear();
-    const approvedLeaveDays = approvedLeaveRequests.reduce(
-        (total, leave) => total + Number(leave.days || 0),
-        0
-    );
-    const approvedLeaveDaysThisYear = approvedLeaveRequests
-        .filter((leave) => new Date(leave.from_date).getFullYear() === currentYear)
-        .reduce((total, leave) => total + Number(leave.days || 0), 0);
     const joiningDate = parseDateOnly(employee.joining_date);
     const serviceMonths = completedMonthsBetween(joiningDate, currentDate);
     const yearStart = new Date(currentYear, 0, 1);
@@ -836,7 +902,9 @@ function EmployeeDashboard() {
         .reduce((total, leave) => total + Number(leave.days || 0), 0);
     const selectedFromDate = parseDateOnly(formData.from_date);
     const selectedToDate = parseDateOnly(formData.to_date);
-    const requestedDays = daysBetweenInclusive(selectedFromDate, selectedToDate);
+    // Server count once it arrives for these dates; calendar days only while it loads
+    const serverDayCount = dayCount?.key === dayCountKey ? dayCount : null;
+    const requestedDays = serverDayCount ? serverDayCount.days : daysBetweenInclusive(selectedFromDate, selectedToDate);
     const selectedLeaveType = formData.leave_type;
     const selectedTrackingLeave = leaves.find((leave) => String(leave.id) === String(openTrackingId));
     const sickEligible = serviceMonths >= leaveRules.sick.eligibleMonths;
@@ -965,7 +1033,18 @@ function EmployeeDashboard() {
     const todayDateKey = localDateKey(currentDate);
     const todayAttendance = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() !== "absent");
     const todayAbsentRecord = attendance.find((record) => String(record.attendance_date || "").slice(0, 10) === todayDateKey && String(record.status || "").toLowerCase() === "absent");
-    const shiftEnded = currentDate.getHours() >= 18;
+    // Work hours and end of today's shift; 9 h / 6 PM only when no shift is known
+    const shiftMinutes = todayShift ? shiftWorkMinutes(todayShift) : 540;
+    const DAY_TARGET_HOURS = Number((shiftMinutes / 60).toFixed(2));
+    const timeToMinutes = (time) => {
+        const [hours, minutes] = String(time || "").split(":").map(Number);
+        return Number.isFinite(hours) ? hours * 60 + (minutes || 0) : null;
+    };
+    const shiftStartMinutes = timeToMinutes(todayShift?.start_time);
+    const shiftEndMinutes = timeToMinutes(todayShift?.end_time) ?? 18 * 60;
+    const nowMinutes = currentDate.getHours() * 60 + currentDate.getMinutes();
+    // A shift that runs past midnight ends tomorrow, so it has not ended today
+    const shiftEnded = shiftStartMinutes !== null && shiftEndMinutes <= shiftStartMinutes ? false : nowMinutes >= shiftEndMinutes;
     const attendanceForDisplay = todayAttendance || todayAbsentRecord || !shiftEnded ? attendance : [{
         id: `absent-${employee.employee_id}-${todayDateKey}`,
         employee_id: employee.employee_id,
@@ -991,23 +1070,25 @@ function EmployeeDashboard() {
             && recordDate.getFullYear() === currentDate.getFullYear()
             && recordDate.getMonth() === currentDate.getMonth();
     });
-    const monthHours = currentMonthAttendance.reduce(
-        (total, record) => total + Number(record.working_minutes || 0) / 60,
-        0
-    );
-    const attendanceDays = attendance.filter((record) => record.punch_in).length;
     const formatHours = (hours) => hours.toFixed(2).replace(/\.00$/, "");
-    const attendanceProgress = Math.min((todayHours / 9) * 100, 100);
     const attendanceMonthOptions = Array.from({ length: 12 }, (_, index) => {
         const monthValue = String(index + 1).padStart(2, "0");
-        const monthLabel = new Date(2000, index, 1).toLocaleDateString("en-IN", { month: "long" });
-        return { value: monthValue, label: monthLabel };
+        const locale = i18n.language === "ar" ? "ar" : "en-IN";
+        const monthDate = new Date(2000, index, 1);
+        return {
+            value: monthValue,
+            label: monthDate.toLocaleDateString(locale, { month: "long" }),
+            short: monthDate.toLocaleDateString(locale, { month: "short" }),
+        };
     });
-    const attendanceYearOptions = [...new Set(
-        attendance
+    // Every year from joining up to this year (grows by itself each January), plus any year that has records
+    const firstAttendanceYear = Math.min(currentYear, joiningDate ? joiningDate.getFullYear() : currentYear);
+    const attendanceYearOptions = [...new Set([
+        ...Array.from({ length: currentYear - firstAttendanceYear + 1 }, (_, index) => String(currentYear - index)),
+        ...attendance
             .map((record) => String(record.attendance_date || "").slice(0, 4))
-            .filter(Boolean)
-    )].sort().reverse();
+            .filter(Boolean),
+    ])].sort().reverse();
     const filteredEmployeeAttendance = attendanceForDisplay.filter((record) => {
         const search = attendanceSearch.trim().toLowerCase();
         const status = String(record.status || "").toLowerCase();
@@ -1017,20 +1098,25 @@ function EmployeeDashboard() {
         return (!search || matchesSearchDate || `${record.attendance_date} ${formatProfileDate(record.attendance_date)} ${record.status} ${attendanceStatusLabel(t, record.status)}`.toLowerCase().includes(search))
             && (attendanceMonth === "all" || recordDate.slice(5, 7) === attendanceMonth)
             && (attendanceYear === "all" || recordDate.slice(0, 4) === attendanceYear)
-            && (attendanceStatus === "all" || status === attendanceStatus);
+            // "On time" rows count as Present, same as the Present tab
+            && (attendanceStatus === "all" || status === attendanceStatus || (attendanceStatus === "present" && status === "on time"));
     });
     const attendancePageCount = Math.max(1, Math.ceil(filteredEmployeeAttendance.length / attendanceRows));
     const visibleEmployeeAttendance = filteredEmployeeAttendance.slice(
         (attendancePage - 1) * attendanceRows,
         attendancePage * attendanceRows
     );
-    const greeting = liveNow.getHours() < 12
+    // "Leave updates" off in Settings hides leave approvals / rejections from the bell
+    const shownNotifications = notificationsEnabled ? notifications : notifications.filter((notification) => notification.type !== "leave");
+    const unreadNotifications = shownNotifications.filter((notification) => !notification.read).length;
+    const liveHour = inTimeZone(liveNow, timeZone).getHours();
+    const greeting = liveHour < 12
         ? t("employeeAttendance.greeting.morning", { defaultValue: "Good Morning" })
-        : liveNow.getHours() < 17
+        : liveHour < 17
             ? t("employeeAttendance.greeting.afternoon", { defaultValue: "Good Afternoon" })
             : t("employeeAttendance.greeting.evening", { defaultValue: "Good Evening" });
-    const liveTime = liveNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-    const liveDate = liveNow.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const liveTime = inTimeZone(liveNow, timeZone).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    const liveDate = inTimeZone(liveNow, timeZone).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     const toggleProfilePanel = (panel) => {
         setProfilePanels((current) => ({ ...current, [panel]: !current[panel] }));
     };
@@ -1040,24 +1126,70 @@ function EmployeeDashboard() {
             <strong>{profileValue(value)}</strong>
         </div>
     ));
-    const displayDate = currentDate.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    });
-    const leaveBreakdown = [
-        { label: t("dashboard.approved"), value: approvedLeaves, color: "#00be63" },
-        { label: t("dashboard.pending"), value: pendingLeaves, color: "#f7b500" },
-        { label: t("dashboard.rejected"), value: rejectedLeaves, color: "#e11d2e" },
+    // Leave balances, the same numbers the server checks when applying
+    const sickRemaining = Math.max(0, leaveRules.sick.totalDays - sickTaken);
+    const casualRemaining = Math.max(0, leaveRules.casual.days - casualTaken);
+    const gender = String(employee.gender || "").trim().toLowerCase();
+    const leaveBalances = [
+        {
+            key: "annual", type: "Annual Leave",
+            value: annualBalance ? annualBalance.available : null,
+            total: annualBalance ? annualBalance.accrued : null,
+            note: annualBalance ? t("employeeHero.earnedSoFar", { count: annualBalance.accrued, defaultValue: "of {{count}} earned" }) : "",
+        },
+        {
+            key: "sick", type: "Sick Leave",
+            value: sickEligible ? sickRemaining : null,
+            total: leaveRules.sick.totalDays,
+            note: sickEligible
+                ? t("employeeHero.ofYearly", { count: leaveRules.sick.totalDays, defaultValue: "of {{count}} this year" })
+                : t("leavePolicy.eligibleAfter", { date: formatRuleDate(sickEligibleDate) }),
+        },
+        {
+            key: "casual", type: "Casual Leave",
+            value: casualRemaining,
+            total: leaveRules.casual.days,
+            note: t("employeeHero.ofYearly", { count: leaveRules.casual.days, defaultValue: "of {{count}} this year" }),
+        },
+        // Per-request types: the limit of one request
+        ...[
+            gender !== "male" && ["maternity", "Maternity Leave", leaveRules.maternity.days],
+            gender !== "female" && ["paternity", "Paternity Leave", leaveRules.paternity.days],
+            ["bereavement", "Bereavement Leave", leaveRules.bereavement.days],
+            ["umrah", "Umrah Leave", leaveRules.umrah.days],
+            ["hajj", "Hajj Leave", leaveRules.hajj.days],
+        ].filter(Boolean).map(([key, type, days]) => ({
+            key, type, value: days, total: null,
+            note: t("employeeHero.perRequest", { defaultValue: "per request" }),
+        })),
     ];
-    const chartTotal = leaves.length;
-    const chartGradient = leaveBreakdown.reduce((gradient, item) => {
-        const end = gradient.end + (item.value / (chartTotal || 1)) * 100;
-        gradient.parts.push(`${item.color} ${gradient.end}% ${end}%`);
-        gradient.end = end;
-        return gradient;
-    }, { parts: [], end: 0 }).parts.join(", ");
-    const chartBackground = chartTotal ? `conic-gradient(${chartGradient})` : "#dce5eb";
+    const recentLeaves = [...leaves]
+        .sort((a, b) => String(b.from_date || "").localeCompare(String(a.from_date || "")))
+        .slice(0, 4);
+    const todayProgress = Math.min((todayHours / DAY_TARGET_HOURS) * 100, 100);
+    const todayStatus = String(todayAttendance?.status || "").toLowerCase();
+    const todayTone = todayAttendance ? (todayStatus === "late" ? "pending" : "approved") : shiftEnded || todayAbsentRecord ? "rejected" : "muted";
+    const weekDays = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - (6 - index));
+        const key = localDateKey(date);
+        const record = attendance.find((item) => String(item.attendance_date || "").slice(0, 10) === key);
+        const status = String(record?.status || "").toLowerCase();
+        const hours = Number(record?.working_minutes || 0) / 60;
+        // The shift saved on the day's row at punch in; otherwise today's shift
+        const target = Number(record?.shift_work_minutes || shiftMinutes) / 60;
+        return {
+            key,
+            hours,
+            target,
+            isToday: index === 6,
+            label: date.toLocaleDateString(i18n.language === "ar" ? "ar" : "en-GB", { weekday: "short" }),
+            tone: status === "absent" ? "rose" : status === "late" ? "amber" : "green",
+        };
+    });
+    const daysWorked = weekDays.filter((day) => day.hours > 0).length;
+    const weekChartMax = Math.max(...weekDays.map((day) => Math.max(day.target + 1, day.hours)));
+    // An absent day keeps a short red stub so it is still visible
+    weekDays.forEach((day) => { day.height = day.hours > 0 ? (day.hours / weekChartMax) * 100 : day.tone === "rose" ? 4 : 0; });
 
     return (
         <div className={`employee-dashboard ${activeSection}-view ${compactMode ? "compact-mode" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
@@ -1079,21 +1211,48 @@ function EmployeeDashboard() {
             {/* MAIN */}
             <main className="employee-main">
 
-                {/* HEADER */}
-                <header className="employee-header">
+                {/* HEADER: the dashboard gets the dark banner used across the HR pages; other sections keep the plain title */}
+                {activeSection === "dashboard" ? (
+                    <header className="edash-hero">
+                        <div className="edash-hero-copy">
+                            <span className="edash-hero-kicker">{t("employeeHero.kicker", { defaultValue: "Employee Portal" })}</span>
+                            <h1>{t("employeeHeader.dashboard.subtitle", { name: employee.name })}</h1>
+                            <p>{[employee.designation || t("dashboard.employee"), employee.department].filter(Boolean).join(" · ")}</p>
+                            <div className="edash-hero-chips">
+                                <span><UserCheck size={14} aria-hidden="true" />{todayAttendance ? attendanceStatusLabel(t, todayAttendance.status) : shiftEnded ? t("dashboard.absent") : t("dashboard.noAttendanceYet")}</span>
+                                <span><Timer size={14} aria-hidden="true" />{t("employeeHero.hoursToday", { hours: formatHours(todayHours), defaultValue: "{{hours}} h worked today" })}</span>
+                                <span><CalendarDays size={14} aria-hidden="true" />{t("employeeHero.pendingLeaves", { count: pendingLeaves, defaultValue: "{{count}} leave requests pending" })}</span>
+                            </div>
+                        </div>
 
-                    <div>
-                        <h1>{t(`employeeHeader.${activeSection}.title`)}</h1>
-                        <p>{t(`employeeHeader.${activeSection}.subtitle`, { name: employee.name })}</p>
-                    </div>
-                    {activeSection === "dashboard" && <div className="employee-notification-wrapper">
-                        <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
-                            <Bell size={19} />
-                            {notifications.filter((notification) => !notification.read).length > 0 && <span className="employee-notification-count">{notifications.filter((notification) => !notification.read).length}</span>}
-                        </button>
-                    </div>}
-
-                </header>
+                        <div className="edash-hero-side">
+                            <button type="button" className="edash-hero-bell" onClick={() => setActiveSection("notifications")} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
+                                <Bell size={22} />
+                                {unreadNotifications > 0 && <span className="edash-hero-bell-count">{unreadNotifications > 9 ? "9+" : unreadNotifications}</span>}
+                            </button>
+                            <div className="edash-hero-clock">
+                                <span>{greeting}</span>
+                                <strong>{liveTime}</strong>
+                                <small><CalendarDays size={13} aria-hidden="true" />{liveDate}</small>
+                            </div>
+                        </div>
+                    </header>
+                ) : !["profile", "attendance", "leave", "documents", "settings", "change-password"].includes(activeSection) && (
+                    // These pages have their own dark banner, same as the HR pages
+                    <header className="employee-header">
+                        <div>
+                            <h1>{t(`employeeHeader.${activeSection}.title`)}</h1>
+                            <p>{t(`employeeHeader.${activeSection}.subtitle`, { name: employee.name })}</p>
+                        </div>
+                        {/* Same bell on every page; the Notifications page itself does not need it */}
+                        {activeSection !== "notifications" && (
+                            <button type="button" className="employee-notification-button" onClick={() => setActiveSection("notifications")} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
+                                <Bell size={22} />
+                                {unreadNotifications > 0 && <span className="employee-notification-count">{unreadNotifications > 9 ? "9+" : unreadNotifications}</span>}
+                            </button>
+                        )}
+                    </header>
+                )}
 
                 {servingNotice && (
                     <div className="resignation-banner employee-resignation-banner" role="status">
@@ -1102,75 +1261,177 @@ function EmployeeDashboard() {
                     </div>
                 )}
 
-                <section className="employee-overview-grid">
-                    <article className="employee-identity-card">
-                        <div className="identity-banner">
-                            <div className="large-avatar">
-                                {employee.profile_photo ? (
-                                    <img src={employee.profile_photo} alt={`${employee.name} profile`} />
-                                ) : (
-                                    employee.name?.charAt(0)?.toUpperCase()
-                                )}
-                            </div>
-                            <div><h2>{employee.name}</h2><p>{employee.designation || t("dashboard.employee")}</p></div>
-                        </div>
-                        <div className="identity-details">
-                            <div><label>{t("dashboard.phoneNumber")}</label><strong>{profileValue(employee.phone)}</strong></div>
-                            <div><label>{t("dashboard.emailAddress")}</label><strong>{profileValue(employee.email)}</strong></div>
-                            <div><label>{t("dashboard.department")}</label><strong>{profileValue(employee.department)}</strong></div>
-                            <div><label>{t("dashboard.joinedOn")}</label><strong>{formatProfileDate(employee.joining_date)}</strong></div>
-                        </div>
-                    </article>
+                {/* DASHBOARD: compact cards and charts in the same style as the HR dashboard */}
+                {activeSection === "dashboard" && (
+                    <div className="edash-body">
+                        <section className="edash-overview edash-overview-top">
+                            <article className="edash-card edash-balances">
+                                <header className="edash-card-head">
+                                    <div>
+                                        <h2>{t("employeeHero.leaveBalances", { defaultValue: "Leave Balances" })}</h2>
+                                        <p className="edash-card-sub">{t("employeeHero.daysAvailable", { defaultValue: "days available to apply" })}</p>
+                                    </div>
+                                    <button type="button" className="edash-link" onClick={openLeaveDetails}>
+                                        {t("employeeHero.seeAll", { defaultValue: "See all" })}
+                                    </button>
+                                </header>
+                                <div className="edash-balance-grid">
+                                    {leaveBalances.map((balance) => (
+                                        <button type="button" className={`edash-balance${balance.total === null ? " per-request" : ""}`} key={balance.key} onClick={openLeaveDetails}>
+                                            <span className="edash-balance-name">{t(`leaveTypes.${balance.type}`, { defaultValue: balance.type })}</span>
+                                            <strong>{balance.value === null ? "-" : formatHours(balance.value)}</strong>
+                                            {balance.total !== null && (
+                                                <i className="edash-balance-bar" aria-hidden="true">
+                                                    <b style={{ width: `${balance.total > 0 && balance.value !== null ? Math.min((balance.value / balance.total) * 100, 100) : 0}%` }} />
+                                                </i>
+                                            )}
+                                            <small>{balance.note}</small>
+                                        </button>
+                                    ))}
+                                </div>
+                            </article>
 
-                    <article className="employee-leave-chart-card">
-                        <div className="overview-card-heading"><h2>{t("dashboard.leaveDetails")}</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
-                        <div className="leave-chart-content">
-                            <div className="leave-legend">
-                                {leaveBreakdown.map((item) => {
-                                    const percentage = chartTotal ? Math.round((item.value / chartTotal) * 100) : 0;
-                                    return <div key={item.label}><i style={{ backgroundColor: item.color }} /><strong>{item.value}</strong> {item.label} <em>({percentage}%)</em></div>;
-                                })}
-                                <div className="leave-legend-total"><i /><strong>{leaves.length}</strong> {t("dashboard.requests")}</div>
-                            </div>
-                            <div className="leave-bar-chart" aria-label={`${leaves.length} leave requests: ${approvedLeaves} approved, ${pendingLeaves} pending, ${rejectedLeaves} rejected`}>
-                                {leaveBreakdown.map((item) => {
-                                    const height = chartTotal ? Math.max((item.value / chartTotal) * 100, item.value ? 18 : 0) : 0;
-                                    return (
-                                        <div className="leave-bar-column" key={item.label}>
-                                            <div className="leave-bar-track">
-                                                <span className="leave-bar-fill" style={{ height: `${height}%`, background: item.color }} />
-                                            </div>
-                                            <small>{item.label}</small>
+                            <article className="edash-card">
+                                <header className="edash-card-head">
+                                    <h2>{t("employeeHero.todayAttendance", { defaultValue: "Today's Attendance" })}</h2>
+                                    <span className="edash-card-icon"><Clock3 size={16} /></span>
+                                </header>
+                                <div className="edash-today">
+                                    <div className="edash-ring" role="img" aria-label={t("employeeHero.hoursToday", { hours: formatHours(todayHours), defaultValue: "{{hours}} h worked today" })}>
+                                        <svg viewBox="0 0 120 120">
+                                            <circle className="edash-ring-track" cx="60" cy="60" r="50" />
+                                            <circle className="edash-ring-fill" cx="60" cy="60" r="50" pathLength="100" strokeDasharray={`${todayProgress} 100`} />
+                                        </svg>
+                                        <div>
+                                            <strong>{formatHours(todayHours)}</strong>
+                                            <span>{t("employeeHero.ofTarget", { target: DAY_TARGET_HOURS, defaultValue: "of {{target}} h" })}</span>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                    <dl className="edash-today-list">
+                                        {todayShift && (
+                                            <div><dt>{t("employeeHero.shift", { defaultValue: "Shift" })}</dt><dd dir="ltr">{todayShift.start_time} – {todayShift.end_time}</dd></div>
+                                        )}
+                                        <div><dt>{t("employeeHero.status", { defaultValue: "Status" })}</dt><dd><span className={`edash-pill edash-pill-${todayTone}`}>{todayAttendance ? attendanceStatusLabel(t, todayAttendance.status) : shiftEnded || todayAbsentRecord ? t("dashboard.absent") : t("dashboard.noAttendanceYet")}</span></dd></div>
+                                        <div><dt>{t("employeeHero.punchIn", { defaultValue: "Punch in" })}</dt><dd>{formatAttendanceTime(todayAttendance?.punch_in)}</dd></div>
+                                        <div><dt>{t("employeeHero.punchOut", { defaultValue: "Punch out" })}</dt><dd>{formatAttendanceTime(todayAttendance?.punch_out)}</dd></div>
+                                    </dl>
+                                </div>
+                            </article>
+                        </section>
+
+                        <section className="edash-board">
+                            <div className="edash-board-main">
+                                <article className="edash-card">
+                                    <header className="edash-card-head">
+                                        <div>
+                                            <h2>{t("employeeHero.weekHours", { defaultValue: "Working Hours – Last 7 Days" })}</h2>
+                                            <p className="edash-card-sub">
+                                                {t("employeeHero.weekTotal", { hours: formatHours(weekHours), defaultValue: "{{hours}} h this week" })}
+                                                {" · "}
+                                                {t("employeeHero.daysWorked", { count: daysWorked, defaultValue: "{{count}} days worked" })}
+                                            </p>
+                                        </div>
+                                        <button type="button" className="edash-link" onClick={() => setActiveSection("attendance")}>
+                                            {t("employeeHero.seeAll", { defaultValue: "See all" })}
+                                        </button>
+                                    </header>
+                                    <div className="edash-week">
+                                        <span className="edash-week-target">{t("employeeHero.target", { hours: DAY_TARGET_HOURS, defaultValue: "{{hours}} h target" })}</span>
+                                        {weekDays.map((day) => (
+                                            <div className={`edash-week-day${day.isToday ? " today" : ""}`} key={day.key}>
+                                                <b>{day.hours > 0 ? formatHours(Number(day.hours.toFixed(1))) : ""}</b>
+                                                <div className="edash-week-track" style={{ "--target": `${(day.target / weekChartMax) * 100}%` }} title={`${day.label}: ${formatHours(day.hours)} / ${formatHours(day.target)} h`}>
+                                                    <i className={`edash-tone-${day.tone}`} style={{ height: `${day.height}%` }} />
+                                                </div>
+                                                <small>{day.label}</small>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <ul className="edash-legend">
+                                        <li className="edash-tone-green">{t("employeeAttendance.status.present", { defaultValue: "Present" })}</li>
+                                        <li className="edash-tone-amber">{t("employeeAttendance.status.late", { defaultValue: "Late" })}</li>
+                                        <li className="edash-tone-rose">{t("dashboard.absent")}</li>
+                                    </ul>
+                                </article>
+
+                                <article className="edash-card">
+                                    <header className="edash-card-head">
+                                        <h2>{t("employeeHero.recentLeaves", { defaultValue: "Recent Leave Requests" })}</h2>
+                                        <button type="button" className="edash-link" onClick={openLeaveDetails}>
+                                            {t("employeeHero.seeAll", { defaultValue: "See all" })}
+                                        </button>
+                                    </header>
+                                    {recentLeaves.length === 0 ? (
+                                        <p className="edash-empty">{t("leaveDetails.noLeaves")}</p>
+                                    ) : (
+                                        <ul className="edash-leave-list">
+                                            {recentLeaves.map((leave) => {
+                                                const status = String(leave.status || "").trim().toLowerCase();
+                                                return (
+                                                    <li key={leave.id}>
+                                                        <div>
+                                                            <strong>{t(`leaveTypes.${leave.leave_type}`, { defaultValue: leave.leave_type })}</strong>
+                                                            <span>{formatProfileDate(leave.from_date)} – {formatProfileDate(leave.to_date)}</span>
+                                                        </div>
+                                                        <b>{t("leaveDetails.daysCount", { count: Number(leave.days || 0) })}</b>
+                                                        <span className={`edash-pill edash-pill-${status}`}>{t(`leaveDetails.status.${status}`, { defaultValue: leave.status })}</span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </article>
                             </div>
-                        </div>
-                    </article>
 
-                    <article className="employee-leave-summary-card">
-                        <div className="overview-card-heading"><h2>{t("dashboard.leaveSummary")}</h2><span><CalendarDays size={14} /> {currentYear}</span></div>
-                        <div className="leave-summary-grid">
-                            <div><label>{t("dashboard.totalRequests")}</label><strong>{leaves.length}</strong></div><div><label>{t("dashboard.takenDays")}</label><strong>{approvedLeaveDays}</strong></div>
-                            <div><label>{t("dashboard.pending")}</label><strong>{pendingLeaves}</strong></div><div><label>{t("dashboard.rejected")}</label><strong>{rejectedLeaves}</strong></div>
-                            <div><label>{t("dashboard.approvedDays")}</label><strong>{approvedLeaveDays}</strong></div><div><label>{t("dashboard.requests")}</label><strong>{leaves.length}</strong></div>
-                        </div>
-                    </article>
-                </section>
+                            <aside className="edash-board-side">
+                                <article className="edash-card edash-profile">
+                                    <div className="edash-profile-head">
+                                        <div className="edash-avatar">
+                                            {employee.profile_photo ? (
+                                                <img src={employee.profile_photo} alt="" />
+                                            ) : (
+                                                employee.name?.charAt(0)?.toUpperCase()
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h2>{employee.name}</h2>
+                                            <p>{employee.designation || t("dashboard.employee")}</p>
+                                        </div>
+                                    </div>
+                                    <dl className="edash-profile-list">
+                                        <div><dt>{t("employeeHero.employeeId", { defaultValue: "Employee ID" })}</dt><dd>{profileValue(employee.employee_id)}</dd></div>
+                                        <div><dt>{t("dashboard.department")}</dt><dd>{profileValue(employee.department)}</dd></div>
+                                        <div><dt>{t("dashboard.phoneNumber")}</dt><dd dir="ltr">{profileValue(employee.phone)}</dd></div>
+                                        <div><dt>{t("dashboard.emailAddress")}</dt><dd>{profileValue(employee.email)}</dd></div>
+                                        <div><dt>{t("dashboard.joinedOn")}</dt><dd>{formatProfileDate(employee.joining_date)}</dd></div>
+                                    </dl>
+                                    <button type="button" className="edash-link" onClick={openProfile}>
+                                        {t("employeeHero.viewProfile", { defaultValue: "View full profile" })}
+                                    </button>
+                                </article>
 
-                <section className="employee-work-metrics">
-                    <div className="work-metric-card attendance-metric"><div className="metric-icon"><Clock3 size={15} /></div><strong>{displayDate}</strong><small>{t("dashboard.attendance")}</small><div className="metric-progress"><span style={{ width: `${attendanceProgress}%` }} /></div><b>{todayAttendance ? t("dashboard.attendanceRecorded") : shiftEnded ? t("dashboard.absent") : t("dashboard.noAttendanceYet")}</b></div>
-                    <div className="work-metric-card"><div className="metric-icon dark"><Clock3 size={15} /></div><strong>{formatHours(todayHours)} <em>/ 9</em></strong><small>{t("dashboard.totalHoursToday")}</small><b className="metric-up">{t("dashboard.actualAttendanceHours")}</b></div>
-                    <div className="work-metric-card"><div className="metric-icon blue"><CalendarDays size={15} /></div><strong>{formatHours(weekHours)} <em>/ 40</em></strong><small>{t("dashboard.totalHoursWeek")}</small><b className="metric-up">{t("dashboard.last7Days")}</b></div>
-                    <div className="work-metric-card"><div className="metric-icon pink"><FileText size={15} /></div><strong>{approvedLeaveDaysThisYear}</strong><small>{t("dashboard.approvedDaysThisYear")}</small><b className="metric-up">{t("dashboard.fromApprovedRequests")}</b></div>
-                </section>
+                                <article className="edash-card">
+                                    <header className="edash-card-head">
+                                        <h2>{t("employeeHero.quickActions", { defaultValue: "Quick Actions" })}</h2>
+                                    </header>
+                                    <div className="edash-quick">
+                                        <button type="button" onClick={openApplyLeave}><CalendarDays size={18} />{t("menu.applyLeave")}</button>
+                                        <button type="button" onClick={() => setActiveSection("attendance")}><Clock3 size={18} />{t("menu.attendance")}</button>
+                                        <button type="button" onClick={() => setActiveSection("payroll")}><Wallet size={18} />{t("menu.payroll")}</button>
+                                        <button type="button" onClick={() => setActiveSection("documents")}><FileText size={18} />{t("menu.documents")}</button>
+                                    </div>
+                                </article>
+                            </aside>
+                        </section>
+                    </div>
+                )}
 
 
 
                 <EmployeeAttendance
                     employee={employee} greeting={greeting} liveTime={liveTime} liveDate={liveDate}
-                    todayHours={todayHours} todayAttendance={todayAttendance} todayStatus={todayAttendance?.status || (shiftEnded ? "Absent" : "No attendance yet")} weekHours={weekHours}
-                    attendanceDays={attendanceDays} monthHours={monthHours} currentMonthAttendance={currentMonthAttendance}
+                    todayHours={todayHours} todayAttendance={todayAttendance} todayStatus={todayAttendance?.status || (shiftEnded || todayAbsentRecord ? "Absent" : "No attendance yet")}
+                    attendanceRecords={attendanceForDisplay} currentMonthAttendance={currentMonthAttendance}
                     formatAttendanceTime={formatAttendanceTime} attendanceStatusLabel={(value) => attendanceStatusLabel(t, value)} attendanceRows={attendanceRows} setAttendanceRows={setAttendanceRows}
                     attendanceMonth={attendanceMonth} setAttendanceMonth={setAttendanceMonth} attendanceMonthOptions={attendanceMonthOptions}
                     attendanceYear={attendanceYear} setAttendanceYear={setAttendanceYear} attendanceYearOptions={attendanceYearOptions}
@@ -1178,11 +1439,13 @@ function EmployeeDashboard() {
                     setAttendanceStatus={setAttendanceStatus} filteredEmployeeAttendance={filteredEmployeeAttendance}
                     visibleEmployeeAttendance={visibleEmployeeAttendance} formatProfileDate={formatProfileDate}
                     attendancePage={attendancePage} attendancePageCount={attendancePageCount} setAttendancePage={setAttendancePage}
+                    unreadNotifications={unreadNotifications} onOpenNotifications={() => setActiveSection("notifications")}
+                    dayTargetHours={DAY_TARGET_HOURS} todayShift={todayShift}
                 />
 
                 <EmployeePayroll records={payrollRecords} loading={payrollLoading} />
 
-                <EmployeeDocuments employee={employee} onRequest={setRequestType} requestsVersion={requestsVersion} />
+                <EmployeeDocuments employee={employee} onRequest={setRequestType} requestsVersion={requestsVersion} unreadNotifications={unreadNotifications} onOpenNotifications={() => setActiveSection("notifications")} />
 
                 {activeSection === "manpower" && showManpower && (
                     <section className="employee-manpower-view">
@@ -1200,121 +1463,19 @@ function EmployeeDashboard() {
                     />
                 )}
                 {activeSection === "notifications" && (
-                    <EmployeeNotifications notifications={notifications} onOpen={openEmployeeNotification} />
+                    <EmployeeNotifications notifications={shownNotifications} onOpen={openEmployeeNotification} />
                 )}
 
                 <section className="employee-leave-section">
-                    <div className="employee-section-header">
-                        <span />
-                        <button className="apply-leave-btn" onClick={openApplyLeave}>
-                            <CalendarDays size={15} /> {t("leaveDetails.applyLeave")}
-                        </button>
-                    </div>
-                    <section className="employee-summary">
-                        <div className="employee-stat-card">
-                            <span><ClipboardList size={18} /></span>
-                            <div><small>{t("dashboard.totalRequests")}</small><strong>{leaves.length}</strong></div>
-                        </div>
-                        <div className="employee-stat-card">
-                            <span><Hourglass size={18} /></span>
-                            <div><small>{t("dashboard.pending")}</small><strong>{pendingLeaves}</strong></div>
-                        </div>
-                        <div className="employee-stat-card">
-                            <span><Check size={18} /></span>
-                            <div><small>{t("dashboard.approved")}</small><strong>{approvedLeaves}</strong></div>
-                        </div>
-                        <div className="employee-stat-card">
-                            <span><X size={18} /></span>
-                            <div><small>{t("dashboard.rejected")}</small><strong>{rejectedLeaves}</strong></div>
-                        </div>
-                    </section>
-                    <section className="employee-holiday-section">
-                        <div className="overview-card-heading">
-                            <h2>{t("leaveDetails.holidayCalendar")}</h2>
-                            <div className="holiday-heading-actions">
-                                <span><CalendarDays size={14} /> {currentYear}</span>
-                                <button
-                                    type="button"
-                                    className="holiday-toggle"
-                                    aria-label={holidaysExpanded ? t("leaveDetails.collapseHolidays") : t("leaveDetails.expandHolidays")}
-                                    aria-expanded={holidaysExpanded}
-                                    onClick={() => setHolidaysExpanded((expanded) => !expanded)}
-                                >
-                                    <ChevronDown size={17} className={holidaysExpanded ? "expanded" : ""} />
-                                </button>
-                            </div>
-                        </div>
-                        {holidaysExpanded && (
-                            <div className="employee-holiday-list">
-                                {holidays.map((holiday) => (
-                                    <div className="employee-holiday-row" key={`${holiday.name}-${holiday.date}`}>
-                                        <strong>{holiday.name}</strong>
-                                        <span>{holiday.date}</span>
-                                        <b>{t("leaveDetails.daysCount", { count: Number(holiday.days) })}</b>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                    <div className="employee-table-card">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>{t("leaveDetails.leaveType")}</th>
-                                    <th>{t("leaveDetails.from")}</th>
-                                    <th>{t("leaveDetails.to")}</th>
-                                    <th>{t("leaveDetails.days")}</th>
-                                    <th>{t("leaveDetails.reason")}</th>
-                                    <th>{t("leaveDetails.statusHeader")}</th>
-                                    <th>{t("leaveDetails.action")}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {leaves.length > 0 ? leaves.map((leave) => {
-                                    const status = leave.status?.trim().toLowerCase() || "pending";
-                                    return (
-                                        <tr
-                                            key={leave.id}
-                                            className="leave-row-clickable"
-                                            role="button"
-                                            tabIndex="0"
-                                            onClick={() => setOpenTrackingId(leave.id)}
-                                            onKeyDown={(event) => {
-                                                if (event.key === "Enter" || event.key === " ") setOpenTrackingId(leave.id);
-                                            }}
-                                        >
-                                            <td>{t(`leaveTypes.${leave.leave_type}`, { defaultValue: leave.leave_type })}</td>
-                                            <td>{formatProfileDate(leave.from_date)}</td>
-                                            <td>{formatProfileDate(leave.to_date)}</td>
-                                            <td>{leave.days}</td>
-                                            <td>{leave.reason || "-"}</td>
-                                            <td>
-                                                <div className="leave-status-cell">
-                                                    <span className={`employee-status ${status}`}>{t(`leaveDetails.status.${status}`, { defaultValue: leave.status })}</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {status === "pending" && (
-                                                    <button
-                                                        type="button"
-                                                        className="cancel-leave-btn"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            setCancelLeaveId(leave.id);
-                                                        }}
-                                                    >
-                                                        {t("leaveDetails.cancel")}
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                }) : (
-                                    <tr><td className="no-leaves" colSpan="7">{t("leaveDetails.noLeaves")}</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <EmployeeLeaveOverview
+                        leaves={leaves} annualBalance={annualBalance} leaveRules={leaveRules}
+                        sickTaken={sickTaken} casualTaken={casualTaken} sickEligible={sickEligible}
+                        sickEligibleDate={formatRuleDate(sickEligibleDate)} holidays={holidays} currentYear={currentYear}
+                        policy={leavePolicyInfo.policy} policyUpdatedAt={leavePolicyInfo.updatedAt} leaveTypes={leaveTypes}
+                        formatProfileDate={formatProfileDate} onApply={openApplyLeave} onOpenLeave={setOpenTrackingId}
+                        onCancelLeave={setCancelLeaveId} unreadNotifications={unreadNotifications}
+                        onOpenNotifications={() => setActiveSection("notifications")}
+                    />
                     {selectedTrackingLeave && (
                         <div className="leave-tracking-modal">
                             <div className="leave-tracking-panel" onClick={(event) => event.stopPropagation()}>
@@ -1340,7 +1501,7 @@ function EmployeeDashboard() {
                 </section>
 
 
-                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onSaved={refreshProfile} formatProfileDate={formatProfileDate} />
+                <EmployeeProfile employee={employee} profilePanels={profilePanels} toggleProfilePanel={toggleProfilePanel} setProfilePanels={setProfilePanels} profileWorkTab={profileWorkTab} setProfileWorkTab={setProfileWorkTab} onSaved={refreshProfile} formatProfileDate={formatProfileDate} unreadNotifications={unreadNotifications} onOpenNotifications={() => setActiveSection("notifications")} />
                 <section className="employee-profile-view legacy-profile-view">
                     <div className="employee-section-heading">
                         <div>
@@ -1376,32 +1537,15 @@ function EmployeeDashboard() {
                     </div>
                 </section>
 
-                <EmployeeSettings employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled} compactMode={compactMode} setCompactMode={setCompactMode} language={language} setLanguage={setLanguage} timeZone={timeZone} setTimeZone={setTimeZone} onEditProfile={openEditProfile} onChangePassword={() => { setShowChangePassword(false); setActiveSection("change-password"); }} onLogout={logout} />
-                <section className="employee-settings-view legacy-settings-view">
-                    <div className="settings-grid">
-                        <article className="settings-card">
-                            <div className="settings-card-heading"><span className="settings-icon blue"><KeyRound size={18} /></span><div><h3>Account &amp; Security</h3><p>Protect your account access</p></div></div>
-                            <div className="settings-row"><div><strong>Password</strong><small>Change your account password anytime</small></div><button type="button" onClick={() => { setShowChangePassword(false); setActiveSection("change-password"); }}>Change Password</button></div>
-                            <div className="settings-row"><div><strong>Account status</strong><small>Your employee account is active</small></div><span className="settings-status">Active</span></div>
-                        </article>
-                        <article className="settings-card">
-                            <div className="settings-card-heading"><span className="settings-icon purple"><UserRound size={18} /></span><div><h3>Profile preferences</h3><p>Manage your personal information</p></div></div>
-                            <div className="settings-row"><div><strong>Personal details</strong><small>Update your contact and profile details</small></div><button type="button" onClick={openEditProfile}>Edit Profile</button></div>
-                            <div className="settings-row"><div><strong>Employee ID</strong><small>Used for signing in to HRMS</small></div><span className="settings-value">{employee.employee_id}</span></div>
-                        </article>
-                        <article className="settings-card">
-                            <div className="settings-card-heading"><span className="settings-icon green"><Bell size={18} /></span><div><h3>Notifications</h3><p>Control dashboard alerts</p></div></div>
-                            <div className="settings-row"><div><strong>Leave updates</strong><small>Show updates about your leave requests</small></div><button type="button" className={`settings-toggle ${notificationsEnabled ? "on" : ""}`} onClick={() => setNotificationsEnabled((enabled) => !enabled)} aria-pressed={notificationsEnabled}><span /></button></div>
-                        </article>
-                        <article className="settings-card">
-                            <div className="settings-card-heading"><span className="settings-icon orange"><Moon size={18} /></span><div><h3>Appearance</h3><p>Choose your dashboard layout</p></div></div>
-                            <div className="settings-row"><div><strong>Compact cards</strong><small>Use a tighter dashboard layout</small></div><button type="button" className={`settings-toggle ${compactMode ? "on" : ""}`} onClick={() => setCompactMode((enabled) => !enabled)} aria-pressed={compactMode}><span /></button></div>
-                        </article>
-                    </div>
-                    <div className="settings-session"><span><SettingsIcon size={17} /> Signed in as {employee.employee_id}</span><button type="button" onClick={logout}>Log out</button></div>
-                </section>
+                <EmployeeSettings
+                    employee={employee} notificationsEnabled={notificationsEnabled} setNotificationsEnabled={setNotificationsEnabled}
+                    compactMode={compactMode} setCompactMode={setCompactMode} timeZone={timeZone} setTimeZone={setTimeZone}
+                    todayShift={todayShift} liveNow={liveNow} unreadNotifications={unreadNotifications}
+                    onOpenNotifications={() => setActiveSection("notifications")} onEditProfile={openEditProfile}
+                    onChangePassword={() => { setShowChangePassword(false); setActiveSection("change-password"); }} onLogout={logout}
+                />
 
-                {activeSection === "change-password" && <ChangePasswordModal inline passwordForm={passwordForm} setPasswordForm={setPasswordForm} onSubmit={changePassword} loading={loading} onClose={() => setActiveSection("settings")} />}
+                {activeSection === "change-password" && <ChangePasswordModal inline passwordForm={passwordForm} setPasswordForm={setPasswordForm} onSubmit={changePassword} loading={loading} onClose={() => setActiveSection("settings")} unreadNotifications={unreadNotifications} onOpenNotifications={() => setActiveSection("notifications")} />}
 
             </main>
 
@@ -1434,7 +1578,7 @@ function EmployeeDashboard() {
             )}
 
 
-            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={leaveTypes} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} timeZone={timeZone} />}
+            {showApplyLeave && <ApplyLeaveModal formData={formData} handleChange={handleChange} setFormData={setFormData} leaveTypes={leaveTypes} selectedLeaveInfo={selectedLeaveInfo} requestedDays={requestedDays} dayCountError={serverDayCount?.error || ""} dayCountPending={Boolean(dayCountKey) && !serverDayCount} loading={loading} onSubmit={applyLeave} onClose={() => setShowApplyLeave(false)} timeZone={timeZone} />}
             {requestType && <EmployeeRequestModal requestType={requestType} onSubmit={submitEmployeeRequest} onClose={() => setRequestType(null)} />}
 
             {showEditProfile && profileDraft && <EmployeeEditModal draft={profileDraft} updateDraft={updateProfileDraft} onSubmit={saveProfile} loading={loading} onClose={() => setShowEditProfile(false)} />}

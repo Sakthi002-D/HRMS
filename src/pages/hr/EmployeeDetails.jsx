@@ -162,7 +162,9 @@ function EmployeeDetails() {
             }
             setDocumentToast({
                 type: "success",
-                message: data.updated
+                message: data.created
+                    ? t("employeeDetails.d365Sync.created", { defaultValue: "Created in D365 as {{number}} and linked", number: data.personnelNumber })
+                    : data.updated
                     ? t("employeeDetails.d365Sync.updated", { defaultValue: "Synced from D365. Updated: {{fields}}", fields: data.fields.join(", ") })
                     : t("employeeDetails.d365Sync.upToDate", { defaultValue: "Already up to date with D365" }),
             });

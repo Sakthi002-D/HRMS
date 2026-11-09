@@ -4,13 +4,13 @@ import { useTranslation } from "react-i18next";
 import { DIALOG_ICONS } from "../../components/common/dialog/dialogContext";
 import useDialogFocus from "../../components/common/dialog/useDialogFocus";
 import useScrollLock from "../../components/common/dialog/useScrollLock";
-import { GRADES } from "../../utils/grades";
+// grades list passed as prop from parent (dynamic from DB)
 import "../../components/common/dialog/Dialog.css";
 import "./GradeAssignment.css";
 
 // Same look as the app's confirm dialog, with a grade dropdown.
 // leaveDaysFor(grade) gives the yearly Annual Leave days shown before confirming.
-function BulkGradeModal({ count, leaveDaysFor, onCancel, onConfirm }) {
+function BulkGradeModal({ count, grades = [], leaveDaysFor, onCancel, onConfirm }) {
     const { t } = useTranslation();
     const dialogRef = useRef(null);
     const selectRef = useRef(null);
@@ -63,7 +63,7 @@ function BulkGradeModal({ count, leaveDaysFor, onCancel, onConfirm }) {
                             <span>{t("employeeProfile.basic.grade", { defaultValue: "Grade" })}</span>
                             <select ref={selectRef} value={grade} disabled={saving} onChange={({ target }) => setGrade(target.value)}>
                                 <option value="">{t("leaveManagement.policy.chooseGrade", { defaultValue: "Choose grade" })}</option>
-                                {GRADES.map((value) => <option key={value} value={value}>{value}</option>)}
+                                {grades.map((value) => <option key={value} value={value}>{value}</option>)}
                             </select>
                         </label>
                         {grade ? (

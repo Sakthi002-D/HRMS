@@ -41,6 +41,7 @@ import AnnualLeaveAccrualReport from "./pages/hr/AnnualLeaveAccrualReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
 import GradeAssignment from "./pages/hr/GradeAssignment";
+import GradeMaster from "./pages/hr/settings/GradeMaster";
 
 import DialogProvider from "./components/common/dialog/DialogProvider";
 import { installApiAuthorizationFetch } from "./utils/auth";
@@ -255,6 +256,11 @@ function App() {
           <Route
             path="/settings/grade-assignment"
             element={<GradeAssignment />}
+          />
+
+          <Route
+            path="/settings/grade-master"
+            element={<GradeMaster />}
           />
 
         </Route>

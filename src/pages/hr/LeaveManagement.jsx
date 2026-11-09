@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -17,9 +17,9 @@ import { usePagination, RowsPerPage, Pagination } from "../../components/common/
 import API_BASE_URL from "../../config/api";
 import { formatAppDate } from "../../utils/appSettings";
 import { exportTable } from "../../utils/tableExport";
-import { GRADES, GRADE_LEAVE_BANDS, defaultGradeRows } from "../../utils/grades";
+import useGrades from "../../hooks/useGrades";
 import ExportMenu from "../../components/common/ExportMenu";
-import { ArrowLeft, CalendarDays, CircleCheck, CircleX, Clock3, Inbox, Plane, Search, SlidersHorizontal, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronDown, CircleCheck, CircleX, Clock3, Inbox, Plane, Search, SlidersHorizontal, Users } from "lucide-react";
 
 const API_URL = `${API_BASE_URL}/api/leaves`;
 const POLICY_API_URL = API_URL.replace(/\/leaves$/, "/leave-policies");
@@ -251,8 +251,38 @@ const buildCalendarDays = (monthKey) => {
     });
 };
 
+// One Leave Policy step: the title row opens and closes it like a dropdown
+function PolicySection({ id, step, title, summary, open, onToggle, actions, className = "", children }) {
+    const bodyId = `leave-policy-${id}`;
+    return (
+        <div className={`leave-policy-section leave-policy-acc${open ? " is-open" : ""}${className ? ` ${className}` : ""}`}>
+            <div className="leave-policy-acc-head">
+                <h3>
+                    <button type="button" className="leave-policy-acc-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
+                        {step && <span className="leave-policy-step" aria-hidden="true">{step}</span>}
+                        <span className="leave-policy-acc-title">{title}</span>
+                        {summary && <small className="leave-policy-acc-summary">{summary}</small>}
+                        <ChevronDown size={18} className="leave-policy-acc-chevron" aria-hidden="true" />
+                    </button>
+                </h3>
+                {open && actions}
+            </div>
+            {open && <div id={bodyId} className="leave-policy-acc-body">{children}</div>}
+        </div>
+    );
+}
+
 function LeaveManagement() {
     const { t } = useTranslation();
+    // Grade leave days are kept in Settings → Grade Master; shown here grouped like the company bands
+    const { grades: masterGrades } = useGrades();
+    const gradeBands = useMemo(() => masterGrades.filter((grade) => grade.active !== false).reduce((bands, grade) => {
+        const days = Number(grade.leave_days) > 0 ? Number(grade.leave_days) : null;
+        const last = bands[bands.length - 1];
+        if (last && last.days === days) last.to = grade.grade_code;
+        else bands.push({ from: grade.grade_code, to: grade.grade_code, days });
+        return bands;
+    }, []), [masterGrades]);
     // Values stay English (filters, CSS classes, saving); only the shown text is translated
     const leaveTypeLabel = (value) => (value ? t(`leaveTypes.${value}`, { defaultValue: value }) : value);
     const statusLabel = (value) => (value ? t(`leaveDetails.status.${value.toLowerCase()}`, { defaultValue: value }) : value);
@@ -270,8 +300,13 @@ function LeaveManagement() {
 
     const [search, setSearch] = useState("");
 
+    // The dashboard links here with ?status=Pending; that view covers every month
+    const linkedStatus = ["Pending", "Approved", "Rejected", "Cancelled"].includes(searchParams.get("status"))
+        ? searchParams.get("status")
+        : null;
+
     const [selectedStatus, setSelectedStatus] =
-        useState("all");
+        useState(linkedStatus || "all");
 
     const [selectedLeaveType, setSelectedLeaveType] =
         useState("all");
@@ -280,7 +315,7 @@ function LeaveManagement() {
     const currentMonth = getCompanyToday().slice(0, 7);
 
     const [selectedMonth, setSelectedMonth] =
-        useState(currentMonth);
+        useState(linkedStatus ? "all" : currentMonth);
 
     // "Who's on leave": YYYY-MM-DD range; to may be empty (single day)
     const [dateRange, setDateRange] = useState({ from: "", to: "" });
@@ -332,14 +367,16 @@ function LeaveManagement() {
     // Qatar holiday editor rows while editing; null when the editor is closed
     const [holidayDraft, setHolidayDraft] = useState(null);
     const [holidayError, setHolidayError] = useState("");
-    // Rwanda holiday editor rows while editing; null when the editor is closed
-    const [rwandaHolidayDraft, setRwandaHolidayDraft] = useState(null);
-    const [rwandaHolidayError, setRwandaHolidayError] = useState("");
+    // Leave Policy steps that are open (each step works like a dropdown)
+    const [openPolicySections, setOpenPolicySections] = useState([]);
+    const togglePolicySection = (id) => setOpenPolicySections((current) => (
+        current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    ));
+    const sectionProps = (id) => ({ id, open: openPolicySections.includes(id), onToggle: () => togglePolicySection(id) });
 
     // D365 Holiday Sync
     const [d365SyncCalendarId, setD365SyncCalendarId] = useState("");
     const [d365SyncYear, setD365SyncYear] = useState(new Date().getFullYear());
-    const [d365SyncCountry, setD365SyncCountry] = useState("qatar");
     const [d365SyncLoading, setD365SyncLoading] = useState(false);
     const [d365SyncMessage, setD365SyncMessage] = useState("");
     const [d365SyncFailed, setD365SyncFailed] = useState(false);
@@ -686,43 +723,6 @@ function LeaveManagement() {
         }
     };
 
-    // ── Rwanda Holiday Editor ──────────────────────────────────
-    const startRwandaHolidayEditing = () => {
-        setRwandaHolidayError("");
-        setRwandaHolidayDraft([...leavePolicy.rwandaHolidayCalendar]);
-    };
-
-    const updateRwandaHolidayDraft = (index, field, value) => {
-        setRwandaHolidayDraft((current) => current.map((h, i) =>
-            i === index ? { ...h, [field]: value } : h
-        ));
-    };
-
-    const saveRwandaHolidays = async () => {
-        const rwandaHolidays = rwandaHolidayDraft.map((h) => ({
-            name: String(h.name || "").trim(),
-            date: String(h.date || "").trim(),
-            days: Number(h.days),
-        }));
-        if (rwandaHolidays.some((h) => !h.name || !h.date)) {
-            setRwandaHolidayError(t("leaveManagement.holidayEditor.missingFields", { defaultValue: "Each holiday needs a name and a date." }));
-            return;
-        }
-        if (rwandaHolidays.some((h) => ISO_DATE_PATTERN.test(h.date) && !isExactHolidayDate(h.date))) {
-            setRwandaHolidayError(t("leaveManagement.holidayEditor.invalidDate", { defaultValue: "One of the dates does not exist. Check the YYYY-MM-DD dates." }));
-            return;
-        }
-        if (rwandaHolidays.some((h) => !Number.isInteger(h.days) || h.days < 1 || h.days > 7)) {
-            setRwandaHolidayError(t("leaveManagement.holidayEditor.invalidDays", { defaultValue: "Days must be a whole number from 1 to 7." }));
-            return;
-        }
-        setRwandaHolidayError("");
-        if (await saveLeavePolicy({ rwandaHolidays })) {
-            setLeavePolicy((current) => ({ ...current, rwandaHolidayCalendar: rwandaHolidays }));
-            setRwandaHolidayDraft(null);
-        }
-    };
-
     // ── D365 Holiday Sync ──────────────────────────────────────
     const syncHolidaysFromD365 = async () => {
         setD365SyncLoading(true);
@@ -735,7 +735,7 @@ function LeaveManagement() {
                 body: JSON.stringify({
                     calendarId: d365SyncCalendarId.trim() || undefined,
                     year: Number(d365SyncYear),
-                    countryCalendar: d365SyncCountry,
+                    countryCalendar: "qatar",
                 }),
             });
             const data = await res.json();
@@ -1687,8 +1687,13 @@ function LeaveManagement() {
                             </button>
                         </div>
                         <div className="leave-policy-body">
-                        <div className="leave-policy-types leave-policy-section">
-                            <h3><span className="leave-policy-step" aria-hidden="true">1</span>{t("leaveManagement.policy.availableTypes", { defaultValue: "Available Leave Types" })}</h3>
+                        <PolicySection
+                            {...sectionProps("types")}
+                            className="leave-policy-types"
+                            step="1"
+                            title={t("leaveManagement.policy.availableTypes", { defaultValue: "Available Leave Types" })}
+                            summary={t("leaveManagement.policy.typesSummary", { count: leavePolicy.leaveTypes.length, defaultValue: "{{count}} types" })}
+                        >
                             <p className="leave-policy-section-note">{t("leaveManagement.policy.typesNote", { defaultValue: "Types you add here appear in the employee Apply Leave form straight away. They have no fixed day limit; HR reviews each request." })}</p>
                             <div className="leave-policy-type-list">
                                 {leavePolicy.leaveTypes.map((leaveType) => {
@@ -1728,9 +1733,13 @@ function LeaveManagement() {
                                 </button>
                             </form>
                             {leaveTypeError && <p className="leave-holiday-error" role="alert">{leaveTypeError}</p>}
-                        </div>
-                        <div className="leave-policy-section">
-                            <h3><span className="leave-policy-step" aria-hidden="true">2</span>{leaveTypeLabel("Annual Leave")}</h3>
+                        </PolicySection>
+                        <PolicySection
+                            {...sectionProps("annual")}
+                            step="2"
+                            title={leaveTypeLabel("Annual Leave")}
+                            summary={t("leaveManagement.policy.annualSummary", { count: Number(leavePolicy.annualYearlyEntitlementDays) || 0, defaultValue: "{{count}} days/year by default · by grade" })}
+                        >
                             <div className="leave-policy-fields annual">
                             <label>
                                 {t("leaveManagement.policy.annualEntitlement", { defaultValue: "Annual Leave Yearly Entitlement" })}
@@ -1767,92 +1776,36 @@ function LeaveManagement() {
                             </div>
                         <div className="leave-policy-grades">
                             <h4>{t("leaveManagement.policy.byGrade", { defaultValue: "Annual Leave Entitlement by Grade" })}</h4>
-                            <p>{t("leaveManagement.policy.byGradeDescription", { defaultValue: "Overrides the yearly entitlement for employees in a grade. Other employees use the default above." })}</p>
-                            <table className="leave-grade-bands">
-                                <thead>
-                                    <tr>
-                                        <th>{t("leaveManagement.policy.gradeBand", { defaultValue: "Grades" })}</th>
-                                        <th>{t("leaveManagement.policy.gradeDays", { defaultValue: "Annual Leave days" })}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {GRADE_LEAVE_BANDS.map((band) => (
-                                        <tr key={band.from}>
-                                            <td dir="ltr">{band.from} – {band.to}</td>
-                                            <td>{band.days}</td>
+                            <p>{t("leaveManagement.policy.byGradeMaster", { defaultValue: "Set in Settings → Grade Master. Employees without a grade use the default above." })}</p>
+                            {gradeBands.length > 0 && (
+                                <table className="leave-grade-bands">
+                                    <thead>
+                                        <tr>
+                                            <th>{t("leaveManagement.policy.gradeBand", { defaultValue: "Grades" })}</th>
+                                            <th>{t("leaveManagement.policy.gradeDays", { defaultValue: "Annual Leave days" })}</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <button
-                                type="button"
-                                className="leave-policy-add-grade"
-                                disabled={policyLoading || policySaving}
-                                onClick={() => setLeavePolicy((current) => ({ ...current, annualGradeOverrides: defaultGradeRows() }))}
-                            >
-                                {t("leaveManagement.policy.useCompanyGrades", { defaultValue: "Use company grade table" })}
-                            </button>
-                            {leavePolicy.annualGradeOverrides.map((row, index) => (
-                                <div className="leave-policy-grade-row" key={index}>
-                                    <select
-                                        aria-label={t("employeeProfile.basic.grade", { defaultValue: "Grade" })}
-                                        value={row.grade}
-                                        disabled={policyLoading || policySaving}
-                                        onChange={(event) => setLeavePolicy((current) => ({
-                                            ...current,
-                                            annualGradeOverrides: current.annualGradeOverrides.map((item, itemIndex) =>
-                                                itemIndex === index ? { ...item, grade: event.target.value } : item
-                                            ),
-                                        }))}
-                                    >
-                                        <option value="">{t("leaveManagement.policy.chooseGrade", { defaultValue: "Choose grade" })}</option>
-                                        {/* A grade saved before the company list stays selectable */}
-                                        {[...new Set([row.grade, ...GRADES])].filter(Boolean).map((grade) => (
-                                            <option key={grade} value={grade}>{grade}</option>
+                                    </thead>
+                                    <tbody>
+                                        {gradeBands.map((band) => (
+                                            <tr key={band.from}>
+                                                <td dir="ltr">{band.from === band.to ? band.from : `${band.from} – ${band.to}`}</td>
+                                                <td>{band.days ?? <span aria-label={t("leaveManagement.policy.defaultDays", { defaultValue: "Default" })}>-</span>}</td>
+                                            </tr>
                                         ))}
-                                    </select>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        step="0.5"
-                                        value={row.days}
-                                        disabled={policyLoading || policySaving}
-                                        onChange={(event) => setLeavePolicy((current) => ({
-                                            ...current,
-                                            annualGradeOverrides: current.annualGradeOverrides.map((item, itemIndex) =>
-                                                itemIndex === index ? { ...item, days: Math.max(0, Number(event.target.value)) } : item
-                                            ),
-                                        }))}
-                                    />
-                                    <span>{t("leaveManagement.policy.gradeRate", { rate: (Number(row.days || 0) / 12).toFixed(2), defaultValue: "days/year • {{rate}}/month" })}</span>
-                                    <button
-                                        type="button"
-                                        aria-label={t("leaveManagement.policy.removeGrade", { grade: row.grade, defaultValue: "Remove grade {{grade}}" })}
-                                        disabled={policyLoading || policySaving}
-                                        onClick={() => setLeavePolicy((current) => ({
-                                            ...current,
-                                            annualGradeOverrides: current.annualGradeOverrides.filter((_, itemIndex) => itemIndex !== index),
-                                        }))}
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                className="leave-policy-add-grade"
-                                disabled={policyLoading || policySaving}
-                                onClick={() => setLeavePolicy((current) => ({
-                                    ...current,
-                                    annualGradeOverrides: [...current.annualGradeOverrides, { grade: "", days: 30 }],
-                                }))}
-                            >
-                                {t("leaveManagement.policy.addGrade", { defaultValue: "+ Add grade" })}
-                            </button>
+                                    </tbody>
+                                </table>
+                            )}
+                            <Link className="leave-policy-add-grade leave-policy-grade-link" to="/settings/grade-master">
+                                {t("leaveManagement.policy.manageGrades", { defaultValue: "Manage grades and leave days" })}
+                            </Link>
                         </div>
-                        </div>
-                        <div className="leave-policy-section">
-                            <h3><span className="leave-policy-step" aria-hidden="true">3</span>{t("leaveManagement.policy.otherRules", { defaultValue: "Other Leave Rules" })}</h3>
+                        </PolicySection>
+                        <PolicySection
+                            {...sectionProps("rules")}
+                            step="3"
+                            title={t("leaveManagement.policy.otherRules", { defaultValue: "Other Leave Rules" })}
+                            summary={t("leaveManagement.policy.rulesSummary", { defaultValue: "Sick, casual, maternity, Hajj and more" })}
+                        >
                             <div className="leave-policy-fields">
                             {[
                                 ["sickEligibleAfterMonths", t("leaveManagement.policy.sickEligibleAfter", { defaultValue: "Sick Leave Eligible After" }), t("leaveManagement.policy.unitMonths", { defaultValue: "months" }), "1"],
@@ -1889,21 +1842,24 @@ function LeaveManagement() {
                             <p><Trans i18nKey="leaveManagement.policy.rules.bereavement" components={{ b: <strong /> }} defaults="<b>Bereavement:</b> Immediate family, manager approval." /></p>
                             <p><Trans i18nKey="leaveManagement.policy.rules.compensatory" components={{ b: <strong /> }} defaults="<b>Compensatory Off:</b> Public holiday or weekend work, manager approval." /></p>
                         </div>
-                        </div>
-                        <div className="leave-holiday-calendar leave-policy-section">
-                            <div className="leave-holiday-heading">
-                                <h3><span className="leave-policy-step" aria-hidden="true">4</span>{t("leaveDetails.holidayCalendar", { defaultValue: "Qatar Holiday Calendar" })}</h3>
-                                {!holidayDraft && (
-                                    <button
-                                        type="button"
-                                        className="leave-policy-add-grade"
-                                        disabled={policyLoading || policySaving}
-                                        onClick={startHolidayEditing}
-                                    >
-                                        {t("leaveManagement.holidayEditor.edit", { defaultValue: "Edit holidays" })}
-                                    </button>
-                                )}
-                            </div>
+                        </PolicySection>
+                        <PolicySection
+                            {...sectionProps("holidays")}
+                            className="leave-holiday-calendar"
+                            step="4"
+                            title={t("leaveDetails.holidayCalendar", { defaultValue: "Qatar Holiday Calendar" })}
+                            summary={t("leaveManagement.policy.holidaysSummary", { count: leavePolicy.qatarHolidayCalendar.length, defaultValue: "{{count}} holidays" })}
+                            actions={!holidayDraft && (
+                                <button
+                                    type="button"
+                                    className="leave-policy-add-grade"
+                                    disabled={policyLoading || policySaving}
+                                    onClick={startHolidayEditing}
+                                >
+                                    {t("leaveManagement.holidayEditor.edit", { defaultValue: "Edit holidays" })}
+                                </button>
+                            )}
+                        >
                             {holidayDraft ? (
                                 <div className="leave-holiday-editor">
                                     <p className="leave-holiday-note">
@@ -2000,130 +1956,18 @@ function LeaveManagement() {
                                     ))}
                                 </div>
                             )}
-                        </div>
-                        </div>
-
-                        {/* ── Rwanda Holiday Calendar ─────────────────── */}
-                        <div className="leave-holiday-calendar leave-policy-section">
-                            <div className="leave-holiday-heading">
-                                <h3>
-                                    <span className="leave-policy-step" aria-hidden="true">5</span>
-                                    🇷🇼 {t("leaveDetails.rwandaHolidayCalendar", { defaultValue: "Rwanda Holiday Calendar" })}
-                                </h3>
-                                {!rwandaHolidayDraft && (
-                                    <button
-                                        type="button"
-                                        className="leave-policy-add-grade"
-                                        disabled={policyLoading || policySaving}
-                                        onClick={startRwandaHolidayEditing}
-                                    >
-                                        {t("leaveManagement.holidayEditor.edit", { defaultValue: "Edit holidays" })}
-                                    </button>
-                                )}
-                            </div>
-                            {rwandaHolidayDraft ? (
-                                <div className="leave-holiday-editor">
-                                    <p className="leave-holiday-note">
-                                        {t("leaveManagement.holidayEditor.note", { defaultValue: "For moveable holidays enter the real date each year (e.g. 2027-04-18)" })}
-                                    </p>
-                                    <div className="leave-holiday-edit-row leave-holiday-edit-labels" aria-hidden="true">
-                                        <span>{t("leaveManagement.holidayEditor.name", { defaultValue: "Name" })}</span>
-                                        <span>{t("leaveManagement.holidayEditor.date", { defaultValue: "Date (YYYY-MM-DD or 1 July)" })}</span>
-                                        <span>{t("leaveManagement.holidayEditor.days", { defaultValue: "Days" })}</span>
-                                    </div>
-                                    {rwandaHolidayDraft.map((holiday, index) => (
-                                        <div key={index}>
-                                            <div className="leave-holiday-edit-row">
-                                                <input
-                                                    type="text"
-                                                    aria-label={t("leaveManagement.holidayEditor.name", { defaultValue: "Name" })}
-                                                    placeholder={t("leaveManagement.holidayEditor.namePlaceholder", { defaultValue: "Holiday name" })}
-                                                    value={holiday.name}
-                                                    disabled={policySaving}
-                                                    onChange={(e) => updateRwandaHolidayDraft(index, "name", e.target.value)}
-                                                />
-                                                <input
-                                                    type="text"
-                                                    aria-label={t("leaveManagement.holidayEditor.date", { defaultValue: "Date" })}
-                                                    placeholder="2027-04-18"
-                                                    value={holiday.date}
-                                                    disabled={policySaving}
-                                                    onChange={(e) => updateRwandaHolidayDraft(index, "date", e.target.value)}
-                                                />
-                                                <input
-                                                    type="number"
-                                                    min="1" max="7" step="1"
-                                                    aria-label={t("leaveManagement.holidayEditor.days", { defaultValue: "Days" })}
-                                                    value={holiday.days}
-                                                    disabled={policySaving}
-                                                    onChange={(e) => updateRwandaHolidayDraft(index, "days", e.target.value)}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Remove ${holiday.name}`}
-                                                    disabled={policySaving}
-                                                    onClick={() => setRwandaHolidayDraft((c) => c.filter((_, i) => i !== index))}
-                                                >×</button>
-                                            </div>
-                                            {String(holiday.date || "").trim() && !isResolvableHolidayDate(holiday.date) && (
-                                                <p className="leave-holiday-warning">
-                                                    {t("leaveManagement.holidayEditor.unresolved", { defaultValue: "This date is not recognised, so leave on it is still counted." })}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        className="leave-policy-add-grade"
-                                        disabled={policySaving}
-                                        onClick={() => setRwandaHolidayDraft((c) => [...c, { name: "", date: "", days: 1 }])}
-                                    >
-                                        {t("leaveManagement.holidayEditor.add", { defaultValue: "+ Add holiday" })}
-                                    </button>
-                                    {rwandaHolidayError && <p className="leave-holiday-error" role="alert">{rwandaHolidayError}</p>}
-                                    <div className="leave-holiday-editor-actions">
-                                        <button
-                                            type="button"
-                                            className="leave-holiday-cancel"
-                                            disabled={policySaving}
-                                            onClick={() => { setRwandaHolidayDraft(null); setRwandaHolidayError(""); }}
-                                        >
-                                            {t("leaveManagement.holidayEditor.cancel", { defaultValue: "Cancel" })}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="leave-holiday-save"
-                                            disabled={policySaving}
-                                            onClick={saveRwandaHolidays}
-                                        >
-                                            {policySaving
-                                                ? t("profileEdit.saving", { defaultValue: "Saving..." })
-                                                : t("leaveManagement.holidayEditor.save", { defaultValue: "Save holidays" })}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="leave-holiday-list">
-                                    {leavePolicy.rwandaHolidayCalendar.map((holiday, index) => (
-                                        <div className="leave-holiday-row" key={`rw-${holiday.name}-${index}`}>
-                                            <strong>{holiday.name}</strong>
-                                            <span>{holidayDate(holiday.date)}</span>
-                                            <b>{t("leaveManagement.dayCount", { count: Number(holiday.days), defaultValue: `${holiday.days} ${holiday.days === 1 ? "day" : "days"}` })}</b>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
+                        </PolicySection>
                         {/* ── D365 Holiday Sync ───────────────────────────────── */}
-                        <div className="leave-policy-section">
-                            <div className="leave-policy-section-header">
-                                <h4>🔗 {t("leaveDetails.d365HolidaySync", { defaultValue: "Sync Holidays from D365" })}</h4>
-                            </div>
+                        <PolicySection
+                            {...sectionProps("d365")}
+                            step="5"
+                            title={t("leaveDetails.d365HolidaySync", { defaultValue: "Sync Holidays from D365" })}
+                            summary={t("leaveManagement.policy.d365Summary", { defaultValue: "Read-only import from D365" })}
+                        >
                             <p style={{ fontSize: "0.85rem", color: "var(--fg2)", margin: "0 0 12px 0" }}>
                                 {t("leaveDetails.d365HolidaySyncDesc", {
                                     defaultValue:
-                                        "Pull non-working dates from a D365 Finance & Operations work calendar and add them to the Qatar or Rwanda calendar above. This is read-only — nothing is written back to D365.",
+                                        "Pull non-working dates from a D365 Finance & Operations work calendar and add them to the Qatar holiday calendar above. This is read-only — nothing is written back to D365.",
                                 })}
                             </p>
                             <div className="leave-d365-sync-form">
@@ -2149,17 +1993,6 @@ function LeaveManagement() {
                                             onChange={(e) => setD365SyncYear(Number(e.target.value))}
                                         />
                                     </label>
-                                    <label className="leave-d365-label">
-                                        {t("leaveDetails.d365TargetCalendar", { defaultValue: "Update calendar" })}
-                                        <select
-                                            className="leave-d365-input"
-                                            value={d365SyncCountry}
-                                            onChange={(e) => setD365SyncCountry(e.target.value)}
-                                        >
-                                            <option value="qatar">🇶🇦 Qatar</option>
-                                            <option value="rwanda">🇷🇼 Rwanda</option>
-                                        </select>
-                                    </label>
                                 </div>
                                 <div className="leave-d365-sync-actions">
                                     <button
@@ -2179,6 +2012,7 @@ function LeaveManagement() {
                                     )}
                                 </div>
                             </div>
+                        </PolicySection>
                         </div>
 
                         <div className="leave-policy-footer">

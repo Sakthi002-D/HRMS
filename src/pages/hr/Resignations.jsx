@@ -2,6 +2,7 @@
 // shared detail view (tracker, tracking log and HR Accept / Reject).
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ResignationDetail from "../../components/resignation/ResignationDetail";
@@ -39,7 +40,12 @@ function Resignations() {
     const [hrId] = useState(getSessionHRId);
     const [version, setVersion] = useState(0);
     const [loaded, setLoaded] = useState({ key: null, rows: [], error: "" });
-    const [filters, setFilters] = useState(EMPTY_FILTERS);
+    const [searchParams] = useSearchParams();
+    // The dashboard links here with ?card=pending-hr
+    const [filters, setFilters] = useState(() => {
+        const card = searchParams.get("card");
+        return RESIGNATION_CARDS.some((item) => item.key === card) ? { ...EMPTY_FILTERS, card } : EMPTY_FILTERS;
+    });
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedId, setSelectedId] = useState(null);

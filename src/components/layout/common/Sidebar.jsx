@@ -13,6 +13,7 @@ import {
   FolderKanban,
   Settings,
   Award,
+  Layers,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -139,6 +140,10 @@ function Sidebar({ collapsed, onToggle }) {
         <NavLink to="/settings/grade-assignment" className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? " active" : ""}`}>
           <Award size={18} strokeWidth={2} />
           <span>{t("menu.gradeAssignment", { defaultValue: "Grade Assignment" })}</span>
+        </NavLink>
+        <NavLink to="/settings/grade-master" className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? " active" : ""}`}>
+          <Layers size={18} strokeWidth={2} />
+          <span>{t("menu.gradeMaster", { defaultValue: "Grade Master" })}</span>
         </NavLink>
         <button
           type="button"

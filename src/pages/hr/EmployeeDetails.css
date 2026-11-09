@@ -1717,11 +1717,11 @@ html[dir="rtl"] .epf-back-icon {
     box-shadow: none !important;
 }
 
+/* Same spacing as the HR employee page: the page keeps its own padding inside the portal */
 .epf-host .epf.employee-details-page,
 .epf-host .eep-page {
     max-width: none;
     min-height: 0;
-    padding: 0;
 }
 
 .employee-main .epf .detail-panel header h2 {

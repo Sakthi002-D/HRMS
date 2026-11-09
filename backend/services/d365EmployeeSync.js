@@ -14,6 +14,7 @@
 // D365_PUSH_ENABLED=false to turn the push off entirely (pull keeps running).
 import { getD365Config, getAccessToken } from "./d365Employees.js";
 import { fetchD365Pages } from "../scripts/d365Reconciliation.js";
+import { importNewD365Workers } from "./d365EmployeeProvisioning.js";
 
 // Only the fields the pull actually compares (First/Middle/Last name are not needed: Name is pull-only).
 // OriginalHireDateTime confirmed present on EmployeesV2 (verified via testD365Fields.js).
@@ -238,6 +239,12 @@ export async function pullD365Changes(pool, { log = console.log } = {}) {
         () => fetchD365Pages({ base: config.baseUrl, select: SELECT, authorization: `Bearer ${token}` }),
         (rows) => ` (${rows.length} rows)`
     );
+    // Workers added in D365 since the last run become HRMS employees (with a login)
+    const newWorkers = await step(
+        "new-workers",
+        () => importNewD365Workers(pool, d365Rows, { log }),
+        (result) => ` (${result.imported.length} imported)`
+    );
     const byIdentity = new Map();
     for (const row of d365Rows) {
         const key = identityKey(row);
@@ -262,7 +269,10 @@ export async function pullD365Changes(pool, { log = console.log } = {}) {
         config.baseUrl, token, positions, mappings.map((mapping) => mapping.employment_legal_entity_id)
     ));
 
-    const summary = { d365Rows: d365Rows.length, linked: mappings.length, updated: 0, unchanged: 0, missingInD365: 0, skipped: [] };
+    const summary = {
+        d365Rows: d365Rows.length, linked: mappings.length, updated: 0, unchanged: 0, missingInD365: 0, skipped: [],
+        newWorkers: { imported: newWorkers.imported, failed: newWorkers.failed, blocked: newWorkers.blocked, found: newWorkers.found },
+    };
     const plans = await step("diff", async () => {
         const planned = [];
         for (const mapping of mappings) {

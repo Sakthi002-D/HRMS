@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ClipboardList, Eye, FileCheck2, FileText, ReceiptText, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import { Bell, ClipboardList, Eye, FileCheck2, FileText, FolderOpen, Hourglass, ReceiptText, RefreshCw, Send, ShieldCheck, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "../components/common/dialog/dialogContext";
 import { DocumentToast, EmployeeDocumentPreviewModal } from "../components/documents/EmployeeDocumentOverlays";
@@ -27,7 +27,7 @@ const REQUEST_ITEMS = [
     { requestType: "Expense Reimbursement", labelKey: "expenseReimbursement", icon: ClipboardList },
 ];
 
-function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
+function EmployeeDocuments({ employee, onRequest, requestsVersion = 0, unreadNotifications = 0, onOpenNotifications }) {
     const { t } = useTranslation();
     const confirm = useConfirm();
     const employeeId = employee?.employee_id;
@@ -102,119 +102,163 @@ function EmployeeDocuments({ employee, onRequest, requestsVersion = 0 }) {
         }
     };
 
+    const onFile = documentItems.filter((item) => documents[item.key]).length;
+    const needsUpload = documentItems.filter((item) => item.uploadedBy === "EMPLOYEE" && !documents[item.key]).length;
+    const openRequests = Object.values(latestRequests).filter((row) => String(row.status || "").toLowerCase() === "pending").length;
+
     return <>
-        <section className="employee-documents-view">
-            <div className="employee-documents-heading">
-                <div>
-                    <span className="employee-documents-kicker">{t("employeeDocuments.kicker")}</span>
-                    <h2>{t("employeeDocuments.title")}</h2>
+        <section className="employee-documents-view edoc">
+            <header className="edash-hero">
+                <div className="edash-hero-copy">
+                    <span className="edash-hero-kicker">{t("employeeDocuments.kicker")}</span>
+                    <h1>{t("employeeDocuments.title")}</h1>
                     <p>{t("employeeDocuments.subtitle")}</p>
-                </div>
-                <FileText size={34} />
-            </div>
-
-            {/* Documents */}
-            <div className="employee-document-grid">
-                {documentItems.map((item) => {
-                    const { key, icon: Icon, uploadedBy } = item;
-                    const title = documentTitle(key);
-                    const document = documents[key];
-                    const isUploading = uploadingType === key;
-                    const employeeUploads = uploadedBy === "EMPLOYEE";
-
-                    let statusText = t("employeeDocuments.pendingHrUpload");
-                    let statusTone = "";
-                    if (loading) {
-                        statusText = t("employeeDocuments.loading");
-                        statusTone = "muted";
-                    } else if (document) {
-                        const date = formatDocumentDate(document.uploaded_at);
-                        statusText = employeeUploads
-                            ? t("employeeDocuments.uploadedOn", { date })
-                            : t("employeeDocuments.addedByHrOn", { date });
-                        statusTone = "uploaded";
-                    } else if (employeeUploads) {
-                        statusText = t("employeeDocuments.notUploaded");
-                        statusTone = "muted";
-                    }
-
-                    return <article className="employee-document-card" key={key}>
-                        <div className="employee-document-icon"><Icon size={22} /></div>
-                        <div><h3>{title}</h3><p>{t(`employeeDocuments.items.${key}.description`)}</p></div>
-                        <div className="employee-document-footer">
-                            <span className={`employee-document-status ${statusTone}`}>{statusText}</span>
-                            <div className="employee-document-actions">
-                                {document && (
-                                    <button type="button" className="employee-document-btn secondary" onClick={() => setPreview({ ...document, displayName: title })}>
-                                        <Eye size={14} /> {t("employeeDocuments.view")}
-                                    </button>
-                                )}
-                                {employeeUploads && !loading && (
-                                    <label className={`employee-document-btn primary${isUploading ? " disabled" : ""}`}>
-                                        {document ? <RefreshCw size={14} /> : <Upload size={14} />}
-                                        {isUploading
-                                            ? t("employeeDocuments.uploading")
-                                            : document ? t("employeeDocuments.replace") : t("employeeDocuments.upload")}
-                                        <input
-                                            type="file"
-                                            accept={FILE_ACCEPT}
-                                            hidden
-                                            disabled={isUploading}
-                                            onChange={(event) => {
-                                                const file = event.target.files?.[0];
-                                                event.target.value = "";
-                                                handleFile(item, file);
-                                            }}
-                                        />
-                                    </label>
-                                )}
-                            </div>
+                    {!loading && (
+                        <div className="edash-hero-chips">
+                            <span><FolderOpen size={14} aria-hidden="true" />{t("employeeDocuments.onFile", { count: onFile, total: documentItems.length, defaultValue: "{{count}} of {{total}} documents on file" })}</span>
+                            <span><Upload size={14} aria-hidden="true" />{t("employeeDocuments.needsUpload", { count: needsUpload, defaultValue: "{{count}} waiting for your upload" })}</span>
+                            <span><Hourglass size={14} aria-hidden="true" />{t("employeeDocuments.openRequests", { count: openRequests, defaultValue: "{{count}} requests with HR" })}</span>
                         </div>
-                    </article>;
-                })}
-            </div>
+                    )}
+                </div>
+                <div className="edash-hero-side">
+                    <button type="button" className="edash-hero-bell" onClick={onOpenNotifications} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
+                        <Bell size={22} />
+                        {unreadNotifications > 0 && <span className="edash-hero-bell-count">{unreadNotifications > 9 ? "9+" : unreadNotifications}</span>}
+                    </button>
+                </div>
+            </header>
 
-            {/* Requests to HR */}
-            <div className="employee-documents-subheading">
-                <h3>{t("employeeDocuments.requestsTitle")}</h3>
-                <p>{t("employeeDocuments.requestsSubtitle")}</p>
-            </div>
-            <div className="employee-document-grid">
-                {REQUEST_ITEMS.map(({ requestType, labelKey, icon: Icon }) => {
-                    const label = t(`employeeDocuments.requests.${labelKey}.title`);
-                    const latest = latestRequests[requestType];
-                    const tone = String(latest?.status || "").toLowerCase();
-                    return (
-                        <article className="employee-document-card request" key={requestType}>
-                            <div className="employee-document-icon"><Icon size={22} /></div>
-                            <div>
-                                <h3>{label}</h3>
-                                <p>{t(`employeeDocuments.requests.${labelKey}.description`)}</p>
-                                {latest && (
-                                    <span className={`employee-request-latest ${tone}`}>
-                                        {t("employeeDocuments.lastRequest", {
-                                            status: t(`employeeDocuments.requestStatus.${tone}`, { defaultValue: latest.status }),
-                                            date: formatDocumentDate(latest.created_at),
-                                        })}
-                                        {latest.file_name ? t("employeeDocuments.documentReady") : ""}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="employee-request-card-actions">
-                                {latest?.file_name && (
-                                    <button
-                                        type="button"
-                                        className="employee-document-btn secondary"
-                                        onClick={() => setPreview({ requestId: latest.id, original_file_name: latest.file_name, displayName: label })}
-                                    >
-                                        <Eye size={14} /> {t("employeeDocuments.view")}
-                                    </button>
-                                )}
-                                <button type="button" onClick={() => onRequest?.(requestType)}>{t("employeeDocuments.request")}</button>
-                            </div>
-                        </article>
-                    );
-                })}
+            <div className="edash-body">
+                {/* Documents */}
+                <article className="edash-card">
+                    <header className="edash-card-head">
+                        <div>
+                            <h2>{t("employeeDocuments.myDocuments", { defaultValue: "My Documents" })}</h2>
+                            <p className="edash-card-sub">{t("employeeDocuments.myDocumentsHint", { defaultValue: "HR adds your contract, offer letter and QID. You upload your visa and passport." })}</p>
+                        </div>
+                        <span className="edash-card-icon"><FileText size={16} /></span>
+                    </header>
+                    <div className="edoc-grid">
+                        {documentItems.map((item) => {
+                            const { key, icon: Icon, uploadedBy } = item;
+                            const title = documentTitle(key);
+                            const document = documents[key];
+                            const isUploading = uploadingType === key;
+                            const employeeUploads = uploadedBy === "EMPLOYEE";
+
+                            let statusText = t("employeeDocuments.pendingHrUpload");
+                            let statusTone = "pending";
+                            if (loading) {
+                                statusText = t("employeeDocuments.loading");
+                                statusTone = "muted";
+                            } else if (document) {
+                                const date = formatDocumentDate(document.uploaded_at);
+                                statusText = employeeUploads
+                                    ? t("employeeDocuments.uploadedOn", { date })
+                                    : t("employeeDocuments.addedByHrOn", { date });
+                                statusTone = "approved";
+                            } else if (employeeUploads) {
+                                statusText = t("employeeDocuments.notUploaded");
+                                statusTone = "rejected";
+                            }
+
+                            return <article className="edoc-tile" key={key}>
+                                <div className="edoc-tile-head">
+                                    <span className="edoc-icon"><Icon size={20} /></span>
+                                    <div>
+                                        <h3>{title}</h3>
+                                        <p>{t(`employeeDocuments.items.${key}.description`)}</p>
+                                    </div>
+                                </div>
+                                <div className="edoc-tile-foot">
+                                    <span className={`edash-pill edash-pill-${statusTone}`}>{statusText}</span>
+                                    <div className="edoc-actions">
+                                        {document && (
+                                            <button type="button" className="edoc-btn" onClick={() => setPreview({ ...document, displayName: title })}>
+                                                <Eye size={14} /> {t("employeeDocuments.view")}
+                                            </button>
+                                        )}
+                                        {employeeUploads && !loading && (
+                                            <label className={`edoc-btn primary${isUploading ? " disabled" : ""}`}>
+                                                {document ? <RefreshCw size={14} /> : <Upload size={14} />}
+                                                {isUploading
+                                                    ? t("employeeDocuments.uploading")
+                                                    : document ? t("employeeDocuments.replace") : t("employeeDocuments.upload")}
+                                                <input
+                                                    type="file"
+                                                    accept={FILE_ACCEPT}
+                                                    hidden
+                                                    disabled={isUploading}
+                                                    onChange={(event) => {
+                                                        const file = event.target.files?.[0];
+                                                        event.target.value = "";
+                                                        handleFile(item, file);
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
+                            </article>;
+                        })}
+                    </div>
+                    <p className="edash-card-sub">{t("employeeDocuments.fileTypes", { defaultValue: "Accepted files: PDF, JPG or PNG." })}</p>
+                </article>
+
+                {/* Requests to HR */}
+                <article className="edash-card">
+                    <header className="edash-card-head">
+                        <div>
+                            <h2>{t("employeeDocuments.requestsTitle")}</h2>
+                            <p className="edash-card-sub">{t("employeeDocuments.requestsSubtitle")}</p>
+                        </div>
+                        <span className="edash-card-icon"><Send size={16} /></span>
+                    </header>
+                    <div className="edoc-grid">
+                        {REQUEST_ITEMS.map(({ requestType, labelKey, icon: Icon }) => {
+                            const label = t(`employeeDocuments.requests.${labelKey}.title`);
+                            const latest = latestRequests[requestType];
+                            const tone = String(latest?.status || "").toLowerCase();
+                            return (
+                                <article className="edoc-tile" key={requestType}>
+                                    <div className="edoc-tile-head">
+                                        <span className="edoc-icon"><Icon size={20} /></span>
+                                        <div>
+                                            <h3>{label}</h3>
+                                            <p>{t(`employeeDocuments.requests.${labelKey}.description`)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="edoc-tile-foot">
+                                        {latest ? (
+                                            <span className={`edash-pill edash-pill-${tone}`}>
+                                                {t("employeeDocuments.lastRequest", {
+                                                    status: t(`employeeDocuments.requestStatus.${tone}`, { defaultValue: latest.status }),
+                                                    date: formatDocumentDate(latest.created_at),
+                                                })}
+                                                {latest.file_name ? t("employeeDocuments.documentReady") : ""}
+                                            </span>
+                                        ) : <span />}
+                                        <div className="edoc-actions">
+                                            {latest?.file_name && (
+                                                <button
+                                                    type="button"
+                                                    className="edoc-btn"
+                                                    onClick={() => setPreview({ requestId: latest.id, original_file_name: latest.file_name, displayName: label })}
+                                                >
+                                                    <Eye size={14} /> {t("employeeDocuments.view")}
+                                                </button>
+                                            )}
+                                            <button type="button" className="edoc-btn primary" onClick={() => onRequest?.(requestType)}>
+                                                <Send size={14} /> {t("employeeDocuments.request")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                </article>
             </div>
         </section>
 

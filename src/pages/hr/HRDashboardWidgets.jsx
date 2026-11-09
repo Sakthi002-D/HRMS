@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarController,
@@ -9,15 +9,8 @@ import {
   LinearScale,
   Tooltip,
 } from "chart.js";
-import API_URL from "../../config/api";
 
 Chart.register(BarController, BarElement, CategoryScale, Legend, LinearScale, Tooltip);
-
-const WIDGET_ROUTES = {
-  trend: "attendance-trend",
-  departments: "department-distribution",
-  recruitment: "recruitment-stats",
-};
 
 const AXIS_COLOR = "#000000";
 const GRID_COLOR = "#eef2f6";
@@ -55,7 +48,7 @@ function WidgetBody({ state, isEmpty, children }) {
   return children;
 }
 
-function AttendanceTrend({ state }) {
+export function AttendanceTrend({ state }) {
   const { t, i18n } = useTranslation();
   const data = state.data;
 
@@ -107,7 +100,7 @@ function AttendanceTrend({ state }) {
   );
 }
 
-function DepartmentDistribution({ state }) {
+export function DepartmentDistribution({ state }) {
   const { t } = useTranslation();
   const departments = state.data?.departments;
 
@@ -152,13 +145,13 @@ function DepartmentDistribution({ state }) {
   );
 }
 
-function RecruitmentStats({ state }) {
+export function RecruitmentStats({ state, action }) {
   const { t } = useTranslation();
   const data = state.data;
   const stageLabel = (stage) => t(`hrDashboard.widgets.stages.${stage.toLowerCase().replace(/\s+/g, "_")}`, { defaultValue: stage });
 
   return (
-    <Widget title={t("hrDashboard.widgets.recruitment", { defaultValue: "Recruitment Statistics" })}>
+    <Widget title={t("hrDashboard.widgets.recruitment", { defaultValue: "Recruitment Statistics" })} action={action}>
       <WidgetBody state={state} isEmpty={!data?.applicants}>
         <div className="hrw-summary">
           <div><strong>{data?.applicants}</strong><span>{t("hrDashboard.widgets.applicants", { defaultValue: "Total Applicants" })}</span></div>
@@ -185,39 +178,3 @@ function RecruitmentStats({ state }) {
     </Widget>
   );
 }
-
-function HRDashboardWidgets() {
-  const [widgets, setWidgets] = useState(() => Object.fromEntries(
-    Object.keys(WIDGET_ROUTES).map((key) => [key, { status: "loading", data: null }])
-  ));
-
-  useEffect(() => {
-    let active = true;
-
-    // Each widget loads on its own, so one failing route leaves the others working
-    Object.entries(WIDGET_ROUTES).forEach(async ([key, route]) => {
-      let next = { status: "failed", data: null };
-      try {
-        const response = await fetch(`${API_URL}/api/dashboard/${route}`);
-        if (response.ok) next = { status: "ready", data: await response.json() };
-      } catch (error) {
-        console.error(`Unable to load dashboard widget ${key}:`, error);
-      }
-      if (active) setWidgets((current) => ({ ...current, [key]: next }));
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return (
-    <div className="hrw-grid">
-      <AttendanceTrend state={widgets.trend} />
-      <DepartmentDistribution state={widgets.departments} />
-      <RecruitmentStats state={widgets.recruitment} />
-    </div>
-  );
-}
-
-export default HRDashboardWidgets;
