@@ -37,6 +37,7 @@ import API_URL from "../../config/api";
 import { authHeaders } from "../../utils/auth";
 import { exportTable } from "../../utils/tableExport";
 import { GRADES } from "../../utils/grades";
+import ResignationStagePill from "../../components/resignation/ResignationStagePill";
 
 const PHONE_COUNTRIES = [
   { code: "+974", groupSize: 4, length: 8 },
@@ -160,6 +161,7 @@ const fetchEmployees = async () => {
   email: employee.email,
   phone: formatPhoneNumber(employee.phone),
   status: employee.status,
+  resignationStatus: employee.resignation_status || null,
   joiningDate: employee.joining_date,
   lastDateWorked: employee.last_date_worked,
   terminationReason: employee.termination_reason,
@@ -1114,6 +1116,7 @@ const updateEmployee = async () => {
             {String(employee.name || "?").trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("")}
           </span>
           <span className="emp-person-name">{employee.name}</span>
+          <ResignationStagePill status={employee.resignationStatus} />
         </span>
       ),
     },
@@ -1579,6 +1582,7 @@ const filteredEmployees =
                       <div className="employee-grid-card-top">
                         <div className="employee-avatar">{employee.name?.charAt(0)?.toUpperCase()}</div>
                         <span className={employee.status === "Active" ? "status active" : "status inactive"}>{valueLabel("status", employee.status)}</span>
+                        <ResignationStagePill status={employee.resignationStatus} />
                       </div>
                       <h3>{employee.name}</h3>
                       <p>{employee.designation || t("employeesList.grid.noDesignation", { defaultValue: "Employee" })}</p>

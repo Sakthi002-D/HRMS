@@ -197,3 +197,547 @@
         flex-wrap: wrap;
     }
 }
+
+/* =========================================================
+   AFTER HR ACCEPTS: case window, countdown, clearance, tracker
+   Shelter blue (#2564eb) and navy (#12304a) on white, 12px cards
+========================================================= */
+
+/* Eight progress steps (the Hiring window uses seven) */
+.hiring-steps.resignation-steps { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+
+.resignation-days-left { color: #0369a1; font-weight: 700; white-space: nowrap; }
+.resignation-days-left.urgent { color: #c81e1e; }
+
+/* Countdown + progress bar */
+.resignation-countdown {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid #c9dafb;
+    border-radius: 12px;
+    background: #f4f8ff;
+}
+.resignation-countdown.urgent { border-color: #f5c2c2; background: #fff5f5; }
+.resignation-countdown-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.resignation-countdown-head strong { color: #12304a; font-size: 20px; font-weight: 800; }
+.resignation-countdown.urgent .resignation-countdown-head strong { color: #c81e1e; }
+.resignation-countdown-head span,
+.resignation-countdown small { color: #475569; font-size: 13px; }
+.resignation-progressbar { height: 8px; overflow: hidden; border-radius: 999px; background: #dbe6f6; }
+.resignation-progressbar span { display: block; height: 100%; border-radius: inherit; background: #2564eb; transition: width 0.3s ease; }
+.resignation-countdown.urgent .resignation-progressbar span { background: #d43b3b; }
+
+/* Forms inside the action card */
+.resignation-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
+    margin-bottom: 4px;
+}
+.resignation-form-grid > div { min-width: 0; }
+.resignation-case .hiring-card .hiring-label { display: block; margin: 14px 0 6px; }
+.resignation-case .resignation-form-grid .hiring-label { margin-top: 0; }
+.resignation-case .hiring-card .mpr-form-error { margin: 6px 0 0; }
+
+.resignation-select,
+.clearance-item-controls select,
+.clearance-amount input {
+    box-sizing: border-box;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+}
+.resignation-select { width: 100%; }
+.resignation-select:focus-visible,
+.clearance-item-controls select:focus-visible,
+.clearance-amount input:focus-visible,
+.resignation-radio-group input:focus-visible {
+    outline: 2px solid #2564eb;
+    outline-offset: 1px;
+}
+
+.resignation-radio-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.resignation-radio-group legend { width: 100%; margin: 0 0 6px; padding: 0; }
+.resignation-radio-group label { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: #334155; font-size: 14px; cursor: pointer; }
+.resignation-radio-group input { width: 18px; height: 18px; accent-color: #2564eb; }
+
+.resignation-card-subtitle {
+    margin: 20px 0 10px;
+    padding-top: 16px;
+    border-top: 1px solid #e3ebf3;
+    color: #48627a;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+.resignation-inline-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.resignation-requested { margin-top: 4px; color: #b45309; }
+.resignation-link-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #2564eb;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.resignation-link-button:focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; border-radius: 4px; }
+
+.resignation-deductions { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.resignation-deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+.resignation-deductions li.total { border-bottom: 0; color: #12304a; font-weight: 800; }
+
+.resignation-letter { display: grid; gap: 14px; }
+.resignation-letter-text { margin: 0; color: #1e293b; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.resignation-letter .hiring-btn { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Exit clearance (HR case window, My Approvals > Clearance, employee tracker) ---------- */
+.clearance-departments { display: grid; gap: 12px; }
+.clearance-department {
+    min-width: 0;
+    border: 1px solid #d8e3ee;
+    border-radius: 12px;
+    background: #ffffff;
+}
+.clearance-department.cleared { border-color: #b7e4c7; background: #fbfefc; }
+.clearance-department > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #edf2f7;
+}
+.clearance-department h4 { margin: 0; color: #12304a; font-size: 15px; font-weight: 800; }
+.clearance-department header small { color: #64748b; font-size: 12.5px; }
+.clearance-department header .mpr-status { display: inline-flex; align-items: center; gap: 4px; }
+.clearance-department ul { margin: 0; padding: 0; list-style: none; }
+.clearance-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.clearance-item:last-child { border-bottom: 0; }
+.clearance-item-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.clearance-item-name strong { color: #1e293b; font-size: 14px; overflow-wrap: anywhere; }
+.clearance-item-name small { width: 100%; color: #64748b; font-size: 12px; }
+.clearance-type {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #48627a;
+    font-size: 11px;
+    font-weight: 700;
+}
+.clearance-item-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
+.clearance-amount { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #475569; font-size: 13px; font-weight: 700; }
+.clearance-amount input { width: 120px; }
+.hiring-btn.clearance-save { min-height: 40px; }
+.clearance-saving,
+.clearance-saved-amount { color: #64748b; font-size: 12px; }
+.clearance-saved-amount { width: 100%; text-align: end; }
+.clearance-error { width: 100%; margin: 0; }
+.clearance-item .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---------- Employee portal ---------- */
+.resignation-tracker-card { max-width: 920px; }
+.resignation-tracker-steps { overflow: hidden; }
+.resignation-tracker-steps .hiring-steps { margin: 0; }
+.resignation-stage-line {
+    margin: 0;
+    padding: 12px 14px;
+    border-inline-start: 4px solid #2564eb;
+    border-radius: 8px;
+    background: #f4f8ff;
+    color: #12304a;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.resignation-log-scroll { max-width: 100%; overflow-x: auto; }
+.resignation-withdraw-confirm {
+    padding: 16px;
+    border: 1px solid #f1baba;
+    border-radius: 12px;
+    background: #fff5f5;
+}
+.resignation-withdraw-confirm:focus-visible { outline: 2px solid #d43b3b; outline-offset: 2px; }
+.resignation-withdraw-confirm h3 { margin: 0 0 8px; color: #b42323; font-size: 16px; }
+.resignation-withdraw-confirm p { margin: 0 0 8px; color: #334155; font-size: 14px; }
+.resignation-withdraw-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.resignation-approval-tabs { margin-top: 4px; }
+.resignation-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; }
+.clearance-tasks { display: grid; gap: 16px; }
+.clearance-task .resignation-card-heading .mpr-chip { white-space: normal; }
+
+.employee-resignation-view :is(button, a, select, input, [tabindex="0"]):focus-visible {
+    outline: 2px solid #2564eb;
+    outline-offset: 2px;
+}
+
+/* "Serving notice" next to the employee name */
+.resignation-stage-pill {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff3d8;
+    color: #b45309;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.resignation-stage-pill.notice { background: #e0f2fe; color: #0369a1; }
+
+/* ---------- Settings > Resignation > Exit clearance ---------- */
+.rs-clearance-list { display: grid; gap: 14px; margin-bottom: 14px; }
+.rs-clearance-dept {
+    min-width: 0;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid #d3e2ee;
+    border-radius: 12px;
+    background: #fbfdff;
+}
+.rs-clearance-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.rs-clearance-head .settings-field { min-width: 0; }
+.rs-clearance-head select,
+.rs-clearance-head input { width: 100%; box-sizing: border-box; }
+.rs-clearance-items td:first-child { width: 60%; }
+.rs-clearance-items input,
+.rs-clearance-items select { width: 100%; box-sizing: border-box; }
+.rs-link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px dashed #93b4f5;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2564eb;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.rs-link-button:hover { background: #eaf1fe; }
+.rs-link-button:focus-visible,
+.rs-clearance-dept :is(button, input, select):focus-visible { outline: 2px solid #2564eb; outline-offset: 1px; }
+
+@media (max-width: 760px) {
+    .resignation-form-grid { grid-template-columns: minmax(0, 1fr); }
+    .rs-clearance-head { grid-template-columns: minmax(0, 1fr) auto; }
+    .rs-clearance-head .settings-field:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .clearance-item { align-items: flex-start; flex-direction: column; }
+    .clearance-item-controls,
+    .clearance-item-controls select { width: 100%; }
+    .clearance-amount { width: 100%; }
+    .clearance-amount input { flex: 1 1 100px; width: auto; min-width: 0; }
+    .resignation-tracker-card { padding: 16px; }
+}
+
+/* Phones: step labels hide (circles only), as in the Hiring window */
+@media (max-width: 560px) {
+    .resignation-tracker-steps .hiring-step-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+    .resignation-withdraw-buttons > button { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .resignation-progressbar span { transition: none; }
+}
+
+/* =========================================================
+   FINAL SETTLEMENT, EXIT FORMALITIES, COMPLETED
+========================================================= */
+
+.settlement { display: grid; gap: 14px; min-width: 0; }
+.settlement .hiring-notice { margin: 0; }
+.settlement-status-line { margin-bottom: 12px; }
+
+.settlement-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #d8e3ee;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+.settlement-inputs div { min-width: 0; }
+.settlement-inputs dt { color: #64748b; font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+.settlement-inputs dd { margin: 3px 0 0; color: #12304a; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.settlement-missing {
+    display: inline-flex;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #fff1d6;
+    color: #9a5d00;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.settlement-table-wrap { max-width: 100%; overflow: hidden; border: 1px solid #d8e3ee; border-radius: 12px; }
+.settlement-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.settlement-table thead th {
+    padding: 10px 12px;
+    background: #12304a;
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: start;
+}
+.settlement-table th.settlement-amount,
+.settlement-table td.settlement-amount { width: 38%; text-align: end; white-space: nowrap; }
+.settlement-table td { padding: 10px 12px; border-top: 1px solid #edf2f7; color: #1e293b; vertical-align: top; }
+.settlement-label { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.settlement-formula { display: block; margin-top: 2px; color: #64748b; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.settlement-row.deduction td.settlement-amount { color: #b42323; }
+.settlement-row.manual input[type="text"] { width: 100%; }
+.settlement-manual-amount { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; max-width: 100%; color: #475569; font-size: 12.5px; font-weight: 700; }
+.settlement-manual-amount input { width: 96px; min-width: 0; }
+.settlement-row.manual input {
+    box-sizing: border-box;
+    min-height: 38px;
+    padding: 7px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+}
+.settlement-row.manual input:focus-visible { outline: 2px solid #2564eb; outline-offset: 1px; }
+.settlement-subtotal td { background: #f8fafc; color: #334155; font-weight: 700; }
+.settlement-net th,
+.settlement-net td { padding: 12px; background: #12304a; color: #ffffff; font-size: 15px; font-weight: 800; text-align: start; }
+.settlement-net td.settlement-amount { text-align: end; }
+.settlement-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.settlement .sr-only,
+.settlement-task .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.settlement-approved-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border: 1px solid #b7e4c7;
+    border-radius: 12px;
+    background: #effaf3;
+}
+.settlement-approved-summary div { display: grid; gap: 2px; }
+.settlement-approved-summary span { color: #146c43; font-size: 12.5px; font-weight: 700; }
+.settlement-approved-summary strong { color: #12304a; font-size: 20px; font-weight: 800; }
+.settlement-approved-summary small { color: #475569; font-size: 12px; }
+
+/* Exit formalities checklist */
+.exit-checklist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.exit-checklist li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 10px 12px;
+    border: 1px solid #d8e3ee;
+    border-radius: 10px;
+    background: #ffffff;
+}
+.exit-checklist li.done { border-color: #b7e4c7; background: #fbfefc; }
+.exit-checklist-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.exit-checklist-main input,
+.exit-checklist-na input { width: 18px; height: 18px; flex: none; accent-color: #2564eb; }
+.exit-checklist-main label { color: #1e293b; font-size: 14px; font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.exit-checklist-main label small { color: #64748b; font-weight: 500; }
+.exit-checklist li.done .exit-checklist-main label { color: #146c43; }
+.exit-checklist-side { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.exit-checklist-side > small { color: #64748b; font-size: 12px; }
+.exit-checklist-na { display: inline-flex; align-items: center; gap: 6px; color: #475569; font-size: 13px; cursor: pointer; }
+.exit-letter-buttons { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.exit-checklist :is(input, button):focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; }
+
+/* Completed: green summary */
+.resignation-completed-card { border-color: #b7e4c7; background: linear-gradient(180deg, #effaf3 0, #ffffff 120px); }
+.resignation-completed-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin: 16px 0 0;
+}
+.resignation-completed-facts dt { color: #64748b; font-size: 12px; font-weight: 700; }
+.resignation-completed-facts dd { margin: 2px 0 0; color: #12304a; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+.resignation-downloads { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* Employee tracker: settlement block */
+.employee-settlement { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid #d8e3ee; border-radius: 12px; background: #f8fbff; }
+.employee-settlement-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.employee-settlement-head .resignation-subheading { margin: 0; }
+.employee-settlement-net { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin: 0; padding: 12px 14px; border-radius: 10px; background: #12304a; color: #ffffff; }
+.employee-settlement-net span { font-size: 13px; font-weight: 600; }
+.employee-settlement-net strong { font-size: 20px; font-weight: 800; }
+.employee-settlement .resignation-downloads { margin-top: 0; }
+.settlement-task .hiring-label { display: block; margin: 14px 0 6px; color: #334155; font-size: 13px; font-weight: 700; }
+.settlement-remark { box-sizing: border-box; width: 100%; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: 14px; resize: vertical; }
+.settlement-confirm { margin-top: 12px; }
+
+/* Settings: radio group */
+.rs-radio-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.rs-radio-field legend { margin-bottom: 6px; padding: 0; }
+.rs-radio-field label { display: flex; align-items: center; gap: 8px; min-height: 32px; color: #334155; font-size: 14px; cursor: pointer; }
+.rs-radio-field input { width: 18px; height: 18px; accent-color: #2564eb; }
+
+/* Termination report */
+.termination-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.termination-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 0 0 18px; }
+.termination-filters label { display: grid; gap: 4px; color: #475569; font-size: 12.5px; font-weight: 700; }
+.termination-filters input {
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+}
+.termination-filters input:focus-visible { outline: 2px solid #2564eb; outline-offset: 1px; }
+
+@media (max-width: 560px) {
+    .settlement-table th.settlement-amount,
+    .settlement-table td.settlement-amount { width: 44%; }
+    .settlement-table td,
+    .settlement-table thead th { padding: 9px 10px; }
+    .settlement-manual-amount { flex-wrap: wrap; }
+    .settlement-manual-amount input { width: 100%; }
+    .resignation-completed-facts { grid-template-columns: minmax(0, 1fr); }
+    .exit-checklist-side { justify-content: flex-start; width: 100%; }
+    .termination-filters label { flex: 1 1 140px; }
+    .termination-filters input { width: 100%; box-sizing: border-box; }
+}
+
+/* =========================================================
+   FINAL SETTLEMENT: alignment (index.css centres every table cell with !important),
+   amount owed, missing salary data, HR approval
+========================================================= */
+.settlement-table :is(th, td).settlement-item { text-align: start !important; }
+.settlement-table :is(th, td).settlement-amount { text-align: end !important; font-variant-numeric: tabular-nums; }
+.settlement-number { font-variant-numeric: tabular-nums; }
+.settlement-formula { font-weight: 400; }
+.settlement-net.owes th,
+.settlement-net.owes td { background: #fff4e0; color: #92400e; border-top: 2px solid #f0b357; }
+
+.settlement-missing-card { display: grid; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #fcd9a8; border-radius: 12px; background: #fff7ed; color: #92400e; }
+.settlement-missing-card > p { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13.5px; font-weight: 600; }
+.settlement-missing-card > p svg { flex: none; margin-top: 2px; }
+.settlement-missing-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.settlement-missing-fields label { display: grid; gap: 4px; color: #7c4a03; font-size: 12.5px; font-weight: 700; min-width: 0; }
+.settlement-missing-fields input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid #e8c48f;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+.settlement-missing-fields input:focus-visible { outline: 2px solid #2564eb; outline-offset: 1px; }
+.settlement-missing-check { display: flex; gap: 8px; align-items: center; color: #7c4a03; font-size: 13px; font-weight: 600; }
+.settlement-missing-check input { width: 16px; height: 16px; margin: 0; }
+.settlement-missing-card small { color: #92400e; font-size: 12px; font-weight: 500; }
+
+.settlement-approve-confirm { display: grid; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid #b7e1c8; border-radius: 12px; background: #f0faf4; }
+.settlement-approve-confirm > p { margin: 0; color: #14532d; font-size: 14px; font-weight: 700; }
+.settlement-approve-confirm.return { border-color: #d8e3ee; background: #f8fafc; }
+.settlement-approve-confirm.return > p { color: #1e293b; }
+.settlement-approve-confirm label { color: #334155; font-size: 13px; font-weight: 700; }
+.settlement-approve-confirm textarea { box-sizing: border-box; width: 100%; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: 14px; resize: vertical; }
+.settlement-approve-confirm .hiring-card-buttons { justify-content: flex-end; }
+.hiring-btn.approve { border-color: #15803d; background: #15803d; color: #ffffff; }
+.hiring-btn.approve:hover:not(:disabled) { background: #166534; }
+.hiring-btn.approve:disabled { opacity: 0.55; cursor: not-allowed; }
+.hiring-btn.neutral { border-color: #cbd5e1; background: #f1f5f9; color: #334155; }
+.hiring-btn.neutral:hover:not(:disabled) { background: #e2e8f0; }
+.case-not-set { color: #94a3b8; font-weight: 500; font-style: normal; }
+.employee-settlement-net.owes { background: #fff4e0; color: #92400e; }
+.rs-radio-field label.rs-radio-disabled { color: #94a3b8; cursor: not-allowed; }
+
+/* Navy total rows: SharedTheme forces dashboard p/small/label/td text black (!important), which
+   made "Net amount payable" and the amount unreadable. More specific selectors keep them white
+   (same approach as .dashboard-content .mpr-form-error); the amber "owes" variant stays dark. */
+.dashboard-content .settlement-table .settlement-net :is(th, td),
+.settlement-table .settlement-net :is(th, td) { color: #ffffff !important; }
+.dashboard-content .settlement-table .settlement-net th,
+.settlement-table .settlement-net th { font-size: 14px; font-weight: 600; }
+.dashboard-content .settlement-table .settlement-net td,
+.settlement-table .settlement-net td { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dashboard-content .settlement-table .settlement-net.owes :is(th, td),
+.settlement-table .settlement-net.owes :is(th, td) { color: #92400e !important; }
+
+.dashboard-content .employee-settlement-net,
+.dashboard-content .employee-settlement-net :is(span, strong),
+.employee-settlement-net,
+.employee-settlement-net :is(span, strong) { color: #ffffff !important; }
+.employee-settlement-net span { font-weight: 600; }
+.employee-settlement-net strong { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dashboard-content .employee-settlement-net.owes,
+.dashboard-content .employee-settlement-net.owes :is(span, strong),
+.employee-settlement-net.owes,
+.employee-settlement-net.owes :is(span, strong) { color: #92400e !important; }
+
+/* Resignation letter: opened through a signed URL (button styled as a link) */
+.resignation-letter-link { padding: 0; border: 0; background: none; color: #2564eb; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.resignation-letter-link:disabled { color: #64748b; cursor: progress; }
+.resignation-letter-link:focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; border-radius: 3px; }
+.resignation-letter-error { display: block; margin-top: 4px; }

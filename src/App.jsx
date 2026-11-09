@@ -39,6 +39,7 @@ import AttendanceReport from "./pages/hr/AttendanceReport";
 import LeaveReport from "./pages/hr/LeaveReport";
 import PayrollReport from "./pages/hr/PayrollReport";
 import AnnualLeaveAccrualReport from "./pages/hr/AnnualLeaveAccrualReport";
+import TerminationReport from "./pages/hr/TerminationReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
 import GradeAssignment from "./pages/hr/GradeAssignment";
@@ -252,6 +253,11 @@ function App() {
           <Route
             path="/annual-leave-accrual-report"
             element={<AnnualLeaveAccrualReport />}
+          />
+
+          <Route
+            path="/termination-report"
+            element={<TerminationReport />}
           />
 
           <Route

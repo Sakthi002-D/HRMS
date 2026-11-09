@@ -80,7 +80,7 @@ const EMPLOYEE_SELF_PATHS = [
     /^\/leaves\/employee\/[^/]+$/,
     /^\/leaves\/[^/]+\/cancel$/,
     /^\/leaves$/,
-    /^\/resignations(?:\/employee\/[^/]+|\/[^/]+(?:\/(?:withdraw))?)?$/,
+    /^\/resignations(?:\/employee\/[^/]+|\/[^/]+(?:\/(?:withdraw|decision\/(?:approve|reject)|settlement\/(?:approve|return)|clearance\/items\/\d+))?)?$/,
     /^\/employees\/[^/]+\/documents(?:\/[^/]+)?$/,
     /^\/employee-requests\/[^/]+\/documents$/,
     /^\/tickets(?:\/[^/]+(?:\/comments)?)?$/,
@@ -99,6 +99,12 @@ const employeeMethodAllowed = (path, method) => {
     if (/^\/leaves\/[^/]+\/cancel$/.test(path)) return method === "PUT";
     if (/^\/resignations\/employee\//.test(path)) return method === "GET";
     if (/^\/resignations\/[^/]+\/withdraw$/.test(path)) return method === "POST";
+    // Line Manager / Department Head decisions and clearance items: the service checks the caller holds them
+    if (/^\/resignations\/\d+$/.test(path)) return method === "GET";
+    if (/^\/resignations\/\d+\/decision\/(?:approve|reject)$/.test(path)) return method === "POST";
+    if (/^\/resignations\/\d+\/clearance\/items\/\d+$/.test(path)) return method === "PUT";
+    // Final settlement decision: the service checks the caller holds the Finance role
+    if (/^\/resignations\/\d+\/settlement\/(?:approve|return)$/.test(path)) return method === "POST";
     if (path.startsWith("/resignations/")) return false;
     if (path.startsWith("/notifications/inbox/")) return false;
     if (/^\/employee-requests\/[^/]+$/.test(path)) return method === "GET";

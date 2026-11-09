@@ -1,10 +1,9 @@
 // HR portal → Resignation: every resignation with summary cards, filters and the
 // shared detail view (tracker, tracking log and HR Accept / Reject).
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import ResignationDetail from "../../components/resignation/ResignationDetail";
+import ResignationCase from "../../components/resignation/ResignationCase";
 import { Pagination } from "../../components/common/TablePagination";
 import ResignationMonthPicker from "../../components/resignation/ResignationMonthPicker";
 import {
@@ -12,13 +11,14 @@ import {
     daysLabel,
     formatDate,
     getSessionHRId,
-    ltrText,
     notifyResignationsChanged,
     resignationStatusLabel,
     resignationTone,
 } from "../../components/resignation/resignationApi";
 import {
     EMPTY_FILTERS,
+    DAYS_LEFT_STATUSES,
+    DAYS_LEFT_WARNING,
     RESIGNATION_CARDS,
     RESIGNATION_STATUSES,
     countByCard,
@@ -43,7 +43,6 @@ function Resignations() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedId, setSelectedId] = useState(null);
-    const [banner, setBanner] = useState(null);
 
     const loadKey = `${hrId}:${version}`;
 
@@ -55,13 +54,6 @@ function Resignations() {
             .catch((err) => !ignore && setLoaded((current) => ({ ...current, key: loadKey, error: err.message })));
         return () => { ignore = true; };
     }, [hrId, loadKey]);
-
-    // The success banner hides itself after a few seconds
-    useEffect(() => {
-        if (!banner) return undefined;
-        const timer = setTimeout(() => setBanner(null), 6000);
-        return () => clearTimeout(timer);
-    }, [banner]);
 
     const rows = loaded.rows;
     const loading = loaded.key !== loadKey && rows.length === 0;
@@ -79,20 +71,20 @@ function Resignations() {
     };
     const hasFilters = Object.values(filters).some(Boolean);
 
-    // After Accept / Reject: close the review, show the banner, refresh table, cards and sidebar badge
-    const handleDecided = ({ action, resignation }) => {
-        const outcome = action === "reject" ? "rejected" : resignation.status === "Serving Notice" ? "accepted" : "approved";
-        setSelectedId(null);
-        setBanner({
-            id: Date.now(),
-            text: t(`hrResignations.banner.${outcome}`, {
-                number: ltrText(resignation.resignation_no),
-                name: resignation.employee_name,
-                defaultValue: `Resignation {{number}} ${outcome}. {{name}} has been notified.`,
-            }),
-        });
+    // Any change in the case window (it stays open): refresh table, cards and sidebar badge
+    const handleChanged = () => {
         setVersion((value) => value + 1);
         notifyResignationsChanged();
+    };
+    const closeCase = useCallback(() => setSelectedId(null), []);
+
+    const daysLeftCell = (row) => {
+        if (!DAYS_LEFT_STATUSES.includes(row.status) || row.days_left === null || row.days_left === undefined) return <span className="emp-muted">—</span>;
+        return (
+            <span className={`resignation-days-left${row.days_left <= DAYS_LEFT_WARNING ? " urgent" : ""}`}>
+                {t("resignation.case.daysLeft", { count: row.days_left, defaultValue: row.days_left === 1 ? "{{count}} day left" : "{{count}} days left" })}
+            </span>
+        );
     };
 
     return (
@@ -185,6 +177,7 @@ function Resignations() {
                                     <th>{t("resignation.form.resignationDate", { defaultValue: "Resignation Date" })}</th>
                                     <th>{t("resignation.form.lastWorkingDay", { defaultValue: "Last Working Day" })}</th>
                                     <th>{t("resignation.form.noticePeriod", { defaultValue: "Notice Period" })}</th>
+                                    <th>{t("hrResignations.table.daysLeft", { defaultValue: "Days left" })}</th>
                                     <th>{t("hrResignations.table.earlyRelease", { defaultValue: "Early Release" })}</th>
                                     <th>{t("resignation.approvals.status", { defaultValue: "Status" })}</th>
                                     <th>{t("resignation.approvals.action", { defaultValue: "Action" })}</th>
@@ -192,9 +185,9 @@ function Resignations() {
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="9">{t("resignation.detail.loading", { defaultValue: "Loading..." })}</td></tr>
+                                    <tr><td colSpan="10">{t("resignation.detail.loading", { defaultValue: "Loading..." })}</td></tr>
                                 ) : pageRows.length === 0 ? (
-                                    <tr><td colSpan="9">{rows.length === 0
+                                    <tr><td colSpan="10">{rows.length === 0
                                         ? t("hrResignations.table.none", { defaultValue: "No resignations yet." })
                                         : t("hrResignations.table.noMatch", { defaultValue: "No resignations match these filters." })}</td></tr>
                                 ) : pageRows.map((row) => (
@@ -202,13 +195,14 @@ function Resignations() {
                                         {/* Numbers, IDs and dates keep their left-to-right order on the Arabic page */}
                                         <td><span dir="ltr" className="ltr-text">{row.resignation_no}</span></td>
                                         <td>
-                                            <strong>{row.employee_name}</strong>
+                                            <strong id={`resignation-row-${row.id}`}>{row.employee_name}</strong>
                                             <small className="resignation-employee-id"><span dir="ltr">{row.employee_id}</span></small>
                                         </td>
                                         <td>{row.department || "—"}</td>
                                         <td><span dir="ltr" className="ltr-text">{formatDate(row.resignation_date)}</span></td>
                                         <td><span dir="ltr" className="ltr-text">{formatDate(row.last_working_day)}</span></td>
                                         <td>{daysLabel(row.notice_period_days)}</td>
+                                        <td>{daysLeftCell(row)}</td>
                                         <td>
                                             <span className={`resignation-flag ${row.early_release ? "yes" : "no"}`}>
                                                 {row.early_release
@@ -218,7 +212,7 @@ function Resignations() {
                                         </td>
                                         <td><span className={`mpr-status ${resignationTone(row.status)}`}>{resignationStatusLabel(row.status)}</span></td>
                                         <td>
-                                            <button type="button" className="create-job-btn" onClick={() => setSelectedId(row.id)}>
+                                            <button type="button" className="create-job-btn" onClick={() => setSelectedId(row.id)} aria-describedby={`resignation-row-${row.id}`}>
                                                 {row.status === "Pending HR"
                                                     ? t("resignation.approvals.review", { defaultValue: "Review" })
                                                     : t("recruitment.common.view", { defaultValue: "View" })}
@@ -235,20 +229,11 @@ function Resignations() {
                     )}
                 </div>
 
-                {banner && createPortal(
-                    <div key={banner.id} className="resignation-toast success" role="status" aria-live="polite">
-                        <span>{banner.text}</span>
-                        <button type="button" aria-label={t("hrResignations.dismiss", { defaultValue: "Dismiss" })} onClick={() => setBanner(null)}>×</button>
-                    </div>,
-                    document.body
-                )}
-
                 {selectedId && (
-                    <ResignationDetail
+                    <ResignationCase
                         resignationId={selectedId}
-                        actorId={hrId}
-                        onClose={() => setSelectedId(null)}
-                        onDecided={handleDecided}
+                        onClose={closeCase}
+                        onChanged={handleChanged}
                     />
                 )}
             </div>

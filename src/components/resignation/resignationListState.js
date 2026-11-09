@@ -1,9 +1,12 @@
-// Summary cards and filters for the HR Resignations page (pure, no React).
+// Stage cards and filters for the HR Resignations page (pure, no React).
 
 export const RESIGNATION_CARDS = [
-    { key: "pending-lm", label: "Pending Line Manager", statuses: ["Pending Line Manager"] },
+    { key: "pending-lm", label: "Pending Line Manager", statuses: ["Pending Line Manager", "Pending Department Head"] },
     { key: "pending-hr", label: "Pending HR", statuses: ["Pending HR"] },
     { key: "serving", label: "Serving Notice", statuses: ["Accepted", "Serving Notice"] },
+    { key: "clearance", label: "Exit Clearance", statuses: ["Exit Clearance"] },
+    { key: "settlement", label: "Final Settlement", statuses: ["Final Settlement"] },
+    { key: "formalities", label: "Exit Formalities", statuses: ["Exit Formalities"] },
     { key: "completed", label: "Completed", statuses: ["Completed"] },
     { key: "closed", label: "Rejected / Withdrawn", statuses: ["Rejected", "Withdrawn"] },
 ];
@@ -13,10 +16,17 @@ export const RESIGNATION_STATUSES = [
     "Pending Department Head",
     "Pending HR",
     "Serving Notice",
+    "Exit Clearance",
+    "Final Settlement",
+    "Exit Formalities",
     "Completed",
     "Rejected",
     "Withdrawn",
 ];
+
+// "Days left" shows for these (red at 7 or fewer)
+export const DAYS_LEFT_STATUSES = ["Accepted", "Serving Notice", "Exit Clearance"];
+export const DAYS_LEFT_WARNING = 7;
 
 export const EMPTY_FILTERS = { card: "", search: "", status: "", department: "", month: "" };
 

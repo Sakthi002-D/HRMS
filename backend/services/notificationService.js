@@ -83,6 +83,8 @@ const buildMail = (mail, settings) => {
         to: mail.to,
         subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
         text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${signature}`,
+        // Optional files (e.g. the resignation experience certificate PDF): [{ filename, content, contentType }]
+        ...(Array.isArray(mail.attachments) && mail.attachments.length ? { attachments: mail.attachments } : {}),
         ...(mail.html ? {
             html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1e293b">`
                 + `<p>Hello ${escapeHtml(mail.name)},</p>${mail.html}`

@@ -4,6 +4,7 @@ import {
     BarChart3,
     CalendarClock,
     CalendarRange,
+    LogOut,
     Grid2X2,
     LayoutList,
     PiggyBank,
@@ -63,6 +64,15 @@ const REPORTS = [
         tag: "finance",
         titleDefault: "Annual Leave Accrual",
         descriptionDefault: "Monthly annual leave days and liability amount per employee, for Finance.",
+    },
+    {
+        key: "termination",
+        path: "/termination-report",
+        icon: LogOut,
+        tone: "rose",
+        tag: "live",
+        titleDefault: "Termination Report",
+        descriptionDefault: "Employees who left, with last working day, reason and final settlement.",
     },
 ];
 

@@ -19,7 +19,7 @@ import EmployeeResignation from "./EmployeeResignation";
 import EmployeeNotifications from "./EmployeeNotifications";
 import AlertDialog from "../components/common/dialog/AlertDialog";
 import "../components/resignation/resignation.css";
-import { api as resignationApi, daysLabel, formatDate as formatResignationDate, isServingNotice } from "../components/resignation/resignationApi";
+import { api as resignationApi, daysLabel, formatDate as formatResignationDate, isAfterAcceptance, isServingNotice } from "../components/resignation/resignationApi";
 import EmployeeSectionEditModal, { sectionFields } from "./EmployeeSectionEditModal";
 import EmployeeSettings from "./EmployeeSettings";
 import EmployeeSidebar from "./EmployeeSidebar";
@@ -477,7 +477,7 @@ function EmployeeDashboard() {
         }
 
         // Accepted resignation: no leave after the last working day
-        if (servingNotice && formData.to_date > activeResignation.last_working_day) {
+        if (isAfterAcceptance(activeResignation) && formData.to_date > activeResignation.last_working_day) {
             showAlert(t("leaveDetails.afterLastWorkingDay", { date: formatResignationDate(activeResignation.last_working_day) }));
             return;
         }
