@@ -9,6 +9,7 @@ import recruitmentRouter from "./routes/recruitment.js";
 import ticketsRouter from "./routes/tickets.js";
 import resignationsRouter from "./routes/resignations.js";
 import careersRouter from "./routes/careers.js";
+import hiringRouter from "./routes/hiring.js";
 import appSettingsRouter from "./routes/appSettings.js";
 import { ensureAppSettingsSchema } from "./services/appSettings.js";
 import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/employeeDocuments.js";
@@ -71,6 +72,8 @@ app.use("/api", ticketsRouter);
 app.use("/api", resignationsRouter);
 // Public Careers page + HR Recruitment → Job Applications
 app.use("/api", careersRouter);
+// HR Recruitment → Hiring (interview result, offer letter, pre-joining, hire) + public /offer/:token answers
+app.use("/api", hiringRouter);
 // Workspace settings (company name, date format, session timeout, notification switches)
 app.use("/api", appSettingsRouter);
 // Employee documents: HR uploads Contract / Offer Letter / QID, employee uploads Visa / Passport
@@ -1092,7 +1095,11 @@ app.get("/api/employees", async (req, res) => {
                 EXISTS (
                     SELECT 1 FROM employee_d365_mapping m
                     WHERE m.employee_id = e.employee_id AND m.link_status = 'linked'
-                ) AS d365_linked
+                ) AS d365_linked,
+                -- Active resignation stage (e.g. Serving Notice); the employee status itself stays Active
+                (SELECT r.status FROM resignations r
+                    WHERE r.employee_id = e.employee_id AND r.status NOT IN ('Rejected', 'Withdrawn', 'Completed')
+                    ORDER BY r.id DESC LIMIT 1) AS resignation_status
              FROM employees e
              ORDER BY e.id ASC`
         );
@@ -1154,6 +1161,9 @@ app.get("/api/employees/:employeeId/details", async (req, res) => {
                 e.assignment_start,
                 e.assignment_end,
                 e.make_primary,
+                (SELECT r.status FROM resignations r
+                    WHERE r.employee_id = e.employee_id AND r.status NOT IN ('Rejected', 'Withdrawn', 'Completed')
+                    ORDER BY r.id DESC LIMIT 1) AS resignation_status,
                 COALESCE((SELECT row_to_json(b) FROM employee_bank_details b WHERE b.employee_id = e.employee_id ORDER BY b.id DESC LIMIT 1), '{}'::json) AS bank,
                 COALESCE((SELECT row_to_json(f) FROM employee_family_details f WHERE f.employee_id = e.employee_id ORDER BY f.id DESC LIMIT 1), '{}'::json) AS family,
                 COALESCE((SELECT json_agg(ed ORDER BY ed.id ASC) FROM employee_education ed WHERE ed.employee_id = e.employee_id), '[]'::json) AS education,

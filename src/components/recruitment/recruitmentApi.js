@@ -13,9 +13,17 @@ export async function api(path, { method = "GET", body } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || i18n.t("recruitment.errors.requestFailed", { defaultValue: "Request failed" }));
+    if (!response.ok) {
+        const error = new Error(data.message || i18n.t("recruitment.errors.requestFailed", { defaultValue: "Request failed" }));
+        error.fields = data.fields || null;
+        throw error;
+    }
     return data;
 }
+
+// MPR request types that add headcount: budget-checked like New Position (Replacement isn't).
+// Same list as NEW_HEADCOUNT_TYPES in backend/services/manpowerWorkflow.js.
+export const NEW_HEADCOUNT_TYPES = ["New Position", "Project Expansion", "Temporary / Contract"];
 
 // Translated labels for values the backend sends in English ("Pending HR" → recruitment.statuses.pending_hr).
 // Only the shown text changes: filters, CSS tones and comparisons keep using the English value.
@@ -93,7 +101,18 @@ export const notifyApplicationsChanged = () => window.dispatchEvent(new Event(AP
 
 // CSS modifier for a job application status pill (mpr-status classes)
 export const applicationTone = (status = "") =>
-    ({ New: "info", Shortlisted: "done", "On Hold": "warning", Rejected: "danger" })[status] || "muted";
+    ({
+        New: "info",
+        Shortlisted: "done",
+        "Interview Scheduled": "pending",
+        "On Hold": "warning",
+        Rejected: "danger",
+        Selected: "info",
+        "Offer Sent": "pending",
+        "Offer Accepted": "done",
+        "Offer Declined": "danger",
+        Hired: "hired",
+    })[status] || "muted";
 
 // Candidate's CV (HR only; there is no public URL) as an object URL
 export async function fetchApplicationCv(applicationId, actorId) {

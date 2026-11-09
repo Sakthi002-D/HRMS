@@ -5,7 +5,8 @@ import { CalendarPlus, Download, Eye, EyeOff, FileText } from "lucide-react";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
 import { useConfirm } from "../common/dialog/dialogContext";
-import { experienceText, monthText, salaryText, sourceText } from "./applicationFormat";
+import { INTERVIEW_PLACE_LABELS, experienceText, formatInterviewTime, monthText, salaryText, sourceText } from "./applicationFormat";
+import InterviewScheduleModal from "./InterviewScheduleModal";
 import {
     api,
     applicationStatusLabel,
@@ -133,6 +134,8 @@ function ApplicationDetail({ applicationId, actorId, onClose, onChanged }) {
     const [loaded, setLoaded] = useState({ id: null, application: null, error: "" });
     const [remark, setRemark] = useState("");
     const [actionError, setActionError] = useState("");
+    const [schedulingInterview, setSchedulingInterview] = useState(false);
+    const [interviewNotice, setInterviewNotice] = useState(null);
 
     useEffect(() => {
         let ignore = false;
@@ -181,11 +184,25 @@ function ApplicationDetail({ applicationId, actorId, onClose, onChanged }) {
         });
     };
 
+    const interviewSaved = ({ application: updated, email }) => {
+        setLoaded({ id: applicationId, application: updated, error: "" });
+        setSchedulingInterview(false);
+        setInterviewNotice(email.sent
+            ? { tone: "success", text: t("recruitment.applicationDetail.interview.emailSent", { email: updated.email, defaultValue: "Interview scheduled and invitation sent to {{email}}" }) }
+            : { tone: "warning", text: t("recruitment.applicationDetail.interview.emailFailed", { reason: email.reason, defaultValue: "Interview saved, but the email could not be sent: {{reason}}" }) });
+        notifyApplicationsChanged();
+        onChanged?.();
+    };
+
+    const interview = application?.interview;
+    const canSchedule = application?.status === "Shortlisted";
+    const interviewPlace = interview && INTERVIEW_PLACE_LABELS[interview.mode];
     const isExperienced = application?.candidate_type === "Experienced";
     const history = Array.isArray(application?.employment_history) ? application.employment_history : [];
     const skills = String(application?.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean);
 
     return (
+        <>
         <div className="candidate-modal-overlay" onClick={onClose}>
             <div className="candidate-modal app-detail" role="dialog" aria-modal="true" aria-label={t("recruitment.applicationDetail.ariaLabel", { defaultValue: "Application details" })} onClick={(event) => event.stopPropagation()}>
                 <div className="candidate-modal-header">
@@ -241,12 +258,43 @@ function ApplicationDetail({ applicationId, actorId, onClose, onChanged }) {
                                 <p className="mpr-muted">{t("recruitment.applicationDetail.noFurtherActions", { status: applicationStatusLabel(application.status), defaultValue: "No further review actions: this application is {{status}}." })}</p>
                             )}
                             <div className="app-next-phase">
-                                <button type="button" className="mpr-btn" disabled title={t("recruitment.applicationDetail.nextPhaseTitle", { defaultValue: "Coming in the next phase (FRD 1.2)" })}>
+                                <button
+                                    type="button"
+                                    className="mpr-btn"
+                                    disabled={!canSchedule}
+                                    title={canSchedule ? undefined : t("recruitment.applicationDetail.interview.shortlistedOnly", { defaultValue: "Available when the application is Shortlisted" })}
+                                    onClick={() => setSchedulingInterview(true)}
+                                >
                                     <CalendarPlus size={15} aria-hidden="true" /> {t("recruitment.applicationDetail.scheduleInterview", { defaultValue: "Schedule Interview" })}
                                 </button>
-                                <small>{t("recruitment.applicationDetail.nextPhaseNote", { defaultValue: "Interview scheduling (FRD 1.2) comes in the next phase." })}</small>
                             </div>
+                            {interviewNotice && <p className={`app-interview-notice ${interviewNotice.tone}`} role="status">{interviewNotice.text}</p>}
                         </section>
+
+                        {interview && (
+                            <section className="candidate-section">
+                                <h3>{t("recruitment.applicationDetail.interview.title", { defaultValue: "Interview" })}</h3>
+                                <div className="candidate-grid">
+                                    <Item label={t("recruitment.applicationDetail.interview.date", { defaultValue: "Interview Date" })}><span dir="ltr" className="ltr-text">{formatDate(interview.interview_date)}</span></Item>
+                                    <Item label={t("recruitment.applicationDetail.interview.time", { defaultValue: "Time" })}><span dir="ltr" className="ltr-text">{formatInterviewTime(interview.interview_time)}</span></Item>
+                                    <Item label={t("recruitment.applicationDetail.interview.mode", { defaultValue: "Mode" })}>{recruitmentValueLabel("interviewMode", interview.mode)}</Item>
+                                    <Item label={t(`recruitment.applicationDetail.interview.${interviewPlace[0]}`, { defaultValue: interviewPlace[1] })}>
+                                        {interview.mode === "Online" && /^https?:\/\//i.test(interview.location_or_link)
+                                            ? <a href={interview.location_or_link} target="_blank" rel="noreferrer noopener" dir="ltr">{interview.location_or_link}</a>
+                                            : interview.location_or_link}
+                                    </Item>
+                                    <Item label={t("recruitment.applicationDetail.interview.interviewer", { defaultValue: "Interviewer Name" })}>{interview.interviewer_name}</Item>
+                                    <Item label={t("recruitment.applicationDetail.interview.emailStatus", { defaultValue: "Invitation Email" })}>
+                                        {interview.email_sent_at
+                                            ? t("recruitment.applicationDetail.interview.sentOn", { date: formatDateTime(interview.email_sent_at), defaultValue: "Sent {{date}}" })
+                                            : interview.email_error
+                                                ? t("recruitment.applicationDetail.interview.notSent", { reason: interview.email_error, defaultValue: "Not sent: {{reason}}" })
+                                                : "—"}
+                                    </Item>
+                                    {interview.notes && <Item label={t("recruitment.applicationDetail.interview.notes", { defaultValue: "Notes" })} full>{interview.notes}</Item>}
+                                </div>
+                            </section>
+                        )}
 
                         <section className="candidate-section">
                             <h3>{t("recruitment.applicationDetail.application", { defaultValue: "Application" })}</h3>
@@ -389,6 +437,10 @@ function ApplicationDetail({ applicationId, actorId, onClose, onChanged }) {
                 )}
             </div>
         </div>
+        {schedulingInterview && application && (
+            <InterviewScheduleModal application={application} actorId={actorId} onClose={() => setSchedulingInterview(false)} onSaved={interviewSaved} />
+        )}
+        </>
     );
 }
 

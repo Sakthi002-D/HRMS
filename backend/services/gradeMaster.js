@@ -196,13 +196,20 @@ export async function updateGrade(db, code, body) {
 export async function deleteGrade(db, code) {
     const current = String(code ?? "").trim().toUpperCase();
     await requireEditable(db, false);
-    const result = await db.query(
-        `DELETE FROM grades g
-         WHERE UPPER(g.code) = $1
-           AND NOT EXISTS (SELECT 1 FROM employees e WHERE UPPER(TRIM(e.grade)) = UPPER(g.code))
-         RETURNING g.code`,
-        [current]
-    );
+    let result;
+    try {
+        result = await db.query(
+            `DELETE FROM grades g
+             WHERE UPPER(g.code) = $1
+               AND NOT EXISTS (SELECT 1 FROM employees e WHERE UPPER(TRIM(e.grade)) = UPPER(g.code))
+             RETURNING g.code`,
+            [current]
+        );
+    } catch (error) {
+        // grade_positions (migration 021, MPR form) points at the grade
+        if (error.code === "23503") throw new GradeError(409, `Grade ${current} has MPR positions and designations linked to it, so it can't be deleted.`);
+        throw error;
+    }
     if (result.rows.length) return { grade_code: result.rows[0].code, deleted: true };
 
     const grade = await findGrade(db, current);
@@ -211,4 +218,44 @@ export async function deleteGrade(db, code) {
         ? `Grade ${grade.grade_code} is given to 1 employee. Move them to another grade first.`
         : `Grade ${grade.grade_code} is given to ${grade.employee_count} employees. Move them to another grade first.`,
     { employee_count: grade.employee_count });
+}
+
+// =====================================================
+// GRADE MASTER: Grade → Position → Designation (MPR form "Grade & Designation")
+// Tables: grades, grade_positions, grade_designations (migration 021).
+// =====================================================
+
+// Nested list: grades (by sort order) → positions → designations.
+// activeOnly = what the MPR form offers (an inactive grade hides its positions, and so on).
+export async function listGradeMaster(db, { activeOnly = false } = {}) {
+    const where = activeOnly ? "WHERE active" : "";
+    const [grades, positions, designations] = await Promise.all([
+        db.query(`SELECT id, code, band, sort_order, active FROM grades ${where} ORDER BY sort_order, code`),
+        db.query(`SELECT id, grade_id, name, sort_order, active FROM grade_positions ${where} ORDER BY sort_order, name`),
+        db.query(`SELECT id, position_id, name, sort_order, active FROM grade_designations ${where} ORDER BY sort_order, name`),
+    ]);
+
+    const designationsByPosition = new Map();
+    designations.rows.forEach(({ position_id: positionId, ...designation }) => {
+        if (!designationsByPosition.has(positionId)) designationsByPosition.set(positionId, []);
+        designationsByPosition.get(positionId).push(designation);
+    });
+
+    const positionsByGrade = new Map();
+    positions.rows.forEach(({ grade_id: gradeId, ...position }) => {
+        if (!positionsByGrade.has(gradeId)) positionsByGrade.set(gradeId, []);
+        positionsByGrade.get(gradeId).push({ ...position, designations: designationsByPosition.get(position.id) || [] });
+    });
+
+    return grades.rows.map((grade) => ({ ...grade, positions: positionsByGrade.get(grade.id) || [] }));
+}
+
+// For /recruitment/meta: an empty list until migration 021 has been run, so the MPR form still opens
+export async function listActiveGrades(db) {
+    try {
+        return await listGradeMaster(db, { activeOnly: true });
+    } catch (error) {
+        if (error.code === "42P01") return []; // undefined_table
+        throw error;
+    }
 }

@@ -4,6 +4,7 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
 import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
 import JobApplications from "../../components/recruitment/JobApplications";
+import Hiring from "../../components/recruitment/Hiring";
 import { Building2, Briefcase, Clock3, UserPlus } from "lucide-react";
 import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
 import {
@@ -22,6 +23,7 @@ const TABS = [
     { id: "manpower", label: "Manpower Requests" },
     { id: "jobs", label: "Job Openings" },
     { id: "applications", label: "Job Applications" },
+    { id: "hiring", label: "Hiring" },
 ];
 
 // New applications from the Careers page show up without a manual refresh
@@ -36,6 +38,7 @@ function Recruitment() {
     const [applications, setApplications] = useState({ rows: [], loading: true, error: "" });
     const [applicationJobFilter, setApplicationJobFilter] = useState("");
     const knownApplicationIds = useRef(null);
+    const [hiring, setHiring] = useState({ rows: [], loading: true, error: "" });
 
     const [jobs, setJobs] = useState([]);
     const [jobSearch, setJobSearch] = useState("");
@@ -81,23 +84,39 @@ function Recruitment() {
         }
     }, [hrQuery]);
 
+    // Hiring tab: every application past New (an error here, e.g. migration 028 not run yet,
+    // only shows on that tab)
+    const fetchHiring = useCallback(async () => {
+        try {
+            setHiring({ rows: await api(`/api/hr/hiring?${hrQuery}`), loading: false, error: "" });
+        } catch (error) {
+            setHiring((current) => ({ ...current, loading: false, error: error.message }));
+        }
+    }, [hrQuery]);
+
     useEffect(() => {
         fetchJobs();
         fetchApplications();
+        fetchHiring();
         fetchSummary();
         api(`/api/recruitment/meta?employee_id=${encodeURIComponent(hrId || "")}`)
             .then(setMeta)
             .catch((error) => console.error("Error fetching recruitment options:", error));
-    }, [hrId, fetchJobs, fetchApplications]);
+    }, [hrId, fetchJobs, fetchApplications, fetchHiring]);
 
     useEffect(() => {
         const timer = window.setInterval(() => {
-            if (document.visibilityState === "visible") fetchApplications();
+            if (document.visibilityState === "visible") {
+                fetchApplications();
+                fetchHiring();
+            }
         }, APPLICATIONS_POLL_MS);
         return () => window.clearInterval(timer);
-    }, [fetchApplications]);
+    }, [fetchApplications, fetchHiring]);
 
     const newApplications = applications.rows.filter((row) => row.status === "New").length;
+    // Offer answers HR hasn't opened yet
+    const newResponses = hiring.rows.filter((row) => row.new_response).length;
 
     const openNewManpowerRequest = () => {
         setActiveTab("manpower");
@@ -130,7 +149,7 @@ function Recruitment() {
 
                 {/* Title, New MPR button and stat cards: not on Job Applications (it has its own cards).
                     The summary stays in state, so the cards show instantly when switching back. */}
-                {activeTab !== "applications" && (
+                {activeTab !== "applications" && activeTab !== "hiring" && (
                 <>
                 <div className="recruitment-header">
                     <div>
@@ -198,6 +217,11 @@ function Recruitment() {
                             {tab.id === "applications" && newApplications > 0 && (
                                 <em className="tab-badge" aria-label={t("recruitment.page.newCount", { number: newApplications, defaultValue: "{{number}} new" })} title={t("recruitment.page.newNotReviewed", { number: newApplications, defaultValue: "{{number}} new (not reviewed)" })}>
                                     {newApplications > 99 ? "99+" : newApplications}
+                                </em>
+                            )}
+                            {tab.id === "hiring" && newResponses > 0 && (
+                                <em className="tab-badge" aria-label={t("recruitment.hiring.newResponses", { number: newResponses, defaultValue: "{{number}} new offer responses" })} title={t("recruitment.hiring.newResponses", { number: newResponses, defaultValue: "{{number}} new offer responses" })}>
+                                    {newResponses > 99 ? "99+" : newResponses}
                                 </em>
                             )}
                         </button>
@@ -373,6 +397,22 @@ function Recruitment() {
                         onChanged={() => {
                             fetchApplications();
                             fetchJobs();
+                            fetchHiring();
+                        }}
+                    />
+                )}
+
+                {activeTab === "hiring" && (
+                    <Hiring
+                        actorId={hrId}
+                        rows={hiring.rows}
+                        loading={hiring.loading}
+                        error={hiring.error}
+                        onChanged={() => {
+                            fetchHiring();
+                            fetchApplications();
+                            fetchJobs();
+                            fetchSummary();
                         }}
                     />
                 )}

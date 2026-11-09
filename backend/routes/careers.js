@@ -10,7 +10,8 @@
 import express from "express";
 import multer from "multer";
 import pool from "../db.js";
-import { sendQueuedEmails } from "../services/notificationService.js";
+import { getAppSettingsSafe } from "../services/appSettings.js";
+import { sendEmailNow, sendQueuedEmails } from "../services/notificationService.js";
 import { WorkflowError } from "../services/manpowerWorkflow.js";
 import {
     CV_MAX_BYTES,
@@ -22,7 +23,9 @@ import {
     getPublicJob,
     listApplications,
     listPublicJobs,
+    recordInterviewEmail,
     requireHRActor,
+    scheduleInterview,
     submitApplication,
 } from "../services/careerApplications.js";
 
@@ -175,6 +178,26 @@ router.get("/hr/job-applications/:id/cv", handle(async (req, res) => {
         "X-Content-Type-Options": "nosniff",
     });
     res.send(cv.buffer);
+}));
+
+// Saves the interview first; the email goes out after the commit, so a failed
+// email (or a slow mail server) never loses it or holds a database connection
+router.post("/hr/job-applications/:id/interview", handle(async (req, res) => {
+    const settings = await getAppSettingsSafe();
+    const { interviewId, email } = await inTransaction((db) =>
+        scheduleInterview(db, { id: req.params.id, actorId: hrIdFrom(req), input: req.body, settings })
+    );
+
+    let result = { sent: true };
+    try {
+        await sendEmailNow(email);
+    } catch (error) {
+        console.error("Interview email failed:", error.message);
+        result = { sent: false, reason: error.message };
+    }
+    await recordInterviewEmail(pool, interviewId, result).catch((error) => console.error("Unable to record interview email result:", error.message));
+
+    res.json({ application: await getApplicationDetail(pool, req.params.id), email: result });
 }));
 
 router.post("/hr/job-applications/:id/:action", handle(async (req, res) => {

@@ -7,7 +7,11 @@ import { api, getSessionEmployeeId, recruitmentRoleLabel, recruitmentValueLabel 
 import { ResignationWorkflowSettings } from "./ResignationSettings";
 import "./RecruitmentSettings.css";
 
-const REQUEST_TYPES = ["Replacement", "New Position"];
+// Shown as a 2 × 2 grid of cards; COO/CTO by department below is shared by all four
+const REQUEST_TYPES = ["Replacement", "New Position", "Project Expansion", "Temporary / Contract"];
+// Departments shown in the "COO / CTO by department" and "Job ID department codes" grids.
+// Others are only hidden: their saved values stay in the draft and are sent back on Save.
+const GRID_DEPARTMENTS = ["HR", "IT", "Finance"];
 
 function ApprovalWorkflowSettings() {
     const { t } = useTranslation();
@@ -16,6 +20,9 @@ function ApprovalWorkflowSettings() {
     const [draft, setDraft] = useState(null);
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const gridDepartments = GRID_DEPARTMENTS
+        .map((name) => departments.find((department) => department.toLowerCase() === name.toLowerCase()))
+        .filter(Boolean);
     const [assignments, setAssignments] = useState({ assignments: [], assignableRoles: [], departmentScopedRoles: [] });
     const [newAssignment, setNewAssignment] = useState({ role_key: "", department: "", employee_id: "" });
     const [message, setMessage] = useState({ text: "", error: false });
@@ -50,9 +57,10 @@ function ApprovalWorkflowSettings() {
     const roleLabel = (role) => recruitmentRoleLabel(role, labels[role] || role);
     const scoped = assignments.departmentScopedRoles;
 
+    const stepsFor = (type) => draft.workflows?.[type] || [];
     const updateSteps = (type, steps) => setDraft((current) => ({ ...current, workflows: { ...current.workflows, [type]: steps } }));
     const moveStep = (type, index, offset) => {
-        const steps = [...draft.workflows[type]];
+        const steps = [...stepsFor(type)];
         const target = index + offset;
         if (target < 0 || target >= steps.length) return;
         [steps[index], steps[target]] = [steps[target], steps[index]];
@@ -76,7 +84,7 @@ function ApprovalWorkflowSettings() {
                 },
             });
             setDraft(result.settings);
-            setMessage({ text: t("settings.workflows.saved", { defaultValue: "Approval workflows saved. New submissions use these steps; MPRs already in approval keep theirs." }), error: false });
+            setMessage({ text: t("settings.workflows.saved", { defaultValue: "Approval steps saved successfully." }), error: false });
         } catch (err) {
             setMessage({ text: err.message, error: true });
         } finally {
@@ -116,17 +124,17 @@ function ApprovalWorkflowSettings() {
                         <div className="rs-workflow" key={type}>
                             <h4>{recruitmentValueLabel("requestType", type)}</h4>
                             <ol>
-                                {draft.workflows[type].map((step, index) => (
+                                {stepsFor(type).map((step, index) => (
                                     <li key={`${step}-${index}`}>
                                         <span>{index + 1}. {roleLabel(step)}</span>
                                         <div>
                                             <button type="button" aria-label={t("settings.workflows.moveUp", { defaultValue: "Move up" })} onClick={() => moveStep(type, index, -1)} disabled={index === 0}><ArrowUp size={14} /></button>
-                                            <button type="button" aria-label={t("settings.workflows.moveDown", { defaultValue: "Move down" })} onClick={() => moveStep(type, index, 1)} disabled={index === draft.workflows[type].length - 1}><ArrowDown size={14} /></button>
+                                            <button type="button" aria-label={t("settings.workflows.moveDown", { defaultValue: "Move down" })} onClick={() => moveStep(type, index, 1)} disabled={index === stepsFor(type).length - 1}><ArrowDown size={14} /></button>
                                             <button
                                                 type="button"
                                                 aria-label={t("settings.workflows.removeStep", { defaultValue: "Remove step" })}
-                                                onClick={() => updateSteps(type, draft.workflows[type].filter((_, i) => i !== index))}
-                                                disabled={draft.workflows[type].length === 1}
+                                                onClick={() => updateSteps(type, stepsFor(type).filter((_, i) => i !== index))}
+                                                disabled={stepsFor(type).length === 1}
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -136,7 +144,7 @@ function ApprovalWorkflowSettings() {
                             </ol>
                             <select
                                 value=""
-                                onChange={(event) => event.target.value && updateSteps(type, [...draft.workflows[type], event.target.value])}
+                                onChange={(event) => event.target.value && updateSteps(type, [...stepsFor(type), event.target.value])}
                             >
                                 <option value="">{t("settings.workflows.addStep", { defaultValue: "+ Add approver step" })}</option>
                                 {data.stepRoles.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
@@ -149,7 +157,7 @@ function ApprovalWorkflowSettings() {
             <section className="rs-section">
                 <h3>{t("settings.workflows.execByDepartment", { defaultValue: "COO / CTO by department" })}</h3>
                 <div className="rs-grid">
-                    {departments.map((department) => (
+                    {gridDepartments.map((department) => (
                         <label className="settings-field" key={department}>
                             <span>{department}</span>
                             <select
@@ -180,7 +188,7 @@ function ApprovalWorkflowSettings() {
                 <h3>{t("settings.workflows.jobCodes", { defaultValue: "Job ID department codes" })}</h3>
                 <p>{t("settings.workflows.jobCodesHint", { defaultValue: "New job openings get IDs like IT001, FIN001. Existing JOB001 / JOB002 are unchanged." })}</p>
                 <div className="rs-grid">
-                    {departments.map((department) => (
+                    {gridDepartments.map((department) => (
                         <label className="settings-field" key={department}>
                             <span>{department}</span>
                             <input

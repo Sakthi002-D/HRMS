@@ -68,27 +68,84 @@ export async function createNotifications(db, recipientIds, { type = "general", 
 // HR Settings apply: "Email Notifications" off skips emails to staff (applicant emails
 // are replies to a form they submitted, so they still go out), the company name appears
 // in the sender / signature and the support email becomes the Reply-To address.
+export const escapeHtml = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+
+// Optional mail.html (already escaped body, e.g. the offer letter's Accept / Decline buttons):
+// wrapped in the same greeting, help line and signature as the text version.
+const buildMail = (mail, settings) => {
+    const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
+    const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
+    const signature = mail.signature || `${company} HRMS`;
+    return {
+        from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
+        ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
+        to: mail.to,
+        subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
+        text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${signature}`,
+        // Optional files (e.g. the resignation experience certificate PDF): [{ filename, content, contentType }]
+        ...(Array.isArray(mail.attachments) && mail.attachments.length ? { attachments: mail.attachments } : {}),
+        ...(mail.html ? {
+            html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1e293b">`
+                + `<p>Hello ${escapeHtml(mail.name)},</p>${mail.html}`
+                + (settings.supportEmail ? `<p>Need help? Contact <a href="mailto:${escapeHtml(settings.supportEmail)}">${escapeHtml(settings.supportEmail)}</a>.</p>` : "")
+                + `<p>Regards,<br>${escapeHtml(signature).replace(/\n/g, "<br>")}</p></div>`,
+        } : {}),
+    };
+};
+
 export async function sendQueuedEmails(queue) {
     const mailer = getTransporter();
     if (!mailer || !queue?.length) return;
 
     const settings = await getAppSettingsSafe();
-    const company = String(settings.companyName || "Shelter Group").replace(/["\r\n]/g, "");
 
     queue.forEach((mail) => {
         if (!mail.plainSubject && settings.emailNotifications === false) return;
 
-        const contact = settings.supportEmail ? `\n\nNeed help? Contact ${settings.supportEmail}.` : "";
         mailer
-            .sendMail({
-                from: `"${mail.plainSubject ? `${company} Careers` : `${company} HRMS`}" <${process.env.EMAIL_USER}>`,
-                ...(settings.supportEmail ? { replyTo: settings.supportEmail } : {}),
-                to: mail.to,
-                subject: mail.plainSubject ? mail.subject : `HRMS: ${mail.subject}`,
-                text: `Hello ${mail.name || ""},\n\n${mail.text}${contact}\n\nRegards,\n${mail.signature || `${company} HRMS`}`,
-            })
+            .sendMail(buildMail(mail, settings))
             .catch((error) => console.error("Notification email failed:", error.message));
     });
+}
+
+const SEND_TIMEOUT_MS = 30 * 1000;
+
+// SMTP_* from .env (never in code). Port 465 uses TLS from the start; other ports upgrade with STARTTLS.
+let smtpTransporter = null;
+const getSmtpTransporter = () => {
+    if (!process.env.SMTP_HOST) return null;
+    const port = Number(process.env.SMTP_PORT) || 587;
+    smtpTransporter ||= nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: port === 465,
+        ...(process.env.SMTP_USER ? { auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } } : {}),
+    });
+    return smtpTransporter;
+};
+
+// Same mail as sendQueuedEmails, for when the caller must know the result: throws if it can't be sent.
+// Uses SMTP_* when set, otherwise the Gmail settings above.
+export async function sendEmailNow(mail) {
+    const smtp = getSmtpTransporter();
+    const mailer = smtp || getTransporter();
+    if (!mailer) throw new Error("email is not set up on the server (add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM to .env)");
+    if (smtp && process.env.SMTP_USER && !process.env.SMTP_PASS) throw new Error("SMTP_PASS is missing in .env");
+    if (!mail.to) throw new Error("this application has no email address");
+
+    const settings = await getAppSettingsSafe();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("the mail server did not respond in time")), SEND_TIMEOUT_MS);
+    });
+    try {
+        const message = buildMail(mail, settings);
+        if (smtp) message.from = process.env.SMTP_FROM || process.env.SMTP_USER;
+        await Promise.race([mailer.sendMail(message), timeout]);
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 export async function getInbox(employeeId, db = pool) {
@@ -119,8 +176,8 @@ const INBOX_KINDS = [
     ["resignation_awaiting_approval", /^Resignation (?<number>.+) awaits your approval$/, /^(?<name>.+) \((?<employeeId>[^,()]+), (?<department>.+)\) resigned\. Last working day (?<date>[^.]+)\. Open Resignation → My Approvals\.$/],
     ["resignation_accepted_hr", /^Resignation accepted: (?<name>.+)$/, /^(?<number>\S+) accepted\. .+ \((?<employeeId>[^,()]+), (?<department>.+)\)\. Last working day: (?<date>[^.]+)\. Final settlement to be processed after the last working day\.$/],
     ["resignation_end_of_service", /^Pending End of Service: (?<name>.+)$/, /^.+ \((?<employeeId>[^,()]+), (?<department>.+)\) finished on (?<date>[^.]+) and is now Inactive\.$/],
-    ["mpr_awaiting_approval_exception", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\) \(budget exception\)\. Open Manpower Requests → My Approvals\.$/],
-    ["mpr_awaiting_approval", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\)\. Open Manpower Requests → My Approvals\.$/],
+    ["mpr_awaiting_approval_exception", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position|Project Expansion|Temporary \/ Contract): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\) \(budget exception\)\. Open Manpower Requests → My Approvals\.$/],
+    ["mpr_awaiting_approval", /^MPR (?<number>\S+) awaits your approval$/, /^(?<requestType>Replacement|New Position|Project Expansion|Temporary \/ Contract): (?<title>.+) \((?<openings>\d+) × (?<department>.+)\)\. Open Manpower Requests → My Approvals\.$/],
     ["mpr_rejected", /^MPR (?<number>\S+) was rejected$/, /^(?<role>.+?) rejected "(?<title>.+)": (?<reason>[\s\S]*)$/],
     ["mpr_sent_back", /^MPR (?<number>\S+) was sent back$/, /^(?<role>.+?) sent back "(?<title>.+)": (?<reason>[\s\S]*)\. Edit and resubmit it from Manpower Requests\.$/],
     ["mpr_approved", /^MPR (?<number>\S+) approved$/, /^Job opening (?<jobId>\S+) was created for "(?<title>.+)"\.$/],

@@ -476,6 +476,86 @@
     font-weight: 600;
 }
 
+/* Job Description: labelled lines */
+.career-jd-body {
+    position: relative;
+    max-width: 75ch;
+    color: #334155;
+    font-size: 15px;
+    line-height: 1.75;
+}
+
+.career-jd-body.collapsed {
+    max-height: calc(1.75em * 8);
+    overflow: hidden;
+}
+
+.career-jd-body.collapsed::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 64px;
+    background: linear-gradient(rgba(255, 255, 255, 0), #fff);
+    pointer-events: none;
+}
+
+.career-jd-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+}
+
+.career-jd-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 210px) 1fr;
+    gap: 4px 14px;
+    align-items: baseline;
+}
+
+.career-jd-row dt {
+    color: #0f5e59;
+    font-weight: 700;
+}
+
+.career-jd-row dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.career-jd-row .career-description {
+    line-height: inherit;
+}
+
+.career-jd-row .career-skill-list {
+    padding-top: 2px;
+}
+
+.career-jd-bullets {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.career-jd-bullets li + li {
+    margin-top: 4px;
+}
+
+.career-jd-toggle {
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #08736d;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.career-jd-toggle:hover {
+    text-decoration: underline;
+}
+
 .career-detail-cta {
     display: flex;
     justify-content: space-between;
@@ -1016,6 +1096,10 @@
         grid-template-columns: 1fr;
     }
 
+    .career-jd-row {
+        grid-template-columns: 1fr;
+    }
+
     .career-type-card {
         padding: 18px 14px;
     }
@@ -1044,5 +1128,185 @@
 
     .career-form-actions > button {
         width: 100%;
+    }
+}
+
+/* Highest qualification (CustomOptionSelect): same look as the other Careers inputs */
+.career-qualification {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    min-width: 0;
+}
+
+.career-form .mpr-dept-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0b3154;
+    font: inherit;
+    font-size: 14px;
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+}
+
+.career-form .mpr-dept-field:focus,
+.career-form .mpr-dept-field.is-open {
+    border-color: #0f8b83;
+    box-shadow: 0 0 0 3px rgba(15, 139, 131, 0.12) !important;
+}
+
+.career-field.has-error .mpr-dept-field {
+    border-color: #f1a1a1 !important;
+    background: #fffafa;
+}
+
+.career-form .career-qualification .save-job-btn {
+    flex-shrink: 0;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #0f8b83;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mpr-dept-menu.career-option-menu { font-size: 14px; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option { color: #0b3154; font-size: 14px; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option:hover { background: #f0faf9; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option.is-selected { background: #e6f5f4; color: #0f8b83; }
+.mpr-dept-menu.career-option-menu .mpr-dept-option.is-other { color: #0f8b83; }
+
+/* ---------- Offer letter page (/offer/:token) ---------- */
+
+.offer-card {
+    padding: 32px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.offer-card h1 {
+    margin: 0 0 8px;
+    color: #0b3154;
+    font-size: clamp(24px, 3vw, 32px);
+}
+
+.offer-greeting {
+    margin: 0 0 20px;
+    color: #475569;
+    font-size: 16px;
+}
+
+.offer-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 24px;
+    margin: 0 0 20px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fbfb;
+}
+
+.offer-summary dt {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.offer-summary dd {
+    margin: 3px 0 0;
+    color: #0b3154;
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.offer-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.offer-buttons .career-apply-btn {
+    min-width: 170px;
+    min-height: 50px;
+    font-size: 16px;
+}
+
+.career-apply-btn.offer-decline-btn {
+    background: #ffffff;
+    border: 1px solid #d43b3b;
+    color: #b91c1c;
+}
+
+.career-apply-btn.offer-decline-btn:hover {
+    background: #fff0f0;
+}
+
+.offer-decline {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.offer-decline label {
+    color: #0b3154;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.offer-decline textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font: inherit;
+    resize: vertical;
+}
+
+.offer-decline textarea:focus {
+    border-color: #0f8b83;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(15, 139, 131, 0.15);
+}
+
+.offer-message svg {
+    color: #0f8b83;
+}
+
+.offer-message.closed svg {
+    color: #d43b3b;
+}
+
+@media (max-width: 600px) {
+    .offer-card {
+        padding: 22px 18px;
+    }
+
+    .offer-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .offer-buttons .career-apply-btn {
+        flex: 1 1 100%;
     }
 }

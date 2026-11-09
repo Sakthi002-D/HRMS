@@ -1,6 +1,7 @@
 // Public Careers page helpers (no login). Validation mirrors
 // backend/services/careerApplications.js → validateApplication.
 import API_URL from "../../config/api";
+import { OTHER_OPTION } from "../recruitment/CustomOptionSelect";
 
 export async function careersApi(path) {
     const response = await fetch(`${API_URL}${path}`, { cache: "no-store" });
@@ -71,6 +72,16 @@ export const COUNTRIES = [
     "United Arab Emirates", "United Kingdom", "United States", "Uzbekistan", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ];
 
+export const CUSTOM_QUALIFICATIONS_KEY = "careersCustomQualifications";
+export const SCHOOL_OPTION = "School";
+export const SCHOOL_STANDARDS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"].map((item) => `${item} Standard`);
+
+// Qualifications from the server, shown with "School" for "High School" and without "Doctorate" or the plain "Other"
+export const qualificationOptions = (qualifications) =>
+    qualifications
+        .filter((option) => option !== OTHER_OPTION && option !== "Doctorate")
+        .map((option) => (option === "High School" ? SCHOOL_OPTION : option));
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 const LINKEDIN_PATTERN =/^https?:\/\/([a-z0-9-]+\.)*linkedin\.com(\/\S*)?$/i;
@@ -117,6 +128,8 @@ export function validateForm(form, { today, cv }) {
     if (!form.willing_to_relocate) fail("willing_to_relocate", "Tell us whether you are willing to relocate");
 
     need("highest_qualification", "Highest qualification");
+    if (form.highest_qualification === OTHER_OPTION) fail("highest_qualification", "Type the new qualification and click Add, or choose one from the list");
+    if (form.highest_qualification === SCHOOL_OPTION) need("school_standard", "Standard");
     need("institution", "Institution");
     const thisYear = Number(today.slice(0, 4));
     const year = Number(form.year_of_passing);
@@ -185,7 +198,9 @@ export function toPayload(form) {
         in_qatar: form.in_qatar,
         visa_status: form.in_qatar === "Yes" ? form.visa_status : "",
         willing_to_relocate: form.willing_to_relocate,
-        highest_qualification: form.highest_qualification,
+        highest_qualification: form.highest_qualification === SCHOOL_OPTION
+            ? `${SCHOOL_OPTION} – ${form.school_standard}`
+            : form.highest_qualification,
         institution: form.institution.trim(),
         year_of_passing: form.year_of_passing,
         percentage_cgpa: form.percentage_cgpa.trim(),
