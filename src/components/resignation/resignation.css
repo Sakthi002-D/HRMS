@@ -741,3 +741,235 @@
 .resignation-letter-link:disabled { color: #64748b; cursor: progress; }
 .resignation-letter-link:focus-visible { outline: 2px solid #2564eb; outline-offset: 2px; border-radius: 3px; }
 .resignation-letter-error { display: block; margin-top: 4px; }
+
+/* =========================================
+   HR resignation case window — project look
+   (dark banner header, orange steps / tabs / main actions, white cards on a light page).
+   Scoped to .resignation-case so the recruitment hiring window is unchanged.
+   ========================================= */
+
+.candidate-modal.hiring-modal.resignation-case {
+    --rc-orange: #f97316;
+    --rc-orange-dark: #ea580c;
+    --rc-orange-ink: #c2410c;
+    --rc-orange-soft: #fff7ed;
+    --rc-navy: #042330;
+    --rc-line: #e3ecf2;
+    width: min(1180px, 100%);
+    overflow: hidden;
+    border-radius: 16px;
+    background: #f6f8fb;
+}
+
+/* ---------- Header: same banner as the HR pages ---------- */
+.resignation-case .hiring-modal-header {
+    padding: 18px 24px;
+    border-bottom: 0;
+    background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+}
+
+.resignation-case .hiring-avatar {
+    border: 0;
+    border-radius: 12px;
+    background: var(--rc-orange);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(249, 115, 22, .35);
+}
+
+.resignation-case .hiring-modal-title h2 {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.resignation-case .hiring-modal-title p {
+    color: #c8d6e0;
+}
+
+.resignation-case .hiring-modal-meta .mpr-status {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .25);
+}
+
+.resignation-case .hiring-modal-meta .mpr-chip {
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .1);
+    color: #ffffff;
+}
+
+.resignation-case .candidate-modal-close {
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .08);
+    color: #ffffff;
+}
+
+.resignation-case .candidate-modal-close:hover {
+    background: rgba(255, 255, 255, .18);
+}
+
+.resignation-case .candidate-modal-close:focus-visible {
+    outline: 2px solid #fdba74;
+    outline-offset: 2px;
+}
+
+/* ---------- Progress steps in orange ---------- */
+.resignation-case .hiring-steps-bar {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--rc-line);
+    background: #ffffff;
+}
+
+.resignation-case .hiring-step.done::before,
+.resignation-case .hiring-step.current::before { background: var(--rc-orange); }
+.resignation-case .hiring-step.done .hiring-step-dot { border-color: var(--rc-orange); background: var(--rc-orange); color: #ffffff; }
+.resignation-case .hiring-step.current .hiring-step-dot { border-color: var(--rc-orange); background: #ffffff; color: var(--rc-orange-ink); box-shadow: 0 0 0 5px rgba(249, 115, 22, .16); }
+.resignation-case .hiring-step.current .hiring-step-label { color: var(--rc-navy); }
+
+/* ---------- Body ---------- */
+.resignation-case .hiring-modal-body {
+    padding: 20px 24px 24px;
+}
+
+.resignation-case .hiring-card,
+.resignation-case .hiring-side-card {
+    border: 1px solid var(--rc-line);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(17, 22, 31, .05);
+}
+
+.resignation-case .hiring-card-head h3 {
+    color: var(--rc-navy);
+    font-weight: 700;
+}
+
+/* Default card icon in orange; success / warning / danger keep their colours */
+.resignation-case .hiring-card-icon:not(.success):not(.warning):not(.danger) {
+    background: var(--rc-orange-soft);
+    color: var(--rc-orange-ink);
+}
+
+.resignation-case .hiring-label {
+    color: var(--rc-navy);
+}
+
+.resignation-case .hiring-card :is(textarea, input[type="text"], input[type="number"]),
+.resignation-case .hiring-card .date-picker-trigger,
+.resignation-case .hiring-card select {
+    border-color: #d5e0e8;
+    border-radius: 9px;
+}
+
+.resignation-case .hiring-card :is(textarea, input, select):focus,
+.resignation-case .hiring-card .date-picker-trigger:focus-visible {
+    border-color: var(--rc-orange);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.resignation-case .hiring-card-footer {
+    border-top-color: #eef2f6;
+}
+
+/* ---------- Buttons ---------- */
+.resignation-case .hiring-btn {
+    border-radius: 9px;
+}
+
+.resignation-case .hiring-btn.primary {
+    border-color: var(--rc-orange);
+    background: var(--rc-orange);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, .25);
+}
+
+.resignation-case .hiring-btn.primary:hover:not(:disabled) {
+    background: var(--rc-orange-dark);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, .32);
+}
+
+.resignation-case .hiring-btn.primary:disabled {
+    border-color: #fdba74;
+    background: #fdba74;
+    box-shadow: none;
+}
+
+.resignation-case .hiring-btn.ghost {
+    border-color: #d5e0e8;
+    background: #ffffff;
+    color: var(--rc-navy);
+}
+
+.resignation-case .hiring-btn.ghost:hover:not(:disabled) {
+    border-color: var(--rc-orange);
+    background: var(--rc-orange-soft);
+    color: var(--rc-orange-ink);
+}
+
+.resignation-case .hiring-btn:focus-visible {
+    outline: 2px solid var(--rc-orange);
+    outline-offset: 2px;
+}
+
+/* ---------- Side tabs (Details / Letter / History) ---------- */
+.resignation-case .hiring-tabs {
+    background: #f8fafc;
+}
+
+.resignation-case .hiring-tabs button:hover {
+    background: var(--rc-orange-soft);
+    color: var(--rc-orange-ink);
+}
+
+.resignation-case .hiring-tabs button.active {
+    background: var(--rc-orange);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, .25);
+    color: #ffffff;
+}
+
+.resignation-case .hiring-tabs button.active .hiring-tab-count {
+    background: #ffffff;
+    color: var(--rc-orange-ink);
+}
+
+.resignation-case .hiring-details dd {
+    color: var(--rc-navy);
+    overflow-wrap: anywhere;
+}
+
+.resignation-case .hiring-details a {
+    color: var(--rc-orange-ink);
+}
+
+/* History timeline */
+.resignation-case .hiring-timeline-dot {
+    border-color: var(--rc-orange);
+}
+
+.resignation-case .hiring-timeline li:first-child .hiring-timeline-dot {
+    background: var(--rc-orange);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .18);
+}
+
+/* Links and the countdown bar */
+.resignation-case .resignation-link-button {
+    color: var(--rc-orange-ink);
+}
+
+.resignation-case .resignation-progressbar span {
+    background: var(--rc-orange);
+}
+
+.resignation-case .resignation-countdown.urgent .resignation-progressbar span {
+    background: #dc2626;
+}
+
+@media (max-width: 760px) {
+    .resignation-case .hiring-modal-header {
+        padding: 14px 16px;
+    }
+
+    .resignation-case .hiring-modal-body,
+    .resignation-case .hiring-steps-bar {
+        padding-inline: 16px;
+    }
+}

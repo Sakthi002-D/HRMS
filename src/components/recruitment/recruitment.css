@@ -2966,3 +2966,439 @@
     .offer-preview-collapse,
     .offer-preview-toggle svg { transition: none; }
 }
+
+/* =========================================
+   HR → RECRUITMENT (rct-*) — project look on every tab
+   Dark banner, white cards, orange accents, light table headers that read from the start edge.
+   Scoped to .rct so pages that reuse these classes (e.g. Resignations) are unchanged.
+   ========================================= */
+
+.dashboard-content .recruitment-page.rct {
+  --rc-orange: #f97316;
+  --rc-orange-dark: #ea580c;
+  --rc-orange-ink: #c2410c;
+  --rc-orange-soft: #fff7ed;
+  --rc-navy: #042330;
+  --rc-text: #64748b;
+  --rc-line: #e3ecf2;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* ---------- Banner ---------- */
+.rct-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px 24px;
+  margin-bottom: 18px;
+  padding: 24px 26px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+  box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+}
+
+.rct-kicker {
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dashboard-content .rct .rct-hero h1 {
+  margin: 4px 0 6px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.dashboard-content .rct .rct-hero p {
+  margin: 0;
+  color: #d7e2ea !important;
+  font-size: 13.5px;
+}
+
+.rct-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--rc-orange);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(249, 115, 22, .35);
+  transition: background-color .15s ease, transform .15s ease;
+}
+
+.rct-new:hover {
+  background: var(--rc-orange-dark);
+  transform: translateY(-1px);
+}
+
+.rct-new:focus-visible {
+  outline: 2px solid #fdba74;
+  outline-offset: 3px;
+}
+
+.rct-hero-stats {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rct-hero-stats > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.rct-hero-stats svg {
+  color: #fdba74;
+}
+
+.rct-hero-stats strong {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.rct-hero-stats span {
+  grid-column: 1 / -1;
+  color: #d7e2ea;
+  font-size: 12px;
+}
+
+/* ---------- Main tabs: one pill bar ---------- */
+.dashboard-content .rct .recruitment-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--rc-line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.dashboard-content .rct .recruitment-tabs button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--rc-navy);
+  font-size: 14px;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.dashboard-content .rct .recruitment-tabs button:hover {
+  background: var(--rc-orange-soft);
+  color: var(--rc-orange-ink);
+}
+
+.dashboard-content .rct .recruitment-tabs button.active {
+  background: var(--rc-orange);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, .25);
+}
+
+.dashboard-content .rct .tab-badge {
+  background: #ef4444;
+}
+
+.dashboard-content .rct .recruitment-tabs button.active .tab-badge {
+  background: #ffffff;
+  color: var(--rc-orange-ink);
+}
+
+/* Sub tabs (Manpower Requests / My Approvals, application filters) */
+.dashboard-content .rct .mpr-subtabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rc-line);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.dashboard-content .rct .mpr-subtabs button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rc-navy);
+  font-size: 13.5px;
+}
+
+.dashboard-content .rct .mpr-subtabs button:hover {
+  background: #ffffff;
+}
+
+.dashboard-content .rct .mpr-subtabs button.active {
+  background: #ffffff;
+  color: var(--rc-orange-ink);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .12);
+}
+
+.dashboard-content .rct .mpr-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  place-items: center;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b42318;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---------- Stat cards inside tabs (Job Applications, Hiring) ---------- */
+.dashboard-content .rct .recruitment-cards {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-content .rct .recruitment-card {
+  overflow: hidden;
+  border: 1px solid var(--rc-line);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.dashboard-content .rct .recruitment-card::before {
+  background: var(--rc-orange);
+}
+
+.dashboard-content .rct button.recruitment-card:hover {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+  transform: translateY(-1px);
+}
+
+.dashboard-content .rct .recruitment-stat-icon {
+  border-radius: 10px;
+  background: var(--rc-orange-soft);
+  color: var(--rc-orange-ink);
+}
+
+.dashboard-content .rct .recruitment-card-content strong {
+  color: var(--rc-navy);
+}
+
+/* ---------- Section card and toolbar ---------- */
+.dashboard-content .rct .jobs-section {
+  padding: 18px 20px;
+  border: 1px solid var(--rc-line);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .rct .jobs-section-header {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-content .rct .jobs-section-header h2 {
+  color: var(--rc-navy);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.dashboard-content .rct :is(.job-search, .tp-header-actions select, .tp-rows select, .app-filters select, .app-filters input:not([type="checkbox"]):not([type="radio"])) {
+  height: 42px;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background-color: #ffffff;
+  color: #000000;
+  font-size: 14px;
+}
+
+.dashboard-content .rct .job-search {
+  padding-inline-start: 38px;
+  /* Search icon drawn in the box */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-position: 12px center;
+  background-repeat: no-repeat;
+}
+
+html[dir="rtl"] .dashboard-content .rct .job-search {
+  background-position: calc(100% - 12px) center;
+}
+
+.dashboard-content .rct :is(.job-search, .tp-header-actions select, .app-filters select, .app-filters input):focus {
+  border-color: var(--rc-orange);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+/* ---------- Tables ---------- */
+.dashboard-content .rct .jobs-table-container {
+  border: 1px solid var(--rc-line);
+  border-radius: 10px;
+}
+
+/* The app centres every table cell; these lists read from the start edge */
+.dashboard-content .rct .jobs-table :is(th, td) {
+  padding: 12px 16px;
+  text-align: start !important;
+  vertical-align: middle;
+}
+
+.dashboard-content .rct .jobs-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--rc-line);
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dashboard-content .rct .jobs-table tbody td {
+  border-bottom: 1px solid #edf2f7;
+  color: var(--rc-navy);
+  font-size: 13.5px;
+}
+
+.dashboard-content .rct .jobs-table tbody td strong {
+  color: var(--rc-navy);
+  font-weight: 600;
+}
+
+.dashboard-content .rct .jobs-table tbody tr:hover td {
+  background: #fafcfe;
+}
+
+/* Rows waiting for the viewer (My Approvals) */
+.dashboard-content .rct .jobs-table tbody tr.mpr-row-awaiting td {
+  background: #fffaf3;
+}
+
+.dashboard-content .rct .jobs-table tbody tr.mpr-row-awaiting td:first-child {
+  box-shadow: inset 3px 0 0 var(--rc-orange);
+}
+
+html[dir="rtl"] .dashboard-content .rct .jobs-table tbody tr.mpr-row-awaiting td:first-child {
+  box-shadow: inset -3px 0 0 var(--rc-orange);
+}
+
+/* Numbers and dates stay on one line */
+.dashboard-content .rct .jobs-table td .ltr-text {
+  white-space: nowrap;
+}
+
+/* ---------- Buttons ---------- */
+.dashboard-content .rct .create-job-btn {
+  border-radius: 9px;
+  background: var(--rc-orange);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dashboard-content .rct .create-job-btn:hover:not(:disabled) {
+  background: var(--rc-orange-dark);
+}
+
+.dashboard-content .rct .jobs-table .job-actions .create-job-btn {
+  padding: 8px 14px;
+  border: 1px solid #fed7aa;
+  background: var(--rc-orange-soft);
+  color: var(--rc-orange-ink);
+}
+
+.dashboard-content .rct .jobs-table .job-actions .create-job-btn:hover:not(:disabled) {
+  background: var(--rc-orange);
+  color: #ffffff;
+}
+
+.dashboard-content .rct .jobs-table .employee-view-button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--rc-navy);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dashboard-content .rct .jobs-table .employee-view-button:hover {
+  border-color: var(--rc-orange);
+  background: var(--rc-orange-soft);
+  color: var(--rc-orange-ink);
+}
+
+.dashboard-content .rct :is(.create-job-btn, .employee-view-button, .job-apps-link, .recruitment-tabs button, .mpr-subtabs button):focus-visible {
+  outline: 2px solid var(--rc-orange);
+  outline-offset: 2px;
+}
+
+.dashboard-content .rct .job-apps-link {
+  color: var(--rc-orange-ink);
+}
+
+/* Pagination */
+.dashboard-content .rct .tp-page.active {
+  border-color: var(--rc-orange);
+  background: var(--rc-orange);
+  color: #ffffff;
+}
+
+/* ---------- Smaller screens ---------- */
+@media (max-width: 1000px) {
+  .rct-hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-content .recruitment-page.rct {
+    padding: 16px;
+  }
+
+  .rct-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rct-new {
+    justify-content: center;
+  }
+
+  .dashboard-content .rct .recruitment-tabs {
+    display: flex;
+  }
+
+  .dashboard-content .rct .recruitment-tabs button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .dashboard-content .rct .job-search {
+    width: 100%;
+  }
+}

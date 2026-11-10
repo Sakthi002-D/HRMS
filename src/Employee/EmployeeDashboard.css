@@ -7057,3 +7057,938 @@ html[dir="rtl"] .eset-switch.on span {
 .employee-dashboard.compact-mode .eset-row {
     padding: 8px 0;
 }
+
+/* =========================================
+   RESIGNATION (eres-*)
+   Same banner, white cards and orange accents as Settings / Change Password
+   ========================================= */
+
+.eres {
+    --er-orange: #f97316;
+    --er-orange-dark: #ea580c;
+    --er-orange-ink: #c2410c;
+    --er-orange-soft: #fff7ed;
+    --er-ink: #111827;
+    --er-navy: #042330;
+    --er-text: #64748b;
+    --er-line: #e5ebf1;
+    --er-green: #15803d;
+    --er-rose: #e11d48;
+    gap: 16px;
+}
+
+.eres .edash-hero {
+    margin-bottom: 0;
+}
+
+/* ---------- Cards ---------- */
+.eres-card {
+    min-width: 0;
+    padding: 20px 22px;
+    border: 1px solid var(--er-line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.eres-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--er-line);
+}
+
+.eres-card-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.employee-dashboard .eres-card-head h2 {
+    margin: 0;
+    color: var(--er-ink);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.employee-main .eres-card-head p {
+    margin: 3px 0 0;
+    color: var(--er-text) !important;
+    font-size: 12.5px;
+}
+
+.eres-card-icon {
+    display: grid;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--er-orange-soft);
+    color: var(--er-orange-ink);
+}
+
+.eres-card-head > .mpr-status {
+    flex: none;
+    align-self: center;
+}
+
+/* ---------- Form ---------- */
+.eres-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.eres-form {
+    display: grid;
+    gap: 18px;
+}
+
+.eres-form .eres-card-head {
+    margin-bottom: 0;
+}
+
+.eres-step {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    margin: 0;
+    padding: 0 0 18px;
+    border: 0;
+    border-bottom: 1px dashed var(--er-line);
+}
+
+.eres-step:last-of-type {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.eres-step legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 0;
+    color: var(--er-navy);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.eres-step-no {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--er-orange);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.eres-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.eres-tile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 2px 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--er-line);
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.eres-tile svg {
+    grid-row: span 3;
+    align-self: start;
+    margin-top: 2px;
+    color: var(--er-orange-ink);
+}
+
+.eres-tile span {
+    color: var(--er-text);
+    font-size: 12px;
+}
+
+.eres-tile strong {
+    color: var(--er-ink);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.employee-main .eres-tile small {
+    color: var(--er-text) !important;
+    font-size: 11.5px;
+}
+
+.eres-field {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.employee-main .eres-field > label,
+.eres-label {
+    color: var(--er-ink) !important;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.eres-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #d5e0e8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--er-ink);
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.eres-field textarea:focus,
+.eres-field .date-picker-input:focus,
+.eres-field input:focus {
+    border-color: var(--er-orange);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.employee-main .eres-hint {
+    color: var(--er-text) !important;
+    font-size: 12px;
+}
+
+.eres-counter {
+    justify-self: end;
+}
+
+.employee-main .eres-error {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #b42318 !important;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+/* Reason chips (radio buttons) */
+.eres-reasons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.employee-main .eres-reasons label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid #d5e0e8;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--er-navy) !important;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.employee-main .eres-reasons label:hover {
+    border-color: #fdba74;
+}
+
+.employee-main .eres-reasons label.on {
+    border-color: var(--er-orange);
+    background: var(--er-orange-soft);
+    color: var(--er-orange-ink) !important;
+    font-weight: 600;
+}
+
+.eres-reasons input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.eres-reasons label:has(input:focus-visible) {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .25);
+}
+
+/* Letter upload */
+.eres-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.employee-main .eres-drop {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    padding: 20px 16px;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: var(--er-navy) !important;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.employee-main .eres-drop:hover,
+.eres-field:has(.eres-file-input:focus-visible) .eres-drop {
+    border-color: var(--er-orange);
+    background: var(--er-orange-soft);
+}
+
+.eres-drop svg {
+    color: var(--er-orange-ink);
+}
+
+.eres-drop strong {
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.employee-main .eres-drop small {
+    color: var(--er-text) !important;
+    font-size: 12px;
+}
+
+.eres-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    background: var(--er-orange-soft);
+}
+
+.eres-file-icon {
+    display: grid;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--er-orange-ink);
+}
+
+.eres-file > div {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+}
+
+.eres-file strong {
+    overflow: hidden;
+    color: var(--er-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.employee-main .eres-file small {
+    color: var(--er-text) !important;
+    font-size: 12px;
+}
+
+.eres-file button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--er-text);
+    cursor: pointer;
+}
+
+.eres-file button:hover {
+    background: #ffffff;
+    color: var(--er-rose);
+}
+
+/* Acknowledgement */
+.employee-main .eres-confirm {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--er-line);
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155 !important;
+    font-size: 13.5px;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.employee-main .eres-confirm.on {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.eres-confirm input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    accent-color: var(--er-orange);
+}
+
+/* ---------- Buttons ---------- */
+.eres-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.eres-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.eres-btn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+.eres-btn.primary {
+    background: var(--er-orange);
+    color: #ffffff;
+}
+
+.eres-btn.primary:hover:not(:disabled) {
+    background: var(--er-orange-dark);
+}
+
+.eres-btn.ghost {
+    border-color: #d5e0e8;
+    background: #ffffff;
+    color: var(--er-ink);
+}
+
+.eres-btn.ghost:hover:not(:disabled) {
+    background: #f8fafc;
+}
+
+.eres-btn.soft {
+    border-color: #fed7aa;
+    background: var(--er-orange-soft);
+    color: var(--er-orange-ink);
+}
+
+.eres-btn.soft:hover:not(:disabled) {
+    background: var(--er-orange);
+    color: #ffffff;
+}
+
+.eres-btn.danger {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: var(--er-rose);
+}
+
+.eres-btn.danger:hover:not(:disabled),
+.eres-btn.danger.solid {
+    background: var(--er-rose);
+    color: #ffffff;
+}
+
+.eres-btn.danger.solid:hover:not(:disabled) {
+    background: #be123c;
+}
+
+.eres :is(.eres-btn, .eres-file button):focus-visible {
+    outline: 2px solid var(--er-orange);
+    outline-offset: 2px;
+}
+
+/* ---------- Callouts (notice, errors, previous resignation, stage line) ---------- */
+.eres-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.eres-callout svg {
+    flex: none;
+    margin-top: 2px;
+}
+
+.eres-callout strong {
+    display: block;
+    font-weight: 600;
+}
+
+.employee-main .eres-callout p {
+    margin: 2px 0 0;
+    color: inherit !important;
+}
+
+.employee-main .eres-callout.success { border-color: #bbf7d0; background: #f0fdf4; color: #166534 !important; }
+.employee-main .eres-callout.info { border-color: #bae6fd; background: #f0f9ff; color: #075985 !important; }
+.employee-main .eres-callout.warning { border-color: #fde68a; background: #fffbeb; color: #92400e !important; }
+.employee-main .eres-callout.danger { border-color: #fecaca; background: #fef2f2; color: #b42318 !important; }
+
+.eres-callout.warning .eres-field {
+    flex: 1;
+}
+
+.employee-main .eres-callout.warning .eres-field > label {
+    color: #92400e !important;
+}
+
+.employee-main .eres-loading {
+    padding: 28px;
+    border: 1px solid var(--er-line);
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--er-text) !important;
+    text-align: center;
+}
+
+/* ---------- How it works ---------- */
+.eres-how {
+    position: sticky;
+    top: 16px;
+    background: linear-gradient(170deg, #ffffff 0%, #fff7ed 100%);
+}
+
+.eres-timeline {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.eres-timeline li {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    padding-bottom: 14px;
+}
+
+.eres-timeline li:last-child {
+    padding-bottom: 0;
+}
+
+/* Line joining the numbers */
+.eres-timeline li:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 26px;
+    bottom: 2px;
+    inset-inline-start: 12px;
+    width: 2px;
+    background: #fed7aa;
+}
+
+.eres-timeline-dot {
+    display: grid;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border: 2px solid #fed7aa;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--er-orange-ink);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.eres-timeline li > div {
+    display: grid;
+    gap: 1px;
+    padding-top: 3px;
+}
+
+.eres-timeline strong {
+    color: var(--er-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.employee-main .eres-timeline small {
+    color: var(--er-text) !important;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+/* ---------- Status ---------- */
+.eres-status {
+    display: grid;
+    gap: 16px;
+}
+
+.eres-summary {
+    display: grid;
+    gap: 16px;
+}
+
+.eres-summary .eres-card-head {
+    margin-bottom: 0;
+}
+
+.eres-progress {
+    overflow-x: auto;
+    padding: 4px 2px 2px;
+}
+
+.eres-progress .hiring-steps {
+    margin: 0;
+}
+
+/* Orange steps instead of the recruitment blue */
+.eres .hiring-step.done::before,
+.eres .hiring-step.current::before { background: var(--er-orange); }
+.eres .hiring-step.done .hiring-step-dot { border-color: var(--er-orange); background: var(--er-orange); color: #ffffff; }
+.eres .hiring-step.current .hiring-step-dot { border-color: var(--er-orange); color: var(--er-orange-ink); box-shadow: 0 0 0 5px rgba(249, 115, 22, .16); }
+.eres .hiring-step.current .hiring-step-label { color: var(--er-navy); }
+
+.eres-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.eres-fact {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--er-line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.eres-fact-icon {
+    display: grid;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--er-orange-soft);
+    color: var(--er-orange-ink);
+}
+
+.eres-fact > div {
+    display: grid;
+    flex: 1;
+    gap: 2px;
+    min-width: 0;
+}
+
+.eres-fact span {
+    color: var(--er-text);
+    font-size: 12px;
+}
+
+.eres-fact strong {
+    color: var(--er-ink);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.eres-fact.urgent {
+    border-color: #fecaca;
+    background: #fff5f5;
+}
+
+.eres-fact.urgent .eres-fact-icon {
+    background: #fee2e2;
+    color: #b42318;
+}
+
+.eres-fact.urgent strong {
+    color: #b42318;
+}
+
+.eres-meter {
+    display: block;
+    height: 6px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #f1f5f9;
+}
+
+.eres-meter b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--er-orange);
+    transition: width .3s ease;
+}
+
+.eres-fact.urgent .eres-meter b {
+    background: #dc2626;
+}
+
+.eres-status-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.eres-status-grid:has(.eres-withdraw) {
+    grid-template-columns: minmax(0, 1.8fr) minmax(250px, 1fr);
+}
+
+.eres-status-main {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.eres-net {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin: 0 0 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #f0fdf4;
+}
+
+.eres-net span {
+    color: #166534;
+    font-size: 13px;
+}
+
+.eres-net strong {
+    color: #166534;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.eres-net.owes {
+    background: #fef2f2;
+}
+
+.eres-net.owes :is(span, strong) {
+    color: #b42318;
+}
+
+.eres-downloads {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.eres-withdraw {
+    position: sticky;
+    top: 16px;
+    border-color: #fecdd3;
+}
+
+.eres-withdraw .eres-card-icon {
+    background: #fff1f2;
+    color: var(--er-rose);
+}
+
+.eres-withdraw > .eres-btn {
+    width: 100%;
+}
+
+.eres-confirm-box {
+    display: grid;
+    gap: 8px;
+    outline: 0;
+}
+
+.eres-confirm-box h3 {
+    margin: 0;
+    color: #b42318;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.employee-main .eres-confirm-box p {
+    margin: 0;
+    color: #334155 !important;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.eres-confirm-box .eres-actions {
+    margin-top: 6px;
+}
+
+/* Early release note and tracking log from the shared resignation components */
+.eres .resignation-early-note,
+.eres .resignation-log-scroll {
+    margin: 0;
+}
+
+/* ---------- Tabs (approvers) ---------- */
+.eres-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-self: flex-start;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--er-line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.eres-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--er-navy);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.eres-tabs button:hover {
+    background: #f8fafc;
+}
+
+.eres-tabs button.active {
+    background: var(--er-orange);
+    color: #ffffff;
+}
+
+.eres-tabs.small button {
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.eres-count {
+    display: inline-grid;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    place-items: center;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #b42318;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.eres-tabs button.active .eres-count {
+    background: #ffffff;
+    color: var(--er-orange-ink);
+}
+
+/* Approval lists keep their tables; give them the same card frame */
+.eres-approvals .jobs-section,
+.eres-approvals .resignation-card {
+    border: 1px solid var(--er-line);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.eres-approvals .jobs-section {
+    overflow: hidden;
+}
+
+.employee-main .eres-approvals .resignation-empty {
+    border-color: var(--er-line);
+    color: var(--er-text) !important;
+    text-align: center;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 1100px) {
+    .eres-layout,
+    .eres-status-grid:has(.eres-withdraw) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eres-how,
+    .eres-withdraw {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .eres-card {
+        padding: 16px;
+    }
+
+    .eres-tiles {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .eres-actions .eres-btn {
+        flex: 1 1 auto;
+    }
+
+    .eres-tabs {
+        align-self: stretch;
+    }
+
+    .eres-tabs button {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Settings > Compact cards */
+.employee-dashboard.compact-mode :is(.eres-card, .eres-fact) {
+    padding: 14px 16px;
+}
+
+.employee-dashboard.compact-mode :is(.eres-status, .eres-status-main, .eres-layout) {
+    gap: 10px;
+}

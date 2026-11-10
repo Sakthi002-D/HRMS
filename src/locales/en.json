@@ -974,6 +974,26 @@
     }
   },
   "resignation": {
+    "how": {
+      "title": "How it works",
+      "hint": "You'll be notified at every step",
+      "step0": "You choose your last working day and give a reason",
+      "step1": "Your Line Manager reviews the request",
+      "step2": "HR accepts the resignation",
+      "step3": "You serve your notice and hand over your work",
+      "step4": "Departments clear your assets and dues",
+      "step5": "HR and Finance prepare your final settlement",
+      "step6": "Experience and relieving letters are issued",
+      "step7": "Your exit is complete"
+    },
+    "hero": {
+      "notice": "Notice period {{days}}",
+      "route": "Line Manager → HR"
+    },
+    "clearance": {
+      "yourItems": "Your clearance items",
+      "yourItemsHint": "Return assets and settle dues with each department"
+    },
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "servingNotice": "Serving notice – {{days}} remaining. Last working day: {{date}}",
@@ -984,6 +1004,13 @@
       "approvals": "My Approvals"
     },
     "form": {
+      "stepDates": "Notice & last working day",
+      "stepReason": "Reason",
+      "stepLetter": "Letter & confirmation",
+      "noticeEndsLabel": "Notice ends",
+      "chooseLetter": "Choose a file to upload",
+      "removeLetter": "Remove letter",
+      "submitResignation": "Submit Resignation",
       "title": "Submit Resignation",
       "subtitle": "Your resignation goes to your Line Manager, then HR.",
       "resignationDate": "Resignation Date",
@@ -1017,6 +1044,9 @@
       "confirmRequired": "Please confirm to continue"
     },
     "status": {
+      "noticeServed": "{{percent}}% of notice served",
+      "changedMind": "Changed your mind?",
+      "withdrawHint": "You can withdraw until HR accepts it",
       "heading": "Resignation {{number}}",
       "submittedOn": "Submitted on {{date}}",
       "reason": "Reason",
@@ -1740,6 +1770,7 @@
       "title": "Tracking details"
     },
     "mpr": {
+      "newButtonShort": "New Manpower Request",
       "applicationPeriod": "Application Period",
       "budget": "Budget",
       "cannotRaise": "Only HR or a Department Coordinator can raise a Manpower Request. Ask HR to assign you in Settings → Approval Workflows.",
@@ -1755,6 +1786,7 @@
       "untitled": "Untitled"
     },
     "page": {
+      "kicker": "Talent acquisition",
       "departments": "Departments",
       "newCount": "{{number}} new",
       "newNotReviewed": "{{number}} new (not reviewed)",
@@ -2064,6 +2096,14 @@
     }
   },
   "hrResignations": {
+    "kicker": "Employee exits",
+    "stagesLabel": "Resignation stages",
+    "showing": "Showing {{count}} of {{total}} resignations",
+    "stats": {
+      "open": "Open cases",
+      "needsHr": "Waiting for HR",
+      "leavingSoon": "Leaving in {{count}} days"
+    },
     "title": "Resignations",
     "subtitle": "Manage employee resignation requests",
     "searchPlaceholder": "Search name or employee ID",
@@ -2082,6 +2122,8 @@
       "closed": "Rejected / Withdrawn"
     },
     "table": {
+      "notice": "{{days}} notice",
+      "early": "Early release",
       "resignationNo": "Resignation No",
       "earlyRelease": "Early Release",
       "none": "No resignations yet.",

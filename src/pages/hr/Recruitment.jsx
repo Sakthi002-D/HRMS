@@ -5,7 +5,7 @@ import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
 import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
 import JobApplications from "../../components/recruitment/JobApplications";
 import Hiring from "../../components/recruitment/Hiring";
-import { Building2, Briefcase, Clock3, UserPlus } from "lucide-react";
+import { Building2, Briefcase, Clock3, Plus, UserPlus } from "lucide-react";
 import { usePagination, RowsPerPage, Pagination } from "../../components/common/TablePagination";
 import {
     api,
@@ -145,63 +145,38 @@ function Recruitment() {
 
     return (
         <DashboardLayout>
-            <div className="recruitment-page">
+            <div className="recruitment-page rct">
 
-                {/* Title, New MPR button and stat cards: not on Job Applications (it has its own cards).
-                    The summary stays in state, so the cards show instantly when switching back. */}
-                {activeTab !== "applications" && activeTab !== "hiring" && (
-                <>
-                <div className="recruitment-header">
-                    <div>
+                {/* Banner on every tab. The summary numbers show on Manpower Requests and Job Openings;
+                    Job Applications and Hiring have their own cards. The summary stays in state,
+                    so the numbers show instantly when switching back. */}
+                <header className="rct-hero">
+                    <div className="rct-hero-copy">
+                        <span className="rct-kicker">{t("recruitment.page.kicker", { defaultValue: "Talent acquisition" })}</span>
                         <h1>{t("menu.recruitment", { defaultValue: "Recruitment" })}</h1>
                         <p>{t("recruitment.page.subtitle", { defaultValue: "Manage manpower requests, job openings and recruitment activities" })}</p>
                     </div>
-
-                    <button
-                        className="create-job-btn"
-                        onClick={openNewManpowerRequest}
-                    >
-                        {t("recruitment.mpr.newButton", { defaultValue: "+ New Manpower Request" })}
+                    <button type="button" className="rct-new" onClick={openNewManpowerRequest}>
+                        <Plus size={17} aria-hidden="true" />
+                        {t("recruitment.mpr.newButtonShort", { defaultValue: "New Manpower Request" })}
                     </button>
-                </div>
-
-                <div className="recruitment-cards four">
-
-                    <div className="recruitment-card">
-                        <Clock3 className="recruitment-stat-icon pending" size={20} aria-hidden="true" />
-                        <div className="recruitment-card-content">
-                            <span>{t("recruitment.page.pendingMprApprovals", { defaultValue: "Pending MPR Approvals" })}</span>
-                            <strong>{summary?.pending_mpr_approvals ?? "—"}</strong>
+                    {activeTab !== "applications" && activeTab !== "hiring" && (
+                        <div className="rct-hero-stats">
+                            {[
+                                [Clock3, t("recruitment.page.pendingMprApprovals", { defaultValue: "Pending MPR Approvals" }), summary?.pending_mpr_approvals],
+                                [Briefcase, t("recruitment.page.openJobs", { defaultValue: "Open Jobs" }), summary?.open_jobs],
+                                [UserPlus, t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" }), summary?.open_positions],
+                                [Building2, t("recruitment.page.departments", { defaultValue: "Departments" }), summary?.departments],
+                            ].map(([Icon, label, value]) => (
+                                <div key={label}>
+                                    <Icon size={16} aria-hidden="true" />
+                                    <strong>{value ?? "—"}</strong>
+                                    <span>{label}</span>
+                                </div>
+                            ))}
                         </div>
-                    </div>
-
-                    <div className="recruitment-card">
-                        <Briefcase className="recruitment-stat-icon jobs" size={20} aria-hidden="true" />
-                        <div className="recruitment-card-content">
-                            <span>{t("recruitment.page.openJobs", { defaultValue: "Open Jobs" })}</span>
-                            <strong>{summary?.open_jobs ?? "—"}</strong>
-                        </div>
-                    </div>
-
-                    <div className="recruitment-card">
-                        <UserPlus className="recruitment-stat-icon positions" size={20} aria-hidden="true" />
-                        <div className="recruitment-card-content">
-                            <span>{t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" })}</span>
-                            <strong>{summary?.open_positions ?? "—"}</strong>
-                        </div>
-                    </div>
-
-                    <div className="recruitment-card">
-                        <Building2 className="recruitment-stat-icon departments" size={20} aria-hidden="true" />
-                        <div className="recruitment-card-content">
-                            <span>{t("recruitment.page.departments", { defaultValue: "Departments" })}</span>
-                            <strong>{summary?.departments ?? "—"}</strong>
-                        </div>
-                    </div>
-
-                </div>
-                </>
-                )}
+                    )}
+                </header>
 
                 <div className="recruitment-tabs" role="tablist">
                     {TABS.map((tab) => (

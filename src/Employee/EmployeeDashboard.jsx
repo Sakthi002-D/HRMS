@@ -1237,7 +1237,7 @@ function EmployeeDashboard() {
                             </div>
                         </div>
                     </header>
-                ) : !["profile", "attendance", "leave", "documents", "settings", "change-password"].includes(activeSection) && (
+                ) : !["profile", "attendance", "leave", "documents", "settings", "change-password", "resignation"].includes(activeSection) && (
                     // These pages have their own dark banner, same as the HR pages
                     <header className="employee-header">
                         <div>
@@ -1254,7 +1254,8 @@ function EmployeeDashboard() {
                     </header>
                 )}
 
-                {servingNotice && (
+                {/* The Resignation page shows the same dates in its own banner */}
+                {servingNotice && activeSection !== "resignation" && (
                     <div className="resignation-banner employee-resignation-banner" role="status">
                         {t("resignation.servingNotice", { days: daysLabel(activeResignation.days_remaining), date: formatResignationDate(activeResignation.last_working_day), defaultValue: "Serving notice – {{days}} remaining. Last working day: {{date}}" })}
                         <button type="button" onClick={() => setActiveSection("resignation")}>{t("resignation.viewResignation", { defaultValue: "View resignation" })}</button>
@@ -1460,6 +1461,8 @@ function EmployeeDashboard() {
                         error={resignationError}
                         onReload={() => { fetchResignation(employee.employee_id); fetchEmployeeNotifications(employee.employee_id); }}
                         onCancel={() => setActiveSection("dashboard")}
+                        unreadNotifications={unreadNotifications}
+                        onOpenNotifications={() => setActiveSection("notifications")}
                     />
                 )}
                 {activeSection === "notifications" && (
