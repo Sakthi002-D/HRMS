@@ -728,7 +728,10 @@ const fetchAttendance = async () => {
                                     <td>
                                         <div className="attendance-person">
                                             <span className="hr-att-avatar" aria-hidden="true">{initialsOf(employee.employeeName)}</span>
-                                            <span className="attendance-person-name">{employee.employeeName}</span>
+                                            <span className="attendance-person-text">
+                                                <span className="attendance-person-name">{employee.employeeName}</span>
+                                                {employee.department && <span className="attendance-person-dept">{employee.department}</span>}
+                                            </span>
                                         </div>
                                     </td>
 

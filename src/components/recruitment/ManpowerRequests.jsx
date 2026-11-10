@@ -1,6 +1,6 @@
 // Manpower Requests: list, "My Approvals", form and detail.
 // Used on the HR Recruitment page and in the Employee portal (coordinators and approvers).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
@@ -10,11 +10,44 @@ import { Eye } from "lucide-react";
 import { usePagination, RowsPerPage, Pagination } from "../common/TablePagination";
 import { api, formatDateRange, mprStatusLabel, notifyMprsChanged, recruitmentValueLabel, statusTone } from "./recruitmentApi";
 
+// Search, sub-tab, rows per page and page are remembered for this browser tab (sessionStorage),
+// so they come back after switching tabs or visiting another page. Saved separately per user.
+const MPR_LIST_STATE_KEY = "mprListState";
+const PAGE_SIZES = [10, 25, 50];
+
+const readMprListState = (actorId) => {
+    const fallback = { scope: "all", search: "", pageSize: 10, page: 1 };
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(`${MPR_LIST_STATE_KEY}:${actorId}`) || "null");
+        if (!saved) return fallback;
+        return {
+            scope: saved.scope === "approvals" ? "approvals" : "all",
+            search: typeof saved.search === "string" ? saved.search : "",
+            pageSize: PAGE_SIZES.includes(saved.pageSize) ? saved.pageSize : 10,
+            page: Number.isInteger(saved.page) && saved.page > 0 ? saved.page : 1,
+        };
+    } catch {
+        return fallback;
+    }
+};
+
+const saveMprListState = (actorId, state) => {
+    try {
+        sessionStorage.setItem(`${MPR_LIST_STATE_KEY}:${actorId}`, JSON.stringify(state));
+    } catch {
+        // Storage blocked (private mode): the list still works, it just isn't remembered
+    }
+};
+
 function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, showNewButton = true }) {
     const { t } = useTranslation();
     const [meta, setMeta] = useState(null);
     const [metaError, setMetaError] = useState("");
-    const [scope, setScope] = useState("all");
+    const [savedListState] = useState(() => readMprListState(actorId));
+    const [scope, setScope] = useState(savedListState.scope);
+    const [search, setSearch] = useState(savedListState.search);
+    // Page to return to once the list has loaded (null = already restored)
+    const pendingPageRef = useRef(savedListState.page);
     const [version, setVersion] = useState(0);
     const [lists, setLists] = useState({ key: null, all: [], approvals: [] });
     const [selectedId, setSelectedId] = useState(null);
@@ -65,11 +98,51 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
         refresh();
     };
     const rows = scope === "approvals" ? lists.approvals : lists.all;
-    const pager = usePagination(rows);
-    const { setPage } = pager;
+
+    // Search: MPR no, job title, department, project, request type, status and raised by
+    const searchText = search.trim().toLowerCase();
+    const visibleRows = searchText
+        ? rows.filter((mpr) =>
+            [
+                mpr.mpr_no,
+                mpr.title,
+                mpr.department,
+                mpr.project_name,
+                mpr.request_type,
+                recruitmentValueLabel("requestType", mpr.request_type),
+                mpr.status,
+                mprStatusLabel(mpr.status),
+                mpr.requested_by_name,
+                mpr.requested_by,
+            ]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(searchText))
+        )
+        : rows;
+
+    const pager = usePagination(visibleRows, savedListState.pageSize);
+    const { page, pageSize, setPage } = pager;
 
     // Switching between "Manpower Requests" and "My Approvals" goes back to page 1
     useEffect(() => { setPage(1); }, [scope, setPage]);
+
+    // Coming back to this tab or page: return to the saved page once the list has loaded
+    const listLoaded = lists.key === listKey;
+    useEffect(() => {
+        if (!listLoaded || pendingPageRef.current === null) return;
+        setPage(pendingPageRef.current);
+        pendingPageRef.current = null;
+    }, [listLoaded, setPage]);
+
+    // Remember search, sub-tab, rows per page and page
+    useEffect(() => {
+        saveMprListState(actorId, {
+            scope,
+            search,
+            pageSize,
+            page: pendingPageRef.current ?? page,
+        });
+    }, [actorId, scope, search, pageSize, page]);
 
     if (metaError) return <p className="mpr-form-error">{metaError}</p>;
     if (!meta) return <p className="mpr-muted">{t("recruitment.mpr.loadingList", { defaultValue: "Loading manpower requests..." })}</p>;
@@ -109,6 +182,17 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                         </button>
                     </div>
                     <div className="tp-header-actions">
+                        <input
+                            type="search"
+                            className="job-search"
+                            placeholder={t("recruitment.mpr.searchPlaceholder", { defaultValue: "Search MPR no, job title, department..." })}
+                            aria-label={t("recruitment.mpr.searchLabel", { defaultValue: "Search manpower requests" })}
+                            value={search}
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setPage(1);
+                            }}
+                        />
                         <RowsPerPage value={pager.pageSize} onChange={pager.setPageSize} />
                         {showNewButton && meta.canRaise && !formVisible && (
                             <button type="button" className="create-job-btn" onClick={() => setFormOpen(true)}>
@@ -138,12 +222,14 @@ function ManpowerRequests({ actorId, formOpen, onFormOpenChange, onChanged, show
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="10">{t("recruitment.common.loading", { defaultValue: "Loading..." })}</td></tr>
-                            ) : rows.length === 0 ? (
+                            ) : visibleRows.length === 0 ? (
                                 <tr>
                                     <td colSpan="10">
-                                        {scope === "approvals"
-                                            ? t("recruitment.mpr.nothingToApprove", { defaultValue: "Nothing is waiting for your approval." })
-                                            : t("recruitment.mpr.noRequests", { defaultValue: "No manpower requests yet." })}
+                                        {rows.length > 0
+                                            ? t("recruitment.mpr.noSearchResults", { defaultValue: "No manpower requests match your search." })
+                                            : scope === "approvals"
+                                                ? t("recruitment.mpr.nothingToApprove", { defaultValue: "Nothing is waiting for your approval." })
+                                                : t("recruitment.mpr.noRequests", { defaultValue: "No manpower requests yet." })}
                                     </td>
                                 </tr>
                             ) : pager.pageItems.map((mpr) => (

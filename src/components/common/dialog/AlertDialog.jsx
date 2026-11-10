@@ -1,6 +1,7 @@
 // The app's message dialog ("Please check" / "Success"): icon, title, message and an OK button.
-import { useId, useRef } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { closeAllMenus } from "./closeMenus";
 import { DIALOG_ICONS } from "./dialogContext";
 import useDialogFocus from "./useDialogFocus";
 import useScrollLock from "./useScrollLock";
@@ -15,6 +16,11 @@ function AlertDialog({ open, onClose, variant = "danger", title, message, button
 
     useDialogFocus(open, { dialogRef, initialFocusRef: buttonRef, onEscape: onClose });
     useScrollLock(open);
+
+    // Close any open dropdown menu before the dialog is painted
+    useLayoutEffect(() => {
+        if (open) closeAllMenus();
+    }, [open]);
 
     if (!open) return null;
 

@@ -2,11 +2,17 @@
 import { useMemo, useRef, useState } from "react";
 import { Award, BriefcaseBusiness, FileText, GraduationCap, Plus, Trash2, Upload } from "lucide-react";
 import DatePicker from "../layout/common/DatePicker";
+import CustomOptionSelect from "../recruitment/CustomOptionSelect";
+import "../recruitment/recruitment.css";
 import SkillTagInput from "./SkillTagInput";
 import {
     COUNTRIES,
+    CUSTOM_QUALIFICATIONS_KEY,
     CV_ACCEPT,
     PHONE_CODES,
+    qualificationOptions,
+    SCHOOL_OPTION,
+    SCHOOL_STANDARDS,
     splitSkills,
     submitApplication,
     toPayload,
@@ -21,7 +27,7 @@ const initialForm = (meta) => ({
     candidate_type: "",
     full_name: "", email: "", phone_code: "+974", phone: "", date_of_birth: "", gender: "", nationality: "",
     current_city: "", current_country: "", in_qatar: "", visa_status: "", willing_to_relocate: "",
-    highest_qualification: "", institution: "", year_of_passing: "", percentage_cgpa: "",
+    highest_qualification: "", school_standard: "", institution: "", year_of_passing: "", percentage_cgpa: "",
     key_skills: [], linkedin_url: "", cover_letter: "",
     source: "", agency_id: "", referrer: "", consent: false,
     internships_projects: "", certifications: "", available_from: "",
@@ -82,12 +88,14 @@ function CareerApplicationForm({ job, meta, onCancel, onClosed, onSubmitted }) {
     const [errors, setErrors] = useState({});
     const [showErrors, setShowErrors] = useState(false);
     const [formError, setFormError] = useState("");
+    const [qualificationError, setQualificationError] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const formRef = useRef(null);
 
     const today = meta.today;
     const thisYear = Number(today.slice(0, 4));
     const jobSkills = useMemo(() => splitSkills(job.skills).slice(0, 12), [job.skills]);
+    const qualifications = useMemo(() => qualificationOptions(meta.qualifications), [meta.qualifications]);
     const isFresher = form.candidate_type === "Fresher";
     const isExperienced = form.candidate_type === "Experienced";
 
@@ -264,12 +272,30 @@ function CareerApplicationForm({ job, meta, onCancel, onClosed, onSubmitted }) {
                     <section className="career-form-section">
                         <h2>4. Education</h2>
                         <div className="career-grid">
-                            <Field label="Highest qualification" field="highest_qualification" required error={err("highest_qualification")}>
-                                <select id="highest_qualification" value={form.highest_qualification} onChange={set("highest_qualification")}>
-                                    <option value="">Select</option>
-                                    {meta.qualifications.map((option) => <option key={option}>{option}</option>)}
-                                </select>
-                            </Field>
+                            <div className="career-qualification">
+                                <Field label="Highest qualification" field="highest_qualification" required error={qualificationError || err("highest_qualification")}>
+                                    <CustomOptionSelect
+                                        id="highest_qualification"
+                                        menuClassName="career-option-menu"
+                                        value={form.highest_qualification}
+                                        onChange={(value) => update({ highest_qualification: value, school_standard: value === SCHOOL_OPTION ? form.school_standard : "" })}
+                                        options={qualifications}
+                                        storageKey={CUSTOM_QUALIFICATIONS_KEY}
+                                        placeholder="Select"
+                                        otherPlaceholder="Enter qualification"
+                                        itemLabel="qualification"
+                                        onError={setQualificationError}
+                                    />
+                                </Field>
+                                {form.highest_qualification === SCHOOL_OPTION && (
+                                    <Field label="Standard" field="school_standard" required error={err("school_standard")}>
+                                        <select id="school_standard" value={form.school_standard} onChange={set("school_standard")}>
+                                            <option value="">Select</option>
+                                            {SCHOOL_STANDARDS.map((option) => <option key={option}>{option}</option>)}
+                                        </select>
+                                    </Field>
+                                )}
+                            </div>
                             <Field label="Institution" field="institution" required error={err("institution")}>
                                 <input id="institution" value={form.institution} onChange={set("institution")} maxLength={160} />
                             </Field>

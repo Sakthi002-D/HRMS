@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Briefcase, BriefcaseBusiness, CalendarDays, ChevronDown, ChevronsUpDown, Clock3, FileText, FolderKanban, GraduationCap, Landmark, Mail, MapPin, Network, Pencil, UsersRound } from "lucide-react";
+import { Bell, Briefcase, BriefcaseBusiness, CalendarDays, ChevronDown, ChevronsUpDown, Clock3, FileText, FolderKanban, GraduationCap, Landmark, Mail, MapPin, Network, Pencil, UsersRound } from "lucide-react";
 import EmployeeEditPage from "../pages/hr/EmployeeEditPage";
 import { serviceLength } from "../pages/hr/employeeProfileData";
 import EmployeeProjectList from "../pages/hr/EmployeeProjectList";
 import "../pages/hr/EmployeeDetails.css";
 
-function EmployeeProfile({ employee, profilePanels, toggleProfilePanel, setProfilePanels, profileWorkTab, setProfileWorkTab, onSaved, formatProfileDate }) {
+function EmployeeProfile({ employee, profilePanels, toggleProfilePanel, setProfilePanels, profileWorkTab, setProfileWorkTab, onSaved, formatProfileDate, unreadNotifications, onOpenNotifications }) {
     const { t } = useTranslation();
     const [editing, setEditing] = useState(false);
     const qid = String(employee.employee_id || "").replace(/^EMP/i, "").padStart(3, "0");
@@ -92,19 +92,6 @@ function EmployeeProfile({ employee, profilePanels, toggleProfilePanel, setProfi
         <section className="employee-profile-view epf-host">
             <div className="employee-details-page epf">
                 <header className="epf-hero">
-                    <div className="epf-hero-top epf-hero-top--end">
-                        <button
-                            type="button"
-                            className="epf-ghost"
-                            onClick={() => setProfilePanels(Object.fromEntries(Object.keys(profilePanels).map((key) => [key, !anyPanelOpen])))}
-                            aria-label={p("toggleAll", "Expand or collapse all employee details")}
-                        >
-                            <ChevronsUpDown size={16} aria-hidden="true" />
-                            {anyPanelOpen
-                                ? t("employeeDetails.edit.collapseAll", { defaultValue: "Collapse all" })
-                                : t("employeeDetails.edit.expandAll", { defaultValue: "Expand all" })}
-                        </button>
-                    </div>
                     <div className="epf-hero-main">
                         <div className="epf-avatar">
                             {employee.profile_photo ? <img src={employee.profile_photo} alt={employee.name} /> : initials}
@@ -119,6 +106,17 @@ function EmployeeProfile({ employee, profilePanels, toggleProfilePanel, setProfi
                             </div>
                         </div>
                         <div className="epf-actions">
+                            <button
+                                type="button"
+                                className="epf-ghost"
+                                onClick={() => setProfilePanels(Object.fromEntries(Object.keys(profilePanels).map((key) => [key, !anyPanelOpen])))}
+                                aria-label={p("toggleAll", "Expand or collapse all employee details")}
+                            >
+                                <ChevronsUpDown size={16} aria-hidden="true" />
+                                {anyPanelOpen
+                                    ? t("employeeDetails.edit.collapseAll", { defaultValue: "Collapse all" })
+                                    : t("employeeDetails.edit.expandAll", { defaultValue: "Expand all" })}
+                            </button>
                             <button type="button" className="epf-primary" onClick={() => setEditing(true)}>
                                 <Pencil size={15} aria-hidden="true" />
                                 {p("editInfo", "Edit Info")}
@@ -129,6 +127,10 @@ function EmployeeProfile({ employee, profilePanels, toggleProfilePanel, setProfi
                                     {p("message", "Message")}
                                 </a>
                             )}
+                            <button type="button" className="edash-hero-bell" onClick={onOpenNotifications} aria-label={t("employeeNotifications.openNotifications", { defaultValue: "Open notifications" })}>
+                                <Bell size={22} />
+                                {unreadNotifications > 0 && <span className="edash-hero-bell-count">{unreadNotifications > 9 ? "9+" : unreadNotifications}</span>}
+                            </button>
                         </div>
                     </div>
                     <div className="epf-stats">

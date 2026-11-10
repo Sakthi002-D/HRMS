@@ -229,3 +229,486 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* =========================================
+   PROFESSIONAL TABLE (same as the Employees list):
+   light header, left-aligned, quiet rows. Overrides index.css for this table only.
+   ========================================= */
+
+.dashboard-content .leave-page.lm-v2 .leave-table {
+  border-collapse: collapse;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-table thead th {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0 !important;
+  background: #f3f5f8 !important;
+  color: #111827 !important;
+  font-size: 14px !important;
+  font-weight: 600;
+  text-align: start !important;
+  white-space: nowrap;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef0f3;
+  color: #374151 !important;
+  font-size: 14.5px;
+  text-align: start !important;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-table .employee-id span {
+  color: #111827 !important;
+  font-weight: 500;
+}
+
+/* Name: avatar, name, department underneath */
+.dashboard-content .leave-page.lm-v2 .leave-person {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 13px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-person .employee-name-btn,
+.dashboard-content .leave-page.lm-v2 .leave-person-name {
+  max-width: 240px;
+  color: #111827 !important;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-person-dept {
+  color: #6b7280 !important;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Days as plain text */
+.dashboard-content .leave-page.lm-v2 .leave-days-pill {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+/* Export: Excel / PDF open as a drop-down under the button (they had no styles and sat beside it) */
+.dashboard-content .leave-page.lm-v2 .leave-header-actions {
+  align-items: center;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-export-menu {
+  position: relative;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-export-options {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  display: grid;
+  min-width: 150px;
+  padding: 6px;
+  border: 1px solid #e3ecf2;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(17, 22, 31, .18);
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-export-options button {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #042330;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-export-options button:hover {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+/* =========================================
+   LEAVE POLICY SETUP — same look as the rest of the app
+   (banner-coloured heading, orange actions and steps, white inputs, light tables)
+   ========================================= */
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel {
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17, 22, 31, .06);
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-heading {
+  padding: 20px 24px;
+  border-radius: 0;
+  background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-heading h2 {
+  font-size: 21px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 18px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-body {
+  gap: 14px;
+  padding: 20px 24px 6px;
+  background: #f8fafc;
+}
+
+/* Each step is a white card with a clear title row */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-section {
+  padding: 18px 20px;
+  border: 1px solid #e3ecf2;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-section h3 {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f6;
+  font-size: 16px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-section .leave-holiday-heading {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-section .leave-holiday-heading h3 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-step {
+  width: 26px;
+  height: 26px;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 12.5px;
+}
+
+/* Fields */
+.dashboard-content .leave-page.lm-v2 .leave-policy-fields label {
+  gap: 6px;
+  font-size: 13px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel :is(input, select) {
+  min-height: 40px;
+  border: 1px solid #d5e0e8 !important;
+  border-radius: 9px;
+  background-color: #ffffff !important;
+  color: #111827;
+  font-size: 14px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel :is(input, select):focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14) !important;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-fields span,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-grade-row span {
+  color: #6b7280;
+  font-size: 12.5px;
+}
+
+/* Leave types: neutral chips; added types outlined in orange */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-type-list {
+  gap: 8px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-type-list span {
+  padding: 7px 13px;
+  border: 1px solid #e3ecf2;
+  background: #f8fafc;
+  color: #042330;
+  font-weight: 500;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-type-list span.is-custom {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-type-list button {
+  background: transparent;
+  color: #9ca3af;
+  font-size: 15px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-type-list button:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Buttons: orange for the main action, orange outline for 'add' actions */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-add-type button,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-save,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-footer button,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-d365-sync-btn {
+  border: 1px solid #f97316;
+  border-radius: 9px;
+  background: #f97316;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-add-type button:hover:not(:disabled),
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-save:hover:not(:disabled),
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-footer button:hover:not(:disabled),
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-d365-sync-btn:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-add-grade {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px dashed #f97316;
+  border-radius: 9px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-add-grade:hover:not(:disabled) {
+  border-style: solid;
+  background: #ffedd5;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-cancel {
+  border: 1px solid #d5e0e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #042330;
+}
+
+/* Grade table and per-grade rows */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-grades {
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-grade-bands {
+  max-width: 460px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-grade-bands :is(th, td) {
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid #eef0f3;
+  text-align: start !important;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-grade-bands thead th {
+  background: #f3f5f8 !important;
+  color: #111827 !important;
+  font-size: 13px !important;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-grade-bands tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-grade-row {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border: 1px solid #eef2f6;
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-grade-row button,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-edit-row button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #dc2626;
+}
+
+/* Rules summary */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-rules {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-inline-start: 3px solid #f97316;
+  border-radius: 10px;
+  background: #fffaf5;
+}
+
+/* Holiday calendars */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-list {
+  gap: 8px;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-row {
+  padding: 11px 14px;
+  border: 1px solid #eef0f3;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-row b {
+  color: #c2410c;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-note,
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-holiday-warning {
+  border-radius: 9px;
+}
+
+/* Footer */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e3ecf2;
+  background: #ffffff;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-footer button {
+  min-width: 130px;
+  height: 42px;
+}
+
+/* =========================================
+   LEAVE POLICY — each step opens and closes like a dropdown
+   ========================================= */
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-acc {
+  padding: 0;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-panel .leave-policy-acc.is-open {
+  border-color: #fed7aa;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, .08);
+}
+
+.leave-policy-acc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline-end: 16px;
+}
+
+.leave-policy-acc.is-open .leave-policy-acc-head {
+  border-bottom: 1px solid #eef2f6;
+}
+
+.dashboard-content .leave-page.lm-v2 .leave-policy-acc-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.leave-policy-acc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.leave-policy-acc-toggle:hover {
+  background: #fffaf5;
+}
+
+.leave-policy-acc-toggle:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: -2px;
+}
+
+.leave-policy-acc-title {
+  color: #042330;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.leave-policy-acc-summary {
+  margin-inline-start: auto;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.leave-policy-acc-chevron {
+  flex: none;
+  color: #64748b;
+  transition: transform .2s ease;
+}
+
+.leave-policy-acc-summary + .leave-policy-acc-chevron {
+  margin-inline-start: 4px;
+}
+
+.leave-policy-acc-title + .leave-policy-acc-chevron {
+  margin-inline-start: auto;
+}
+
+.leave-policy-acc.is-open .leave-policy-acc-chevron {
+  transform: rotate(180deg);
+  color: #f97316;
+}
+
+.leave-policy-acc-body {
+  padding: 16px 20px 18px;
+}
+
+@media (max-width: 640px) {
+  .leave-policy-acc-summary {
+    display: none;
+  }
+
+  .leave-policy-acc-head {
+    flex-wrap: wrap;
+    padding-inline-end: 0;
+  }
+
+  .leave-policy-acc-head > :not(h3) {
+    margin: 0 20px 12px;
+  }
+}

@@ -170,7 +170,8 @@ test("pullD365Changes logs every step with timings and omits unneeded name field
         assert.ok(select.includes("PrimaryContactPhone"));
         assert.equal(/FirstName|MiddleName|LastName/.test(select), false);
         // one batched load instead of one SELECT per employee
-        assert.equal(pool.calls.filter((call) => call.sql.startsWith("SELECT employee_id, name")).length, 1);
+        // (the new-worker check reads id/name/email/phone once; the linked-employee load is the wider SELECT)
+        assert.equal(pool.calls.filter((call) => call.sql.startsWith("SELECT employee_id, name, email, phone, gender")).length, 1);
         assert.equal(pool.calls.filter((call) => call.sql.startsWith("UPDATE employees")).length, 1);
     });
 });

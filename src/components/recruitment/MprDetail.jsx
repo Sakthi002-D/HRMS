@@ -13,6 +13,7 @@ import {
     formatMoney,
     getCompanyCurrency,
     mprStatusLabel,
+    NEW_HEADCOUNT_TYPES,
     recruitmentActionLabel,
     recruitmentRoleLabel,
     recruitmentValueLabel,
@@ -115,7 +116,7 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                             {mpr.job_id && <span className="mpr-chip">{t("recruitment.detail.jobChip", { id: mpr.job_id, defaultValue: "Job {{id}}" })}</span>}
                         </div>
 
-                        {mpr.request_type === "New Position" && mpr.budget_snapshot && (
+                        {NEW_HEADCOUNT_TYPES.includes(mpr.request_type) && mpr.budget_snapshot && (
                             <section className="mpr-budget-summary">
                                 <BudgetStatusPill budget={mpr.budget_snapshot} />
                                 <BudgetDetails budget={mpr.budget_snapshot} currency={currency} audience="approver" />
@@ -186,11 +187,22 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                         <section className="candidate-section">
                             <h3>{t("recruitment.fields.position", { defaultValue: "Position" })}</h3>
                             <div className="candidate-grid">
+                                <div><label>{t("recruitment.fields.projectName", { defaultValue: "Project" })}</label><p>{mpr.project_name || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.projectCode", { defaultValue: "Project Code" })}</label><p>{mpr.project_code ? <span dir="ltr" className="ltr-text">{mpr.project_code}</span> : "—"}</p></div>
                                 <div><label>{t("recruitment.fields.jobTitle", { defaultValue: "Job Title" })}</label><p>{mpr.title || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.grade", { defaultValue: "Grade" })}</label><p>{mpr.grade ? <span dir="ltr" className="ltr-text">{mpr.grade}</span> : "—"}</p></div>
+                                <div><label>{t("recruitment.fields.gradePosition", { defaultValue: "Position" })}</label><p>{mpr.position || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.designation", { defaultValue: "Designation" })}</label><p>{mpr.designation || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.employeeCategory", { defaultValue: "Employee Category" })}</label><p>{mpr.employee_category || "—"}</p></div>
                                 <div><label>{t("recruitment.fields.openingsCount", { defaultValue: "No. of Openings" })}</label><p>{mpr.openings ?? "—"}</p></div>
                                 <div><label>{t("recruitment.fields.experience", { defaultValue: "Experience" })}</label><p>{mpr.experience || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.qualification", { defaultValue: "Required Qualification" })}</label><p>{mpr.qualification || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.requiredJoiningDate", { defaultValue: "Required Joining Date" })}</label><p>{mpr.required_joining_date ? <span dir="ltr" className="ltr-text">{formatDate(mpr.required_joining_date)}</span> : "—"}</p></div>
                                 <div><label>{t("recruitment.fields.location", { defaultValue: "Location" })}</label><p>{mpr.location || "—"}</p></div>
                                 <div><label>{t("profileEdit.sectionFields.employment_type", { defaultValue: "Employment Type" })}</label><p>{recruitmentValueLabel("employmentType", mpr.employment_type) || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.projectStartDate", { defaultValue: "Project Start Date" })}</label><p>{mpr.project_start_date ? <span dir="ltr" className="ltr-text">{formatDate(mpr.project_start_date)}</span> : "—"}</p></div>
+                                <div><label>{t("recruitment.fields.deploymentTimeline", { defaultValue: "Expected Deployment" })}</label><p>{mpr.deployment_timeline || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.shiftSchedule", { defaultValue: "Shift / Work Schedule" })}</label><p>{mpr.shift_schedule || "—"}</p></div>
                                 <div><label>{t("recruitment.fields.applicationStartDate", { defaultValue: "Application Start Date" })}</label><p><span dir="ltr" className="ltr-text">{formatDate(mpr.application_start_date)}</span></p></div>
                                 <div><label>{t("recruitment.fields.applicationEndDate", { defaultValue: "Application End Date" })}</label><p><span dir="ltr" className="ltr-text">{formatDate(mpr.application_end_date)}</span></p></div>
                                 <div><label>{t("recruitment.fields.requiredSkills", { defaultValue: "Required Skills" })}</label><p>{mpr.skills || "—"}</p></div>
@@ -209,6 +221,8 @@ function MprDetail({ mprId, actorId, meta, onClose, onChanged, onEdit }) {
                             <h3>{t("recruitment.detail.compensationTitle", { defaultValue: "Compensation, Benefits & Assets" })}</h3>
                             <div className="candidate-grid">
                                 <div><label>{t("recruitment.detail.salaryPerMonth", { defaultValue: "Salary (per month)" })}</label><p><span dir="ltr" className="ltr-text">{currency} {formatMoney(mpr.salary_min)} – {formatMoney(mpr.salary_max)}</span></p></div>
+                                <div><label>{t("recruitment.fields.payBasis", { defaultValue: "Pay Basis" })}</label><p>{mpr.pay_basis || "—"}</p></div>
+                                <div><label>{t("recruitment.fields.ppeRequired", { defaultValue: "PPE Required" })}</label><p>{yesNo(t, mpr.ppe_required)}</p></div>
                                 <div><label>{t("recruitment.fields.airTicket", { defaultValue: "Air Ticket" })}</label><p>{yesNo(t, mpr.benefits?.air_ticket)}</p></div>
                                 <div><label>{t("recruitment.fields.vehicle", { defaultValue: "Vehicle" })}</label><p>{yesNo(t, mpr.benefits?.vehicle)}</p></div>
                                 <div><label>{t("recruitment.fields.accommodation", { defaultValue: "Accommodation" })}</label><p>{yesNo(t, mpr.benefits?.accommodation)}</p></div>

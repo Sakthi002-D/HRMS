@@ -20,6 +20,7 @@ import {
     resignationActionLabel,
     resignationRoleLabel,
     resignationStatusLabel,
+    openResignationLetter,
     resignationTone,
 } from "./resignationApi";
 
@@ -80,6 +81,12 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
     const [lastWorkingDay, setLastWorkingDay] = useState("");
     const [busy, setBusy] = useState("");
     const [actionError, setActionError] = useState("");
+    const [letterState, setLetterState] = useState({ busy: false, error: "" });
+    const viewLetter = async () => {
+        setLetterState({ busy: true, error: "" });
+        const error = await openResignationLetter(resignationId);
+        setLetterState({ busy: false, error });
+    };
     const confirm = useConfirm();
     useScrollLock(true);
 
@@ -146,7 +153,8 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
             onConfirm: async () => {
                 setBusy(action);
                 try {
-                    updated = await api(`/api/resignations/${resignationId}/${action}`, {
+                    // /decision/ also works for Line Managers signed in to the Employee portal
+                    updated = await api(`/api/resignations/${resignationId}/decision/${action}`, {
                         method: "POST",
                         body: { actor_id: actorId, remark, ...(accepting ? { last_working_day: lastWorkingDay } : {}) },
                     });
@@ -243,11 +251,13 @@ function ResignationDetail({ resignationId, actorId, onClose, onChanged, onDecid
                                 <div>
                                     <label>{t("resignation.detail.letter", { defaultValue: "Resignation Letter" })}</label>
                                     <p>
-                                        {resignation.letter_url ? (
-                                            <a href={resignation.letter_url} download={resignation.letter_name || true} target="_blank" rel="noreferrer">
-                                                {resignation.letter_name || t("resignation.detail.letterDefault", { defaultValue: "Resignation letter" })} {t("resignation.detail.download", { defaultValue: "(Download)" })}
-                                            </a>
-                                        ) : t("resignation.detail.notAttached", { defaultValue: "Not attached" })}
+                                        {!resignation.has_letter ? t("resignation.detail.notAttached", { defaultValue: "Not attached" })
+                                            : resignation.permissions?.canViewLetter ? (
+                                                <button type="button" className="resignation-letter-link" onClick={viewLetter} disabled={letterState.busy}>
+                                                    {resignation.letter_name || t("resignation.detail.letterDefault", { defaultValue: "Resignation letter" })} {letterState.busy ? t("resignation.detail.opening", { defaultValue: "Opening..." }) : t("resignation.detail.viewLetterParen", { defaultValue: "(View letter)" })}
+                                                </button>
+                                            ) : <>{resignation.letter_name || t("resignation.detail.letterDefault", { defaultValue: "Resignation letter" })} <small>{t("resignation.detail.letterHrOnly", { defaultValue: "(HR and the employee only)" })}</small></>}
+                                        {letterState.error && <span className="mpr-form-error resignation-letter-error" role="alert">{letterState.error}</span>}
                                     </p>
                                 </div>
                                 {resignation.early_release && resignation.early_release_reason && (

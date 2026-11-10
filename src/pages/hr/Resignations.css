@@ -1,8 +1,9 @@
 /* HR portal → Resignation (builds on Recruitment.css: header, cards, jobs-table) */
 
+/* Eight stage cards: 4 per row on desktop, 3 / 2 on smaller screens (media rules below) */
 .resignation-summary-cards {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 25px;
 }
@@ -50,6 +51,9 @@
 .resignations-page .resignation-summary-card.tone-pending-lm,
 .resignations-page .resignation-summary-card.tone-pending-hr { border-inline-start-color: #f59e0b; }
 .resignations-page .resignation-summary-card.tone-serving { border-inline-start-color: #0284c7; }
+.resignations-page .resignation-summary-card.tone-clearance { border-inline-start-color: #ea580c; }
+.resignations-page .resignation-summary-card.tone-settlement { border-inline-start-color: #2564eb; }
+.resignations-page .resignation-summary-card.tone-formalities { border-inline-start-color: #12304a; }
 .resignations-page .resignation-summary-card.tone-completed { border-inline-start-color: #16a34a; }
 .resignations-page .resignation-summary-card.tone-closed { border-inline-start-color: #94a3b8; }
 

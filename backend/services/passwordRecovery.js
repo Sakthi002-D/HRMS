@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { setAccountPassword, employeeMappingPredicate } from "./accountCredentials.js";
+import { setAccountPassword, employeeLoginPredicate } from "./accountCredentials.js";
 import { verifyToken } from "../middleware/auth.js";
 
 export async function findPasswordIdentity(db, username, { lock = false } = {}) {
@@ -16,7 +16,7 @@ export async function findPasswordIdentity(db, username, { lock = false } = {}) 
          FROM employee_logins l JOIN employees e ON e.employee_id = l.employee_id
          WHERE l.normalized_username = LOWER(BTRIM($1))
            AND l.enabled = TRUE AND e.status = 'Active' AND e.access_disabled IS NOT TRUE
-           AND ${employeeMappingPredicate}${lock ? " FOR UPDATE OF e, l" : ""}`,
+           AND ${employeeLoginPredicate}${lock ? " FOR UPDATE OF e, l" : ""}`,
         [username]
     );
     return result.rows[0] ? { employee: result.rows[0], credentialType: "employee" } : null;

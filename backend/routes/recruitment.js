@@ -15,6 +15,7 @@ import {
     ASSIGNABLE_ROLES,
     DEPARTMENT_SCOPED_ROLES,
     EMPLOYMENT_TYPES,
+    NEW_HEADCOUNT_TYPES,
     NON_MPR_ROLES,
     REQUEST_TYPES,
     ROLE_LABELS,
@@ -22,6 +23,7 @@ import {
     WORKFLOW_STEP_ROLES,
     WorkflowError,
     approveMpr,
+    budgetLineUsageWhere,
     cancelMpr,
     computeBudget,
     getMprDetail,
@@ -36,6 +38,7 @@ import {
     saveRecruitmentSettings,
     sendBackMpr,
 } from "../services/manpowerWorkflow.js";
+import { listActiveGrades } from "../services/gradeMaster.js";
 
 const router = express.Router();
 
@@ -101,14 +104,16 @@ router.get("/recruitment/meta", handle(async (req, res) => {
             canRaise: raiseDepartments.length > 0,
             raiseDepartments,
             isApprover: approverRoles.length > 0,
+            grades: await listActiveGrades(pool),
         });
     }
 
-    const [settings, locations, agencies, departments] = await Promise.all([
+    const [settings, locations, agencies, departments, grades] = await Promise.all([
         getRecruitmentSettings(),
         pool.query(`SELECT id, name FROM recruitment_locations WHERE active ORDER BY name`),
         pool.query(`SELECT id, name, contact_person, email, phone FROM recruitment_agencies WHERE active ORDER BY name`),
         pool.query(`SELECT DISTINCT TRIM(department) AS name FROM employees WHERE COALESCE(TRIM(department), '') <> '' ORDER BY 1`),
+        listActiveGrades(pool),
     ]);
 
     const departmentNames = [...new Set([...Object.keys(settings.departmentCodes || {}), ...departments.rows.map((row) => row.name)])];
@@ -125,6 +130,8 @@ router.get("/recruitment/meta", handle(async (req, res) => {
         departments: departmentNames,
         locations: locations.rows,
         agencies: agencies.rows,
+        // Grade → Position → Designation (active only, sorted) for the MPR form
+        grades,
         requestTypes: REQUEST_TYPES,
         assetOptions: ASSET_OPTIONS,
         employmentTypes: EMPLOYMENT_TYPES,
@@ -327,19 +334,38 @@ router.delete("/recruitment/agencies/:id", handle(async (req, res) => {
     res.json({ ok: true });
 }));
 
+// Headcount Budget lines (year + grade + position + designation). Old department-only rows
+// (grade IS NULL) stay in the table but aren't shown or used.
+// used = openings of Approved / Pending new-headcount MPRs on the same line.
 router.get("/recruitment/budgets", handle(async (req, res) => {
     res.json((await pool.query(
-        `SELECT id, department, year, headcount AS budgeted_positions, salary_budget::float AS salary_budget FROM department_headcount_budgets ORDER BY year DESC, department`
+        `
+        SELECT b.id, b.year, b.grade, b.position, b.designation,
+               b.headcount AS budgeted_positions, b.salary_budget::float AS salary_budget,
+               COALESCE(u.used, 0)::int AS used
+        FROM department_headcount_budgets b
+        LEFT JOIN LATERAL (
+            SELECT SUM(COALESCE(m.openings, 0)) AS used
+            FROM manpower_requests m
+            WHERE ${budgetLineUsageWhere({ year: "b.year", grade: "b.grade", position: "b.position", designation: "b.designation", types: "$1" })}
+        ) u ON TRUE
+        WHERE b.grade IS NOT NULL
+        ORDER BY b.year DESC, b.grade, b.position, b.designation
+        `,
+        [NEW_HEADCOUNT_TYPES]
     )).rows);
 }));
 
-// Create or update the budget for a department + year.
+// Create or update the line for year + grade + position + designation.
 // Budgeted Positions = NEW people HR approves (stored in the existing headcount column).
 router.post("/recruitment/budgets", handle(async (req, res) => {
     await requireHR(actorFrom(req));
-    const { department, year, salary_budget: salaryBudget } = req.body || {};
+    const { year, salary_budget: salaryBudget } = req.body || {};
+    const [grade, position, designation] = ["grade", "position", "designation"].map((name) => String(req.body?.[name] || "").trim());
     const positions = req.body?.budgeted_positions ?? req.body?.headcount;
-    if (!String(department || "").trim()) throw new WorkflowError("Department is required");
+    if (!grade) throw new WorkflowError("Grade is required");
+    if (!position) throw new WorkflowError("Position is required");
+    if (!designation) throw new WorkflowError("Designation is required");
     if (!(Number(year) >= 2000)) throw new WorkflowError("Year is required");
     if (positions === "" || positions === null || positions === undefined || !Number.isInteger(Number(positions)) || Number(positions) < 0) {
         throw new WorkflowError("Budgeted Positions must be a whole number, 0 or more");
@@ -348,12 +374,13 @@ router.post("/recruitment/budgets", handle(async (req, res) => {
 
     const result = await pool.query(
         `
-        INSERT INTO department_headcount_budgets (department, year, headcount, salary_budget)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (LOWER(department), year) DO UPDATE SET headcount = EXCLUDED.headcount, salary_budget = EXCLUDED.salary_budget
-        RETURNING id, department, year, headcount AS budgeted_positions, salary_budget::float AS salary_budget
+        INSERT INTO department_headcount_budgets (year, grade, position, designation, headcount, salary_budget)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (year, LOWER(grade), LOWER(position), LOWER(designation)) WHERE grade IS NOT NULL
+        DO UPDATE SET headcount = EXCLUDED.headcount, salary_budget = EXCLUDED.salary_budget
+        RETURNING id, year, grade, position, designation, headcount AS budgeted_positions, salary_budget::float AS salary_budget
         `,
-        [department.trim(), Number(year), Number(positions), Number(salaryBudget)]
+        [Number(year), grade, position, designation, Number(positions), Number(salaryBudget)]
     );
     res.json(result.rows[0]);
 }));
@@ -373,12 +400,14 @@ router.get("/mprs/summary", handle(async (req, res) => {
     res.json(await getRecruitmentSummary());
 }));
 
-// Budget check while filling the form (New Position only)
+// Budget check while filling the form (new headcount types only; see needsBudgetCheck),
+// against the Headcount Budget line for year + grade + position + designation
 router.get("/mprs/budget-preview", handle(async (req, res) => {
-    const { department, start_date: startDate, openings, salary_max: salaryMax, mpr_id: mprId } = req.query;
-    if (!department) throw new WorkflowError("Department is required");
+    const { grade, position, designation, start_date: startDate, openings, salary_max: salaryMax, mpr_id: mprId } = req.query;
     res.json(await computeBudget(pool, {
-        department,
+        grade,
+        position,
+        designation,
         // Budget year = year of the Application Start Date
         year: Number(String(startDate || await getRecruitmentToday()).slice(0, 4)),
         openings,

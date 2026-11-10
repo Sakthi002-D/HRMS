@@ -20,6 +20,7 @@ import "./EmployeeDetails.css";
 import API_URL from "../../config/api";
 import { authHeaders, getAuthRole } from "../../utils/auth";
 import { formatAppDate } from "../../utils/appSettings";
+import ResignationStagePill from "../../components/resignation/ResignationStagePill";
 // [type, label, who uploads it] — must match DOCUMENT_TYPES in backend/routes/employeeDocuments.js
 const EMPLOYEE_DOCUMENTS = [
     ["employment_contract", "Employment Contract", "HR"],
@@ -162,7 +163,9 @@ function EmployeeDetails() {
             }
             setDocumentToast({
                 type: "success",
-                message: data.updated
+                message: data.created
+                    ? t("employeeDetails.d365Sync.created", { defaultValue: "Created in D365 as {{number}} and linked", number: data.personnelNumber })
+                    : data.updated
                     ? t("employeeDetails.d365Sync.updated", { defaultValue: "Synced from D365. Updated: {{fields}}", fields: data.fields.join(", ") })
                     : t("employeeDetails.d365Sync.upToDate", { defaultValue: "Already up to date with D365" }),
             });
@@ -428,6 +431,7 @@ function EmployeeDetails() {
                                 <span>{employee.designation ? auto(employee.designation) : t("employeeProfile.employee", { defaultValue: "Employee" })}</span>
                                 <span>{employee.employment_type ? valueLabel("employmentType", employee.employment_type) : t("employeeDetails.fullTimeFallback", { defaultValue: "Full time" })}</span>
                                 <span className={isActive ? "epf-tag-active" : "epf-tag-inactive"}>{valueLabel("status", employee.status || "Active")}</span>
+                                <ResignationStagePill status={employee.resignation_status} />
                             </div>
                         </div>
                         <div className="epf-actions">

@@ -28,7 +28,8 @@ export const QUALIFICATIONS = ["High School", "Diploma", "Bachelor's Degree", "M
 export const SOURCES = ["Company website", "LinkedIn", "NaukriGulf", "Recruitment agency", "Employee referral", "Other"];
 export const NOTICE_PERIODS = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
 export const SALARY_CURRENCIES = ["QAR", "INR", "USD", "EUR", "GBP", "AED", "SAR", "KWD", "OMR", "BHD"];
-export const APPLICATION_STATUSES = ["New", "Shortlisted", "On Hold", "Rejected"];
+export const APPLICATION_STATUSES = ["New", "Shortlisted", "Interview Scheduled", "On Hold", "Rejected", "Selected", "Offer Sent", "Offer Accepted", "Offer Declined", "Hired"];
+export const INTERVIEW_MODES = ["In-person", "Online", "Phone"];
 
 export const CV_MAX_BYTES = 5 * 1024 * 1024;
 const CV_TYPES = {
@@ -148,12 +149,14 @@ const toPublicJob = (row) => ({
     apply_by: row.apply_by,
     job_description: row.job_description,
     skills: row.skills,
+    qualification: row.qualification || null,
 });
 
 // An Open job counts only if it is legacy (no MPR) or its MPR was approved
 const PUBLIC_JOB_SELECT = `
     SELECT j.id, j.job_id, j.title, j.department, j.location, j.employment_type, j.experience, j.openings,
            j.job_description, j.skills, j.status, j.mpr_id,
+           to_jsonb(m) ->> 'required_qualification' AS qualification, -- column not in every DB
            TO_CHAR(j.created_at, 'YYYY-MM-DD') AS posted_on,
            TO_CHAR(j.application_deadline, 'YYYY-MM-DD') AS apply_by,
            (j.application_deadline IS NOT NULL AND j.application_deadline < $1::date) AS deadline_passed,
@@ -470,7 +473,7 @@ async function nextApplicationNo(db, year) {
     return `APP-${year}-${String(result.rows[0].next).padStart(4, "0")}`;
 }
 
-async function logApplicationAction(db, applicationDbId, { action, from = null, to = null, actor = null, remark = null }) {
+export async function logApplicationAction(db, applicationDbId, { action, from = null, to = null, actor = null, remark = null }) {
     await db.query(
         `INSERT INTO job_application_actions (application_db_id, action, from_status, to_status, actor_id, actor_name, remark)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -657,9 +660,20 @@ export async function getApplicationDetail(db, id) {
         [id]
     );
 
+    const interview = (await interviewTableExists(db))
+        ? (await db.query(
+            `SELECT id, TO_CHAR(interview_date, 'YYYY-MM-DD') AS interview_date, TO_CHAR(interview_time, 'HH24:MI') AS interview_time,
+                    mode, location_or_link, interviewer_name, notes, email_sent_at, email_error, created_at
+             FROM public.job_application_interviews WHERE application_db_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
+            [id]
+        )).rows[0] || null
+        : null;
+
     const { cv_path: cvPath, cv_storage: cvStorage, ...safe } = row;
     return {
         ...safe,
+        company_today: await getRecruitmentToday(db),
+        interview,
         has_cv: Boolean(cvPath && cvStorage),
         allowed_actions: Object.entries(TRANSITIONS).filter(([, rule]) => rule.from.includes(row.status)).map(([key]) => key),
         actions: actions.rows,
@@ -698,4 +712,136 @@ export async function actOnApplication(db, { id, action, actorId, remark }) {
     );
     await logApplicationAction(db, id, { action: rule.label, from: current.status, to: rule.to, actor, remark: note });
     return getApplicationDetail(db, id);
+}
+
+// =====================================================
+// INTERVIEW SCHEDULING (migrations/020_job_application_interviews.sql)
+// The table is created by hand from that file, not at server start,
+// so the application pop-up has to keep working until it exists.
+// =====================================================
+
+const INTERVIEW_PLACE_LABELS = { "In-person": "Interview Location", Online: "Meeting Link", Phone: "Phone Number" };
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export async function interviewTableExists(db) {
+    const result = await db.query(`SELECT to_regclass('public.job_application_interviews') AS name`);
+    return Boolean(result.rows[0].name);
+}
+
+// Current date and time on the company's clock
+const companyClock = (timeZone) => {
+    const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+            .formatToParts(new Date())
+            .map((part) => [part.type, part.value])
+    );
+    return { today: `${parts.year}-${parts.month}-${parts.day}`, now: `${parts.hour}:${parts.minute}` };
+};
+
+// Follows the date format chosen in HR Settings
+export const formatDateKey = (value, dateFormat) => {
+    const [year, month, day] = value.split("-");
+    return (dateFormat || "DD-MM-YYYY").replace("YYYY", year).replace("MM", month).replace("DD", day);
+};
+
+// "14:30" → "02:30 PM"
+const formatTime12 = (value) => {
+    const [hour, minute] = value.split(":").map(Number);
+    return `${String(hour % 12 || 12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+};
+
+export function validateInterview(input, { today, now }) {
+    const fields = {};
+    const data = {
+        interview_date: text(input?.interview_date, 10),
+        interview_time: text(input?.interview_time, 5),
+        mode: text(input?.mode, 20),
+        location_or_link: text(input?.location_or_link, 500),
+        interviewer_name: text(input?.interviewer_name, 120),
+        notes: text(input?.notes, 1000) || null,
+    };
+
+    if (!isDateKey(data.interview_date)) fields.interview_date = "Interview date is required";
+    else if (data.interview_date < today) fields.interview_date = "Interview date can't be in the past";
+    if (!TIME_PATTERN.test(data.interview_time)) fields.interview_time = "Interview time is required";
+    else if (data.interview_date === today && data.interview_time <= now) fields.interview_time = "Interview time must be later today";
+    if (!INTERVIEW_MODES.includes(data.mode)) fields.mode = "Choose the interview mode";
+    const placeLabel = INTERVIEW_PLACE_LABELS[data.mode] || "Location or meeting link";
+    if (!data.location_or_link) fields.location_or_link = `${placeLabel} is required`;
+    else if (data.mode === "Online" && !/^https:\/\/\S+$/i.test(data.location_or_link)) fields.location_or_link = "Enter a meeting link starting with https://";
+    if (!data.interviewer_name) fields.interviewer_name = "Interviewer name is required";
+
+    if (Object.keys(fields).length) throw new ValidationError(fields);
+    return data;
+}
+
+// Goes to the address on the application record, never one typed by HR
+export function buildInterviewEmail(application, data, settings) {
+    const details = [
+        ["Candidate", application.candidate_name],
+        ["Position", application.job_title],
+        ["Date", formatDateKey(data.interview_date, settings.dateFormat)],
+        ["Time", `${formatTime12(data.interview_time)} (${settings.timezone || COMPANY_TIMEZONE})`],
+        ["Mode", data.mode],
+        [INTERVIEW_PLACE_LABELS[data.mode], data.location_or_link],
+        ["Interviewer", data.interviewer_name],
+        ...(data.notes ? [["Notes", data.notes]] : []),
+    ];
+    return {
+        to: application.email,
+        name: application.candidate_name,
+        subject: `Interview Invitation – ${application.job_title} – Shelter Group`,
+        plainSubject: true,
+        signature: "HR Team\nShelter Group",
+        text:
+            `We are pleased to invite you to an interview for the position of ${application.job_title} at Shelter Group.\n\n` +
+            details.map(([label, value]) => `${label}: ${value}`).join("\n"),
+    };
+}
+
+export async function scheduleInterview(db, { id, actorId, input, settings }) {
+    const actor = await requireHRActor(db, actorId);
+    if (!(await interviewTableExists(db))) {
+        throw new WorkflowError("Interview scheduling isn't set up yet: run migrations/020_job_application_interviews.sql", 503);
+    }
+    const data = validateInterview(input, companyClock(settings.timezone || COMPANY_TIMEZONE));
+
+    const found = await db.query(
+        `SELECT a.id, a.status, a.email, a.candidate_name, COALESCE(j.title, a.job_title) AS job_title
+         FROM public.job_applications a
+         LEFT JOIN public.jobs j ON j.job_id = a.job_id
+         WHERE a.id = $1 FOR UPDATE OF a`,
+        [id]
+    );
+    const application = found.rows[0];
+    if (!application) throw new WorkflowError("Application not found", 404);
+    if (application.status !== "Shortlisted") {
+        throw new WorkflowError(`This application is ${application.status}; only Shortlisted applications can be scheduled for an interview`, 409);
+    }
+
+    const saved = await db.query(
+        `INSERT INTO public.job_application_interviews
+            (application_db_id, interview_date, interview_time, mode, location_or_link, interviewer_name, notes, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id`,
+        [id, data.interview_date, data.interview_time, data.mode, data.location_or_link, data.interviewer_name, data.notes, actor.employee_id]
+    );
+
+    const remark = `Interview on ${formatDateKey(data.interview_date, settings.dateFormat)} at ${formatTime12(data.interview_time)} (${data.mode}) with ${data.interviewer_name}`;
+    await db.query(
+        `UPDATE public.job_applications
+         SET status = 'Interview Scheduled', status_remark = $2, reviewed_by = $3, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [id, remark, actor.employee_id]
+    );
+    await logApplicationAction(db, id, { action: "Interview Scheduled", from: application.status, to: "Interview Scheduled", actor, remark });
+
+    return { interviewId: saved.rows[0].id, email: buildInterviewEmail(application, data, settings) };
+}
+
+export async function recordInterviewEmail(db, interviewId, { sent, reason }) {
+    await db.query(
+        `UPDATE public.job_application_interviews SET email_sent_at = $2, email_error = $3 WHERE id = $1`,
+        [interviewId, sent ? new Date() : null, sent ? null : String(reason).slice(0, 500)]
+    );
 }

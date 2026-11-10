@@ -42,7 +42,7 @@ const sourceDateValue = (value, field) => {
     return date.toISOString().slice(0, 10);
 };
 
-const buildEmployee = (source, now) => {
+export const buildEmployee = (source, now) => {
     const personnelNumber = requiredString(source.PersonnelNumber, "PersonnelNumber");
     const legalEntity = requiredString(source.EmploymentLegalEntityId, "EmploymentLegalEntityId");
     requiredString(source.EmploymentId, "EmploymentId");

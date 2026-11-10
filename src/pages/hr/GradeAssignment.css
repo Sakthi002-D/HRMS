@@ -119,6 +119,7 @@
 }
 
 .ga-toolbar > select {
+  max-width: 240px;
   height: 42px;
   padding: 0 12px;
   border: 1px solid #d5e0e8;
@@ -168,17 +169,46 @@
   overflow-x: auto;
 }
 
+/* Columns read from the left edge (the app centres tables by default),
+   one text style for every cell */
+.dashboard-content .ga-page .ga-table table :is(th, td) {
+  text-align: start !important;
+  vertical-align: middle;
+}
+
+.dashboard-content .ga-page .ga-table table thead th {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.dashboard-content .ga-page .ga-table table tbody td {
+  padding-block: 12px;
+  color: #042330;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dashboard-content .ga-page .ga-table table :is(th, td):first-child {
+  padding-inline-start: 22px !important;
+}
+
+/* Grade column: fixed width so every select starts at the same place */
+.dashboard-content .ga-page .ga-table table :is(th, td):last-child {
+  width: 230px;
+}
+
 .ga-person {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
+  gap: 10px;
 }
 
 .ga-person strong {
   color: #042330;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .ga-grade-cell {

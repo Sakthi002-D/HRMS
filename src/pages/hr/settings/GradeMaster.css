@@ -1,0 +1,237 @@
+/* =========================================
+   SETTINGS → GRADE MASTER (gm-*)
+   Page frame comes from GradeAssignment.css (ga-page, ga-hero, ga-card, ga-toolbar)
+   ========================================= */
+
+.gm-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gm-panel .ga-toolbar {
+  margin-bottom: 0;
+}
+
+.gm-table {
+  overflow-x: auto;
+  border: 1px solid #e3ecf2;
+  border-radius: 10px;
+}
+
+/* The app centres every table; this one reads from the left like Grade Assignment */
+.gm-panel .gm-table table.common-table :is(th, td) {
+  padding: 11px 16px;
+  text-align: start !important;
+  vertical-align: middle;
+}
+
+.gm-panel .gm-table table.common-table thead th {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.gm-panel .gm-table table.common-table tbody td {
+  color: #042330;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.gm-panel .gm-table table.common-table :is(th, td):first-child {
+  width: 84px;
+  padding-inline-start: 20px;
+}
+
+.gm-panel .gm-table table.common-table :is(th, td):last-child {
+  width: 110px;
+}
+
+.gm-order {
+  color: #64748b !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.gm-grade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 3px 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gm-muted {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.gm-count {
+  display: inline-flex;
+  min-width: 30px;
+  justify-content: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.gm-count.used {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.gm-inactive td {
+  opacity: .55;
+}
+
+.gm-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.gm-icon-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #d5e0e8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #042330;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.gm-icon-button:hover:not(:disabled) {
+  border-color: #f97316;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.gm-icon-button.save {
+  border-color: #f97316;
+  background: #f97316;
+  color: #ffffff;
+}
+
+.gm-icon-button.save:hover:not(:disabled) {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+.gm-icon-button.danger:hover:not(:disabled) {
+  border-color: #fda4af;
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.gm-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.gm-icon-button:focus-visible,
+.gm-input:focus {
+  border-color: #f97316;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .16);
+}
+
+/* Inline add / edit row */
+.gm-edit-row td {
+  background: #fffbf5;
+}
+
+.gm-input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d5e0e8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #042330;
+  font: inherit;
+  font-size: 13.5px;
+  box-sizing: border-box;
+}
+
+.gm-input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.gm-input-order {
+  max-width: 64px;
+}
+
+.gm-input-code {
+  max-width: 96px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gm-input-days {
+  max-width: 96px;
+}
+
+.gm-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.gm-banner svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.gm-panel .gm-banner.warning {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e !important;
+}
+
+.gm-panel .gm-banner.error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b42318 !important;
+}
+
+.gm-panel .gm-empty {
+  margin: 0;
+  padding: 28px 0;
+  color: #64748b;
+  font-size: 13.5px;
+  text-align: center !important;
+}
+
+.gm-panel .gm-hint {
+  margin: 0;
+  color: #64748b !important;
+  font-size: 12.5px;
+}
+
+@media (max-width: 640px) {
+  .gm-panel .ga-bulk-button {
+    width: 100%;
+    justify-content: center;
+    margin-inline-start: 0;
+  }
+}

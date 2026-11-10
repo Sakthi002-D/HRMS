@@ -1,4 +1,4 @@
-// Budget check display for New Position MPRs: the details box used in the form pop-ups,
+// Budget check display for new-headcount MPRs: the details box used in the form pop-ups,
 // the badge above the form, and the MPR detail for approvers.
 import { useTranslation } from "react-i18next";
 import { formatMoney, isBudgetException } from "./recruitmentApi";
@@ -6,14 +6,21 @@ import { formatMoney, isBudgetException } from "./recruitmentApi";
 // Number expressions ("8,000 × 12 × 2 = 192,000") always read left-to-right, also on the Arabic page
 const Ltr = ({ children }) => <span dir="ltr" className="ltr-text">{children}</span>;
 
-// The backend's "No budget set for IT (2026). Set it in Settings → Recruitment Masters."
-// Arabic text only in ar.json, so English keeps the backend sentence exactly.
-const noBudgetReason = (t, budget) =>
-    t("recruitment.budget.noBudgetReason", { department: budget.department, year: budget.year, defaultValue: budget.reason });
+// The backend's "No budget set for 2026 · 4-B · Senior Engineer · Senior Civil Engineer. Set it in …".
+// Arabic text only in ar.json, so English keeps the backend sentence exactly. Snapshots saved before
+// budget lines have a department instead of a line.
+const noBudgetReason = (t, budget) => (budget.line
+    ? t("recruitment.budget.noBudgetLineReason", { line: budget.line, defaultValue: budget.reason })
+    : t("recruitment.budget.noBudgetReason", { department: budget.department, year: budget.year, defaultValue: budget.reason }));
+
+// "Budget line: 2026 · 4-B · Senior Engineer · Senior Civil Engineer" (old snapshots: "Department: IT (2026)")
+const budgetLineRow = (t, budget) => (budget.line
+    ? [t("recruitment.budget.budgetLine", { defaultValue: "Budget line" }), <bdi dir="ltr">{budget.line}</bdi>]
+    : [t("profileEdit.fields.department", { defaultValue: "Department" }), `${budget.department} (${budget.year})`]);
 
 // Lines in the order the pop-ups show them. audience "approver" says "Requested" instead of "You requested".
 function detailLines(t, budget, audience) {
-    if (budget.status === "no_budget") return [["", noBudgetReason(t, budget)]];
+    if (budget.status === "no_budget") return [...(budget.line ? [budgetLineRow(t, budget)] : []), ["", noBudgetReason(t, budget)]];
 
     const requestedLabel = audience === "approver"
         ? t("recruitment.budget.requested", { defaultValue: "Requested" })
@@ -21,7 +28,7 @@ function detailLines(t, budget, audience) {
     const exceeded = budget.status === "exceeded";
     const hasCost = budget.salaryMax > 0;
     const lines = [
-        [t("profileEdit.fields.department", { defaultValue: "Department" }), `${budget.department} (${budget.year})`],
+        budgetLineRow(t, budget),
         [t("recruitment.budget.budgetedPositions", { defaultValue: "Budgeted positions" }), budget.budgetedPositions],
     ];
 

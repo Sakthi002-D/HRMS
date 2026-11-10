@@ -1,6 +1,7 @@
 // Confirmation dialog in the style of the app's "Please check" alert dialog.
-import { useId, useRef } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { closeAllMenus } from "./closeMenus";
 import { DIALOG_ICONS } from "./dialogContext";
 import useDialogFocus from "./useDialogFocus";
 import useScrollLock from "./useScrollLock";
@@ -34,6 +35,11 @@ function ConfirmDialog({
     // Cancel gets focus first: the safer choice for destructive actions
     useDialogFocus(open, { dialogRef, initialFocusRef: cancelRef, onEscape: dismiss });
     useScrollLock(open);
+
+    // Close any open dropdown menu before the dialog is painted
+    useLayoutEffect(() => {
+        if (open) closeAllMenus();
+    }, [open]);
 
     if (!open) return null;
 

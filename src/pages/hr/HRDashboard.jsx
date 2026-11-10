@@ -1,18 +1,16 @@
 import { Link } from "react-router-dom";
 import {
-  Users,
-  Clock3,
   Wallet,
   Ticket,
   Bell,
   UserPlus,
   ClipboardCheck,
-  CalendarCheck,
   FileBarChart,
   FileText,
-  ArrowRight,
-  AlertCircle,
-  X,
+  ArrowUpRight,
+  CalendarDays,
+  UserCheck,
+  Plane,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -25,7 +23,8 @@ import { getCompanyToday } from "../../components/hr/leaveTrackerState";
 import "../../components/recruitment/recruitment.css";
 import API_URL from "../../config/api";
 import { formatAppDate, getAppSettings } from "../../utils/appSettings";
-import HRDashboardWidgets from "./HRDashboardWidgets";
+import { AttendanceTrend, DepartmentDistribution, RecruitmentStats } from "./HRDashboardWidgets";
+import useDashboardWidgets from "./useDashboardWidgets";
 import "./HRDashboard.css";
 
 const employeeSlug = (name) => String(name || "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -39,6 +38,86 @@ function ApprovalsLink({ children, ...props }) {
   );
 }
 
+// Coloured dot + label + count for each part of a bar or gauge
+function Legend({ parts, vertical = false }) {
+  return (
+    <ul className={`dash-legend${vertical ? " vertical" : ""}`}>
+      {parts.map((part) => (
+        <li key={part.key} className={`seg-${part.tone}`}>
+          {part.label} <b>({part.value})</b>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// One horizontal bar split by value; an empty grey track when everything is 0
+function SegmentBar({ parts }) {
+  return (
+    <div className="dash-segbar" aria-hidden="true">
+      {parts.filter((part) => part.value > 0).map((part) => (
+        <i key={part.key} className={`seg-${part.tone}`} style={{ flexGrow: part.value }} />
+      ))}
+    </div>
+  );
+}
+
+// Half-circle gauge; each part is an arc sized by its share of the total.
+// A part with any people gets at least MIN_SHARE so 5 of 895 is still visible;
+// the last part (the grey remainder) takes whatever is left.
+const MIN_SHARE = 3;
+const GAP = 1;
+
+function Gauge({ parts, total, label, value }) {
+  const arc = "M 16 86 A 70 70 0 0 1 156 86";
+  const shares = parts.slice(0, -1).map((part) => (part.value > 0 ? Math.max((part.value / total) * 100, MIN_SHARE) : 0));
+  shares.push(Math.max(100 - shares.reduce((sum, share) => sum + share, 0), 0));
+  let start = 0;
+  return (
+    <div className="dash-gauge">
+      <svg viewBox="0 0 172 96" aria-hidden="true">
+        <path d={arc} pathLength="100" className="dash-gauge-track" />
+        {total > 0 && parts.map((part, index) => {
+          const share = shares[index];
+          const offset = start;
+          start += share;
+          if (share <= 0 || (index === parts.length - 1 && part.value === 0)) return null;
+          return (
+            <path
+              key={part.key}
+              d={arc}
+              pathLength="100"
+              className={`dash-gauge-seg seg-${part.tone}`}
+              strokeDasharray={`${Math.max(share - GAP, 0.5)} 100`}
+              strokeDashoffset={-offset}
+            />
+          );
+        })}
+      </svg>
+      <span className="dash-gauge-label">{label}<strong>{value}</strong></span>
+    </div>
+  );
+}
+
+// Small counts under a card value; a part with `to` is a link to that list
+function MiniStats({ parts }) {
+  return (
+    <div className="dash-mini">
+      {parts.map(({ key, tone, label, value, to }) => {
+        const body = (
+          <>
+            <span className={`dash-mini-label seg-${tone}`}>{label}</span>
+            <strong>{value}</strong>
+          </>
+        );
+        return to
+          ? <Link key={key} className="dash-mini-item" to={to}>{body}<ArrowUpRight className="dash-mini-arrow" size={13} aria-hidden="true" /></Link>
+          : <div key={key} className="dash-mini-item">{body}</div>;
+      })}
+    </div>
+  );
+}
+
 function HRDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -47,6 +126,7 @@ function HRDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [resignations, setResignations] = useState([]);
   const [endOfService, setEndOfService] = useState([]);
+  const widgets = useDashboardWidgets();
   const hrProfile = (() => {
     try {
       const storedHR = sessionStorage.getItem("loggedInHR");
@@ -83,7 +163,6 @@ function HRDashboard() {
   const hrAdministratorLabel = t("hrDashboard.hrAdministrator", { defaultValue: "HR Administrator" });
   const hrShownName = hrDisplayName === "HR Administrator" ? hrAdministratorLabel : hrDisplayName;
   const hrRoleLabel = hrAdministratorLabel;
-  const valueLabel = (group, value) => t(`hrDashboard.values.${group}.${String(value).trim().toLowerCase().replace(/[\s-]+/g, "_")}`, { defaultValue: String(value) });
   const hrProfilePhoto = typeof hrProfile.profile_photo === "string"
     ? hrProfile.profile_photo.trim()
     : "";
@@ -269,33 +348,67 @@ function HRDashboard() {
   const pendingHRResignations = resignations.filter(isPendingHR).length;
   const pendingApprovals = dashboardData ? (dashboardData.pendingLeaves ?? 0) + pendingHRResignations : "-";
 
-  const stats = [
-    { key: "employees", tone: "blue", icon: Users, to: "/employees", label: t("hrDashboard.stats.totalEmployees", { defaultValue: "Total Employees" }), value: dashboardData?.totalEmployees ?? "—", note: t("hrDashboard.stats.activeEmployees", { defaultValue: "Active employees" }) },
-    { key: "attendance", tone: "green", icon: Clock3, to: "/attendance", label: t("hrDashboard.stats.presentTodayTitle", { defaultValue: "Present Today" }), value: dashboardData?.presentToday ?? "—", note: t("hrDashboard.stats.presentTodayNote", { defaultValue: "Present today" }) },
-    { key: "leave", tone: "amber", icon: CalendarCheck, to: "/leave-management", label: t("hrDashboard.stats.onLeave", { defaultValue: "On Leave" }), value: dashboardData?.onLeave ?? "—", note: t("hrDashboard.stats.pendingApproval", { number: dashboardData?.pendingLeaves ?? "—", defaultValue: "{{number}} pending approval" }) },
-    { key: "payroll", tone: "rose", icon: Wallet, to: "/payroll", label: t("hrDashboard.stats.payrollStatus", { defaultValue: "Payroll Status" }), value: dashboardData?.payrollStatus ? valueLabel("payrollStatus", dashboardData.payrollStatus) : "—", note: dashboardData?.payrollStatus ? t("hrDashboard.stats.currentPayrollStatus", { defaultValue: "Current payroll status" }) : t("hrDashboard.stats.noPayrollData", { defaultValue: "No payroll data" }) },
-    { key: "recruitment", tone: "violet", icon: UserPlus, to: "/recruitment", label: t("hrDashboard.stats.openPositionsTitle", { defaultValue: "Open Positions" }), value: dashboardData?.openPositions ?? "—", note: t("hrDashboard.stats.openPositionsNote", { defaultValue: "Open positions" }) },
-    { key: "joiners", tone: "teal", icon: Users, to: "/employees", label: t("hrDashboard.stats.newJoiners", { defaultValue: "New Joiners" }), value: dashboardData?.newJoiners ?? "—", note: t("hrDashboard.stats.joinedThisMonth", { defaultValue: "Joined this month" }) },
-    { key: "tickets", tone: "indigo", icon: Ticket, to: "/tickets", label: t("hrDashboard.stats.openTicketsTitle", { defaultValue: "Open Tickets" }), value: dashboardData?.openTickets ?? "—", note: t("hrDashboard.stats.openTicketsNote", { defaultValue: "Open tickets" }) },
-    { key: "approvals", tone: "orange", icon: ClipboardCheck, to: "/leave-management", label: t("hrDashboard.approvalsTitle", { defaultValue: "Pending Approvals" }), value: pendingApprovals, note: t("hrDashboard.approvalsNote", { defaultValue: "Leave and resignations" }) },
+  const active = dashboardData?.totalEmployees ?? 0;
+  const inactive = dashboardData?.inactiveEmployees ?? 0;
+  const onLeave = dashboardData?.onLeave ?? 0;
+  const present = dashboardData?.presentToday ?? 0;
+  const absent = dashboardData?.absentToday ?? 0;
+  const pendingLeaves = dashboardData?.pendingLeaves ?? 0;
+  const openTickets = dashboardData?.openTickets ?? 0;
+  const shown = (value) => (dashboardData ? value : "—");
+  const pendingActions = shown(pendingLeaves + pendingHRResignations + openTickets);
+
+  // Each count opens its own list, already filtered
+  const LEAVE_PENDING = "/leave-management?status=Pending";
+  const RESIGNATIONS_PENDING = "/resignations?card=pending-hr";
+  const TICKETS_OPEN = "/tickets?status=Open";
+
+  const employeeBar = [
+    { key: "active", tone: "navy", label: t("hrDashboard.overview.active", { defaultValue: "Active" }), value: active },
+    { key: "inactive", tone: "rose", label: t("hrDashboard.overview.inactive", { defaultValue: "Inactive" }), value: inactive },
   ];
 
-  const quickActions = [
-    { key: "employee", tone: "blue", icon: UserPlus, to: "/employees", label: t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" }) },
-    { key: "leave", tone: "amber", icon: ClipboardCheck, to: "/leave-management", label: t("hrDashboard.quickActions.leaveRequest", { defaultValue: "Leave Request" }) },
-    { key: "payroll", tone: "rose", icon: Wallet, to: "/payroll", label: t("hrDashboard.quickActions.runPayroll", { defaultValue: "Run Payroll" }) },
-    { key: "requests", tone: "violet", icon: FileText, to: "/hr/employee-requests", label: t("hrDashboard.quickActions.employeeRequests", { defaultValue: "Employee Requests" }) },
-    { key: "reports", tone: "teal", icon: FileBarChart, to: "/reports", label: t("menu.reports", { defaultValue: "Reports" }) },
+  const employeeParts = [
+    ...employeeBar.map((part) => ({ ...part, value: shown(part.value) })),
+    { key: "joiners", tone: "orange", label: t("hrDashboard.stats.newJoiners", { defaultValue: "New Joiners" }), value: shown(dashboardData?.newJoiners ?? 0) },
   ];
+
+  const actionParts = [
+    { key: "leave", tone: "orange", to: LEAVE_PENDING, label: t("hrDashboard.overview.leaveRequests", { defaultValue: "Leave" }), value: pendingLeaves },
+    { key: "resignations", tone: "navy", to: RESIGNATIONS_PENDING, label: t("hrDashboard.overview.resignations", { defaultValue: "Resignations" }), value: pendingHRResignations },
+    { key: "tickets", tone: "amber", to: TICKETS_OPEN, label: t("hrDashboard.overview.tickets", { defaultValue: "Tickets" }), value: openTickets },
+  ];
+
+  // Not marked = active employees with no attendance saved today and not on leave
+  const attendanceParts = [
+    { key: "present", tone: "green", label: t("hrDashboard.widgets.present", { defaultValue: "Present" }), value: present },
+    { key: "absent", tone: "rose", label: t("hrDashboard.widgets.absent", { defaultValue: "Absent" }), value: absent },
+    { key: "leave", tone: "amber", label: t("hrDashboard.stats.onLeave", { defaultValue: "On Leave" }), value: onLeave },
+    { key: "notMarked", tone: "muted", label: t("hrDashboard.overview.notMarked", { defaultValue: "Not marked" }), value: Math.max(active - present - absent - onLeave, 0) },
+  ];
+  const attendanceRate = active ? `${Math.round((present / active) * 1000) / 10}%` : "—";
+
+  const quickActions = [
+    { key: "employee", icon: UserPlus, to: "/employees?add=1", label: t("hrDashboard.quickActions.addEmployee", { defaultValue: "Add Employee" }) },
+    { key: "leave", icon: ClipboardCheck, to: LEAVE_PENDING, label: t("hrDashboard.quickActions.leaveRequest", { defaultValue: "Leave Request" }) },
+    { key: "payroll", icon: Wallet, to: "/payroll", label: t("hrDashboard.quickActions.runPayroll", { defaultValue: "Run Payroll" }) },
+    { key: "requests", icon: FileText, to: "/hr/employee-requests", label: t("hrDashboard.quickActions.employeeRequests", { defaultValue: "Employee Requests" }) },
+    { key: "tickets", icon: Ticket, to: TICKETS_OPEN, label: t("hrDashboard.stats.openTicketsTitle", { defaultValue: "Open Tickets" }) },
+    { key: "reports", icon: FileBarChart, to: "/reports", label: t("menu.reports", { defaultValue: "Reports" }) },
+  ];
+
+  const viewLabel = t("hrDashboard.stats.viewDetails", { defaultValue: "View Details" });
 
   return (
     <DashboardLayout className="hr-dashboard-layout">
-      <div className="dashboard-main">
+      <div className="dashboard-main dash-compact">
 
-        {/* ================= WELCOME BANNER ================= */}
-        <header className="dash-hero">
-          <div className="dash-hero-copy">
-            <span className="dash-hero-kicker">{t("hrDashboard.title", { defaultValue: "HR Dashboard" })}</span>
+        {/* ================= TOP BAR ================= */}
+        <header className="dash-topbar">
+          <div className="dash-topbar-copy">
+            <span className="dash-crumb">
+              {t("hrDashboard.overview.title", { defaultValue: "Overview" })} / <b>{t("hrDashboard.title", { defaultValue: "HR Dashboard" })}</b>
+            </span>
             <h1>{t("hrDashboard.welcomeBack", { name: hrShownName, defaultValue: "Welcome back, {{name}}" })}</h1>
             <p>
               <Trans
@@ -312,120 +425,132 @@ function HRDashboard() {
                 defaults="You have <b>{{count}} pending approvals</b> to review."
               />
             </p>
-            <div className="dash-hero-chips">
-              <span className="dash-hero-chip"><i className="date" aria-hidden="true" />{formatAppDate(getCompanyToday())}</span>
-              <span className="dash-hero-chip"><i className="leave" aria-hidden="true" />{t("leaveManagement.hero.onLeaveToday", { count: dashboardData?.onLeave ?? 0, defaultValue: "{{count}} on leave today" })}</span>
-            </div>
           </div>
 
-          <div className="dash-hero-side">
-              <div className="header-right">
-    
-                {/* Notification */}
-                <div className="notification-wrapper">
-    
-                  <button
-                    className="notification-btn"
-                    aria-label={t("hrDashboard.openNotifications", { defaultValue: "Open notifications" })}
-                    onClick={() => navigate("/hr/notifications")}
-                  >
-                    <Bell size={19} />
-    
-                    {unreadCount > 0 && (
-                      <span className="notification-dot" aria-label={t("hrDashboard.unreadNotifications", { count: unreadCount, defaultValue: "{{count}} unread notifications" })}>
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </button>
-    
-                </div>
-    
-    
-                {/* Profile */}
-                <div className="profile">
-    
-                  <div className="profile-avatar">
-                    {hrProfilePhoto ? (
-                      <img src={hrProfilePhoto} alt={t("hrDashboard.profilePhotoAlt", { name: hrShownName, defaultValue: "{{name}} profile" })} />
-                    ) : (
-                      hrInitials || "HR"
-                    )}
-                  </div>
-    
-                  <div className="profile-info">
-                    <strong>{hrShownName}</strong>
-                    <small>{hrRoleLabel}</small>
-                  </div>
-    
-                </div>
-    
+          <div className="dash-topbar-side">
+            <div className="dash-topbar-user">
+              <div className="dash-profile" title={`${hrShownName} · ${hrRoleLabel}`}>
+                <span className="dash-profile-avatar">
+                  {hrProfilePhoto ? (
+                    <img src={hrProfilePhoto} alt={t("hrDashboard.profilePhotoAlt", { name: hrShownName, defaultValue: "{{name}} profile" })} />
+                  ) : (
+                    hrInitials || "HR"
+                  )}
+                </span>
+                <span className="dash-profile-info">
+                  <strong>{hrShownName}</strong>
+                  <small>{hrRoleLabel}</small>
+                </span>
               </div>
-
-            <div className="dash-hero-actions">
-              <Link to="/employees">{t("hrDashboard.manageEmployees", { defaultValue: "Manage Employees" })}</Link>
-              <Link to="/leave-management" className="primary">{t("hrDashboard.reviewRequests", { defaultValue: "Review Requests" })}</Link>
+              <button
+                className="notification-btn"
+                aria-label={t("hrDashboard.openNotifications", { defaultValue: "Open notifications" })}
+                onClick={() => navigate("/hr/notifications")}
+              >
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="notification-dot" aria-label={t("hrDashboard.unreadNotifications", { count: unreadCount, defaultValue: "{{count}} unread notifications" })}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div className="dash-topbar-chips">
+              <span><CalendarDays size={14} aria-hidden="true" />{formatAppDate(getCompanyToday())}</span>
+              <span><UserCheck size={14} aria-hidden="true" />{t("hrDashboard.overview.presentToday", { count: present, defaultValue: "{{count}} present today" })}</span>
+              <span><Plane size={14} aria-hidden="true" />{t("leaveManagement.hero.onLeaveToday", { count: onLeave, defaultValue: "{{count}} on leave today" })}</span>
             </div>
           </div>
         </header>
 
-        {/* ================= OVERVIEW ================= */}
-        <section className="dash-stats">
-          {stats.map(({ key, tone, icon: Icon, to, label, value, note }) => (
-            <Link className={`dash-stat tone-${tone}`} to={to} key={key}>
-              <span className="dash-icon"><Icon size={20} aria-hidden="true" /></span>
-              <span className="dash-stat-body">
-                <span className="dash-stat-label">{label}</span>
-                <strong>{value}</strong>
-                <span className="dash-stat-note">{note}</span>
-              </span>
-              <ArrowRight className="dash-stat-arrow" size={16} aria-hidden="true" />
-            </Link>
-          ))}
+        {/* ================= OVERVIEW CARDS ================= */}
+        <section className="dash-overview">
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <h2>{t("hrDashboard.stats.totalEmployees", { defaultValue: "Total Employees" })}</h2>
+              <Link to="/employees" aria-label={viewLabel} title={viewLabel}><ArrowUpRight size={16} /></Link>
+            </div>
+            <div className="dash-card-value">
+              <strong>{shown(active + inactive)}</strong>
+              <span className="dash-card-sub">{t("hrDashboard.overview.allRecords", { defaultValue: "All employee records" })}</span>
+            </div>
+            <SegmentBar parts={employeeBar} />
+            <MiniStats parts={employeeParts} />
+          </article>
+
+          <article className="dash-card">
+            <div className="dash-card-head">
+              <h2>{t("hrDashboard.overview.pendingActions", { defaultValue: "Pending Actions" })}</h2>
+            </div>
+            <div className="dash-card-value">
+              <strong>{pendingActions}</strong>
+              <Link className="dash-card-sub link" to="/recruitment">{t("hrDashboard.overview.openPositions", { count: dashboardData?.openPositions ?? 0, defaultValue: "{{count}} open positions" })}</Link>
+            </div>
+            <SegmentBar parts={actionParts} />
+            <MiniStats parts={actionParts.map((part) => ({ ...part, value: shown(part.value) }))} />
+          </article>
+
+          <article className="dash-card dash-card-gauge">
+            <div className="dash-card-head">
+              <h2>{t("hrDashboard.overview.attendanceToday", { defaultValue: "Attendance Today" })}</h2>
+              <Link to="/attendance" aria-label={viewLabel} title={viewLabel}><ArrowUpRight size={16} /></Link>
+            </div>
+            <div className="dash-gauge-row">
+              <Gauge parts={attendanceParts} total={active} value={attendanceRate} label={t("hrDashboard.overview.attendanceRate", { defaultValue: "Present rate" })} />
+              <Legend parts={attendanceParts} vertical />
+            </div>
+          </article>
         </section>
 
-        <div className="dash-columns">
-          <section className="employee-request-review-panel">
-            <div className="employee-request-review-heading">
-              <div>
-                <h2>{t("hrDashboard.endOfService.title", { defaultValue: "Pending End of Service" })}</h2>
-                <p>{t("hrDashboard.endOfService.description", { defaultValue: "Employees whose resignation completed after their last working day. End of Service processing will follow." })}</p>
+        {/* ================= MAIN GRID ================= */}
+        <div className="dash-board">
+          <div className="dash-board-main">
+            <AttendanceTrend state={widgets.trend} />
+            <DepartmentDistribution state={widgets.departments} />
+          </div>
+
+          <aside className="dash-board-side">
+            <section className="dash-panel">
+              <div className="dash-card-head">
+                <h2>{t("hrDashboard.quickActions.title", { defaultValue: "Quick Actions" })}</h2>
               </div>
-              <span>{t("hrDashboard.endOfService.pendingCount", { number: endOfService.length, defaultValue: "{{number}} pending" })}</span>
-            </div>
-            {endOfService.length === 0 ? (
-              <div className="employee-request-review-empty">{t("hrDashboard.endOfService.empty", { defaultValue: "No employees pending End of Service." })}</div>
-            ) : (
-              <div className="employee-request-review-list">
-                {endOfService.map((row) => (
-                  <article className="employee-request-review-item" key={row.id}>
-                    <div>
-                      <strong>{row.employee_name} ({row.employee_id})</strong>
-                      <span>{row.department || "—"} · {t("hrDashboard.endOfService.lastWorkingDay", { date: formatDate(row.last_working_day), defaultValue: "Last working day {{date}}" })}{row.resignation_no ? ` · ${row.resignation_no}` : ""}</span>
-                    </div>
-                    <div className="employee-request-review-actions">
-                      <Link className="review-request-button" to={`/employees/employeedetails/${employeeSlug(row.employee_name)}`}>{t("hrDashboard.endOfService.viewEmployee", { defaultValue: "View employee" })}</Link>
-                    </div>
-                  </article>
+              <div className="dash-quick-grid">
+                {quickActions.map(({ key, icon: Icon, to, label }) => (
+                  <Link className="dash-quick-tile" to={to} key={key}>
+                    <Icon size={17} aria-hidden="true" />
+                    <span>{label}</span>
+                  </Link>
                 ))}
               </div>
-            )}
-          </section>
+            </section>
 
-          <HRDashboardWidgets />
+            <section className="dash-panel">
+              <div className="dash-card-head">
+                <h2>{t("hrDashboard.endOfService.title", { defaultValue: "Pending End of Service" })}</h2>
+                <span className="dash-count">{endOfService.length}</span>
+              </div>
+              {endOfService.length === 0 ? (
+                <p className="dash-panel-empty">{t("hrDashboard.endOfService.empty", { defaultValue: "No employees pending End of Service." })}</p>
+              ) : (
+                <ul className="dash-todo">
+                  {endOfService.map((row) => (
+                    <li key={row.id}>
+                      <div>
+                        <strong>{row.employee_name} ({row.employee_id})</strong>
+                        <span>{row.department || "—"} · {t("hrDashboard.endOfService.lastWorkingDay", { date: formatDate(row.last_working_day), defaultValue: "Last working day {{date}}" })}{row.resignation_no ? ` · ${row.resignation_no}` : ""}</span>
+                      </div>
+                      <Link to={`/employees/employeedetails/${employeeSlug(row.employee_name)}`}>{t("hrDashboard.endOfService.viewEmployee", { defaultValue: "View employee" })}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
 
-          {/* ================= QUICK ACTIONS ================= */}
-          <section className="dash-quick">
-            <h2>{t("hrDashboard.quickActions.title", { defaultValue: "Quick Actions" })}</h2>
-            <div className="dash-quick-list">
-              {quickActions.map(({ key, tone, icon: Icon, to, label }) => (
-                <Link className={`dash-quick-item tone-${tone}`} to={to} key={key}>
-                  <span className="dash-icon"><Icon size={18} aria-hidden="true" /></span>
-                  {label}
-                  <ArrowRight size={15} aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          </section>
+            <RecruitmentStats
+              state={widgets.recruitment}
+              action={<Link className="hrw-tag" to="/recruitment">{t("hrDashboard.overview.seeAll", { defaultValue: "See all" })}</Link>}
+            />
+          </aside>
         </div>
 
       </div>

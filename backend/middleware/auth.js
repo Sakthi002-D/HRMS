@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { employeeMappingPredicate, setAccountPassword } from "../services/accountCredentials.js";
+import { employeeLoginPredicate, setAccountPassword } from "../services/accountCredentials.js";
 
 const TOKEN_TTL_SECONDS = Number(process.env.AUTH_TOKEN_TTL_SECONDS) || 8 * 60 * 60;
 
@@ -63,8 +63,8 @@ export const isPublicApiRequest = (req) => {
     const path = req.path;
     const method = req.method.toUpperCase();
     if (method === "POST" && ["/login", "/forgot-password", "/verify-otp", "/reset-password"].includes(path)) return true;
-    return (method === "GET" && /^\/careers\/(meta|jobs(?:\/[^/]+)?)$/.test(path))
-        || (method === "POST" && /^\/careers\/jobs\/[^/]+\/apply$/.test(path));
+    return (method === "GET" && /^\/careers\/(meta|jobs(?:\/[^/]+)?|offers\/[^/]+)$/.test(path))
+        || (method === "POST" && /^\/careers\/(jobs\/[^/]+\/apply|offers\/[^/]+\/respond)$/.test(path));
 };
 
 const EMPLOYEE_SELF_PATHS = [
@@ -78,9 +78,11 @@ const EMPLOYEE_SELF_PATHS = [
     /^\/notifications\/inbox\/[^/]+$/,
     /^\/notifications\/inbox\/[^/]+\/read$/,
     /^\/leaves\/employee\/[^/]+$/,
+    /^\/leaves\/day-count$/,
+    /^\/attendance\/shift$/,
     /^\/leaves\/[^/]+\/cancel$/,
     /^\/leaves$/,
-    /^\/resignations(?:\/employee\/[^/]+|\/[^/]+(?:\/(?:withdraw))?)?$/,
+    /^\/resignations(?:\/employee\/[^/]+|\/[^/]+(?:\/(?:withdraw|decision\/(?:approve|reject)|settlement\/(?:approve|return)|clearance\/items\/\d+))?)?$/,
     /^\/employees\/[^/]+\/documents(?:\/[^/]+)?$/,
     /^\/employee-requests\/[^/]+\/documents$/,
     /^\/tickets(?:\/[^/]+(?:\/comments)?)?$/,
@@ -93,12 +95,18 @@ const EMPLOYEE_SELF_PATHS = [
 const isEmployeeSelfPath = (path) => EMPLOYEE_SELF_PATHS.some((pattern) => pattern.test(path));
 
 const employeeMethodAllowed = (path, method) => {
-    if (/^\/(?:leave-policies|ticket-categories|recruitment\/meta|settings\/app)$/.test(path)) return method === "GET";
+    if (/^\/(?:leave-policies|ticket-categories|recruitment\/meta|settings\/app|leaves\/day-count)$/.test(path)) return method === "GET";
     if (/^\/(?:attendance|payroll|notifications\/employee|leaves\/employee)\//.test(path)) return method === "GET";
     if (path === "/leaves" || path === "/employee-requests" || path === "/resignations" || path === "/assistant") return method === "POST";
     if (/^\/leaves\/[^/]+\/cancel$/.test(path)) return method === "PUT";
     if (/^\/resignations\/employee\//.test(path)) return method === "GET";
     if (/^\/resignations\/[^/]+\/withdraw$/.test(path)) return method === "POST";
+    // Line Manager / Department Head decisions and clearance items: the service checks the caller holds them
+    if (/^\/resignations\/\d+$/.test(path)) return method === "GET";
+    if (/^\/resignations\/\d+\/decision\/(?:approve|reject)$/.test(path)) return method === "POST";
+    if (/^\/resignations\/\d+\/clearance\/items\/\d+$/.test(path)) return method === "PUT";
+    // Final settlement decision: the service checks the caller holds the Finance role
+    if (/^\/resignations\/\d+\/settlement\/(?:approve|return)$/.test(path)) return method === "POST";
     if (path.startsWith("/resignations/")) return false;
     if (path.startsWith("/notifications/inbox/")) return false;
     if (/^\/employee-requests\/[^/]+$/.test(path)) return method === "GET";
@@ -163,7 +171,7 @@ export const requireAuth = (db) => async (req, res, next) => {
                         l.credential_version, l.enabled
                  FROM employee_logins l
                  JOIN employees e ON e.employee_id = l.employee_id
-                 WHERE l.employee_id = $1 AND ${employeeMappingPredicate}`,
+                 WHERE l.employee_id = $1 AND ${employeeLoginPredicate}`,
                 [claims.sub]
             );
         } else {
@@ -283,7 +291,7 @@ export const createLoginHandler = (db) => async (req, res) => {
                     l.password_hash, l.credential_version, l.enabled
              FROM employee_logins l
              JOIN employees e ON e.employee_id = l.employee_id
-             WHERE l.normalized_username = LOWER(BTRIM($1)) AND ${employeeMappingPredicate}`,
+             WHERE l.normalized_username = LOWER(BTRIM($1)) AND ${employeeLoginPredicate}`,
             [username]
         );
         if (employeeLogin.rows.length) {

@@ -9,6 +9,7 @@
 
 import pool from "../db.js";
 import { getCompanyToday } from "./leaveDateRules.js";
+import { gradeLeaveDays } from "./gradeMaster.js";
 
 export const ANNUAL_LEAVE_TYPE = "Annual Leave";
 export const DEFAULT_YEARLY_ENTITLEMENT_DAYS = 30;
@@ -41,7 +42,7 @@ export const completedMonthsBetween = (joiningKey, asOfKey) => {
     return monthCompletionDate(joiningKey, months) <= asOfKey ? months : Math.max(0, months - 1);
 };
 
-// Annual Leave settings from Leave Policy Setup
+// Annual Leave settings from Leave Policy Setup, with per-grade days from Grade Master
 export async function getAnnualLeavePolicy(db = pool) {
     const result = await db.query("SELECT policy FROM leave_policy_settings WHERE id = 1");
     const policy = result.rows[0]?.policy || {};
@@ -55,6 +56,8 @@ export async function getAnnualLeavePolicy(db = pool) {
     Object.entries(annual.grade_overrides || {}).forEach(([grade, days]) => {
         if (grade.trim() && Number(days) > 0) gradeOverrides[grade.trim().toLowerCase()] = Number(days);
     });
+    // Settings → Grade Master days win; Leave Policy grade_overrides only fill grades without days
+    Object.assign(gradeOverrides, await gradeLeaveDays(db));
 
     const salaryBasis = SALARY_BASES.includes(policy.leave_accrual_salary_basis)
         ? policy.leave_accrual_salary_basis

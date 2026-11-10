@@ -13,6 +13,7 @@ import {
   FolderKanban,
   Settings,
   Award,
+  Layers,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -58,11 +59,14 @@ const mprApprovalsPath = (hrId) => `/api/mprs?employee_id=${hrId}&scope=approval
 // Job applications from the Careers page that HR hasn't reviewed yet
 const newApplicationsPath = (hrId) => `/api/hr/job-applications/new?employee_id=${hrId}`;
 const NEW_APPLICATIONS_POLL_MS = 60000;
+// Candidates who accepted / declined an offer that HR hasn't opened yet (Recruitment → Hiring)
+const offerResponsesPath = (hrId) => `/api/hr/hiring/responses?employee_id=${hrId}`;
 
-const recruitmentBadgeLabel = (approvals, applications) =>
+const recruitmentBadgeLabel = (approvals, applications, responses) =>
   [
     approvals ? `${approvals} waiting for your approval` : "",
     applications ? `${applications} new job application${applications === 1 ? "" : "s"}` : "",
+    responses ? `${responses} new offer response${responses === 1 ? "" : "s"}` : "",
   ].filter(Boolean).join(", ");
 
 function Sidebar({ collapsed, onToggle }) {
@@ -70,6 +74,7 @@ function Sidebar({ collapsed, onToggle }) {
   const pendingResignations = useMenuCount(resignationsPath, RESIGNATIONS_CHANGED_EVENT, isPendingHR);
   const pendingMprApprovals = useMenuCount(mprApprovalsPath, MPRS_CHANGED_EVENT);
   const newApplications = useMenuCount(newApplicationsPath, APPLICATIONS_CHANGED_EVENT, undefined, NEW_APPLICATIONS_POLL_MS);
+  const newOfferResponses = useMenuCount(offerResponsesPath, APPLICATIONS_CHANGED_EVENT, undefined, NEW_APPLICATIONS_POLL_MS);
   const { pathname } = useLocation();
   const { t } = useTranslation();
   const scrollRef = useRef(null);
@@ -84,7 +89,7 @@ function Sidebar({ collapsed, onToggle }) {
   const menuItems = [
     ["/hr-dashboard", t("menu.dashboard"), LayoutDashboard],
     ["/employees", t("menu.employees"), Users],
-    ["/recruitment", t("menu.recruitment"), BriefcaseBusiness, pendingMprApprovals + newApplications, recruitmentBadgeLabel(pendingMprApprovals, newApplications)],
+    ["/recruitment", t("menu.recruitment"), BriefcaseBusiness, pendingMprApprovals + newApplications + newOfferResponses, recruitmentBadgeLabel(pendingMprApprovals, newApplications, newOfferResponses)],
     ["/attendance", t("menu.attendance"), Clock3],
     ["/leave-management", t("menu.leaveManagement"), CalendarDays],
     ["/resignations", t("menu.resignation"), DoorOpen, pendingResignations, `${pendingResignations} waiting for HR`],
@@ -139,6 +144,10 @@ function Sidebar({ collapsed, onToggle }) {
         <NavLink to="/settings/grade-assignment" className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? " active" : ""}`}>
           <Award size={18} strokeWidth={2} />
           <span>{t("menu.gradeAssignment", { defaultValue: "Grade Assignment" })}</span>
+        </NavLink>
+        <NavLink to="/settings/grade-master" className={({ isActive }) => `sidebar-link sidebar-sublink${isActive ? " active" : ""}`}>
+          <Layers size={18} strokeWidth={2} />
+          <span>{t("menu.gradeMaster", { defaultValue: "Grade Master" })}</span>
         </NavLink>
         <button
           type="button"

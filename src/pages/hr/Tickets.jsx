@@ -11,6 +11,7 @@ import {
     X,
 } from "lucide-react";
 import i18n from "i18next";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ExportMenu from "../../components/common/ExportMenu";
@@ -19,6 +20,7 @@ import API_URL from "../../config/api";
 import "./Tickets.css";
 
 const PRIORITIES = ["Low", "Medium", "High"];
+const STATUSES = ["Open", "On Hold", "Reopened", "Resolved", "Closed"];
 const emptyForm = { subject: "", description: "", category_id: "", priority: "Medium", raised_by: "", assigned_to: "" };
 
 const getCurrentUserId = () => {
@@ -61,8 +63,10 @@ function Tickets() {
     const { t } = useTranslation();
     const valueLabel = (group, value) => t(`tickets.values.${group}.${valueKey(value)}`, { defaultValue: String(value) });
     const currentUserId = useMemo(() => getCurrentUserId(), []);
+    const [searchParams] = useSearchParams();
     const [search, setSearch] = useState("");
-    const [selectedStatus, setSelectedStatus] = useState("all");
+    // The dashboard links here with ?status=Open
+    const [selectedStatus, setSelectedStatus] = useState(() => (STATUSES.includes(searchParams.get("status")) ? searchParams.get("status") : "all"));
     const [tickets, setTickets] = useState([]);
     const [categories, setCategories] = useState([]);
     const [agents, setAgents] = useState([]);
@@ -242,7 +246,7 @@ function Tickets() {
                             <label className="ticket-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("tickets.searchPlaceholder", { defaultValue: "Search tickets" })} /></label>
                             <select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)} aria-label={t("tickets.statusFilterLabel", { defaultValue: "Select status" })}>
                                 <option value="all">{t("tickets.selectStatus", { defaultValue: "Select Status" })}</option>
-                                {["Open", "On Hold", "Reopened", "Resolved", "Closed"].map((status) => <option key={status} value={status}>{valueLabel("status", status)}</option>)}
+                                {STATUSES.map((status) => <option key={status} value={status}>{valueLabel("status", status)}</option>)}
                             </select>
                             <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} aria-label={t("tickets.sortLabel", { defaultValue: "Sort tickets" })}>
                                 <option value="recent">{t("tickets.sortBy", { option: t("tickets.sort.newest", { defaultValue: "Newest" }), defaultValue: "Sort By : {{option}}" })}</option>

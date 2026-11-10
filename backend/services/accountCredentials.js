@@ -12,6 +12,38 @@ export const employeeMappingPredicate = `
                   AND m.link_status = 'linked')
 `;
 
+// Who may sign in: an employee linked to exactly one D365 worker (above), or an employee
+// added in HRMS that is not in D365 yet, whose login is EMP<their HRMS employee ID>.
+// Once the D365 create links them (same personnel number), the first rule applies.
+export const employeeLoginPredicate = `(
+    (${employeeMappingPredicate})
+    OR (
+        l.username = 'EMP' || l.personnel_number
+        AND l.personnel_number = l.employee_id
+        AND NOT EXISTS (SELECT 1 FROM public.employee_d365_mapping m WHERE m.employee_id = l.employee_id)
+        AND NOT EXISTS (SELECT 1 FROM public.employee_d365_mapping m WHERE m.personnel_number = l.personnel_number)
+    )
+)`;
+
+// Login for an employee HR adds in HRMS: username EMP<employee ID>, temporary password =
+// username (same as the imported employees), changed after first sign-in.
+// Returns null when the ID cannot be a login name (e.g. it already starts with EMP).
+export async function createHrmsEmployeeLogin(db, employeeId) {
+    const id = String(employeeId ?? "").trim();
+    if (!/^[A-Za-z0-9-]+$/.test(id) || /^EMP/i.test(id)) return null;
+    const username = `EMP${id}`;
+    const result = await db.query(
+        `INSERT INTO employee_logins
+            (employee_id, personnel_number, username, normalized_username, password_hash,
+             enabled, credential_version, must_change_password, provision_run_id)
+         VALUES ($1, $1, $2, $3, $4, TRUE, 0, TRUE, 'hrms-add')
+         ON CONFLICT DO NOTHING
+         RETURNING username`,
+        [id, username, username.toLowerCase(), await bcrypt.hash(username, 10)]
+    );
+    return result.rows[0]?.username || null;
+}
+
 export async function buildInitialEmployeeCredential(personnelNumber) {
     if (typeof personnelNumber !== "string" || !/^[A-Za-z0-9-]+$/.test(personnelNumber)
         || /^EMP/i.test(personnelNumber)) {

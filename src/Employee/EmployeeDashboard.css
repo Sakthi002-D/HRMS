@@ -3890,3 +3890,3170 @@
     box-shadow: none !important;
 }
 
+
+/* =========================================
+   EMPLOYEE DASHBOARD — same look as the HR pages
+   Dark navy/teal banner with orange accents, plain white cards.
+   Scoped to the dashboard section; the other sections keep their own styles.
+   ========================================= */
+
+.employee-dashboard.dashboard-view {
+    --emp-orange: #f97316;
+    --emp-orange-ink: #c2410c;
+    --emp-orange-soft: #fff7ed;
+    --emp-accent: #fdba74;
+    --emp-ink: #111827;
+    --emp-text: #4b5563;
+    --emp-line: #e5ebf1;
+}
+
+/* ---------- Banner ---------- */
+.edash-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 18px 28px;
+    margin-bottom: 22px;
+    padding: 26px 28px;
+    border-radius: 14px;
+    background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+    box-shadow: 0 10px 26px rgba(17, 22, 31, .16);
+    color: #ffffff;
+}
+
+.edash-hero-copy {
+    min-width: 0;
+}
+
+.edash-hero-kicker {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--emp-accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.employee-dashboard .edash-hero h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.employee-dashboard .edash-hero p {
+    margin: 6px 0 0;
+    color: #d7e2ea !important;
+    font-size: 14px;
+}
+
+.edash-hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.edash-hero-chips span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.edash-hero-chips svg {
+    color: var(--emp-accent);
+}
+
+/* Right side: bell in the top corner, live clock under it */
+.edash-hero-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.employee-dashboard .edash-hero-bell {
+    position: relative;
+    display: grid;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .08);
+    color: #ffffff;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.employee-dashboard .edash-hero-bell:hover {
+    background: rgba(255, 255, 255, .16);
+    transform: none;
+}
+
+.edash-hero-bell-count {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border: 2px solid #11161f;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+}
+
+.edash-hero-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.edash-hero-clock span {
+    color: var(--emp-accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.edash-hero-clock strong {
+    color: #ffffff;
+    font-size: 30px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.edash-hero-clock small {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #d7e2ea;
+    font-size: 13px;
+}
+
+/* ---------- Cards ---------- */
+.employee-dashboard.dashboard-view .employee-identity-card,
+.employee-dashboard.dashboard-view .employee-leave-chart-card,
+.employee-dashboard.dashboard-view .employee-leave-summary-card,
+.employee-dashboard.dashboard-view .work-metric-card {
+    border: 1px solid var(--emp-line);
+    border-radius: 12px;
+    box-shadow: none;
+}
+
+.employee-dashboard.dashboard-view .employee-identity-card:hover,
+.employee-dashboard.dashboard-view .employee-leave-chart-card:hover,
+.employee-dashboard.dashboard-view .employee-leave-summary-card:hover,
+.employee-dashboard.dashboard-view .work-metric-card:hover {
+    border-color: #fed7aa;
+    box-shadow: 0 8px 20px rgba(17, 22, 31, .06);
+    transform: none;
+}
+
+.employee-dashboard.dashboard-view .employee-overview-grid {
+    gap: 18px;
+}
+
+.employee-dashboard.dashboard-view .employee-work-metrics {
+    gap: 18px;
+    margin-top: 18px;
+}
+
+/* Profile card: light header, the banner above is already dark */
+.employee-dashboard.dashboard-view .identity-banner,
+.employee-dashboard.dashboard-view .employee-identity-card:hover .identity-banner {
+    min-height: 0;
+    padding: 20px;
+    border-bottom: 1px solid var(--emp-line);
+    background: #ffffff;
+}
+
+.employee-dashboard.dashboard-view .large-avatar {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+    border: 0;
+    background: var(--emp-orange);
+}
+
+.employee-dashboard.dashboard-view .identity-banner h2 {
+    margin-bottom: 3px;
+    color: var(--emp-ink);
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.employee-dashboard.dashboard-view .identity-banner p {
+    color: var(--emp-text) !important;
+}
+
+.employee-dashboard.dashboard-view .identity-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 16px;
+    padding: 20px;
+}
+
+.employee-dashboard.dashboard-view .identity-details label,
+.employee-dashboard.dashboard-view .leave-summary-grid label {
+    margin-bottom: 5px;
+    color: var(--emp-text);
+    font-size: 12.5px;
+}
+
+.employee-dashboard.dashboard-view .identity-details strong {
+    color: var(--emp-ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.employee-dashboard.dashboard-view .overview-card-heading {
+    padding: 16px 20px;
+    border-bottom-color: var(--emp-line);
+}
+
+.employee-dashboard.dashboard-view .overview-card-heading h2 {
+    color: var(--emp-ink);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.employee-dashboard.dashboard-view .overview-card-heading span {
+    border-color: var(--emp-line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--emp-ink);
+    font-weight: 600;
+}
+
+.employee-dashboard.dashboard-view .overview-card-heading span svg {
+    color: var(--emp-orange);
+}
+
+.employee-dashboard.dashboard-view .leave-summary-grid strong {
+    color: var(--emp-ink);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* Metric cards: one icon style, orange */
+.employee-dashboard.dashboard-view .metric-icon,
+.employee-dashboard.dashboard-view .metric-icon.dark,
+.employee-dashboard.dashboard-view .metric-icon.blue,
+.employee-dashboard.dashboard-view .metric-icon.pink {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    background: var(--emp-orange-soft);
+    color: var(--emp-orange-ink);
+}
+
+.employee-dashboard.dashboard-view .metric-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.employee-dashboard.dashboard-view .employee-work-metrics .work-metric-card strong {
+    color: var(--emp-ink);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.employee-dashboard.dashboard-view .employee-work-metrics .work-metric-card small {
+    color: var(--emp-ink);
+    font-weight: 600;
+}
+
+.employee-dashboard.dashboard-view .metric-progress {
+    background: #f1f5f9;
+}
+
+.employee-dashboard.dashboard-view .metric-progress span {
+    background: var(--emp-orange);
+}
+
+@media (max-width: 760px) {
+    .edash-hero {
+        padding: 22px 20px;
+    }
+
+    .edash-hero-side {
+        flex-direction: row-reverse;
+        align-items: center;
+        width: 100%;
+    }
+
+    .edash-hero-clock {
+        align-items: flex-start;
+    }
+
+    .employee-dashboard.dashboard-view .identity-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+html[dir="rtl"] .edash-hero-kicker,
+html[dir="rtl"] .edash-hero-clock span {
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+html[dir="rtl"] .edash-hero-bell-count {
+    right: auto;
+    left: -7px;
+}
+
+/* =========================================
+   EMPLOYEE DASHBOARD BODY — compact cards and charts, same look as the HR dashboard
+   ========================================= */
+
+.employee-dashboard.dashboard-view .edash-hero {
+    margin-bottom: 16px;
+    padding: 22px 26px;
+}
+
+.edash-body {
+    --ed-orange: #f97316;
+    --ed-orange-ink: #c2410c;
+    --ed-orange-soft: #fff7ed;
+    --ed-navy: #0c4a5e;
+    --ed-amber: #f59e0b;
+    --ed-green: #16a34a;
+    --ed-rose: #e11d48;
+    --ed-muted: #eef2f6;
+    --ed-ink: #111827;
+    --ed-text: #64748b;
+    --ed-line: #e5ebf1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.edash-tone-orange { --seg: var(--ed-orange); }
+.edash-tone-navy { --seg: var(--ed-navy); }
+.edash-tone-amber { --seg: var(--ed-amber); }
+.edash-tone-green { --seg: var(--ed-green); }
+.edash-tone-rose { --seg: var(--ed-rose); }
+
+/* ---------- Cards ---------- */
+.edash-card {
+    min-width: 0;
+    padding: 18px 20px;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.edash-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.employee-dashboard .edash-body h2 {
+    margin: 0;
+    color: var(--ed-ink);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.edash-card-icon {
+    display: grid;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+}
+
+.employee-main .edash-body .edash-card-sub {
+    margin: 12px 0 0;
+    color: var(--ed-text) !important;
+    font-size: 12.5px;
+}
+
+.employee-main .edash-body .edash-card-head .edash-card-sub {
+    margin-top: 3px;
+}
+
+.edash-card-value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin-bottom: 14px;
+}
+
+.edash-card-value strong {
+    color: var(--ed-ink);
+    font-size: 30px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.edash-card-value span {
+    color: var(--ed-text);
+    font-size: 13px;
+}
+
+.employee-dashboard .edash-body .edash-link {
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--ed-orange-ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-dashboard .edash-body .edash-link:hover {
+    text-decoration: underline;
+    transform: none;
+}
+
+/* ---------- Overview row ---------- */
+.edash-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.edash-segbar {
+    display: flex;
+    gap: 4px;
+    height: 8px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    background: var(--ed-muted);
+}
+
+.edash-segbar i {
+    flex-basis: 0;
+    min-width: 6px;
+    border-radius: 999px;
+    background: var(--seg);
+}
+
+.edash-mini {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.employee-dashboard .edash-body .edash-mini-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--ed-line);
+    border-radius: 10px;
+    background: #f8fafc;
+    box-shadow: none;
+    color: var(--ed-ink);
+    font: inherit;
+    text-align: start;
+}
+
+.employee-dashboard .edash-body button.edash-mini-item {
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.employee-dashboard .edash-body button.edash-mini-item:hover {
+    border-color: #fed7aa;
+    background: var(--ed-orange-soft);
+    transform: none;
+}
+
+.edash-mini-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--ed-text);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.edash-mini-label::before {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--seg);
+    content: "";
+}
+
+.edash-mini-item strong {
+    color: var(--ed-ink);
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* Today: hours ring + punch details */
+.edash-today {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.edash-ring {
+    position: relative;
+    flex: none;
+    width: 112px;
+    height: 112px;
+}
+
+.edash-ring svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.edash-ring circle {
+    fill: none;
+    stroke-width: 11;
+}
+
+.edash-ring-track {
+    stroke: var(--ed-muted);
+}
+
+.edash-ring-fill {
+    stroke: var(--ed-orange);
+    stroke-linecap: round;
+    transition: stroke-dasharray .4s ease;
+}
+
+.edash-ring > div {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.edash-ring strong {
+    color: var(--ed-ink);
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.edash-ring span {
+    color: var(--ed-text);
+    font-size: 12px;
+}
+
+.edash-today-list,
+.edash-profile-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+}
+
+.edash-today-list > div,
+.edash-profile-list > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.edash-today-list dt,
+.edash-profile-list dt {
+    color: var(--ed-text);
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.edash-today-list dd,
+.edash-profile-list dd {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ed-ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Status pills (leave + attendance) */
+.edash-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--ed-muted);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.edash-pill-approved { background: #dcfce7; color: #15803d; }
+.edash-pill-pending { background: #fef3c7; color: #b45309; }
+.edash-pill-rejected { background: #ffe4e6; color: #be123c; }
+
+/* ---------- Board ---------- */
+.edash-board {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.edash-board-main,
+.edash-board-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+/* Weekly hours chart */
+.edash-week {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    height: 200px;
+    padding-top: 6px;
+}
+
+.edash-week-target {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: var(--ed-text);
+    font-size: 11px;
+}
+
+.edash-week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.edash-week-day b {
+    height: 16px;
+    color: var(--ed-ink);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.edash-week-track {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    width: 100%;
+    max-width: 44px;
+    border-radius: 8px;
+    background: #f8fafc;
+    /* dashed line at the daily target */
+    background-image: linear-gradient(to top, transparent calc(var(--target) - 1px), #fdba74 calc(var(--target) - 1px), #fdba74 var(--target), transparent var(--target));
+}
+
+.edash-week-track i {
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+    background: var(--seg);
+    transition: height .4s ease;
+}
+
+.edash-week-day.today .edash-week-track {
+    outline: 2px solid #fed7aa;
+    outline-offset: 2px;
+}
+
+.employee-main .edash-body .edash-week-day small {
+    color: var(--ed-text) !important;
+    font-size: 12px;
+}
+
+.employee-main .edash-body .edash-week-day.today small {
+    color: var(--ed-orange-ink) !important;
+    font-weight: 600;
+}
+
+.edash-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.edash-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ed-text);
+    font-size: 12.5px;
+}
+
+.edash-legend li::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--seg);
+    content: "";
+}
+
+/* Recent leave list */
+.edash-leave-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.edash-leave-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 0;
+    border-top: 1px solid var(--ed-line);
+}
+
+.edash-leave-list li:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.edash-leave-list li > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.edash-leave-list strong {
+    overflow: hidden;
+    color: var(--ed-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.edash-leave-list li > div span {
+    color: var(--ed-text);
+    font-size: 12.5px;
+}
+
+.edash-leave-list b {
+    color: var(--ed-ink);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.employee-main .edash-body .edash-empty {
+    margin: 0;
+    color: var(--ed-text) !important;
+    font-size: 13px;
+}
+
+/* Profile card */
+.edash-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--ed-line);
+}
+
+.edash-profile-head > div:last-child {
+    min-width: 0;
+}
+
+.edash-avatar {
+    display: grid;
+    flex: none;
+    width: 46px;
+    height: 46px;
+    overflow: hidden;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--ed-orange);
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.edash-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.employee-main .edash-body .edash-profile-head p {
+    margin: 2px 0 0;
+    color: var(--ed-text) !important;
+    font-size: 12.5px;
+}
+
+.edash-profile .edash-link {
+    margin-top: 14px;
+}
+
+/* Quick actions */
+.edash-quick {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.employee-dashboard .edash-body .edash-quick button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--ed-line);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: none;
+    color: var(--ed-ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.employee-dashboard .edash-body .edash-quick button svg {
+    color: var(--ed-orange-ink);
+}
+
+.employee-dashboard .edash-body .edash-quick button:hover {
+    border-color: #fed7aa;
+    background: var(--ed-orange-soft);
+    transform: none;
+}
+
+@media (max-width: 1200px) {
+    .edash-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .edash-board {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .edash-overview {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .edash-week {
+        gap: 6px;
+        height: 170px;
+    }
+
+    .edash-leave-list li {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .edash-leave-list b {
+        display: none;
+    }
+}
+
+/* =========================================
+   EMPLOYEE ATTENDANCE — same banner and cards as the employee dashboard,
+   table styled like the HR Attendance page
+   ========================================= */
+
+.employee-dashboard.attendance-view .employee-attendance-view.eatt {
+    margin-top: 0;
+}
+
+.eatt .edash-hero {
+    margin-bottom: 16px;
+    padding: 22px 26px;
+}
+
+/* The portal turns all small text black; the banner date stays light */
+.employee-main .edash-hero-clock small {
+    color: #d7e2ea !important;
+}
+
+.eatt .edash-today-list dt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.eatt .edash-today-list dt svg {
+    color: var(--ed-orange-ink);
+}
+
+/* Records card: title + search, then status tabs + month/year */
+.eatt-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.eatt-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+}
+
+.eatt-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 1 300px;
+    min-width: 200px;
+}
+
+.eatt-search svg {
+    position: absolute;
+    inset-inline-start: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.employee-dashboard .eatt-search input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    padding-inline-start: 36px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: var(--ed-ink);
+    font-size: 13px;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.employee-dashboard .eatt-search input:focus {
+    border-color: var(--ed-orange);
+    background: #ffffff;
+    outline: 3px solid #ffedd5;
+}
+
+/* Status tabs with counts */
+.eatt-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.employee-dashboard .eatt-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    margin: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ed-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.employee-dashboard .eatt-tabs button[class*="edash-tone-"]::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--seg);
+    content: "";
+}
+
+.employee-dashboard .eatt-tabs button:hover {
+    color: var(--ed-ink);
+    transform: none;
+}
+
+.employee-dashboard .eatt-tabs button.active {
+    background: #ffffff;
+    color: var(--ed-ink);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(17, 22, 31, .1) !important;
+}
+
+.eatt-tabs b {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--ed-muted);
+    color: var(--ed-text);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.eatt-tabs button.active b {
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+}
+
+/* Month / year pickers */
+.eatt-period {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.eatt-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.eatt-select svg {
+    position: absolute;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.eatt-select svg:first-child:not(:last-child) {
+    inset-inline-start: 11px;
+    color: var(--ed-orange-ink);
+}
+
+.eatt-select svg:last-child {
+    inset-inline-end: 10px;
+}
+
+.employee-dashboard .eatt-select select {
+    height: 38px;
+    padding: 0 32px 0 12px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--ed-ink);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.employee-dashboard .eatt-select svg:first-child:not(:last-child) + select {
+    padding-inline-start: 34px;
+}
+
+html[dir="rtl"] .employee-dashboard .eatt-select select {
+    padding: 0 12px 0 32px;
+}
+
+.employee-dashboard .eatt-select select:hover {
+    border-color: #fed7aa;
+}
+
+.employee-dashboard .eatt-select select:focus,
+.employee-dashboard .eatt-footer select:focus {
+    border-color: var(--ed-orange);
+    outline: 3px solid #ffedd5;
+}
+
+.employee-dashboard .eatt-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 38px;
+    margin: 0;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ed-orange-ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-dashboard .eatt-clear:hover {
+    background: var(--ed-orange-soft);
+    transform: none;
+}
+
+.employee-dashboard .eatt-footer select {
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid #d6dee8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ed-ink);
+    font-size: 13px;
+}
+
+.eatt-table-wrap {
+    margin: 0 -20px;
+    overflow-x: auto;
+    border-top: 1px solid var(--ed-line);
+    border-bottom: 1px solid var(--ed-line);
+}
+
+.eatt-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.employee-dashboard .eatt-table thead th {
+    padding: 12px 20px !important;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f3f5f8 !important;
+    color: #111827 !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    text-align: start !important;
+}
+
+.employee-dashboard .eatt-table tbody td {
+    padding: 12px 20px;
+    border-bottom: 1px solid #eef0f3;
+    color: #374151;
+    font-size: 14px;
+    text-align: start !important;
+    white-space: nowrap;
+}
+
+.eatt-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.eatt-table tbody tr:hover td {
+    background: #f9fafb;
+}
+
+.employee-dashboard .eatt-table td.eatt-empty {
+    padding: 36px 20px;
+    color: var(--ed-text);
+    text-align: center !important;
+}
+
+/* Hours with a small bar against the 9 h day */
+.eatt-hours {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.eatt-hours span {
+    min-width: 72px;
+    color: var(--ed-ink);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+
+.eatt-hours i {
+    display: block;
+    width: 70px;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--ed-muted);
+}
+
+.eatt-hours b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ed-orange);
+}
+
+.eatt-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    padding-top: 14px;
+    color: var(--ed-text);
+    font-size: 13px;
+}
+
+.employee-main .eatt-footer label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ed-text) !important;
+    font-size: 13px;
+}
+
+.eatt-pager {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.eatt-pager b {
+    min-width: 54px;
+    color: var(--ed-ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.employee-dashboard .eatt-pager button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--ed-line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ed-ink);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.employee-dashboard .eatt-pager button:hover:not(:disabled) {
+    border-color: #fed7aa;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+}
+
+.employee-dashboard .eatt-pager button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+html[dir="rtl"] .eatt-pager button {
+    transform: scaleX(-1);
+}
+
+@media (max-width: 760px) {
+    .eatt-search {
+        flex: 1 1 100%;
+    }
+
+    .eatt-tabs {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+}
+
+/* Notification bell on the plain page header: same size and orange accent as the banner bell */
+.employee-dashboard .employee-header .employee-notification-button {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid #e5ebf1;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #111827;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+
+.employee-dashboard .employee-header .employee-notification-button:hover {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
+    transform: none;
+}
+
+.employee-dashboard .employee-header .employee-notification-count {
+    top: -7px;
+    right: -7px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+}
+
+html[dir="rtl"] .employee-dashboard .employee-header .employee-notification-count {
+    right: auto;
+    left: -7px;
+}
+
+.epf .epf-actions > .edash-hero-bell {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+}
+
+/* =========================================
+   EMPLOYEE LEAVE — same banner and cards as the employee dashboard
+   ========================================= */
+
+.elv .edash-hero {
+    margin-bottom: 16px;
+    padding: 22px 26px;
+}
+
+.elv .edash-hero-side {
+    justify-content: space-between;
+}
+
+.employee-dashboard .elv .elv-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    margin: 0;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 10px;
+    background: #f97316;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.employee-dashboard .elv .elv-apply:hover {
+    background: #ea580c;
+    transform: none;
+}
+
+.elv .eatt-toolbar {
+    margin-bottom: 14px;
+}
+
+.elv-row {
+    cursor: pointer;
+}
+
+.elv-row:focus-visible {
+    outline: 2px solid #fed7aa;
+    outline-offset: -2px;
+}
+
+.elv-type {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 260px;
+}
+
+.elv-type strong {
+    color: var(--ed-ink);
+    font-weight: 600;
+}
+
+.elv-type span {
+    overflow: hidden;
+    color: var(--ed-text);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.employee-dashboard .elv .elv-cancel {
+    height: 30px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #be123c;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-dashboard .elv .elv-cancel:hover {
+    background: #ffe4e6;
+    transform: none;
+}
+
+.edash-pill-cancelled {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.elv .eatt-table-wrap + .edash-card-sub {
+    margin-top: 14px;
+}
+
+/* Leave rules list: type on the left, limit + pay on the right */
+.elv-rules > div {
+    align-items: flex-start;
+}
+
+.elv-rules dd {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    white-space: normal;
+    text-align: end;
+}
+
+.elv-rules dd small {
+    color: var(--ed-text);
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+/* Holidays */
+.employee-dashboard .elv .elv-toggle {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--ed-line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ed-text);
+    cursor: pointer;
+}
+
+.elv-toggle svg {
+    transition: transform .2s ease;
+}
+
+.elv-toggle.open svg {
+    transform: rotate(180deg);
+}
+
+.elv-holidays {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.elv-holidays li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--ed-line);
+}
+
+.elv-holidays li:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.elv-holiday-icon {
+    display: grid;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+}
+
+.elv-holidays li > div {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.elv-holidays strong {
+    color: var(--ed-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.elv-holidays li > div span {
+    color: var(--ed-text);
+    font-size: 12.5px;
+}
+
+.elv-holidays b {
+    color: var(--ed-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.employee-dashboard.leave-view .employee-leave-section {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* =========================================
+   EMPLOYEE DOCUMENTS — same banner and cards as the employee dashboard
+   ========================================= */
+
+.employee-dashboard .employee-documents-view.edoc {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.edoc .edash-hero {
+    margin-bottom: 16px;
+    padding: 22px 26px;
+}
+
+.edoc .edash-hero-side {
+    justify-content: flex-start;
+}
+
+.edoc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.edoc-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: #ffffff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.edoc-tile:hover {
+    border-color: #fed7aa;
+    box-shadow: 0 6px 16px rgba(17, 22, 31, .05);
+}
+
+.edoc-tile-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.edoc-icon {
+    display: grid;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+}
+
+.employee-dashboard .edoc-tile h3 {
+    margin: 0 0 3px;
+    color: var(--ed-ink);
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.employee-main .edoc-tile p {
+    margin: 0;
+    color: var(--ed-text) !important;
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.edoc-tile-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.edoc-tile-foot .edash-pill {
+    height: auto;
+    min-height: 24px;
+    white-space: normal;
+}
+
+.edoc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-inline-start: auto;
+}
+
+.employee-dashboard .edoc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid var(--ed-line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ed-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+
+.employee-dashboard .edoc-btn:hover {
+    border-color: #fed7aa;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+    transform: none;
+}
+
+.employee-dashboard .edoc-btn.primary {
+    border-color: var(--ed-orange);
+    background: var(--ed-orange);
+    color: #ffffff;
+}
+
+.employee-dashboard .edoc-btn.primary:hover {
+    border-color: #ea580c;
+    background: #ea580c;
+    color: #ffffff;
+}
+
+.employee-dashboard .edoc-btn.disabled {
+    opacity: .6;
+    pointer-events: none;
+}
+
+.edoc .edoc-grid + .edash-card-sub {
+    margin-top: 14px;
+}
+
+/* Leave Policy (read-only, from HR's Leave Policy Setup) */
+.elv-grade {
+    flex: none;
+    padding: 5px 12px;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    background: var(--ed-orange-soft);
+    color: var(--ed-orange-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.elv-policy {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.elv-policy-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--ed-line);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.elv-policy-item > div {
+    min-width: 0;
+}
+
+.employee-dashboard .elv-policy-item h3 {
+    margin: 0 0 2px;
+    color: var(--ed-text);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.elv-policy-item strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--ed-ink);
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.elv-policy-item ul {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.elv-policy-item li {
+    position: relative;
+    padding-inline-start: 12px;
+    color: var(--ed-text);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.elv-policy-item li::before {
+    position: absolute;
+    top: 7px;
+    inset-inline-start: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #fdba74;
+    content: "";
+}
+
+/* =========================================
+   PERIOD PICKER — month + year filter in one popover
+   ========================================= */
+
+.eperiod {
+    position: relative;
+}
+
+.employee-dashboard .eperiod-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.employee-dashboard .eperiod-trigger svg:first-child {
+    color: #c2410c;
+}
+
+.employee-dashboard .eperiod-trigger svg:last-child {
+    color: #94a3b8;
+    transition: transform .2s ease;
+}
+
+.employee-dashboard .eperiod-trigger:hover,
+.employee-dashboard .eperiod-trigger.open {
+    border-color: #f97316;
+    transform: none;
+}
+
+.employee-dashboard .eperiod-trigger.open svg:last-child {
+    transform: rotate(180deg);
+}
+
+.employee-dashboard .eperiod-trigger.active {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
+    font-weight: 600;
+}
+
+.eperiod-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    inset-inline-end: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 320px;
+    padding: 16px;
+    border: 1px solid #e5ebf1;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 18px 40px rgba(17, 22, 31, .16);
+    animation: eperiodIn .16s ease;
+}
+
+@keyframes eperiodIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.eperiod-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.eperiod-title {
+    color: #64748b;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+html[dir="rtl"] .eperiod-title {
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.eperiod-years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 76px;
+    overflow-y: auto;
+}
+
+.eperiod-months {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.employee-dashboard :is(.eperiod-years, .eperiod-months) button {
+    height: 32px;
+    margin: 0;
+    padding: 0 10px;
+    border: 1px solid #e5ebf1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #111827;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+
+.employee-dashboard .eperiod-months button.wide {
+    grid-column: 1 / -1;
+}
+
+.employee-dashboard :is(.eperiod-years, .eperiod-months) button:hover {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    transform: none;
+}
+
+.employee-dashboard .eperiod-months button.current {
+    border-color: #fdba74;
+}
+
+.employee-dashboard :is(.eperiod-years, .eperiod-months) button.selected {
+    border-color: #f97316;
+    background: #f97316;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.eperiod-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #eef2f6;
+}
+
+.employee-dashboard .eperiod-foot button {
+    height: 32px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid #e5ebf1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #c2410c;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-dashboard .eperiod-foot button.primary {
+    border-color: #f97316;
+    background: #f97316;
+    color: #ffffff;
+}
+
+.employee-dashboard .eperiod-foot button:hover {
+    transform: none;
+}
+
+@media (max-width: 560px) {
+    .eperiod-pop {
+        position: fixed;
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: auto;
+    }
+}
+
+/* =========================================
+   APPLY FOR LEAVE — fixed header and footer, only the body scrolls
+   ========================================= */
+
+.employee-modal.alm-overlay {
+    align-items: center;
+    overflow: hidden;
+    padding: 24px;
+}
+
+.employee-modal-card.apply-leave-card.alm {
+    display: flex;
+    flex-direction: column;
+    width: min(880px, 100%);
+    max-width: none;
+    max-height: calc(100vh - 48px);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #e5ebf1;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(17, 22, 31, .28);
+}
+
+.alm-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    background: linear-gradient(120deg, #11161f 0%, #042330 62%, #0c4a5e 100%);
+    color: #ffffff;
+}
+
+.alm-head-icon {
+    display: grid;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .08);
+    color: #fdba74;
+}
+
+.alm-head > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.employee-modal-card.alm .alm-head h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.employee-main .alm .alm-head p,
+.alm .alm-head p {
+    margin: 3px 0 0;
+    color: #d7e2ea !important;
+    font-size: 13px;
+}
+
+.employee-dashboard .alm .alm-close {
+    display: grid;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .08);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.employee-dashboard .alm .alm-close:hover {
+    background: rgba(255, 255, 255, .16);
+    transform: none;
+}
+
+.alm-form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+}
+
+.alm-body {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.alm-main {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px 24px;
+}
+
+.alm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.employee-dashboard .alm-field label {
+    margin: 0;
+    color: #111827 !important;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.alm-select {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.employee-dashboard .alm-select select {
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0 40px 0 14px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+html[dir="rtl"] .employee-dashboard .alm-select select {
+    padding: 0 14px 0 40px;
+}
+
+.alm-select svg {
+    position: absolute;
+    inset-inline-end: 14px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.alm-dates {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+}
+
+.alm-dates-arrow {
+    display: grid;
+    width: 28px;
+    height: 44px;
+    margin-top: 27px;
+    place-items: center;
+    color: #94a3b8;
+}
+
+html[dir="rtl"] .alm-dates-arrow svg,
+html[dir="rtl"] .alm-range-dates svg {
+    transform: scaleX(-1);
+}
+
+/* Date fields in the project look */
+.alm .date-picker-trigger {
+    height: 44px !important;
+    border: 1px solid #d6dee8 !important;
+    border-radius: 10px !important;
+}
+
+.alm .date-picker-trigger.is-open,
+.alm .date-picker-trigger:hover {
+    border-color: #f97316 !important;
+}
+
+.alm .date-field-error {
+    color: #be123c;
+}
+
+/* Range summary */
+.alm-range {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px dashed #fdba74;
+    border-radius: 12px;
+    background: #fff7ed;
+}
+
+.alm-range.error {
+    border-color: #fecdd3;
+    background: #fff1f2;
+}
+
+.alm-range-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.alm-range.error .alm-range-hint {
+    color: #be123c;
+    font-weight: 600;
+}
+
+.alm-range-dates {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    font-size: 13px;
+}
+
+.alm-range strong {
+    color: #c2410c;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.employee-main .alm .alm-range small,
+.alm .alm-range small {
+    color: #64748b !important;
+    font-size: 12px;
+}
+
+.employee-dashboard .alm-field textarea {
+    min-height: 90px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    color: #111827;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.employee-dashboard .alm-field :is(select, textarea):focus {
+    border-color: #f97316;
+    outline: 3px solid #ffedd5;
+}
+
+.employee-main .alm .alm-count,
+.alm .alm-count {
+    align-self: flex-end;
+    color: #94a3b8 !important;
+    font-size: 11.5px;
+}
+
+/* Side panel: eligibility + balance */
+.alm-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 24px;
+    border-inline-start: 1px solid #eef2f6;
+    background: #f8fafc;
+}
+
+.alm-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.alm-side.eligible .alm-status {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.alm-side.not-eligible .alm-status {
+    background: #ffe4e6;
+    color: #be123c;
+}
+
+.employee-main .alm .alm-detail,
+.alm .alm-detail {
+    margin: 0;
+    color: #475569 !important;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.alm-balance {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid #e5ebf1;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.alm-balance-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+.alm-balance-top strong {
+    color: #111827;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.alm-meter {
+    display: flex;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eef2f6;
+}
+
+.alm-meter i {
+    display: block;
+    height: 100%;
+    transition: width .3s ease;
+}
+
+.alm-meter .used {
+    background: #0c4a5e;
+}
+
+.alm-meter .request {
+    background: #f97316;
+}
+
+.alm-meter .request.over {
+    background: #e11d48;
+}
+
+.alm-balance-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.alm-balance-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alm-balance-legend span::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    content: "";
+}
+
+.alm-balance-legend .used::before { background: #0c4a5e; }
+.alm-balance-legend .request::before { background: #f97316; }
+
+.alm-after {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.alm-after.over {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.alm-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+}
+
+.alm-facts > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.alm-facts dt {
+    color: #64748b;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.alm-facts dd {
+    margin: 0;
+    color: #111827;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: end;
+}
+
+/* Footer */
+.alm-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 24px;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+}
+
+.alm-foot-summary {
+    color: #475569;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.alm-foot-actions {
+    display: flex;
+    gap: 10px;
+    margin-inline-start: auto;
+}
+
+.employee-dashboard .alm .alm-btn {
+    height: 42px;
+    margin: 0;
+    padding: 0 18px;
+    border: 1px solid #d6dee8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.employee-dashboard .alm .alm-btn.primary {
+    border-color: #f97316;
+    background: #f97316;
+    color: #ffffff;
+}
+
+.employee-dashboard .alm .alm-btn.primary:hover:not(:disabled) {
+    border-color: #ea580c;
+    background: #ea580c;
+}
+
+.employee-dashboard .alm .alm-btn:hover {
+    transform: none;
+}
+
+.employee-dashboard .alm .alm-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+    .employee-modal.alm-overlay {
+        padding: 12px;
+    }
+
+    .employee-modal-card.apply-leave-card.alm {
+        max-height: calc(100vh - 24px);
+    }
+
+    .alm-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .alm-side {
+        border-inline-start: 0;
+        border-top: 1px solid #eef2f6;
+    }
+
+    .alm-dates {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .alm-dates-arrow {
+        display: none;
+    }
+}
+
+/* Dashboard top row: all leave balances in one compact card + today's attendance */
+.edash-overview.edash-overview-top {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.edash-balances .edash-card-head {
+    margin-bottom: 12px;
+}
+
+.edash-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.employee-dashboard .edash-body .edash-balance {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--ed-line);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--ed-ink);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.employee-dashboard .edash-body .edash-balance:hover {
+    border-color: #fed7aa;
+    background: var(--ed-orange-soft);
+    transform: none;
+}
+
+.employee-dashboard .edash-body .edash-balance.per-request {
+    background: #f8fafc;
+}
+
+.edash-balance-name {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--ed-text);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.edash-balance strong {
+    color: var(--ed-ink);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.edash-balance-bar {
+    display: block;
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--ed-muted);
+}
+
+.edash-balance-bar b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ed-orange);
+}
+
+.employee-main .edash-body .edash-balance small {
+    color: var(--ed-text) !important;
+    font-size: 11.5px;
+    line-height: 1.3;
+}
+
+@media (max-width: 1200px) {
+    .edash-overview.edash-overview-top {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .edash-balance-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Period picker: year stepper (any year from 2000 to next year) */
+.eperiod-year-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.eperiod-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #e5ebf1;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.employee-dashboard .eperiod-stepper button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #c2410c;
+    cursor: pointer;
+}
+
+.employee-dashboard .eperiod-stepper button:hover:not(:disabled) {
+    background: #fff7ed;
+    transform: none;
+}
+
+.employee-dashboard .eperiod-stepper button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.eperiod-stepper strong {
+    min-width: 48px;
+    color: #111827;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-align: center;
+}
+
+html[dir="rtl"] .eperiod-stepper svg {
+    transform: scaleX(-1);
+}
+
+/* =========================================
+   SETTINGS + CHANGE PASSWORD (eset-*, epw-*)
+   Same banner and cards as the other employee pages
+   ========================================= */
+
+.eset,
+.epw {
+    --es-orange: #f97316;
+    --es-orange-ink: #c2410c;
+    --es-orange-soft: #fff7ed;
+    --es-ink: #111827;
+    --es-navy: #042330;
+    --es-text: #64748b;
+    --es-line: #e5ebf1;
+    --es-green: #15803d;
+    --es-rose: #e11d48;
+}
+
+/* The old password view was a small white box; the page now has its own banner and cards */
+.employee-dashboard .employee-password-view.epw {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.eset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.eset-card,
+.epw-card,
+.epw-tips {
+    min-width: 0;
+    padding: 20px 22px;
+    border: 1px solid var(--es-line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.eset-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--es-line);
+}
+
+.employee-dashboard .eset-card-head h2,
+.employee-dashboard .epw-tips h3 {
+    margin: 0;
+    color: var(--es-ink);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.employee-main .eset-card-head p {
+    margin: 3px 0 0;
+    color: var(--es-text) !important;
+    font-size: 12.5px;
+}
+
+.eset-card-icon {
+    display: grid;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--es-orange-soft);
+    color: var(--es-orange-ink);
+}
+
+/* Setting rows */
+.eset-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--es-line);
+}
+
+.eset-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 2px;
+}
+
+.eset-row-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: var(--es-navy);
+}
+
+.eset-row-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.eset-row-text strong {
+    color: var(--es-ink);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.employee-main .eset-row-text small {
+    color: var(--es-text) !important;
+    font-size: 12px;
+}
+
+.eset-row-control {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.eset-code {
+    padding: 4px 10px;
+    border: 1px solid var(--es-line);
+    border-radius: 7px;
+    background: #f8fafc;
+    color: var(--es-navy);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.eset-pill {
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: var(--es-green);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.eset-button {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid #fed7aa;
+    border-radius: 9px;
+    background: var(--es-orange-soft);
+    color: var(--es-orange-ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.eset-button:hover {
+    background: var(--es-orange);
+    color: #ffffff;
+}
+
+.eset-select {
+    min-width: 150px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #d5e0e8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: var(--es-ink);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.eset-select:focus,
+.eset-button:focus-visible,
+.eset-switch:focus-visible {
+    border-color: var(--es-orange);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .16) !important;
+}
+
+/* On / off switch */
+.eset-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    cursor: pointer;
+    transition: background-color .2s ease;
+}
+
+.eset-switch span {
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .25);
+    transition: transform .2s ease;
+}
+
+.eset-switch.on {
+    background: var(--es-orange);
+}
+
+.eset-switch.on span {
+    transform: translateX(20px);
+}
+
+html[dir="rtl"] .eset-switch.on span {
+    transform: translateX(-20px);
+}
+
+/* Read-only work details */
+.eset-facts {
+    display: grid;
+    margin: 0;
+}
+
+.eset-facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--es-line);
+    font-size: 13.5px;
+}
+
+.eset-facts dt {
+    color: var(--es-text);
+}
+
+.eset-facts dd {
+    margin: 0;
+    color: var(--es-ink);
+    font-weight: 600;
+    text-align: end;
+}
+
+.eset-muted {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.eset-link {
+    margin-top: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--es-orange-ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.eset-link:hover {
+    text-decoration: underline;
+}
+
+.eset-session {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px 20px;
+    border: 1px solid var(--es-line);
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--es-text);
+    font-size: 13px;
+}
+
+.eset-session span,
+.eset-session button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.eset-session button {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid #fecdd3;
+    border-radius: 9px;
+    background: #fff1f2;
+    color: var(--es-rose);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.eset-session button:hover {
+    background: var(--es-rose);
+    color: #ffffff;
+}
+
+/* ---------- Change password ---------- */
+.epw-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.epw-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.epw-field {
+    display: grid;
+    gap: 6px;
+}
+
+.employee-main .epw-field label {
+    color: var(--es-ink) !important;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.epw-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 6px 0 12px;
+    border: 1px solid #d5e0e8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #94a3b8;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.epw-input:focus-within {
+    border-color: var(--es-orange);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.epw-input.invalid {
+    border-color: #fda4af;
+}
+
+.employee-main .epw-input input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--es-ink);
+    font: inherit;
+    font-size: 14px;
+}
+
+.epw-input button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--es-text);
+    cursor: pointer;
+}
+
+.epw-input button:hover {
+    background: #f1f5f9;
+    color: var(--es-navy);
+}
+
+/* Strength meter */
+.epw-strength {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: -6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.epw-strength i {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+.epw-strength b {
+    height: 5px;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.epw-strength.s0 b.on,
+.epw-strength.s1 b.on { background: var(--es-rose); }
+.epw-strength.s2 b.on { background: #f59e0b; }
+.epw-strength.s3 b.on { background: #84cc16; }
+.epw-strength.s4 b.on { background: #16a34a; }
+.epw-strength.s0 span,
+.epw-strength.s1 span { color: var(--es-rose); }
+.epw-strength.s2 span { color: #b45309; }
+.epw-strength.s3 span { color: #4d7c0f; }
+.epw-strength.s4 span { color: var(--es-green); }
+
+.epw-rules {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    list-style: none;
+}
+
+.epw-rules li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--es-text);
+    font-size: 12.5px;
+}
+
+.epw-rules li svg {
+    color: #94a3b8;
+}
+
+.epw-rules li.ok,
+.epw-rules li.ok svg {
+    color: var(--es-green);
+}
+
+.epw-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.epw-cancel,
+.epw-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.epw-cancel {
+    border: 1px solid #d5e0e8;
+    background: #ffffff;
+    color: var(--es-ink);
+}
+
+.epw-cancel:hover {
+    background: #f8fafc;
+}
+
+.epw-submit {
+    border: 0;
+    background: var(--es-orange);
+    color: #ffffff;
+}
+
+.epw-submit:hover:not(:disabled) {
+    background: #ea580c;
+}
+
+.epw-submit:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.epw-tips {
+    display: grid;
+    gap: 10px;
+    background: linear-gradient(160deg, #ffffff 0%, #fff7ed 100%);
+}
+
+.epw-tips ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-inline-start: 18px;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.epw-tips li::marker {
+    color: var(--es-orange);
+}
+
+@media (max-width: 900px) {
+    .eset-grid,
+    .epw-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .eset-row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .eset-row-control {
+        grid-column: 2;
+        justify-content: flex-start;
+    }
+}
+
+/* Settings > Compact cards: tighter spacing on the current pages */
+.employee-dashboard.compact-mode .edash-hero {
+    margin-bottom: 14px;
+    padding: 18px 22px;
+}
+
+.employee-dashboard.compact-mode .edash-body,
+.employee-dashboard.compact-mode .eset-grid,
+.employee-dashboard.compact-mode .epw-layout {
+    gap: 10px;
+}
+
+.employee-dashboard.compact-mode :is(.edash-card, .eset-card, .epw-card, .epw-tips) {
+    padding: 14px 16px;
+}
+
+.employee-dashboard.compact-mode .eset-row {
+    padding: 8px 0;
+}

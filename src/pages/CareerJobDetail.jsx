@@ -1,5 +1,5 @@
 // Public job details (/careers/:jobId): description, skills, deadline, Apply Now → application form → success.
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, BriefcaseBusiness, CalendarClock, CalendarDays, CircleCheck, GraduationCap, Lock, MapPin, Users } from "lucide-react";
 import CareersHeader from "../components/careers/CareersHeader";
@@ -7,6 +7,83 @@ import CareersFooter from "../components/careers/CareersFooter";
 import CareerApplicationForm from "../components/careers/CareerApplicationForm";
 import { careersApi, formatJobDate, splitSkills } from "../components/careers/careersApi";
 import "./Careers.css";
+
+const COLLAPSED_LINES = 8;
+const BULLET = /^\s*(?:[-•*]|\d+[.)])\s+/;
+
+// Lines starting with "-", "•" or "1." become Roles & Responsibilities (when there are several)
+function splitDescription(text) {
+    const lines = String(text || "").replace(/\s+(?=•)/g, "\n").split(/\r?\n/);
+    const bullets = lines.filter((line) => BULLET.test(line));
+    if (bullets.length < 2) return { description: String(text || "").trim(), responsibilities: [] };
+    return {
+        description: lines.filter((line) => !BULLET.test(line)).join("\n").trim(),
+        responsibilities: bullets.map((line) => line.replace(BULLET, "").trim()).filter(Boolean),
+    };
+}
+
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== "" && String(value).trim() !== "—";
+
+function JobDescription({ job }) {
+    const { description, responsibilities } = splitDescription(job.job_description);
+    const skills = splitSkills(job.skills);
+    const experience = job.experience === "Not specified" ? "" : job.experience;
+    const bodyRef = useRef(null);
+    const [overflowing, setOverflowing] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+
+    useLayoutEffect(() => {
+        const measure = () => {
+            const body = bodyRef.current;
+            if (!body) return;
+            const lineHeight = parseFloat(getComputedStyle(body).lineHeight) || 26;
+            setOverflowing(body.scrollHeight > lineHeight * COLLAPSED_LINES + 8);
+        };
+        measure();
+        window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+    }, [job.job_description, job.skills]);
+
+    const rows = [
+        ["Project Role", job.title],
+        ["Department", job.department],
+        ["Role Description", description && <p className="career-description">{description}</p>],
+        ["Must Have Skills", skills.length > 0 && (
+            <ul className="career-skill-list">
+                {skills.map((skill) => <li key={skill}>{skill}</li>)}
+            </ul>
+        )],
+        ["Minimum Experience", experience],
+        ["Educational Qualification", job.qualification],
+        ["Roles & Responsibilities", responsibilities.length > 0 && (
+            <ul className="career-jd-bullets">
+                {responsibilities.map((item, index) => <li key={index}>{item}</li>)}
+            </ul>
+        )],
+    ].filter(([, value]) => (typeof value === "string" ? hasValue(value) : Boolean(value)));
+
+    const collapsed = overflowing && !expanded;
+    return (
+        <section className="career-detail-section career-jd">
+            <h2>Job Description</h2>
+            <div id="career-jd-body" ref={bodyRef} className={`career-jd-body${collapsed ? " collapsed" : ""}`}>
+                <dl className="career-jd-list">
+                    {rows.map(([label, value]) => (
+                        <div className="career-jd-row" key={label}>
+                            <dt>{label} :</dt>
+                            <dd>{value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </div>
+            {overflowing && (
+                <button type="button" className="career-jd-toggle" aria-expanded={expanded} aria-controls="career-jd-body" onClick={() => setExpanded((open) => !open)}>
+                    {expanded ? "Show less ▴" : "Read full job description ▾"}
+                </button>
+            )}
+        </section>
+    );
+}
 
 function CareerJobDetail() {
     const { jobId } = useParams();
@@ -86,7 +163,6 @@ function CareerJobDetail() {
             />
         );
     } else {
-        const skills = splitSkills(job.skills);
         content = (
             <article className="career-detail">
                 <header className="career-detail-head">
@@ -112,21 +188,7 @@ function CareerJobDetail() {
                     </li>
                 </ul>
 
-                <section className="career-detail-section">
-                    <h2>Job Description</h2>
-                    <p className="career-description">{job.job_description || "Details will be shared during the selection process."}</p>
-                </section>
-
-                <section className="career-detail-section">
-                    <h2>Required Skills</h2>
-                    {skills.length ? (
-                        <ul className="career-skill-list">
-                            {skills.map((skill) => <li key={skill}>{skill}</li>)}
-                        </ul>
-                    ) : (
-                        <p>—</p>
-                    )}
-                </section>
+                <JobDescription job={job} />
 
                 <div className="career-detail-cta">
                     <p>

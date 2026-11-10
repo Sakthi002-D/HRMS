@@ -5,6 +5,7 @@ import EmployeeDashboard from "./Employee/EmployeeDashboard";
 import EmployeeDetails from "./pages/hr/EmployeeDetails";
 import Careers from "./pages/Careers";
 import CareerJobDetail from "./pages/CareerJobDetail";
+import OfferResponse from "./pages/OfferResponse";
 
 import Attendance from "./pages/hr/Attendance";
 import Employees from "./pages/hr/Employees";
@@ -38,9 +39,11 @@ import AttendanceReport from "./pages/hr/AttendanceReport";
 import LeaveReport from "./pages/hr/LeaveReport";
 import PayrollReport from "./pages/hr/PayrollReport";
 import AnnualLeaveAccrualReport from "./pages/hr/AnnualLeaveAccrualReport";
+import TerminationReport from "./pages/hr/TerminationReport";
 import DepartmentOverview from "./pages/hr/DepartmentOverview";
 import Settings from "./pages/hr/Settings";
 import GradeAssignment from "./pages/hr/GradeAssignment";
+import GradeMaster from "./pages/hr/settings/GradeMaster";
 
 import DialogProvider from "./components/common/dialog/DialogProvider";
 import { installApiAuthorizationFetch } from "./utils/auth";
@@ -109,6 +112,12 @@ function App() {
         <Route
           path="/careers/:jobId"
           element={<CareerJobDetail />}
+        />
+
+        {/* Offer letter: candidate accepts / declines from the emailed link (no login) */}
+        <Route
+          path="/offer/:token"
+          element={<OfferResponse />}
         />
 
         {/* Old Careers link */}
@@ -248,6 +257,11 @@ function App() {
           />
 
           <Route
+            path="/termination-report"
+            element={<TerminationReport />}
+          />
+
+          <Route
             path="/settings"
             element={<Settings />}
           />
@@ -255,6 +269,11 @@ function App() {
           <Route
             path="/settings/grade-assignment"
             element={<GradeAssignment />}
+          />
+
+          <Route
+            path="/settings/grade-master"
+            element={<GradeMaster />}
           />
 
         </Route>

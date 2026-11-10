@@ -61,12 +61,15 @@ try {
         await submit({ application_start_date: addDays(3), application_end_date: addDays(3) }); // same day is fine
     });
 
-    await check("3. Submit saves both dates; grade / required_by are not set; list shows the period", async () => {
-        const { mpr } = await submit({ grade: "G9", required_by: addDays(30) });
+    await check("3. Submit saves both dates and the Grade Master choice; required_by is not set; list shows the period", async () => {
+        const { mpr } = await submit({ grade: "5-A", position: "Engineer", designation: "Electrical Engineer", employee_category: "Technical Supervisory / Senior Team Leader", required_by: addDays(30) });
         const detail = await getMprDetail(db, { id: mpr.id, actorId: hr });
         assert.equal(detail.application_start_date, today);
         assert.equal(detail.application_end_date, addDays(14));
-        assert.equal(detail.grade, null);
+        assert.equal(detail.grade, "5-A");
+        assert.equal(detail.position, "Engineer");
+        assert.equal(detail.designation, "Electrical Engineer");
+        assert.equal(detail.employee_category, "Technical Supervisory / Senior Team Leader");
         assert.equal(detail.required_by, null);
         const listed = (await listMprs(db, { actorId: hr, scope: "all" })).find((row) => Number(row.id) === Number(mpr.id));
         assert.equal(listed.application_start_date, today);
