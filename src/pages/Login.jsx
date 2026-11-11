@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, CalendarCheck, Eye, EyeOff, Info, Loader2, LockKeyhole, ShieldCheck, UserRound, Users } from "lucide-react";
 import "./Login.css";
 import API_URL from "../config/api";
 import { useAlert } from "../components/common/dialog/dialogContext";
@@ -159,148 +160,140 @@ function Login() {
   };
 
   return (
-    <div className="login-page">
+    <div className="lg-page">
 
-      {/* LEFT SIDE */}
-      <div className="login-left">
-
-        <div className="login-brand">
-          <img
-            src="/SC logo.png"
-            alt="Shelter Group"
-          />
-
+      {/* LEFT: brand panel (same dark banner as the portals) */}
+      <aside className="lg-brand">
+        <Link to="/" className="lg-logo" aria-label="Shelter Group home">
+          <img src="/SC logo.png" alt="" />
           <span>SHELTER GROUP</span>
-        </div>
+        </Link>
 
-        <div className="login-left-content">
-
-          <p className="login-welcome">
-            WELCOME TO SHELTER GROUP
-          </p>
-
+        <div className="lg-brand-copy">
+          <span className="lg-kicker">Welcome to Shelter Group</span>
           <h1>
-            Empowering people
-            <br />
-            through smarter HR
-            <br />
-            management.
+            Empowering people through <em>smarter HR</em> management.
           </h1>
-
           <p>
-            Manage your workforce, streamline HR
-            operations, and keep everything connected
-            in one centralized platform.
+            Manage your workforce, streamline HR operations and keep
+            everything connected in one centralized platform.
           </p>
 
+          <ul className="lg-points">
+            <li>
+              <span><Users size={18} aria-hidden="true" /></span>
+              <div>
+                <strong>HR portal</strong>
+                <small>Employees, approvals, recruitment and payroll</small>
+              </div>
+            </li>
+            <li>
+              <span><CalendarCheck size={18} aria-hidden="true" /></span>
+              <div>
+                <strong>Employee self-service</strong>
+                <small>Leave, attendance, payslips and documents</small>
+              </div>
+            </li>
+            <li>
+              <span><ShieldCheck size={18} aria-hidden="true" /></span>
+              <div>
+                <strong>Secure access</strong>
+                <small>Your account, your data, protected sign-in</small>
+              </div>
+            </li>
+          </ul>
         </div>
-      </div>
 
-      {/* RIGHT SIDE */}
-      <div className="login-right">
+        <p className="lg-brand-foot">© 2026 Shelter Group. All rights reserved.</p>
+      </aside>
 
-        <div className="login-card">
+      {/* RIGHT: sign-in card */}
+      <main className="lg-main">
+        <Link to="/" className="lg-back">
+          <ArrowLeft size={16} aria-hidden="true" /> Back to home
+        </Link>
 
-          <img
-            className="login-logo"
-            src="/SC logo.png"
-            alt="Shelter Group"
-          />
+        <div className="lg-card">
+          <img className="lg-card-logo" src="/SC logo.png" alt="Shelter Group" />
 
-          <h2>Sign In</h2>
+          <h2>Welcome back</h2>
+          <p className="lg-sub">Sign in to your Shelter Group HRMS account</p>
 
-          <p className="login-subtitle">
-            Please enter your login details
-          </p>
+          <form onSubmit={handleLogin} className="lg-form">
 
-          <form onSubmit={handleLogin}>
-
-            {/* USERNAME */}
-            <label>
-              Username / Employee ID
-            </label>
-
-            <div className="login-input-box">
-
-              <input
-                type="text"
-                placeholder="Enter username or employee ID"
-                value={username}
-                onChange={(e) =>
-                  setUsername(e.target.value)
-                }
-                autoComplete="username"
-                required
-              />
-
+            <div className="lg-field">
+              <label htmlFor="login-username">Username / Employee ID</label>
+              <div className="lg-input">
+                <UserRound size={17} aria-hidden="true" />
+                <input
+                  id="login-username"
+                  type="text"
+                  placeholder="e.g. EMP3544"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  dir="ltr"
+                  required
+                />
+              </div>
             </div>
 
-            {/* PASSWORD */}
-            <label>
-              Password
-            </label>
-
-            <div className="login-input-box password-input">
-
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                autoComplete="current-password"
-                required
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowPassword(
-                    (prev) => !prev
-                  )
-                }
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-
+            <div className="lg-field">
+              <div className="lg-label-row">
+                <label htmlFor="login-password">Password</label>
+                <button
+                  type="button"
+                  className="lg-link"
+                  onClick={() => navigate("/forgot-password")}
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="lg-input">
+                <LockKeyhole size={17} aria-hidden="true" />
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  dir="ltr"
+                  required
+                />
+                <button
+                  type="button"
+                  className="lg-eye"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
 
-            {/* LOGIN BUTTON */}
-            <button
-              type="submit"
-              className="login-button"
-              disabled={loading}
-            >
-              {loading
-                ? "Signing In..."
-                : "Sign In"}
+            <button type="submit" className="lg-submit" disabled={loading}>
+              {loading ? (
+                <><Loader2 size={18} className="lg-spin" aria-hidden="true" /> Signing in...</>
+              ) : (
+                <>Sign In <ArrowRight size={18} aria-hidden="true" /></>
+              )}
             </button>
 
           </form>
 
-          {/* FORGOT PASSWORD */}
-          <button
-            type="button"
-            className="forgot-password-link"
-            onClick={() =>
-              navigate("/forgot-password")
-            }
-          >
-            Forgot Password?
-          </button>
-
-          <p className="login-footer">
-            HRMS - Human Resource Management System
+          <p className="lg-hint">
+            <Info size={14} aria-hidden="true" />
+            Employees sign in with EMP + employee ID (for example EMP3544).
           </p>
 
-          <p className="login-copyright">
-            © 2026 Shelter Group. All rights reserved.
-          </p>
-
+          <div className="lg-card-foot">
+            <span>HRMS · Human Resource Management System</span>
+            <Link to="/careers">Looking for a job? View careers</Link>
+          </div>
         </div>
-
-      </div>
+      </main>
 
     </div>
   );
