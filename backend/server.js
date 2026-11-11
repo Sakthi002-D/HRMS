@@ -40,7 +40,7 @@ import {
 } from "./services/annualLeaveAccrual.js";
 import { randomBytes, randomInt } from "node:crypto";
 import { createApiAccessMiddleware, createLoginHandler, createChangePasswordHandler, requireAuth, requireHR, requireSelfOrHR, signToken, stripPassword } from "./middleware/auth.js";
-import { setAccountPassword, createHrmsEmployeeLogin } from "./services/accountCredentials.js";
+import { setAccountPassword, createHrmsEmployeeLogin, nextEmployeeId, hasEmpPrefix, EMP_PREFIX_MESSAGE } from "./services/accountCredentials.js";
 import { findPasswordIdentity, createResetPasswordHandler } from "./services/passwordRecovery.js";
 import { runFullSync, syncSingleEmployee, pushEmployeeToD365, startD365SyncScheduler, isPushEnabled } from "./services/d365EmployeeSync.js";
 import { createEmployeeInD365 } from "./services/d365EmployeeProvisioning.js";
@@ -1088,6 +1088,14 @@ app.post("/api/attendance/punch-out", async (req, res) => {
 // =========================
 
 // Get all employees
+// Probation: an Active employee is on probation until probation_end_date (set from the offer, 1-6 months).
+// Employees without one (D365 imports) use joining date + DEFAULT_PROBATION_MONTHS.
+// Nothing is stored: once the end date passes they count as Active automatically.
+const DEFAULT_PROBATION_MONTHS = 6;
+const probationEndSql = (alias = "") => `COALESCE(${alias}probation_end_date, (${alias}joining_date + INTERVAL '${DEFAULT_PROBATION_MONTHS} months')::date)`;
+const onProbationSql = (alias = "") => `(${alias}status = 'Active' AND ${alias}joining_date IS NOT NULL
+    AND ${alias}joining_date <= CURRENT_DATE AND ${probationEndSql(alias)} > CURRENT_DATE)`;
+
 app.get("/api/employees", async (req, res) => {
     try {
         const result = await pool.query(
@@ -1099,7 +1107,9 @@ app.get("/api/employees", async (req, res) => {
                 -- Active resignation stage (e.g. Serving Notice); the employee status itself stays Active
                 (SELECT r.status FROM resignations r
                     WHERE r.employee_id = e.employee_id AND r.status NOT IN ('Rejected', 'Withdrawn', 'Completed')
-                    ORDER BY r.id DESC LIMIT 1) AS resignation_status
+                    ORDER BY r.id DESC LIMIT 1) AS resignation_status,
+                ${onProbationSql("e.")} AS on_probation,
+                TO_CHAR(${probationEndSql("e.")}, 'YYYY-MM-DD') AS probation_until
              FROM employees e
              ORDER BY e.id ASC`
         );
@@ -1634,8 +1644,20 @@ app.post("/api/employees/bulk-grade", requireAuth(pool), requireHR, async (req, 
     }
 });
 
+// Next free employee ID for the Add Employee form (login = EMP<ID>)
+app.get("/api/employees/next-id", requireAuth(pool), requireHR, async (req, res) => {
+    try {
+        res.set("Cache-Control", "no-store");
+        res.json({ employee_id: await nextEmployeeId(pool) });
+    } catch (error) {
+        console.error("Next employee ID failed:", error.message);
+        res.status(500).json({ message: "Unable to suggest an employee ID" });
+    }
+});
+
 app.post("/api/employees", requireAuth(pool), requireHR, async (req, res) => {
     try {
+        if (hasEmpPrefix(req.body?.employee_id)) return res.status(400).json({ message: EMP_PREFIX_MESSAGE });
         const gradeProblem = await gradeError(req.body?.grade);
         if (gradeProblem) return res.status(400).json({ message: gradeProblem });
         const {
@@ -3209,7 +3231,8 @@ app.get("/api/dashboard", async (req, res) => {
         // HR login accounts are not counted, same as the Employees list.
         const employeesResult = await pool.query(`
             SELECT COUNT(*) FILTER (WHERE status = 'Active')::int AS total_employees,
-                   COUNT(*) FILTER (WHERE status IS DISTINCT FROM 'Active')::int AS inactive_employees
+                   COUNT(*) FILTER (WHERE status IS DISTINCT FROM 'Active')::int AS inactive_employees,
+                   COUNT(*) FILTER (WHERE ${onProbationSql()})::int AS probation_employees
             FROM employees
             WHERE ${NOT_HR_ACCOUNT}
         `);
@@ -3295,6 +3318,7 @@ app.get("/api/dashboard", async (req, res) => {
             openTickets: openTickets,
             openPositions,
             newJoiners: newJoinersResult.rows[0].new_joiners,
+            probationEmployees: employeesResult.rows[0].probation_employees,
             departments: departmentsResult.rows[0].departments,
             payrollStatus: null
         });

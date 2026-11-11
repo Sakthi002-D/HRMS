@@ -21,6 +21,7 @@ import {
     requireHRActor,
 } from "./careerApplications.js";
 import { normalizeGrade } from "./grades.js";
+import { createHrmsEmployeeLogin, nextEmployeeId, hasEmpPrefix, EMP_PREFIX_MESSAGE } from "./accountCredentials.js";
 import {
     OFFER_ACCEPT_LABEL,
     OFFER_CURRENCY,
@@ -609,15 +610,9 @@ export async function savePrejoiningItem(db, { id, actorId, input }) {
     return checklist;
 }
 
-// Next free EMP number (EMP0001, EMP0002, …); HR can change it in the Hire box.
-// Letters + digits keep it apart from D365 personnel numbers, which the D365 import uses as IDs.
-export async function suggestEmployeeId(db) {
-    const result = await db.query(
-        `SELECT COALESCE(MAX(SUBSTRING(employee_id FROM '^EMP([0-9]+)$')::bigint), 0) + 1 AS next
-         FROM employees WHERE employee_id ~ '^EMP[0-9]+$'`
-    );
-    return `EMP${String(result.rows[0].next).padStart(4, "0")}`;
-}
+// Next free numeric ID (same style as the D365 personnel numbers); HR can change it in the
+// Hire box. The portal login is EMP<ID>, e.g. 9121 -> EMP9121.
+export const suggestEmployeeId = (db) => nextEmployeeId(db);
 
 // Same columns and defaults as POST /api/employees (backend/server.js), plus salary and probation
 // from the accepted offer. status stays 'Active' (login, punch-in and headcount need it).
@@ -635,6 +630,7 @@ export async function hireCandidate(db, { id, actorId, input, settings }) {
     await db.query(`SELECT pg_advisory_xact_lock(hashtext('hire-employee-id'))`);
     const employeeId = text(input?.employee_id, 30) || await suggestEmployeeId(db);
     if (!/^[A-Za-z0-9_-]{2,30}$/.test(employeeId)) throw new ValidationError({ employee_id: "Employee ID can use letters, numbers, - and _ (2–30 characters)" });
+    if (hasEmpPrefix(employeeId)) throw new ValidationError({ employee_id: EMP_PREFIX_MESSAGE });
     const taken = await db.query(`SELECT 1 FROM employees WHERE LOWER(employee_id) = LOWER($1)`, [employeeId]);
     if (taken.rows.length) throw new ValidationError({ employee_id: `Employee ID ${employeeId} already exists` });
     const sameEmail = await db.query(`SELECT employee_id FROM employees WHERE LOWER(email) = LOWER($1) LIMIT 1`, [context.email]);
@@ -664,6 +660,8 @@ export async function hireCandidate(db, { id, actorId, input, settings }) {
         ]
     );
     const employee = inserted.rows[0];
+    // Employee portal login: EMP<employee ID>, temporary password = the username
+    employee.login_username = await createHrmsEmployeeLogin(db, employee.employee_id);
 
     await db.query(
         `UPDATE public.job_applications
@@ -712,7 +710,11 @@ export async function hireCandidate(db, { id, actorId, input, settings }) {
                 `Welcome to ${company}! We are delighted that you are joining us as ${designation}.\n\n` +
                 `Joining date: ${formatDateKey(offer.joining_date, settings.dateFormat)}\n` +
                 `Site: ${context.site || "to be confirmed by HR"}\n` +
-                `Employee ID: ${employee.employee_id}\n\n` +
+                `Employee ID: ${employee.employee_id}\n` +
+                (employee.login_username
+                    ? `HRMS username: ${employee.login_username}\n`
+                      + "Temporary password: the same as your username. Please change it after your first sign-in.\n\n"
+                    : "\n") +
                 "Our HR team will contact you before your first day with the reporting details.",
         },
     };

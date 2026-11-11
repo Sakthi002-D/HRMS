@@ -44,6 +44,20 @@ export async function createHrmsEmployeeLogin(db, employeeId) {
     return result.rows[0]?.username || null;
 }
 
+// New employee IDs are plain numbers like the D365 personnel numbers (e.g. 9121), so the
+// login is EMP<ID> (EMP9121) with the same text as the temporary password.
+export async function nextEmployeeId(db) {
+    const result = await db.query(
+        `SELECT COALESCE(MAX(employee_id::bigint), 0) + 1 AS next
+         FROM employees WHERE employee_id ~ '^[0-9]{1,15}$'`
+    );
+    return String(result.rows[0].next).padStart(4, "0");
+}
+
+// An ID that already starts with EMP would give the login EMPEMP...; the EMP is added for the login
+export const EMP_PREFIX_MESSAGE = "Enter the employee ID without EMP (for example 9121); the login becomes EMP9121";
+export const hasEmpPrefix = (employeeId) => /^EMP/i.test(String(employeeId ?? "").trim());
+
 export async function buildInitialEmployeeCredential(personnelNumber) {
     if (typeof personnelNumber !== "string" || !/^[A-Za-z0-9-]+$/.test(personnelNumber)
         || /^EMP/i.test(personnelNumber)) {
