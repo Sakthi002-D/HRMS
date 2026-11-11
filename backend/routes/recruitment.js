@@ -34,6 +34,7 @@ import {
     listMprs,
     rejectMpr,
     saveMpr,
+    saveJobOpening,
     saveRecruitmentPlan,
     saveRecruitmentSettings,
     sendBackMpr,
@@ -47,7 +48,7 @@ const handle = (fn) => async (req, res) => {
         await fn(req, res);
     } catch (error) {
         if (error instanceof WorkflowError) {
-            return res.status(error.status).json({ message: error.message });
+            return res.status(error.status).json({ message: error.message, fields: error.fields || undefined });
         }
         if (error.code === "23505") {
             return res.status(409).json({ message: "That record already exists" });
@@ -452,8 +453,17 @@ router.post("/mprs/:id/:action", handle(async (req, res) => {
 }));
 
 // =====================================================
-// JOB OPENINGS: recruitment plan
+// JOB OPENINGS: edit job opening (+ the older recruitment plan route)
 // =====================================================
+
+// Edit Job Opening: updates the job only (not the MPR). Sourcing / agency / recruiter /
+// panel keep their stored values.
+router.put("/jobs/:id", handle(async (req, res) => {
+    const { job } = await inTransaction(async (db) => ({
+        job: await saveJobOpening(db, { jobDbId: req.params.id, body: req.body || {}, actorId: actorFrom(req) }),
+    }));
+    res.json(job);
+}));
 
 router.put("/jobs/:id/recruitment-plan", handle(async (req, res) => {
     const job = await inTransaction(async (db) => ({

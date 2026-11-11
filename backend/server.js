@@ -16,7 +16,7 @@ import employeeDocumentsRouter, { ensureEmployeeDocumentSchema } from "./routes/
 import { ensureTicketSchema } from "./services/ticketSchema.js";
 import { checkLeaveAgainstResignation, ensureResignationSchema, startResignationScheduler } from "./services/resignationWorkflow.js";
 import { ensureNotificationSchema, getInbox, inboxKind, sendQueuedEmails } from "./services/notificationService.js";
-import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, refreshJobFill } from "./services/manpowerWorkflow.js";
+import { FILLED_APPLICATION_STATUSES, WorkflowError, ensureManpowerSchema, getRecruitmentToday, refreshJobFill } from "./services/manpowerWorkflow.js";
 import { getCompanyToday, validateLeaveDates } from "./services/leaveDateRules.js";
 import { ensureCareerSchema } from "./services/careerApplications.js";
 
@@ -3368,11 +3368,17 @@ app.get("/api/jobs", withHR(async (req, res) => {
                 j.compensation,
                 j.mpr_id,
                 m.mpr_no,
+                m.grade AS mpr_grade,
+                m.position AS mpr_position,
+                m.designation AS mpr_designation,
+                m.openings AS mpr_openings,
+                COALESCE(NULLIF(TRIM(to_jsonb(j) ->> 'qualification'), ''), m.required_qualification) AS qualification,
                 COALESCE(j.request_type, m.request_type) AS request_type,
                 j.sourcing,
                 j.agency_id,
                 a.name AS agency_name,
                 TO_CHAR(j.application_deadline, 'YYYY-MM-DD') AS application_deadline,
+                TO_CHAR(j.application_start_date, 'YYYY-MM-DD') AS application_start_date,
                 j.recruiter_employee_id,
                 r.name AS recruiter_name,
                 j.interview_panel,
@@ -3388,7 +3394,7 @@ app.get("/api/jobs", withHR(async (req, res) => {
             LEFT JOIN recruitment_agencies a ON a.id = j.agency_id
             LEFT JOIN employees r ON r.employee_id = j.recruiter_employee_id
             ORDER BY j.id DESC
-        `, [getCompanyToday(), FILLED_APPLICATION_STATUSES]);
+        `, [await getRecruitmentToday(), FILLED_APPLICATION_STATUSES]);
 
         res.set("Cache-Control", "no-store");
         res.json(result.rows);

@@ -12,10 +12,12 @@ export const INTERVIEW_PLACE_LABELS = {
     Phone: ["phoneNumber", "Phone Number"],
 };
 
-// "HH:MM" every 30 minutes, 07:00 to 19:00
-export const INTERVIEW_TIME_SLOTS = Array.from({ length: 25 }, (_, index) =>
-    `${String(7 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}`
+// Full day in 30-minute steps, saved as 24-hour "HH:MM" ("00:00" … "23:30", 48 slots)
+export const INTERVIEW_TIME_SLOTS = Array.from({ length: 48 }, (_, index) =>
+    `${String(Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}`
 );
+// Where the menu scrolls to when no time is chosen yet
+export const INTERVIEW_DEFAULT_SCROLL_SLOT = "09:00";
 
 // "14:30" → "02:30 PM"
 export const formatInterviewTime = (value) => {

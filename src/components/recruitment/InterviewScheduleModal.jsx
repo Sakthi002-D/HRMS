@@ -6,8 +6,9 @@ import { Building2, CalendarDays, Clock, Link as LinkIcon, MapPin, Phone, Send, 
 import DatePicker from "../layout/common/DatePicker";
 import "../../pages/hr/Recruitment.css";
 import "./recruitment.css";
-import { INTERVIEW_MODES, INTERVIEW_PLACE_LABELS, INTERVIEW_TIME_SLOTS, formatInterviewTime } from "./applicationFormat";
+import { INTERVIEW_DEFAULT_SCROLL_SLOT, INTERVIEW_MODES, INTERVIEW_PLACE_LABELS, INTERVIEW_TIME_SLOTS, formatInterviewTime } from "./applicationFormat";
 import { api, recruitmentValueLabel } from "./recruitmentApi";
+import { DEFAULT_SETTINGS, getAppSettings } from "../../utils/appSettings";
 
 const MODE_ICONS = { "In-person": Building2, Online: Video, Phone };
 const PLACE_ICONS = { "In-person": MapPin, Online: LinkIcon, Phone };
@@ -22,12 +23,49 @@ function Field({ label, htmlFor, required = false, error, full = false, children
     );
 }
 
+// Current date ("YYYY-MM-DD") and time ("HH:MM") on the company clock (Settings → timezone),
+// the same clock the server checks interview times against
+function companyClock() {
+    try {
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat("en-CA", {
+                timeZone: getAppSettings().timezone || DEFAULT_SETTINGS.timezone,
+                year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+            }).formatToParts(new Date()).map((part) => [part.type, part.value])
+        );
+        return { today: `${parts.year}-${parts.month}-${parts.day}`, now: `${parts.hour}:${parts.minute}` };
+    } catch {
+        return { today: "", now: "" };
+    }
+}
+
+// A slot is past when the date is today (company time) and the slot is not later than now
+const isPastSlot = (date, slot) => {
+    if (!date) return false;
+    const { today, now } = companyClock();
+    return date === today && slot <= now;
+};
+
 // The menu is drawn in document.body (position: fixed) so the form's scroll box can't clip it
-function TimeSlotSelect({ value, onChange, placeholder }) {
+function TimeSlotSelect({ value, onChange, placeholder, date }) {
     const [open, setOpen] = useState(false);
     const [menuStyle, setMenuStyle] = useState(null);
     const buttonRef = useRef(null);
     const menuRef = useRef(null);
+    const scrolledRef = useRef(false);
+
+    // On open: bring the selected time (or 09:00 AM) to the top of the menu, once
+    useLayoutEffect(() => {
+        if (!open) {
+            scrolledRef.current = false;
+            return;
+        }
+        const menu = menuRef.current;
+        if (!menu || scrolledRef.current) return;
+        const target = menu.querySelector(`[data-slot="${value || INTERVIEW_DEFAULT_SCROLL_SLOT}"]`);
+        if (target) menu.scrollTop = Math.max(0, target.offsetTop - 4);
+        scrolledRef.current = true;
+    }, [open, menuStyle, value]);
 
     useLayoutEffect(() => {
         if (!open) return undefined;
@@ -84,20 +122,25 @@ function TimeSlotSelect({ value, onChange, placeholder }) {
 
             {open && menuStyle && createPortal(
                 <div ref={menuRef} className="mpr-dept-menu" style={menuStyle}>
-                    {INTERVIEW_TIME_SLOTS.map((slot) => (
-                        <button
-                            key={slot}
-                            type="button"
-                            className={`mpr-dept-option${value === slot ? " is-selected" : ""}`}
-                            dir="ltr"
-                            onClick={() => {
-                                onChange(slot);
-                                setOpen(false);
-                            }}
-                        >
-                            {formatInterviewTime(slot)}
-                        </button>
-                    ))}
+                    {INTERVIEW_TIME_SLOTS.map((slot) => {
+                        const past = isPastSlot(date, slot);
+                        return (
+                            <button
+                                key={slot}
+                                type="button"
+                                data-slot={slot}
+                                className={`mpr-dept-option${value === slot ? " is-selected" : ""}${past ? " is-past" : ""}`}
+                                dir="ltr"
+                                disabled={past}
+                                onClick={() => {
+                                    onChange(slot);
+                                    setOpen(false);
+                                }}
+                            >
+                                {formatInterviewTime(slot)}
+                            </button>
+                        );
+                    })}
                 </div>,
                 document.body
             )}
@@ -127,6 +170,15 @@ function InterviewScheduleModal({ application, actorId, onClose, onSaved }) {
         setErrors((current) => ({ ...current, [name]: "" }));
     };
 
+    const laterTimeMessage = () => text("errorLaterTime", "Choose a later time.");
+
+    // Moving the date to today clears a time that has already passed
+    const chooseDate = (date) => {
+        const clearTime = form.interview_time && isPastSlot(date, form.interview_time);
+        setForm((current) => ({ ...current, interview_date: date, interview_time: clearTime ? "" : current.interview_time }));
+        setErrors((current) => ({ ...current, interview_date: "", interview_time: clearTime ? laterTimeMessage() : current.interview_time }));
+    };
+
     const chooseMode = (mode) => {
         setForm((current) => ({ ...current, mode, location_or_link: "" }));
         setErrors((current) => ({ ...current, mode: "", location_or_link: "" }));
@@ -138,6 +190,7 @@ function InterviewScheduleModal({ application, actorId, onClose, onSaved }) {
         if (!form.interview_date) found.interview_date = text("errorDate", "Choose the interview date");
         else if (form.interview_date < application.company_today) found.interview_date = text("errorDatePast", "Interview date can't be in the past");
         if (!form.interview_time) found.interview_time = text("errorTime", "Choose the interview time");
+        else if (isPastSlot(form.interview_date, form.interview_time)) found.interview_time = laterTimeMessage();
         if (!form.mode) found.mode = text("errorMode", "Choose the interview mode");
         else if (!form.location_or_link.trim()) found.location_or_link = text("errorPlace", "{{label}} is required", { label: place });
         else if (form.mode === "Online" && !/^https:\/\/\S+$/i.test(form.location_or_link.trim())) found.location_or_link = text("errorLink", "Enter a meeting link starting with https://");
@@ -196,7 +249,7 @@ function InterviewScheduleModal({ application, actorId, onClose, onSaved }) {
                             <Field label={text("date", "Interview Date")} required error={errors.interview_date}>
                                 <DatePicker
                                     value={form.interview_date}
-                                    onChange={(value) => set("interview_date", value)}
+                                    onChange={chooseDate}
                                     minDate={application.company_today}
                                     today={application.company_today}
                                     autoPosition
@@ -208,6 +261,7 @@ function InterviewScheduleModal({ application, actorId, onClose, onSaved }) {
                                     value={form.interview_time}
                                     onChange={(value) => set("interview_time", value)}
                                     placeholder={text("selectTime", "Select time")}
+                                    date={form.interview_date}
                                 />
                             </Field>
 

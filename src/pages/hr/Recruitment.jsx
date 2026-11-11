@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import ManpowerRequests from "../../components/recruitment/ManpowerRequests";
-import RecruitmentPlanModal from "../../components/recruitment/RecruitmentPlanModal";
+import JobOpeningEditModal from "../../components/recruitment/JobOpeningEditModal";
 import JobApplications from "../../components/recruitment/JobApplications";
 import Hiring from "../../components/recruitment/Hiring";
 import { Building2, Briefcase, Clock3, Plus, UserPlus } from "lucide-react";
@@ -45,6 +45,13 @@ function Recruitment() {
     const [summary, setSummary] = useState(null);
     const [meta, setMeta] = useState(null);
     const [planJob, setPlanJob] = useState(null);
+    const [notice, setNotice] = useState("");
+
+    useEffect(() => {
+        if (!notice) return undefined;
+        const timer = window.setTimeout(() => setNotice(""), 3500);
+        return () => window.clearTimeout(timer);
+    }, [notice]);
 
     const hrQuery = `employee_id=${encodeURIComponent(hrId || "")}`;
 
@@ -326,7 +333,7 @@ function Recruitment() {
                                                     type="button"
                                                     className="create-job-btn"
                                                     onClick={() => setPlanJob(job)}
-                                                    disabled={!meta || String(job.status).toLowerCase() === "closed"}
+                                                    disabled={!meta}
                                                 >
                                                     {t("recruitment.jobs.editPlan", { defaultValue: "Edit Recruitment Plan" })}
                                                 </button>
@@ -348,17 +355,28 @@ function Recruitment() {
                 )}
 
                 {planJob && meta && (
-                    <RecruitmentPlanModal
+                    <JobOpeningEditModal
                         job={planJob}
                         meta={meta}
                         actorId={hrId}
                         onClose={() => setPlanJob(null)}
-                        onSaved={() => {
+                        onSaved={(saved) => {
+                            // Update the row straight away, then reload for the server's full view
+                            setJobs((current) => current.map((row) => (row.id === saved.id
+                                ? {
+                                    ...row,
+                                    ...saved,
+                                    deadline_passed: Boolean(saved.application_deadline && meta.today && saved.application_deadline < meta.today),
+                                }
+                                : row)));
                             setPlanJob(null);
+                            setNotice(t("recruitment.editJob.updated", { defaultValue: "Job opening updated" }));
                             refreshRecruitment();
                         }}
                     />
                 )}
+
+                {notice && <div className="rct-toast" role="status">{notice}</div>}
 
                 {activeTab === "applications" && (
                     <JobApplications

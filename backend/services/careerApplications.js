@@ -152,16 +152,23 @@ const toPublicJob = (row) => ({
     qualification: row.qualification || null,
 });
 
-// An Open job counts only if it is legacy (no MPR) or its MPR was approved
+// Filled = applications marked Hired / Joined (same as FILLED_APPLICATION_STATUSES)
+const FULLY_FILLED_SQL = `(j.openings > 0 AND (SELECT COUNT(*) FROM public.job_applications fa
+      WHERE fa.job_id = j.job_id AND LOWER(fa.status) IN ('hired', 'joined')) >= j.openings)`;
+
+// An Open job counts only if it is legacy (no MPR) or its MPR was approved.
+// Always read live (no caching): edits from Recruitment → Edit Job Opening show on the next load.
+// Qualification: the job's own value (Edit Job Opening), else the MPR's.
 const PUBLIC_JOB_SELECT = `
     SELECT j.id, j.job_id, j.title, j.department, j.location, j.employment_type, j.experience, j.openings,
            j.job_description, j.skills, j.status, j.mpr_id,
-           to_jsonb(m) ->> 'required_qualification' AS qualification, -- column not in every DB
+           COALESCE(NULLIF(TRIM(to_jsonb(j) ->> 'qualification'), ''), to_jsonb(m) ->> 'required_qualification') AS qualification, -- columns not in every DB
            TO_CHAR(j.created_at, 'YYYY-MM-DD') AS posted_on,
            TO_CHAR(j.application_deadline, 'YYYY-MM-DD') AS apply_by,
            (j.application_deadline IS NOT NULL AND j.application_deadline < $1::date) AS deadline_passed,
            (j.application_start_date IS NOT NULL AND j.application_start_date > $1::date) AS not_started,
-           LOWER(COALESCE(j.status, '')) = ANY($2::text[]) AS status_open
+           LOWER(COALESCE(j.status, '')) = ANY($2::text[]) AS status_open,
+           ${FULLY_FILLED_SQL} AS fully_filled
     FROM public.jobs j
     LEFT JOIN manpower_requests m ON m.id = j.mpr_id
     WHERE (j.mpr_id IS NULL OR m.status = 'Approved')
@@ -174,6 +181,7 @@ export async function listPublicJobs(db = pool) {
            AND LOWER(COALESCE(j.status, '')) = ANY($2::text[])
            AND (j.application_deadline IS NULL OR j.application_deadline >= $1::date)
            AND (j.application_start_date IS NULL OR j.application_start_date <= $1::date)
+           AND NOT ${FULLY_FILLED_SQL}
          ORDER BY j.created_at DESC, j.id DESC`,
         [await getRecruitmentToday(db), PUBLIC_JOB_STATUSES]
     );
@@ -192,10 +200,14 @@ export async function getPublicJob(jobCode, db = pool) {
     const wasPublished = row && !row.not_started && (row.status_open || String(row.status).toLowerCase() === "closed");
     if (!wasPublished) throw new WorkflowError("This job opening was not found", 404);
 
-    if (!row.status_open || row.deadline_passed) {
+    if (!row.status_open || row.deadline_passed || row.fully_filled) {
         return {
             accepting: false,
-            reason: row.deadline_passed ? "The application deadline for this job has passed." : "This position is no longer accepting applications.",
+            reason: row.deadline_passed
+                ? "The application deadline for this job has passed."
+                : row.fully_filled && row.status_open
+                    ? "All positions for this job have been filled."
+                    : "This position is no longer accepting applications.",
             job: { job_id: row.job_id, title: row.title, department: row.department, location: row.location, apply_by: row.apply_by },
         };
     }
@@ -498,7 +510,7 @@ export async function submitApplication(db, { jobCode, input, file }) {
     const job = jobResult.rows[0];
     if (!job || job.not_started || !(job.status_open || String(job.status).toLowerCase() === "closed")) throw new WorkflowError("This job opening was not found", 404);
     if (job.deadline_passed) throw new WorkflowError("Applications closed: the deadline for this job has passed", 409);
-    if (!job.status_open) throw new WorkflowError("Applications closed: this position is no longer accepting applications", 409);
+    if (!job.status_open || job.fully_filled) throw new WorkflowError("Applications closed: this position is no longer accepting applications", 409);
 
     const duplicate = await db.query(
         `SELECT 1 FROM public.job_applications WHERE job_id = $1 AND LOWER(email) = $2 LIMIT 1`,

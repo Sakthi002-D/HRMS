@@ -3402,3 +3402,188 @@ html[dir="rtl"] .dashboard-content .rct .jobs-table tbody tr.mpr-row-awaiting td
     width: 100%;
   }
 }
+
+/* Edit Job Opening (Job Openings → Edit Recruitment Plan). Builds on the Schedule
+   Interview pop-up: fixed header + footer, scrolling body, 2 columns (1 on phones). */
+.candidate-modal.jo-edit-modal {
+    width: min(760px, 100%);
+}
+
+.jo-edit-modal .candidate-modal-header,
+.jo-edit-modal .app-iv-body {
+    padding: 24px;
+}
+
+.jo-edit-modal .app-iv-footer {
+    padding: 16px 24px;
+}
+
+.jo-edit-modal input.app-iv-control {
+    padding-inline: 12px;
+}
+
+.jo-edit-modal select.app-iv-control {
+    height: 44px;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.jo-edit-context {
+    gap: 6px 28px;
+}
+
+.jo-edit-context > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.jo-edit-context small {
+    color: #64748b;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.jo-edit-hint {
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+.jo-edit-modal .jo-edit-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    cursor: text;
+}
+
+.jo-edit-modal .jo-edit-tags:focus-within {
+    border-color: #2564eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 100, 235, .12) !important;
+}
+
+.jo-edit-modal .jo-edit-tags.invalid {
+    border-color: #f1a1a1 !important;
+}
+
+.jo-edit-tags input {
+    flex: 1;
+    min-width: 140px;
+    height: 30px;
+    padding: 0 4px;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.jo-edit-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px 4px 10px;
+    border-radius: 999px;
+    background: #e8f0fe;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.jo-edit-tag button {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.jo-edit-tag button:hover {
+    background: #c7d7fb;
+}
+
+.jo-edit-status {
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #cbd8e6;
+    border-radius: 10px;
+    background: #f1f5f9;
+}
+
+.jo-edit-status-btn {
+    min-height: 36px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: #475569;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.jo-edit-status-btn.open.selected {
+    background: #dcfce7;
+    color: #15803d;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
+}
+
+.jo-edit-status-btn.closed.selected {
+    background: #ffffff;
+    color: #b91c1c;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
+}
+
+.jo-edit-modal .save-job-btn {
+    background: #2564eb;
+}
+
+@media (max-width: 640px) {
+    .jo-edit-modal .candidate-modal-header,
+    .jo-edit-modal .app-iv-body {
+        padding: 16px;
+    }
+
+    .jo-edit-modal .app-iv-footer {
+        padding: 12px 16px;
+    }
+}
+
+/* "Job opening updated" confirmation */
+.rct-toast {
+    position: fixed;
+    inset-block-end: 24px;
+    inset-inline-end: 24px;
+    z-index: calc(var(--z-modal, 1000) + 1);
+    max-width: calc(100vw - 32px);
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .2);
+}
+
+/* Schedule Interview → Time: slots already past today (company time) */
+.mpr-dept-menu .mpr-dept-option.is-past,
+.mpr-dept-menu .mpr-dept-option.is-past:hover {
+    background: transparent;
+    color: #a3b1bf;
+    cursor: not-allowed;
+}

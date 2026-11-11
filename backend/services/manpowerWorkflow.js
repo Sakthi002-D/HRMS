@@ -1106,6 +1106,119 @@ export async function saveRecruitmentPlan(db, { jobDbId, body, actorId }) {
     return result.rows[0];
 }
 
+// =====================================================
+// EDIT JOB OPENING (HR): updates public.jobs only, never the MPR.
+// Sourcing / agency / recruiter / panel are left untouched.
+// =====================================================
+
+export const JOB_EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Temporary", "Project-based"];
+export const JOB_EXPERIENCE_OPTIONS = ["Fresher", "0–2 years", "2–5 years", "5–10 years", "10+ years"];
+const OPEN_JOB_STATUSES = ["open", "recruitment in progress", "active"];
+
+export class JobFieldsError extends WorkflowError {
+    constructor(fields) {
+        super(Object.values(fields)[0] || "Please check the form", 400);
+        this.fields = fields;
+    }
+}
+
+export async function saveJobOpening(db, { jobDbId, body, actorId }) {
+    const { actor, roles } = await getRolesFor(db, actorId);
+    if (!isHR(roles)) throw new WorkflowError("Only HR can edit job openings", 403);
+
+    const found = await db.query(
+        `SELECT j.*, TO_CHAR(j.application_start_date, 'YYYY-MM-DD') AS start_date, m.openings AS mpr_openings,
+                (SELECT COUNT(*)::int FROM public.job_applications a
+                  WHERE a.job_id = j.job_id AND LOWER(a.status) = ANY($2::text[])) AS filled
+         FROM public.jobs j LEFT JOIN manpower_requests m ON m.id = j.mpr_id
+         WHERE j.id = $1 FOR UPDATE OF j`,
+        [jobDbId, FILLED_APPLICATION_STATUSES]
+    );
+    const job = found.rows[0];
+    if (!job || job.is_deleted) throw new WorkflowError("Job not found", 404);
+
+    const errors = {};
+    const text = (name, label, max) => {
+        const value = String(body[name] ?? "").trim();
+        if (!value) errors[name] = `${label} is required`;
+        else if (value.length > max) errors[name] = `${label} must be ${max} characters or fewer`;
+        return value;
+    };
+
+    const title = text("title", "Job title", 150);
+    const location = text("location", "Location / Site", 150);
+    const qualification = text("qualification", "Required qualification", 300);
+    // Keeps the candidate's line breaks; only trailing spaces / CRs are cleaned
+    const description = String(body.job_description ?? "").replace(/\r\n/g, "\n").replace(/[ \t]+$/gm, "").trim();
+    if (!description) errors.job_description = "Job description is required";
+    else if (description.length > 10000) errors.job_description = "Job description must be 10,000 characters or fewer";
+
+    // A value already on the job (e.g. "Other", or "2" from before) stays valid when unchanged
+    const employmentType = String(body.employment_type ?? "").trim();
+    if (!employmentType) errors.employment_type = "Employment type is required";
+    else if (!JOB_EMPLOYMENT_TYPES.includes(employmentType) && employmentType !== job.employment_type) errors.employment_type = "Choose an employment type";
+
+    const experience = String(body.experience ?? "").trim();
+    if (!experience) errors.experience = "Experience is required";
+    else if (!JOB_EXPERIENCE_OPTIONS.includes(experience) && experience !== job.experience) errors.experience = "Choose an experience range";
+
+    if (location && !errors.location && !sameText(location, job.location)) {
+        const known = await db.query(`SELECT name FROM recruitment_locations WHERE active AND LOWER(TRIM(name)) = LOWER($1)`, [location]);
+        if (!known.rows.length) errors.location = "Choose a location from Recruitment Masters";
+    }
+
+    const filled = job.filled || 0;
+    const openingsText = String(body.openings ?? "").trim();
+    const openings = Number(openingsText);
+    if (!openingsText) errors.openings = "Number of openings is required";
+    else if (!/^\d+$/.test(openingsText) || openings < 1) errors.openings = "Enter a whole number, 1 or more";
+    else if (openings < filled) errors.openings = `Can't be less than the ${filled} position${filled === 1 ? "" : "s"} already filled`;
+    else if (job.mpr_openings && openings > job.mpr_openings) errors.openings = `Can't be more than the ${job.mpr_openings} approved in the MPR`;
+
+    const skills = [...new Map(
+        (Array.isArray(body.skills) ? body.skills : String(body.skills || "").split(","))
+            .map((skill) => String(skill).trim().slice(0, 50))
+            .filter(Boolean)
+            .map((skill) => [skill.toLowerCase(), skill])
+    ).values()].slice(0, 30);
+    if (!skills.length) errors.skills = "Add at least one key skill";
+
+    const deadline = String(body.application_deadline || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline)) errors.application_deadline = "Application deadline is required";
+    else if (deadline < await getRecruitmentToday(db)) errors.application_deadline = "Application deadline must be today or later";
+    else if (job.start_date && deadline < job.start_date) errors.application_deadline = "Application deadline can't be before the application start date";
+
+    const wantsOpen = body.status === "Open";
+    if (!["Open", "Closed"].includes(body.status)) errors.status = "Choose Open or Closed";
+    else if (wantsOpen && !errors.openings && filled >= openings) errors.status = "All positions are filled. Increase the number of openings to reopen this job";
+
+    if (Object.keys(errors).length) throw new JobFieldsError(errors);
+
+    // Open keeps "Recruitment In Progress"; a Closed job reopens as Open
+    const currentlyOpen = OPEN_JOB_STATUSES.includes(String(job.status || "").toLowerCase());
+    const status = wantsOpen ? (currentlyOpen ? job.status : "Open") : "Closed";
+
+    const result = await db.query(
+        `
+        UPDATE public.jobs SET
+            title = $2, location = $3, employment_type = $4, experience = $5, openings = $6,
+            qualification = $7, skills = $8, job_description = $9, application_deadline = $10,
+            status = $11, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING id, job_id, title, location, employment_type, experience, openings, qualification, skills,
+                  job_description, status, TO_CHAR(application_deadline, 'YYYY-MM-DD') AS application_deadline
+        `,
+        [jobDbId, title, location, employmentType, experience, openings, qualification, skills.join(", "), description, deadline, status]
+    );
+
+    // History lives on the MPR timeline (manpower_request_actions); legacy jobs have no MPR
+    if (job.mpr_id) {
+        await logAction(db, job.mpr_id, `Job opening edited by ${actor.name}`, actor, { remark: `${job.job_id}: ${title}, ${openings} opening${openings === 1 ? "" : "s"}, deadline ${deadline}, ${status}` });
+    }
+
+    return { ...result.rows[0], filled, deadline_passed: false, accepting_applications: wantsOpen };
+}
+
 // Filled = applications marked Hired/Joined; the job closes when filled = openings
 export async function refreshJobFill(db, jobCode) {
     await db.query(
